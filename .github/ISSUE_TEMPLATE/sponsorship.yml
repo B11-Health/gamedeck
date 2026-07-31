@@ -1,0 +1,25 @@
+name: Sponsorship inquiry
+description: Ask about a privacy-respecting community placement
+title: "[Sponsor]: "
+labels: [sponsorship]
+body:
+  - type: input
+    id: organization
+    attributes:
+      label: Organization
+    validations:
+      required: true
+  - type: textarea
+    id: fit
+    attributes:
+      label: Product and community fit
+      description: Do not include payment information or confidential contract terms.
+    validations:
+      required: true
+  - type: checkboxes
+    id: policy
+    attributes:
+      label: Sponsorship policy
+      options:
+        - label: I have read and accept the static, labeled, no-tracking sponsorship policy.
+          required: true

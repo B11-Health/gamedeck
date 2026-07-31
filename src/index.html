@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: file:; connect-src 'self'">
+  <title>GameDeck</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+
+  <header class="app-header">
+    <div class="brand"><span class="brand-mark"><img src="../assets/branding/gamedeck-mark-source.png" alt=""></span><span>GAMEDECK</span></div>
+    <nav aria-label="Main navigation">
+      <button class="nav active" data-view="home">Library</button>
+      <button class="nav" data-view="discover">Discover</button>
+      <button class="nav" data-view="favorites">Favorites</button>
+      <button class="nav" data-view="recent">Recent</button>
+      <button class="nav" data-view="community">Community</button>
+    </nav>
+    <div class="head-actions">
+      <span class="controller-pill" id="controllerStatus">No controller</span>
+      <button class="header-button activity-button" id="consoleToggle" title="Open activity console">Activity <span id="activityCount" class="activity-count hidden">0</span></button>
+      <button class="header-button compact" id="rescan" title="Rescan library">Refresh</button>
+    </div>
+  </header>
+
+  <main>
+    <aside>
+      <div class="eyebrow">YOUR SYSTEMS</div>
+      <div id="systems" class="system-list"></div>
+      <div class="aside-foot">
+        <div><span class="status-dot"></span><b id="readyCount">0</b> emulators ready</div>
+        <button id="folder">Open RGSX library</button>
+      </div>
+    </aside>
+
+    <section class="content">
+      <section class="loading-stage" id="appLoading" aria-live="polite" aria-label="Loading GameDeck">
+        <div class="loading-orbit" aria-hidden="true"><span><img src="../assets/branding/gamedeck-mark-source.png" alt=""></span></div>
+        <div class="loading-copy">
+          <div class="eyebrow">PREPARING YOUR DECK</div>
+          <h2 id="loadingTitle">Starting GameDeck</h2>
+          <p id="loadingMessage">Checking your library and emulator setup.</p>
+          <div class="loading-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="8" id="loadingTrack">
+            <span id="loadingBar" style="width:8%"></span>
+          </div>
+          <small id="loadingPercent">8%</small>
+        </div>
+      </section>
+
+      <div class="hero">
+        <div>
+          <div class="eyebrow" id="context">ALL SYSTEMS</div>
+          <h1 id="headline">Your games.<br><em>One move away.</em></h1>
+          <p id="subhead">Pick a title and GameDeck chooses the right emulator automatically.</p>
+        </div>
+        <div class="stats" aria-label="Library stats">
+          <div><strong id="gameCount">0</strong><span>GAMES</span></div>
+          <div><strong id="systemCount">0</strong><span>SYSTEMS</span></div>
+        </div>
+      </div>
+
+      <section class="spotlight hidden" id="spotlight" aria-label="Selected game">
+        <div class="feature-backdrop" aria-hidden="true"><img id="spotlightBackdrop" alt=""></div>
+        <div class="spotlight-art" id="spotlightArt"></div>
+        <div class="spotlight-copy">
+          <div class="eyebrow" id="spotlightSystem">SELECTED GAME</div>
+          <h2 id="spotlightTitle">Pick a game</h2>
+          <div class="feature-facts" id="spotlightFacts"></div>
+          <p class="feature-description" id="spotlightDescription">Use a controller, keyboard, or mouse to focus a title.</p>
+          <p class="feature-status" id="spotlightMeta">Ready when you are.</p>
+        </div>
+        <div class="spotlight-actions">
+          <button class="primary" id="spotlightPlay">Play now</button>
+          <button id="spotlightFav">Save</button>
+        </div>
+      </section>
+
+      <div class="control-legend" aria-label="Controller help">
+        <span><kbd>A</kbd> Select / Play</span>
+        <span><kbd>B</kbd> Back</span>
+        <span><kbd>Y</kbd> Setup</span>
+        <span><kbd>D-PAD</kbd> Move</span>
+        <span><kbd>START</kbd> Change view</span>
+      </div>
+
+      <div class="toolbar">
+        <label class="search">
+          <span aria-hidden="true">/</span>
+          <input id="search" placeholder="Search your collection" autocomplete="off">
+          <kbd>/</kbd>
+        </label>
+        <span class="toolbar-context" id="toolbarContext">READY TO PLAY</span>
+      </div>
+
+      <section id="empty" class="empty hidden">
+        <div class="empty-art"><span>+</span></div>
+        <h2>Your deck is ready</h2>
+        <p>Choose Discover to fetch a title through RGSX, or add an owned game to the RGSX ROM folder.</p>
+        <div class="empty-actions">
+          <button class="primary" id="emptyDiscover">Browse RGSX</button>
+          <button id="emptyFolder">Open game folder</button>
+        </div>
+      </section>
+
+      <div id="games" class="game-grid"></div>
+
+      <section id="discover" class="discover hidden">
+        <div class="discover-label">
+          <span>RGSX CONSOLES</span>
+          <small>Choose a console, then move down into its games.</small>
+        </div>
+        <div class="console-rail" id="consoleRail"></div>
+
+        <section class="catalog-feature hidden" id="catalogFeature">
+          <div class="feature-backdrop" aria-hidden="true"><img id="catalogFeatureBackdrop" alt=""></div>
+          <div class="catalog-feature-art" id="catalogFeatureArt"></div>
+          <div class="catalog-feature-copy">
+            <div class="eyebrow" id="catalogFeatureSystem">RGSX TITLE</div>
+            <h2 id="catalogFeatureTitle">Select a game</h2>
+            <div class="feature-facts" id="catalogFeatureFacts"></div>
+            <p class="feature-description" id="catalogFeatureDescription">Browse the catalog, then choose a title for the full details.</p>
+            <p class="feature-status" id="catalogFeatureMeta">Downloads are handled by RGSX.</p>
+          </div>
+          <div class="catalog-feature-actions">
+            <button id="catalogSetup" class="hidden">Setup console</button>
+            <button class="primary" id="catalogFeatureAction">Get with RGSX</button>
+          </div>
+        </section>
+
+        <div class="catalog-head">
+          <div>
+            <div class="eyebrow">RGSX CATALOG</div>
+            <h2 id="catalogTitle">Choose a console</h2>
+          </div>
+          <span id="catalogCount"></span>
+        </div>
+        <div id="catalogGames" class="catalog-grid"></div>
+        <div id="catalogPager" class="catalog-pager hidden">
+          <span id="catalogProgress">0 of 0 titles shown</span>
+          <button id="catalogMore" type="button">Show next 300</button>
+        </div>
+      </section>
+
+      <section id="community" class="community hidden" aria-label="GameDeck community and settings">
+        <section class="community-hero">
+          <div class="community-hero-copy">
+            <div class="eyebrow">OPEN SOURCE · PLAYER OWNED</div>
+            <h1>The deck gets better<br><em>when everyone builds.</em></h1>
+            <p>GameDeck is a local-first launcher for legally owned game libraries. Help us ship cleaner setup, broader emulator support, and the best couch-first experience on every desktop.</p>
+            <div class="community-actions">
+              <button class="primary" id="openGithub">View on GitHub</button>
+              <button id="openContributing">Start contributing</button>
+            </div>
+            <div class="community-badges">
+              <span>MIT licensed</span><span>Windows</span><span>macOS</span><span>Linux</span><span>No ROMs included</span>
+            </div>
+          </div>
+          <div class="community-brand" aria-hidden="true">
+            <img src="../assets/branding/gamedeck-mark-source.png" alt="">
+            <span>BUILD · PLAY · SHARE</span>
+          </div>
+        </section>
+
+        <div class="community-grid">
+          <article class="community-card sponsor-card" id="sponsorCard">
+            <div class="card-kicker" id="sponsorEyebrow">COMMUNITY SPONSOR</div>
+            <h2 id="sponsorTitle">Become a founding GameDeck sponsor</h2>
+            <p id="sponsorBody">Support open development and reach players through one tasteful, privacy-respecting placement—never behavioral tracking.</p>
+            <button id="sponsorAction">See sponsorship options</button>
+            <small>Clearly labeled · static creative · no cross-app tracking</small>
+          </article>
+
+          <article class="community-card funding-card">
+            <div class="card-kicker">POWER THE NEXT RELEASE</div>
+            <h2 id="donationHeadline">Fuel the next build</h2>
+            <p id="donationMessage">Public donation methods are being configured. Wallet secrets never ship with GameDeck.</p>
+            <div class="donation-methods" id="donationMethods"></div>
+            <button id="openFunding">Funding & transparency</button>
+          </article>
+        </div>
+
+        <section class="settings-card">
+          <div class="settings-heading">
+            <div>
+              <div class="card-kicker">THIS DEVICE</div>
+              <h2>Paths, privacy, and launch setup</h2>
+              <p>GameDeck detects common emulator locations. Override only what differs on this machine.</p>
+            </div>
+            <div class="runtime-badge" id="runtimeBadge">Detecting platform…</div>
+          </div>
+
+          <div class="settings-grid">
+            <label class="setting-field"><span>Game library</span><div><input id="settingLibrary" autocomplete="off"><button type="button" data-browse="libraryRoot">Browse</button></div></label>
+            <label class="setting-field"><span>RGSX root <small>optional outside Windows</small></span><div><input id="settingRgsx" autocomplete="off"><button type="button" data-browse="rgsxRoot">Browse</button></div></label>
+            <label class="setting-field"><span>RetroArch executable</span><div><input id="settingRetroArch" autocomplete="off"><button type="button" data-browse="retroArchPath">Browse</button></div></label>
+            <label class="setting-field"><span>RetroArch cores</span><div><input id="settingCores" autocomplete="off"><button type="button" data-browse="retroArchCores">Browse</button></div></label>
+            <label class="setting-field"><span>RetroArch system / BIOS</span><div><input id="settingSystem" autocomplete="off"><button type="button" data-browse="retroArchSystem">Browse</button></div></label>
+            <label class="setting-toggle"><input type="checkbox" id="settingSponsors"><span><b>Show community sponsor placements</b><small>Static creative only; GameDeck does not build advertising profiles.</small></span></label>
+          </div>
+          <div class="settings-actions">
+            <span id="settingsStatus">Changes to paths apply after restart.</span>
+            <button id="restartApp" class="hidden">Restart now</button>
+            <button id="saveSettings" class="primary">Save settings</button>
+          </div>
+        </section>
+
+        <section class="community-note">
+          <b>Bring your own games and firmware.</b>
+          <span>GameDeck does not host, bundle, or endorse unauthorized ROMs, BIOS files, or copyrighted game assets. You are responsible for complying with the laws that apply to your library.</span>
+        </section>
+      </section>
+    </section>
+  </main>
+
+  <aside class="debug-console hidden" id="debugConsole" aria-label="Activity console">
+    <div class="debug-head">
+      <div><span>GAMEDECK</span><b>Activity console</b></div>
+      <div>
+        <button id="consoleClear">Clear</button>
+        <button id="consoleClose">Close</button>
+      </div>
+    </div>
+    <div class="debug-health" id="debugHealth"></div>
+    <pre id="debugOutput">Waiting for activity...</pre>
+  </aside>
+
+  <section class="transfer-dock hidden" id="transferDock" aria-label="Download activity" aria-live="polite">
+    <button class="transfer-summary" id="transferSummary" type="button" aria-expanded="false" aria-controls="transferPanel">
+      <span class="transfer-glyph" aria-hidden="true">↓</span>
+      <span class="transfer-copy"><small id="transferKicker">DOWNLOADING</small><b id="transferTitle">Preparing transfer</b><span id="transferDetail">Connecting to RGSX…</span></span>
+      <span class="transfer-meter" aria-hidden="true"><span id="transferBar"></span></span>
+      <strong id="transferPercent">0%</strong>
+      <span class="transfer-chevron" aria-hidden="true">⌃</span>
+    </button>
+    <div class="transfer-panel hidden" id="transferPanel"></div>
+  </section>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="app.js"></script>
+</body>
+</html>

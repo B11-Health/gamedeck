@@ -1,0 +1,28 @@
+node_modules/
+dist/
+backups/
+screenshots/
+*.log
+*.tmp
+.env
+.env.*
+!.env.example
+.DS_Store
+Thumbs.db
+
+# Local app and emulator data
+userdata/
+library.json
+settings.json
+artwork/
+details/
+
+# Wallet secrets must never enter Git
+vault/
+**/*keystore*.json
+**/*seed*.txt
+**/*mnemonic*.txt
+config/donations.local.json
+
+# Local launch convenience
+Launch GameDeck.cmd

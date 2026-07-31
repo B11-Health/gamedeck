@@ -1,0 +1,6 @@
+{
+  "enabled": false,
+  "headline": "Fuel the next build",
+  "message": "A public donation address will appear here after the maintainer completes the secure local wallet setup. No wallet secret is ever bundled with GameDeck.",
+  "methods": []
+}

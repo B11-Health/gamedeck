@@ -1,0 +1,39 @@
+name: Bug report
+description: Report a reproducible GameDeck problem
+title: "[Bug]: "
+labels: [bug, needs-triage]
+body:
+  - type: markdown
+    attributes:
+      value: Do not attach ROMs, BIOS files, keys, wallet secrets, API keys, or private personal paths.
+  - type: input
+    id: version
+    attributes:
+      label: GameDeck version
+      placeholder: 1.0.0
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options: [Windows, macOS, Linux]
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior and steps to reproduce
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Sanitized diagnostics
+      description: Include emulator name/version and the GameDeck Activity output after removing personal information.

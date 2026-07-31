@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "placements": [
+    {
+      "id": "founding-sponsor",
+      "eyebrow": "FOUNDING SPONSOR",
+      "title": "Put your brand behind the open game room",
+      "body": "Support cross-platform releases, emulator setup guides, accessibility, and community QA through one tasteful placement inside GameDeck.",
+      "cta": "View sponsorship options",
+      "url": "https://github.com/B11-Health/gamedeck/blob/main/docs/SPONSORSHIP.md",
+      "accent": "#72e7ff",
+      "image": "assets/branding/gamedeck-mark-source.png"
+    }
+  ]
+}

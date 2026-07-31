@@ -1,0 +1,99 @@
+{
+  "name": "gamedeck",
+  "version": "1.0.0",
+  "description": "A cinematic, local-first launcher for legally owned game libraries on Windows, macOS, and Linux.",
+  "main": "main.js",
+  "author": "B11 Health",
+  "license": "MIT",
+  "homepage": "https://github.com/B11-Health/gamedeck#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/B11-Health/gamedeck.git"
+  },
+  "bugs": {
+    "url": "https://github.com/B11-Health/gamedeck/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "electron .",
+    "check": "node --check main.js && node --check preload.js && node --check src/app.js && node scripts/smoke-test.mjs",
+    "test": "npm run check",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder --publish never",
+    "dist:win": "electron-builder --win --x64 --publish never",
+    "dist:mac": "electron-builder --mac --universal --publish never",
+    "dist:linux": "electron-builder --linux --x64 --publish never",
+    "wallet:create": "node scripts/create-donation-wallet.mjs"
+  },
+  "devDependencies": {
+    "electron": "^43.2.0",
+    "electron-builder": "26.15.3",
+    "ethers": "6.17.0"
+  },
+  "build": {
+    "appId": "io.gamedeck.launcher",
+    "productName": "GameDeck",
+    "copyright": "Copyright © 2026 B11 Health and GameDeck contributors",
+    "asar": true,
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*",
+      "assets/**/*",
+      "config/**/*",
+      "sponsors.json",
+      "LICENSE",
+      "!**/*.map",
+      "!screenshots/**/*",
+      "!backups/**/*"
+    ],
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ]
+    },
+    "nsis": {
+      "artifactName": "${productName}-Setup-${version}-${arch}.${ext}",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "GameDeck"
+    },
+    "portable": {
+      "artifactName": "${productName}-Portable-${version}-${arch}.${ext}"
+    },
+    "mac": {
+      "icon": "build/icon.icns",
+      "category": "public.app-category.games",
+      "target": [
+        { "target": "dmg", "arch": ["universal"] },
+        { "target": "zip", "arch": ["universal"] }
+      ]
+    },
+    "linux": {
+      "icon": "build/icons",
+      "category": "Game",
+      "synopsis": "Local-first game library launcher",
+      "target": [
+        { "target": "AppImage", "arch": ["x64"] },
+        { "target": "deb", "arch": ["x64"] }
+      ]
+    },
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+    "publish": {
+      "provider": "github",
+      "owner": "B11-Health",
+      "repo": "gamedeck",
+      "releaseType": "release"
+    }
+  }
+}
