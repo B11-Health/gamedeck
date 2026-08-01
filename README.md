@@ -31,6 +31,7 @@ GameDeck does **not** include ROMs, BIOS files, encryption keys, or commercial g
 - Scoped Xbox/XInput arcade profiles that preserve global emulator settings
 - BIOS-aware readiness checks with real setup locations
 - Cinematic title details, artwork caching, favorites, and recent plays
+- Exact No-Intro filename matching, revision aliases, Libretro CDN fallback, and quiet background cover enrichment
 - A calm four-stage startup panel that reports library, launcher, artwork, and control readiness
 - Context-aware hero actions for continuing a recent game, choosing a surprise title, or finishing setup
 - Immediate launch feedback and visible metadata-source continuity in the selected-game spotlight

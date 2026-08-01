@@ -77,12 +77,14 @@ let toastTimer = null;
 let catalogRequest = 0;
 let artworkObserver = null;
 let artworkActive = 0;
+let artworkEnrichmentTimer = null;
 let detailTimer = null;
 let loadingHideTimer = null;
 let transferHideTimer = null;
 let settingsInspectTimer = null;
 let settingsInspectionRequest = 0;
 const artworkQueue = [];
+const artworkEnrichmentTried = new Set();
 const completionRefreshes = new Set();
 
 function escapeHtml(value) {
@@ -615,10 +617,16 @@ function updateGameArtwork(game, url) {
   if (!url) return;
   game.art = url;
   $$(`[data-game-art="${game.id}"]`).forEach(image => { image.src = url; });
+  const card = document.querySelector(`.game[data-id="${game.id}"]`);
+  card?.classList.remove('missing-art');
+  card?.classList.add('has-art');
+  card?.querySelector('.art-status')?.remove();
   if (state.focusedGameId === game.id) {
     $('#spotlightArt').innerHTML = `<img src="${escapeHtml(url)}" alt="${escapeHtml(game.title)} cover">`;
     $('#spotlightBackdrop').src = url;
   }
+  if (state.artworkFilter === 'missing-art' && !['discover', 'community'].includes(state.view)) renderGames();
+  else renderSetupCoach();
   renderDownloads();
   if (arcadeSelected()) renderArcadeDeck();
 }
@@ -656,6 +664,37 @@ function requestArtwork(game, priority = false) {
     const url = await window.deck.artwork(game.artworkTitle || game.title, game.system, game.artworkFolder || '');
     updateGameArtwork(game, url);
   }, priority);
+}
+
+function artworkEnrichmentScore(game) {
+  let score = 0;
+  if (game.system === state.selectedSystem) score += 30;
+  if (game.favorite) score += 20;
+  if (game.lastPlayed) score += 10;
+  if (state.focusedGameId === game.id) score += 40;
+  return score;
+}
+
+function scheduleArtworkEnrichment(delay = 3200) {
+  clearTimeout(artworkEnrichmentTimer);
+  if (requestedCaptureView) return;
+  artworkEnrichmentTimer = setTimeout(enrichNextArtwork, delay);
+}
+
+function enrichNextArtwork() {
+  clearTimeout(artworkEnrichmentTimer);
+  if (requestedCaptureView) return;
+  if (document.hidden || state.downloads.some(download => download.status === 'running')) {
+    artworkEnrichmentTimer = setTimeout(enrichNextArtwork, 3500);
+    return;
+  }
+  const game = state.library.games
+    .filter(item => !item.art && !artworkEnrichmentTried.has(item.id) && !state.artworkLoading.has(`library:${item.id}`))
+    .sort((a, b) => artworkEnrichmentScore(b) - artworkEnrichmentScore(a) || a.title.localeCompare(b.title))[0];
+  if (!game) return;
+  artworkEnrichmentTried.add(game.id);
+  requestArtwork(game);
+  artworkEnrichmentTimer = setTimeout(enrichNextArtwork, 1400);
 }
 
 function updateCatalogArtwork(game, url) {
@@ -697,6 +736,10 @@ function observeVisibleArtwork() {
     }
   }, { root: $('.content'), rootMargin: '320px 0px' });
   $$('[data-game-art], [data-catalog-art]').forEach(image => artworkObserver.observe(image));
+}
+
+function gameMetadataTitle(game) {
+  return game?.metadataTitle || game?.title || game?.artworkTitle || '';
 }
 
 function gameDetailsContext(game) {
@@ -771,7 +814,7 @@ function setFocusedGame(game, options = {}) {
   const arcade = isArcadeId(game.system);
   const blocked = arcade && ['damaged', 'incomplete'].includes(game.archiveHealth);
   const fallback = fallbackDescription(game.title, system?.name || 'this console', true);
-  const cached = state.gameDetails.get(detailKey(game.artworkTitle || game.title, game.system));
+  const cached = state.gameDetails.get(detailKey(gameMetadataTitle(game), game.system));
   spotlight.classList.toggle('details-loading', !cached);
   $('#spotlightSource').textContent = cached ? String(cached.source || 'GameDeck').toUpperCase() : 'MATCHING DETAILS';
   $('#spotlightSystem').textContent = `${system?.name || 'Game'} / ${blocked ? arcadeHealthLabel(game) : system?.ready ? 'READY TO PLAY' : 'SETUP NEEDED'}`;
@@ -788,7 +831,7 @@ function setFocusedGame(game, options = {}) {
   $('#spotlightBackdrop').src = art;
   spotlight.classList.remove('hidden');
   requestArtwork(game);
-  queueGameDetails(game.artworkTitle || game.title, game.system, gameDetailsContext(game), details => {
+  queueGameDetails(gameMetadataTitle(game), game.system, gameDetailsContext(game), details => {
     applyFocusedDetails(game, details);
   });
 
@@ -829,10 +872,10 @@ async function refreshFocusedDetails() {
   label.textContent = 'Refreshing…';
   $('#spotlight').classList.add('details-loading');
   $('#spotlightSource').textContent = 'REFRESHING DETAILS';
-  const key = detailKey(game.artworkTitle || game.title, game.system);
+  const key = detailKey(gameMetadataTitle(game), game.system);
   state.gameDetails.delete(key);
   try {
-    const details = await window.deck.refreshGameDetails(game.artworkTitle || game.title, game.system, gameDetailsContext(game));
+    const details = await window.deck.refreshGameDetails(gameMetadataTitle(game), game.system, gameDetailsContext(game));
     if (!details) throw Error('No details were returned');
     state.gameDetails.set(key, details);
     applyFocusedDetails(game, details);
@@ -2194,6 +2237,7 @@ async function loadLibrary(shouldRender = true) {
     if (state.view !== 'discover') renderGames();
   }
   renderDownloads();
+  scheduleArtworkEnrichment();
 }
 
 async function refreshCatalogAfterDownload(taskId) {
@@ -2340,6 +2384,8 @@ $('#rescan').onclick = async () => {
     setLoading(true, 'Finishing the refresh', 'Updating artwork, favorites, and recent activity.', 86);
     await refreshDiagnostics();
     render();
+    artworkEnrichmentTried.clear();
+    scheduleArtworkEnrichment(1800);
     refreshArcadeAudit(false);
     toast('RGSX library refreshed');
   } finally {
@@ -2485,6 +2531,10 @@ window.addEventListener('pointermove', event => {
   if (event.pointerType !== 'touch' && (Math.abs(event.movementX || 0) + Math.abs(event.movementY || 0) > 0)) setInputMode('pointer');
 }, { passive: true });
 window.addEventListener('pointerdown', () => setInputMode('pointer'), { passive: true });
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) scheduleArtworkEnrichment(1000);
+});
 
 window.addEventListener('gamepadconnected', () => {
   gamepadState.initialized = false;

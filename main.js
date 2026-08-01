@@ -256,7 +256,7 @@ const systems = [
   { id: 'gamegear', name: 'Sega Game Gear', short: 'GAME GEAR', color: '#f43f5e', folders: ['gamegear'], exts: ['.gg', '.zip'], core: coreFile('genesis_plus_gx_libretro'), icon: 'GG' },
   { id: 'segacd', name: 'Sega CD', short: 'SEGA CD', color: '#3b82f6', folders: ['segacd', 'megacd'], exts: ['.cue', '.chd'], core: coreFile('genesis_plus_gx_libretro'), bios: ['bios_CD_E.bin', 'bios_CD_U.bin', 'bios_CD_J.bin'], biosDirs: [RA_SYSTEM, ...firmwareSearchRoots], icon: 'CD' },
   { id: 'pce', name: 'PC Engine', short: 'PCE', color: '#f97316', folders: ['pcengine', 'supergrafx'], exts: ['.pce', '.zip'], core: coreFile('mednafen_pce_fast_libretro'), icon: 'P' },
-  { id: 'saturn', name: 'Sega Saturn', short: 'SATURN', color: '#38bdf8', folders: ['saturn'], exts: ['.cue', '.chd'], core: coreFile('mednafen_saturn_libretro'), bios: ['sega_101.bin', 'mpr-17933.bin'], biosDirs: [RA_SYSTEM, ...firmwareSearchRoots], icon: 'ST' },
+  { id: 'saturn', name: 'Sega Saturn', short: 'SATURN', color: '#38bdf8', folders: ['saturn'], exts: ['.cue', '.chd', '.m3u'], core: coreFile('mednafen_saturn_libretro'), bios: ['sega_101.bin', 'mpr-17933.bin'], biosDirs: [RA_SYSTEM, ...firmwareSearchRoots], icon: 'ST' },
   { id: 'dreamcast', name: 'Dreamcast', short: 'DC', color: '#fb923c', folders: ['dreamcast'], exts: ['.gdi', '.cdi', '.chd'], core: coreFile('flycast_libretro'), icon: 'DC' },
   { id: 'atari2600', name: 'Atari 2600', short: 'ATARI', color: '#f59e0b', folders: ['atari2600'], exts: ['.a26', '.bin', '.zip'], core: coreFile('stella_libretro'), icon: 'A' },
   { id: 'arcade', name: 'FinalBurn Neo', short: 'FBNEO', color: '#ec4899', folders: ['fbneo', 'neogeo'], exts: ['.zip', '.7z'], core: coreFile('fbneo_libretro'), icon: 'FB' },
@@ -369,6 +369,10 @@ function lookupTitleName(value) {
   if (!knownExtensions.has(extension)) return text;
   const leaf = text.replace(/\\/g, '/').split('/').pop() || text;
   return leaf.slice(0, -extension.length).trim();
+}
+
+function metadataLookupTitle(value, context = {}) {
+  return cleanName(context.name || lookupTitleName(value)) || String(context.name || lookupTitleName(value) || 'Selected game').trim();
 }
 
 function normalizeName(value) {
@@ -646,7 +650,7 @@ function localGameMetadata(title, context = {}) {
   if (!description) return null;
   const releaseDate = String(data.releaseDate || data.release_date || data.released || '').trim();
   return {
-    title: String(data.title || data.name || lookupTitleName(title)).trim(),
+    title: String(data.title || data.name || metadataLookupTitle(title, context)).trim(),
     description,
     releaseDate,
     year: String(data.year || releaseDate.match(/\b(19|20)\d{2}\b/)?.[0] || '').trim(),
@@ -661,7 +665,7 @@ function localGameMetadata(title, context = {}) {
 
 function fallbackGameDetails(title, systemId, context = {}) {
   const system = systems.find(item => item.id === systemId);
-  const gameTitle = lookupTitleName(title) || String(context.name || 'Selected game');
+  const gameTitle = metadataLookupTitle(title, context);
   const systemName = system?.name || String(context.systemName || 'this console');
   const edition = String(context.edition || '').trim();
   const region = String(context.region || '').trim();
@@ -685,7 +689,8 @@ async function fetchGameDetails(title, systemId, context = {}) {
   const localMetadata = localGameMetadata(title, context);
   const fallback = { ...fallbackGameDetails(title, systemId, context), ...(localArcade || {}), ...(localMetadata || {}) };
   const platformId = tgdbPlatforms[systemId];
-  const cacheFile = cachedDetailsPath(title, systemId);
+  const detailTitle = metadataLookupTitle(title, context);
+  const cacheFile = cachedDetailsPath(detailTitle, systemId);
   const cached = readJson(cacheFile, null);
   if (localMetadata?.description) return localMetadata;
   if (cached?.description) return cached;
@@ -698,7 +703,7 @@ async function fetchGameDetails(title, systemId, context = {}) {
       if (!key) return fallback;
       const params = new URLSearchParams({
         apikey: key,
-        name: lookupTitleName(title),
+        name: detailTitle,
         'filter[platform]': String(platformId)
       });
       const response = await fetch(`https://api.thegamesdb.net/v1/Games/ByGameName?${params}`, { signal: AbortSignal.timeout(8000) });
@@ -731,7 +736,7 @@ async function fetchGameDetails(title, systemId, context = {}) {
       fs.writeFileSync(cacheFile, JSON.stringify(details, null, 2));
       return details;
     } catch (error) {
-      addActivity('info', `Game details are temporarily unavailable for ${lookupTitleName(title)}: ${error.message}`);
+      addActivity('info', `Game details are temporarily unavailable for ${detailTitle}: ${error.message}`);
       return fallback;
     } finally {
       detailRequests.delete(cacheFile);
@@ -987,7 +992,8 @@ function getLibrary() {
       system: system.id,
       size: stat.size,
       art: resolveGameArt(file, title, system.id, folder),
-      artworkTitle: title,
+      artworkTitle: isArcadeSystem(system) ? title : shortName,
+      metadataTitle: title,
       artworkFolder: folder,
       shortName,
       edition: editionLabel(file),
@@ -1573,16 +1579,50 @@ function queueRgsxFirmwareDownload(systemId) {
 }
 
 function thumbnailNameCandidates(title) {
-  const raw = lookupTitleName(title);
-  const expanded = raw
+  const raw = lookupTitleName(title).trim();
+  const aliases = raw
     .replace(/\((JP|JPN|J)\)/gi, '(Japan)')
     .replace(/\((US|U)\)/gi, '(USA)')
-    .replace(/\((EU|EUR|E)\)/gi, '(Europe)')
-    .replace(/\((UK)\)/gi, '(Europe)');
-  const disc = expanded.replace(/\s+-\s+(?:CD|Disc)\s*(\d+)/i, ' (Disc $1)');
-  const withoutDisc = disc.replace(/\s*\((?:Disc|Disk)\s*\d+\)\s*$/i, '');
-  const names = [expanded, disc, withoutDisc];
-  return [...new Set(names.filter(Boolean).flatMap(name => [name, name.replace(/[&*/:`<>?\\|]/g, '_')]))].slice(0, 6);
+    .replace(/\((EU|EUR|E|UK)\)/gi, '(Europe)');
+  const revisionNumeric = aliases.replace(/\(Rev ([A-Z])\)/gi, (_, letter) => `(Rev ${letter.toUpperCase().charCodeAt(0) - 64})`);
+  const revisionLetter = aliases.replace(/\(Rev (\d+)\)/gi, (_, number) => {
+    const value = Number(number);
+    return value >= 1 && value <= 26 ? `(Rev ${String.fromCharCode(64 + value)})` : `(Rev ${number})`;
+  });
+  const withoutDumpTags = aliases.replace(/\s*\[[^\]]+\]/g, '').trim();
+  const stripNonRegionTags = value => value.replace(/\s*\(([^)]+)\)/g, (match, tag) => {
+    return /\b(USA|Europe|Japan|World|Asia|Australia|Brazil|Canada|France|Germany|Italy|Korea|Spain|Sweden|Taiwan)\b/i.test(tag) ? match : '';
+  }).replace(/\s+/g, ' ').trim();
+  const reorderArticle = value => {
+    const trailing = value.match(/^(.*),\s+(The|A|An)(\s+\([^)]*\))?$/i);
+    if (trailing) return `${trailing[2]} ${trailing[1]}${trailing[3] || ''}`;
+    const leading = value.match(/^(The|A|An)\s+(.+?)(\s+\([^)]*\))?$/i);
+    return leading ? `${leading[2]}, ${leading[1]}${leading[3] || ''}` : '';
+  };
+  const base = [
+    raw,
+    aliases,
+    revisionNumeric,
+    revisionLetter,
+    withoutDumpTags,
+    aliases.replace(/\s+-\s+(?:CD|Disc|Disk)\s*(\d+)/i, ' (Disc $1)'),
+    aliases.replace(/\s*\((?:Disc|Disk)\s*\d+\)\s*$/i, ''),
+    stripNonRegionTags(withoutDumpTags),
+    cleanName(withoutDumpTags)
+  ].filter(Boolean);
+  const articleVariants = base.map(reorderArticle).filter(Boolean);
+  const punctuationVariants = [...base, ...articleVariants].flatMap(value => [
+    value.replace(/\./g, ''),
+    value.replace(/\s+&\s+/g, ' and '),
+    value.replace(/\s+and\s+/gi, ' & '),
+    value.replace(/\s+-\s+/g, ' - ')
+  ]).filter(Boolean);
+  const regionless = cleanName(withoutDumpTags) || stripNonRegionTags(withoutDumpTags);
+  const inferredRegions = ['USA', 'USA, Europe', 'World', 'Europe', 'Japan'].map(region => `${regionless} (${region})`);
+  const names = [...base, ...articleVariants, ...punctuationVariants, ...inferredRegions]
+    .map(value => value.replace(/\s+/g, ' ').trim())
+    .filter(Boolean);
+  return [...new Set(names.flatMap(name => [name, name.replace(/[&*/:`<>?\\|]/g, '_')]))].slice(0, 32);
 }
 
 function thumbnailRepoCandidates(systemId, folder) {
@@ -1593,21 +1633,33 @@ function thumbnailRepoCandidates(systemId, folder) {
   return [...new Set(repositories.filter(Boolean))];
 }
 
+function thumbnailCdnRepository(repository) {
+  return String(repository || '').replace(/_-_/g, ' - ').replace(/_/g, ' ');
+}
+
 async function fetchLibretroArtwork(title, systemId, folder, cache) {
-  for (const repository of thumbnailRepoCandidates(systemId, folder)) {
-    for (const name of thumbnailNameCandidates(title)) {
-      const encoded = encodeURIComponent(name).replace(/%2F/gi, '_');
-      const url = `https://raw.githubusercontent.com/libretro-thumbnails/${repository}/master/Named_Boxarts/${encoded}.png`;
-      try {
-        const response = await fetch(url, { signal: AbortSignal.timeout(8000) });
-        if (!response.ok || !String(response.headers.get('content-type')).startsWith('image/')) continue;
-        const bytes = Buffer.from(await response.arrayBuffer());
-        if (!bytes.length || bytes.length > 12 * 1024 * 1024) continue;
-        fs.mkdirSync(ART_CACHE, { recursive: true });
-        fs.writeFileSync(cache, bytes);
-        return toFileUrl(cache);
-      } catch {
-        // TheGamesDB remains available as a fallback when GitHub is unavailable.
+  const repositories = thumbnailRepoCandidates(systemId, folder);
+  const names = thumbnailNameCandidates(title);
+  for (const repository of repositories) {
+    const cdnRepository = thumbnailCdnRepository(repository);
+    for (const name of names) {
+      const encodedName = encodeURIComponent(name).replace(/%2F/gi, '_');
+      const urls = [
+        `https://thumbnails.libretro.com/${encodeURIComponent(cdnRepository)}/Named_Boxarts/${encodedName}.png`,
+        `https://raw.githubusercontent.com/libretro-thumbnails/${repository}/master/Named_Boxarts/${encodedName}.png`
+      ];
+      for (const url of urls) {
+        try {
+          const response = await fetch(url, { signal: AbortSignal.timeout(8000) });
+          if (!response.ok || !String(response.headers.get('content-type')).startsWith('image/')) continue;
+          const bytes = Buffer.from(await response.arrayBuffer());
+          if (!bytes.length || bytes.length > 12 * 1024 * 1024) continue;
+          fs.mkdirSync(ART_CACHE, { recursive: true });
+          fs.writeFileSync(cache, bytes);
+          return toFileUrl(cache);
+        } catch {
+          // Try the next candidate or source. TheGamesDB remains the final fallback.
+        }
       }
     }
   }
@@ -1631,7 +1683,7 @@ async function fetchArtwork(title, systemId, folder = '') {
       if (!key) return '';
       const params = new URLSearchParams({
         apikey: key,
-        name: lookupTitleName(title),
+        name: detailTitle,
         'filter[platform]': String(platformId)
       });
       const gameResponse = await fetch(`https://api.thegamesdb.net/v1/Games/ByGameName?${params}`);
@@ -1802,7 +1854,8 @@ async function chooseGameArtwork(file) {
 }
 
 async function refreshGameDetails(title, systemId, context = {}) {
-  const cacheFile = cachedDetailsPath(title, systemId);
+  const detailTitle = metadataLookupTitle(title, context);
+  const cacheFile = cachedDetailsPath(detailTitle, systemId);
   try {
     if (fs.existsSync(cacheFile)) fs.unlinkSync(cacheFile);
   } catch (error) {

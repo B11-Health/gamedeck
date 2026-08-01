@@ -4,6 +4,8 @@ All notable GameDeck releases are documented here.
 
 ## [Unreleased]
 
+- Split exact filename artwork identity from clean metadata identity, added revision/region aliases, the official Libretro CDN, and throttled background cover enrichment.
+
 - Changed Library and Discover cards to preview on single click and act only through Play, Enter/A, or double-click; corrected nested-control semantics.
 
 - Added actionable Ready and Needs Attention transfer states, issue routing, library focus, and dismissible finished items.
