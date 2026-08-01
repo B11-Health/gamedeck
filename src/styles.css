@@ -3083,6 +3083,9 @@ body.density-compact .catalog-grid { gap: 15px; }
 .archive-badge.verified { border-color: #baf76b66; color: #dcffaf; }
 .archive-badge.attention { border-color: #ff8f6366; color: #ffc2a8; }
 .archive-badge.checking { color: #96a2b4; }
+.archive-badge.repairable { border-color: #67e8f966; color: #9cecff; background: #0d344466; }
+.game.health-repairable .cover { box-shadow: inset 0 0 0 1px #4ddff055, 0 16px 35px #0006; }
+.game.health-repairable .ready-dot { background: #4ddff0; box-shadow: 0 0 10px #4ddff088; }
 .game.health-attention .cover { box-shadow: inset 0 0 0 1px #ff765e66, 0 16px 35px #0006; }
 .game.health-attention .ready-dot { background: #ff8a5c; box-shadow: 0 0 10px #ff8a5c88; }
 .game .play:disabled,

@@ -480,16 +480,24 @@ function arcadeSelected() {
   return isArcadeId(state.selectedSystem) && !['discover', 'community'].includes(state.view);
 }
 
+function gameLaunchBlocked(game) {
+  return Boolean(game && ['damaged', 'incomplete'].includes(game.archiveHealth) && !game.autoRepair);
+}
+
 function arcadeHealthLabel(game) {
+  if (game.autoRepair && ['damaged', 'incomplete'].includes(game.archiveHealth)) return 'AUTO REPAIR';
   if (game.archiveHealth === 'verified') return game.system === 'mame' ? 'ROM SET VERIFIED' : 'ARCHIVE VERIFIED';
   if (game.archiveHealth === 'damaged') return 'DAMAGED ARCHIVE';
   if (game.archiveHealth === 'incomplete') return 'ROMSET INCOMPLETE';
+  if (game.archiveHealth === 'repairable') return 'AUTO SETUP';
   return 'CHECK PENDING';
 }
 
 function arcadeHealthClass(game) {
+  if (game.autoRepair && ['damaged', 'incomplete'].includes(game.archiveHealth)) return 'repairable';
   if (game.archiveHealth === 'verified') return 'verified';
-  if (['damaged', 'incomplete'].includes(game.archiveHealth)) return 'attention';
+  if (gameLaunchBlocked(game)) return 'attention';
+  if (game.archiveHealth === 'repairable') return 'repairable';
   return 'checking';
 }
 
@@ -510,7 +518,7 @@ function currentGames() {
   if (state.query) games = games.filter(game => game.title.toLowerCase().includes(state.query) || String(game.shortName || '').toLowerCase().includes(state.query));
   if (state.artworkFilter === 'missing-art') games = games.filter(game => !game.art);
   if (arcadeSelected() && state.arcadeFilter === 'verified') games = games.filter(game => game.archiveHealth === 'verified');
-  if (arcadeSelected() && state.arcadeFilter === 'attention') games = games.filter(game => ['damaged', 'incomplete'].includes(game.archiveHealth));
+  if (arcadeSelected() && state.arcadeFilter === 'attention') games = games.filter(game => gameLaunchBlocked(game));
 
   const byTitle = (a, b) => a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' });
   if (state.view === 'recent' || state.sort === 'recent') games.sort((a, b) => Number(b.lastPlayed || 0) - Number(a.lastPlayed || 0) || byTitle(a, b));
@@ -593,7 +601,7 @@ function renderArcadeDeck() {
 
   const games = state.library.games.filter(game => game.system === state.selectedSystem);
   const verified = games.filter(game => game.archiveHealth === 'verified').length;
-  const attention = games.filter(game => ['damaged', 'incomplete'].includes(game.archiveHealth)).length;
+  const attention = games.filter(game => ['damaged', 'incomplete', 'repairable'].includes(game.archiveHealth)).length;
   const unchecked = games.filter(game => !game.archiveHealth || game.archiveHealth === 'unchecked').length;
   const artwork = games.length ? Math.round((games.filter(game => game.art).length / games.length) * 100) : 0;
   const progress = state.arcadeAuditProgress;
@@ -859,7 +867,7 @@ function setFocusedGame(game, options = {}) {
   const art = gameArt(game);
   const launcher = system?.emulatorLabel || (system?.core ? 'RetroArch' : system?.name || 'your configured emulator');
   const arcade = isArcadeId(game.system);
-  const blocked = arcade && ['damaged', 'incomplete'].includes(game.archiveHealth);
+  const blocked = arcade && gameLaunchBlocked(game);
   const fallback = fallbackDescription(game.title, system?.name || 'this console', true);
   const cached = state.gameDetails.get(detailKey(gameMetadataTitle(game), game.system));
   spotlight.classList.toggle('details-loading', !cached);
@@ -947,7 +955,7 @@ function renderSystems() {
     const countLabel = installed > 0 ? `${installed}/${total}` : String(total);
     const title = system.issue ? `${system.name} — ${system.issue}` : system.name;
     const arcadeGames = isArcadeId(system.id) ? state.library.games.filter(game => game.system === system.id) : [];
-    const arcadeAttention = arcadeGames.filter(game => ['damaged', 'incomplete'].includes(game.archiveHealth)).length;
+    const arcadeAttention = arcadeGames.filter(game => ['damaged', 'incomplete', 'repairable'].includes(game.archiveHealth)).length;
     const status = isArcadeId(system.id) && arcadeGames.length
       ? (arcadeAttention ? `${arcadeAttention} SET${arcadeAttention === 1 ? '' : 'S'} TO CHECK` : `${arcadeGames.filter(game => game.archiveHealth === 'verified').length} PREFLIGHT OK`)
       : systemStatusLabel(system);
@@ -1036,6 +1044,7 @@ function renderGames() {
     const arcade = isArcadeId(game.system);
     const healthClass = arcadeHealthClass(game);
     const blocked = arcade && healthClass === 'attention';
+    const repairable = arcade && healthClass === 'repairable';
     const artMissing = !game.art;
     const playable = Boolean(system?.ready) && !blocked;
     const badge = arcade ? `<span class="archive-badge ${healthClass}">${escapeHtml(arcadeHealthLabel(game))}</span>` : '';
@@ -1048,7 +1057,7 @@ function renderGames() {
     const generatedArt = artMissing && artworkEnrichmentTried.has(game.id);
     const artStatus = artMissing ? `<span class="art-status ${generatedArt ? 'generated' : 'matching'}">${generatedArt ? 'GAMEDECK ART' : 'MATCHING ART'}</span>` : '';
     const stateClasses = [artMissing ? 'missing-art' : 'has-art', game.favorite ? 'is-favorite' : '', game.lastPlayed ? 'is-recent' : '', playable ? 'is-playable' : 'needs-setup'].filter(Boolean).join(' ');
-    return `<article class="game ${game.file === state.launchingFile ? 'launching' : ''} ${stateClasses} ${arcade ? 'arcade-card' : ''} ${blocked ? 'health-attention' : ''} ${active ? 'active' : ''}" style="--delay:${Math.min(index, 14) * 18}ms" tabindex="0" role="listitem" aria-current="${active}" aria-label="Select ${escapeHtml(game.title)} on ${escapeHtml(system?.name || 'GameDeck')}" data-id="${game.id}"><div class="cover" style="--c:${system?.color || '#8992a3'}"><div class="cover-art"><img data-game-art="${game.id}" src="${escapeHtml(gameArt(game))}" alt="${escapeHtml(game.title)} artwork" loading="lazy"></div><span class="cover-system">${escapeHtml(system?.short || 'GAME')}</span>${badge}${artStatus}<button class="fav ${game.favorite ? 'on' : ''}" aria-label="${game.favorite ? 'Remove favorite' : 'Favorite'}"><span aria-hidden="true">${game.favorite ? '★' : '☆'}</span></button><div class="cover-logo">${escapeHtml(system?.icon || 'G')}</div><div class="cover-title">${escapeHtml(game.title)}</div><button class="play" aria-label="${blocked ? 'ROM set needs attention' : `Play ${escapeHtml(game.title)}`}" ${blocked ? 'disabled' : ''}><span aria-hidden="true">${blocked ? '!' : '▶'}</span> ${blocked ? 'CHECK' : 'PLAY'}</button></div><div class="meta"><b title="${escapeHtml(game.title)}">${escapeHtml(game.title)}</b><div class="game-card-facts">${facts}</div><small><span class="ready-dot ${playable ? 'ok' : 'setup'}"></span>${escapeHtml(status)}</small></div></article>`;
+    return `<article class="game ${game.file === state.launchingFile ? 'launching' : ''} ${stateClasses} ${arcade ? 'arcade-card' : ''} ${blocked ? 'health-attention' : ''} ${repairable ? 'health-repairable' : ''} ${active ? 'active' : ''}" style="--delay:${Math.min(index, 14) * 18}ms" tabindex="0" role="listitem" aria-current="${active}" aria-label="Select ${escapeHtml(game.title)} on ${escapeHtml(system?.name || 'GameDeck')}" data-id="${game.id}"><div class="cover" style="--c:${system?.color || '#8992a3'}"><div class="cover-art"><img data-game-art="${game.id}" src="${escapeHtml(gameArt(game))}" alt="${escapeHtml(game.title)} artwork" loading="lazy"></div><span class="cover-system">${escapeHtml(system?.short || 'GAME')}</span>${badge}${artStatus}<button class="fav ${game.favorite ? 'on' : ''}" aria-label="${game.favorite ? 'Remove favorite' : 'Favorite'}"><span aria-hidden="true">${game.favorite ? '★' : '☆'}</span></button><div class="cover-logo">${escapeHtml(system?.icon || 'G')}</div><div class="cover-title">${escapeHtml(game.title)}</div><button class="play" aria-label="${blocked ? 'ROM set needs attention' : `Play ${escapeHtml(game.title)}`}" ${blocked ? 'disabled' : ''}><span aria-hidden="true">${blocked ? '!' : '▶'}</span> ${blocked ? 'CHECK' : 'PLAY'}</button></div><div class="meta"><b title="${escapeHtml(game.title)}">${escapeHtml(game.title)}</b><div class="game-card-facts">${facts}</div><small><span class="ready-dot ${playable ? 'ok' : 'setup'}"></span>${escapeHtml(status)}</small></div></article>`;
   }).join('');
 
   renderEmptyState(games);
@@ -1063,7 +1072,7 @@ function renderGames() {
     card.ondblclick = event => {
       if (event.target.closest('button')) return;
       setFocusedGame(game);
-      if (['damaged', 'incomplete'].includes(game.archiveHealth)) {
+      if (gameLaunchBlocked(game)) {
         toast(game.archiveHealthMessage || 'This ROM set needs attention', 'warning');
         return;
       }
@@ -1072,7 +1081,7 @@ function renderGames() {
     card.querySelector('.play').onclick = event => {
       event.stopPropagation();
       setFocusedGame(game);
-      if (['damaged', 'incomplete'].includes(game.archiveHealth)) return;
+      if (gameLaunchBlocked(game)) return;
       launch(game.file);
     };
     card.querySelector('.fav').onclick = async event => {
@@ -1116,13 +1125,13 @@ function setLaunchingState(game, active) {
   card?.setAttribute('aria-busy', String(active));
   const playButton = card?.querySelector('.play');
   if (playButton) {
-    playButton.disabled = active || ['damaged', 'incomplete'].includes(game.archiveHealth);
+    playButton.disabled = active || gameLaunchBlocked(game);
     playButton.innerHTML = active ? '<span aria-hidden="true">↻</span> OPENING' : '<span aria-hidden="true">▶</span> PLAY';
   }
   if (game && state.focusedGameId === game.id) {
     $('#spotlight').classList.toggle('launching', active);
-    $('#spotlightPlay').disabled = active || ['damaged', 'incomplete'].includes(game.archiveHealth);
-    $('#spotlightPlay').textContent = active ? 'Opening…' : ['damaged', 'incomplete'].includes(game.archiveHealth) ? 'Fix ROM set first' : 'Play now';
+    $('#spotlightPlay').disabled = active || gameLaunchBlocked(game);
+    $('#spotlightPlay').textContent = active ? 'Opening…' : gameLaunchBlocked(game) ? 'Fix ROM set first' : 'Play now';
   }
 }
 
@@ -1131,27 +1140,17 @@ async function launch(file) {
   let game = null;
   try {
     game = state.library.games.find(item => item.file === file);
-    const system = game ? systemById(game.system) : null;
-    if (game && ['damaged', 'incomplete'].includes(game.archiveHealth)) throw Error(game.archiveHealthMessage || 'This ROM set needs attention before launch');
-    if (system && !system.ready && (system.issue || '').toLowerCase().includes('firmware')) {
-      const result = await window.deck.setupSystem(system.id);
-      if (result?.queued) {
-        toast(`${system.name} firmware is downloading through RGSX`);
-        state.transferExpanded = true;
-        renderDownloads();
-        return;
-      }
-      if (result?.ready) {
-        toast(`${system.name} firmware is already installed`);
-      } else {
-        toast(result?.error || system.issue || 'Firmware setup required');
-        openConsole(true);
-        return;
-      }
-    }
+    if (game && gameLaunchBlocked(game)) throw Error(game.archiveHealthMessage || 'This ROM set needs attention before launch');
     setLaunchingState(game, true);
-    toast('Opening ' + (game?.title || 'your game') + ' with the correct emulator…', 'progress');
+    toast('Opening ' + (game?.title || 'your game') + ' — GameDeck is checking everything automatically…', 'progress');
     const result = await window.deck.launch(file);
+    if (result?.queued) {
+      setLaunchingState(game, false);
+      state.transferExpanded = true;
+      renderDownloads();
+      toast(result.message || 'GameDeck is preparing the required files. The game will open automatically.', 'progress');
+      return;
+    }
     if (!result?.ok) throw Error(result?.error || 'Could not launch this game');
     setTimeout(() => {
       setLaunchingState(game, false);
@@ -1743,7 +1742,7 @@ function surpriseMe() {
   if (['discover', 'community'].includes(state.view)) changeView('home');
   const candidates = currentGames().filter(game => {
     const system = systemById(game.system);
-    return system?.ready && !['damaged', 'incomplete'].includes(game.archiveHealth);
+    return system?.ready && !gameLaunchBlocked(game);
   });
   if (!candidates.length) {
     state.setupCoachOpen = true;
@@ -1788,7 +1787,7 @@ function renderHeroActions(selected) {
   const icon = button.querySelector('span');
   const candidates = state.library.games.filter(game => {
     const system = systemById(game.system);
-    if (!system?.ready || ['damaged', 'incomplete'].includes(game.archiveHealth)) return false;
+    if (!system?.ready || gameLaunchBlocked(game)) return false;
     if (selected && game.system !== selected.id) return false;
     if (state.view === 'favorites' && !game.favorite) return false;
     return true;
@@ -2616,6 +2615,28 @@ window.deck.onArcadeAudit(progress => {
   if (progress.items) applyArcadeAudit(progress);
   renderArcadeDeck();
 });
+window.deck.onLaunch(update => {
+  const game = state.library.games.find(item => item.file === update.file);
+  if (update.status === 'repairing') {
+    setLaunchingState(game, false);
+    state.transferExpanded = true;
+    renderDownloads();
+    toast(update.message || 'GameDeck is preparing this game automatically.', 'progress');
+    return;
+  }
+  if (update.status === 'launched') {
+    setLaunchingState(game, false);
+    toast(update.message || ((game?.title || 'Your game') + ' is opening.'), 'success');
+    loadLibrary(false);
+    return;
+  }
+  if (update.status === 'failed') {
+    setLaunchingState(game, false);
+    toast(update.message || 'Automatic game setup could not be completed.', 'warning');
+    openConsole(true);
+  }
+});
+
 window.deck.onDownload(download => {
   if (download.status === 'running') state.dismissedDownloads.delete(download.id);
   const index = state.downloads.findIndex(item => item.id === download.id);

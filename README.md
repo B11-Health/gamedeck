@@ -28,6 +28,8 @@ GameDeck does **not** include ROMs, BIOS files, encryption keys, or commercial g
 - RetroArch core discovery plus standalone DuckStation, PCSX2, PPSSPP, Dolphin, and Cemu routing
 - Validated multi-disc Saturn `.m3u` playlists that reject missing disc members before launch
 - Dedicated MAME and FinalBurn Neo catalog handling with pre-launch ROM-set health checks
+- One-click launch doctor that resolves shared BIOS/parent files, validates the best available arcade route, and resumes launch automatically
+- Managed repair-on-play for damaged RGSX arcade archives with no manual file handling
 - Full arcade names and local year, manufacturer, player, button, and control metadata from installed MAME
 - Scoped Xbox/XInput arcade profiles that preserve global emulator settings
 - BIOS-aware readiness checks with real setup locations
@@ -105,7 +107,7 @@ GameDeck checks common emulator and library locations automatically. Open **Comm
 
 ### Arcade libraries
 
-The Arcade Command Center verifies ZIP/7z integrity, uses native MAME verification for standalone-MAME titles, and blocks only the unsafe set instead of entering a download retry loop. Read the [arcade setup guide](docs/ARCADE.md) for compatible set layouts, BIOS/parent lookup, Xbox mappings, artwork folders, and troubleshooting.
+The Arcade Command Center verifies ZIP/7z integrity, uses native MAME verification where it is authoritative, and keeps FinalBurn Neo as the preferred route for compatible sets. Missing shared system files are installed through RGSX and the original launch resumes automatically. Damaged managed archives can be replaced, re-audited, and launched from the same click; untrusted files without a repair source remain blocked. Read the [arcade setup guide](docs/ARCADE.md) for compatible set layouts, BIOS/parent lookup, Xbox mappings, artwork folders, and troubleshooting.
 
 ### Keyboard shortcuts
 

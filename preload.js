@@ -27,6 +27,11 @@ contextBridge.exposeInMainWorld('deck', {
   openExternal: target => ipcRenderer.invoke('open-external', target),
   restartApp: () => ipcRenderer.invoke('restart-app'),
   clearActivity: () => ipcRenderer.invoke('clear-activity'),
+  onLaunch: callback => {
+    const listener = (_, update) => callback(update);
+    ipcRenderer.on('launch-update', listener);
+    return () => ipcRenderer.removeListener('launch-update', listener);
+  },
   onActivity: callback => {
     const listener = (_, entry) => callback(entry);
     ipcRenderer.on('activity', listener);

@@ -4,6 +4,10 @@ All notable GameDeck releases are documented here.
 
 ## [Unreleased]
 
+- Added a one-click launch doctor that installs missing shared arcade dependencies, validates available routes, and automatically resumes the original launch.
+
+- Added managed repair-on-play for damaged arcade archives with an exact RGSX source, including re-audit and automatic relaunch.
+
 - Added ordered-token artwork matching and premium GameDeck-original fallback posters for titles without a trustworthy source cover.
 
 - Validated Saturn `.m3u` members before launch and kept automation sessions alive when the visible window is closed.

@@ -117,6 +117,11 @@ if (!html.includes('boot-panel') || !styles.includes('.loading-steps')) fail('pr
 if (!renderer.includes('surpriseMe')) fail('renderer is missing the random playable game action');
 if (!renderer.includes('renderHeroActions')) fail('renderer is missing context-aware hero actions');
 if (!renderer.includes('setLaunchingState') || !styles.includes('.game.launching')) fail('launch feedback states are missing');
+if (!main.includes('pendingLaunches') || !main.includes('queueLaunchDependency') || !main.includes('completePendingLaunch')) fail('one-click dependency repair and automatic relaunch are missing');
+if (!main.includes('queueManagedGameRepair') || !main.includes('options.repair')) fail('managed repair-on-play is missing');
+if (!main.includes('verifyMameLaunchRoute') || !main.includes('verified set')) fail('arcade route verification is missing');
+if (!preload.includes('onLaunch: callback') || !renderer.includes('window.deck.onLaunch')) fail('launch progress handoff is missing');
+if (!renderer.includes('gameLaunchBlocked') || !renderer.includes('AUTO REPAIR')) fail('repairable arcade sets must remain one-click playable');
 if (!renderer.includes('spotlightSource') || !styles.includes('.feature-source')) fail('metadata source feedback is missing');
 if (!renderer.includes('artworkFilter') || !html.includes('id="artworkFilter"')) fail('library artwork quality filter is missing');
 if (!renderer.includes('chooseFocusedArtwork') || !renderer.includes('refreshFocusedDetails')) fail('renderer is missing manual artwork or detail repair controls');

@@ -281,6 +281,8 @@ let appIsQuitting = false;
 let mainWindow = null;
 let activity = [];
 const downloads = new Map();
+const pendingLaunches = new Map();
+const mameLaunchVerificationCache = new Map();
 const artworkRequests = new Map();
 const artworkMisses = new Set();
 const detailRequests = new Map();
@@ -880,6 +882,10 @@ async function inspectArcadeArchive(game) {
   if (!fingerprint) return { ...base, status: 'damaged', message: 'The archive is missing or unreadable.' };
   const size = Number(fingerprint.split(':')[0] || 0);
   if (size < 64) return { ...base, status: 'damaged', message: 'The archive is empty or incomplete.' };
+  const missingDependencies = missingArcadeDependencies(game.file);
+  if (missingDependencies.length) {
+    return { ...base, status: 'repairable', dependencies: missingDependencies.map(item => item.fileName), message: 'GameDeck will install ' + missingDependencies.map(item => item.label).join(', ') + ' automatically on first launch.' };
+  }
   if (!SEVEN_ZIP || !fs.existsSync(SEVEN_ZIP)) {
     return { ...base, status: 'unchecked', message: 'Install 7-Zip or configure RGSX to enable integrity checks.' };
   }
@@ -899,12 +905,19 @@ async function inspectArcadeArchive(game) {
 }
 
 function inspectArcadeArchiveSync(game) {
-  const cached = cachedArchiveAudit(game.file);
-  if (cached.status !== 'unchecked' && game.system !== 'mame') return cached;
   const fingerprint = archiveFingerprint(game.file);
   const extension = path.extname(game.file).toLowerCase();
   const base = { fingerprint, checkedAt: Date.now(), format: extension.replace('.', '').toUpperCase() };
   const size = Number(fingerprint.split(':')[0] || 0);
+  const missingDependencies = fingerprint && size >= 64 ? missingArcadeDependencies(game.file) : [];
+  if (missingDependencies.length) {
+    const repairable = { ...base, status: 'repairable', dependencies: missingDependencies.map(item => item.fileName), message: 'GameDeck will install ' + missingDependencies.map(item => item.label).join(', ') + ' automatically on first launch.' };
+    arcadeAuditCache.entries[game.file] = repairable;
+    saveArcadeAuditCache();
+    return repairable;
+  }
+  const cached = cachedArchiveAudit(game.file);
+  if (cached.status !== 'unchecked' && cached.status !== 'repairable' && game.system !== 'mame') return cached;
   let result;
   if (!fingerprint || size < 64) {
     result = { ...base, status: 'damaged', message: 'The archive is empty, incomplete, or unreadable.' };
@@ -944,7 +957,7 @@ function arcadeAuditSnapshot(games) {
   return {
     total: items.length,
     verified: items.filter(item => item.status === 'verified').length,
-    attention: items.filter(item => ['damaged', 'incomplete'].includes(item.status)).length,
+    attention: items.filter(item => ['damaged', 'incomplete', 'repairable'].includes(item.status)).length,
     unchecked: items.filter(item => item.status === 'unchecked').length,
     zip: arcadeGames.filter(game => game.format === 'ZIP').length,
     sevenZip: arcadeGames.filter(game => game.format === '7Z').length,
@@ -1015,6 +1028,7 @@ function getLibrary() {
       format: path.extname(file).replace('.', '').toUpperCase(),
       archiveHealth: archive?.status || '',
       archiveHealthMessage: archive?.message || '',
+      autoRepair: Boolean(isArcadeSystem(system) && ['damaged', 'incomplete'].includes(archive?.status) && findRgsxCatalogAsset(path.basename(file), folder)),
       favorite: state.favorites.includes(file),
       lastPlayed: state.recent[file] || null
     };
@@ -1051,6 +1065,35 @@ function addActivity(level, message, taskId = null) {
 function emitDownload(job) {
   if (!job || !mainWindow || mainWindow.isDestroyed()) return;
   mainWindow.webContents.send('download-update', { ...job });
+}
+
+function emitLaunch(update) {
+  if (!update || !mainWindow || mainWindow.isDestroyed()) return;
+  mainWindow.webContents.send('launch-update', { ...update });
+}
+
+function registerPendingLaunch(taskId, file, message) {
+  if (!taskId || !file) return;
+  pendingLaunches.set(taskId, { file, message: String(message || 'GameDeck is preparing this game.') });
+  emitLaunch({ file, taskId, status: 'repairing', message: String(message || 'GameDeck is preparing this game.') });
+}
+
+function completePendingLaunch(taskId, ok, error = '') {
+  const pending = pendingLaunches.get(taskId);
+  if (!pending) return;
+  pendingLaunches.delete(taskId);
+  if (!ok) {
+    emitLaunch({ file: pending.file, taskId, status: 'failed', message: error || 'Automatic setup could not be completed.' });
+    return;
+  }
+  setTimeout(() => {
+    try {
+      launchGame(pending.file, { automatic: true });
+    } catch (launchError) {
+      addActivity('error', `Automatic launch failed: ${launchError.message}`, taskId);
+      emitLaunch({ file: pending.file, taskId, status: 'failed', message: launchError.message });
+    }
+  }, 350);
 }
 
 function unitBytes(value, unit) {
@@ -1123,7 +1166,141 @@ function ensureRetroArchArcadeControllerConfig() {
   }
 }
 
-function launchGame(file) {
+function arcadeDependencySpecs(file) {
+  const folder = path.relative(LIBRARY, file).split(path.sep)[0]?.toLowerCase() || '';
+  if (folder === 'neogeo') {
+    return [{ fileName: 'neogeo.zip', folder: 'neogeo', label: 'Neo Geo system files' }];
+  }
+  return [];
+}
+
+function missingArcadeDependencies(file) {
+  return arcadeDependencySpecs(file).filter(dependency => !installedArcadeDependency(file, dependency));
+}
+
+function installedArcadeDependency(file, dependency) {
+  const candidates = [
+    path.join(path.dirname(file), dependency.fileName),
+    path.join(LIBRARY, dependency.folder || '', dependency.fileName),
+    path.join(RA_SYSTEM, 'fbneo', dependency.fileName),
+    path.join(RA_SYSTEM, dependency.fileName)
+  ];
+  return candidates.find(candidate => candidate && fs.existsSync(candidate)) || '';
+}
+
+function findRgsxCatalogAsset(fileName, preferredFolder = '') {
+  const target = String(fileName || '').toLowerCase();
+  const catalog = getCatalogSystems().sort((a, b) => Number(b.folder === preferredFolder) - Number(a.folder === preferredFolder));
+  for (const platform of catalog) {
+    const row = readCatalogRows(platform.gamesFile).find(item => String(item?.[0] || '').toLowerCase() === target);
+    if (row) return { source: platform.source, folder: platform.folder, fileName: row[0], size: row[2] || '' };
+  }
+  return null;
+}
+
+function queueLaunchDependency(file, dependency) {
+  const installed = installedArcadeDependency(file, dependency);
+  if (installed) return { ok: true, ready: true, installedFile: installed };
+  const asset = findRgsxCatalogAsset(dependency.fileName, dependency.folder);
+  if (!asset) return { ok: false, error: dependency.label + ' are missing and no managed RGSX source is available.' };
+  const title = dependency.label;
+  const result = queueRgsxDownload(asset.source, asset.folder, title, asset.fileName);
+  if (result?.installedFile) return { ok: true, ready: true, installedFile: result.installedFile };
+  if (result?.queued) {
+    const job = downloads.get(result.taskId);
+    const gameTitle = isArcadeSystem(detectSystem(file)) ? arcadeDisplayTitle(rawGameName(file)) : cleanName(file);
+    const message = 'Installing ' + dependency.label + '. ' + gameTitle + ' will open automatically.';
+    if (job) {
+      job.dependency = true;
+      job.autoLaunch = true;
+      job.launchFile = file;
+      job.title = dependency.label;
+      job.stage = 'Auto setup';
+      job.message = message;
+      emitDownload(job);
+    }
+    registerPendingLaunch(result.taskId, file, message);
+    return { ok: true, queued: true, taskId: result.taskId, message };
+  }
+  return result || { ok: false, error: 'Automatic dependency setup could not start.' };
+}
+
+function queueManagedGameRepair(file, audit) {
+  const folder = path.relative(LIBRARY, file).split(path.sep)[0]?.toLowerCase() || '';
+  const asset = findRgsxCatalogAsset(path.basename(file), folder);
+  if (!asset) return { ok: false, error: audit?.message || 'This game needs a verified replacement archive.' };
+  const gameTitle = isArcadeSystem(detectSystem(file)) ? arcadeDisplayTitle(rawGameName(file)) : cleanName(file);
+  const result = queueRgsxDownload(asset.source, asset.folder, gameTitle, asset.fileName, { force: true, repair: true });
+  if (result?.queued) {
+    const job = downloads.get(result.taskId);
+    const message = 'Repairing ' + gameTitle + ' from its managed RGSX source. It will open automatically.';
+    if (job) {
+      job.autoLaunch = true;
+      job.launchFile = file;
+      job.stage = 'Repairing';
+      job.message = message;
+      emitDownload(job);
+    }
+    registerPendingLaunch(result.taskId, file, message);
+    return { ok: true, queued: true, taskId: result.taskId, message };
+  }
+  return result || { ok: false, error: 'Automatic repair could not start.' };
+}
+
+function resolveLaunchDependencies(file, system) {
+  if (!isArcadeSystem(system)) return { ok: true, ready: true };
+  for (const dependency of arcadeDependencySpecs(file)) {
+    const result = queueLaunchDependency(file, dependency);
+    if (!result?.ready) return result;
+  }
+  return { ok: true, ready: true };
+}
+
+function verifyMameLaunchRoute(game) {
+  if (!MAME || !fs.existsSync(MAME)) return { ok: false, reason: 'MAME is unavailable.' };
+  const dependencySignature = arcadeDependencySpecs(game.file).map(dependency => {
+    const installed = installedArcadeDependency(game.file, dependency);
+    if (!installed) return dependency.fileName + ':missing';
+    const stat = fs.statSync(installed);
+    return dependency.fileName + ':' + stat.size + ':' + Math.floor(stat.mtimeMs);
+  }).join('|');
+  const fingerprint = archiveFingerprint(game.file) + ':' + dependencySignature;
+  const cached = mameLaunchVerificationCache.get(game.file);
+  if (cached?.fingerprint === fingerprint) return cached;
+  const verification = spawnSync(MAME, ['-verifyroms', game.shortName, '-rompath', mameRomSearchPath(game.file)], {
+    cwd: path.dirname(MAME),
+    windowsHide: true,
+    encoding: 'utf8',
+    timeout: 45000,
+    maxBuffer: 8 * 1024 * 1024
+  });
+  const result = {
+    ok: verification.status === 0,
+    fingerprint,
+    output: (String(verification.stdout || '') + String(verification.stderr || '')).trim()
+  };
+  mameLaunchVerificationCache.set(game.file, result);
+  return result;
+}
+
+function selectLaunchEmulator(system, game) {
+  const preferred = configuredEmulator(system);
+  const folder = path.relative(LIBRARY, game.file).split(path.sep)[0]?.toLowerCase() || '';
+  if (isArcadeSystem(system) && (folder === 'neogeo' || system.id === 'mame')) {
+    const verification = verifyMameLaunchRoute(game);
+    if (verification.ok && preferred && system.id !== 'mame') {
+      return { ...preferred, label: preferred.label + ' · verified set', verified: true };
+    }
+    if (verification.ok) {
+      return { kind: 'mame', executable: MAME, label: 'MAME · verified route', verified: true };
+    }
+    if (!preferred) throw Error(verification.output || 'No compatible arcade engine could validate this ROM set.');
+    addActivity('info', 'MAME did not validate ' + game.shortName + '; using ' + preferred.label + ' instead.');
+  }
+  return preferred;
+}
+
+function launchGame(file, options = {}) {
   const safeFile = safeLibraryFile(file);
   const system = detectSystem(safeFile);
   if (!system || !isPlayableFile(safeFile, system)) throw Error('Could not identify this game system.');
@@ -1131,65 +1308,61 @@ function launchGame(file) {
   if (setupIssue) {
     if (String(setupIssue).toLowerCase().includes('firmware')) {
       const firmwareResult = queueRgsxFirmwareDownload(system.id);
-      if (firmwareResult?.ok) {
-        addActivity('info', `${system.name} firmware is being downloaded through RGSX.`);
-        return false;
+      if (firmwareResult?.ready) {
+        // Continue directly when existing firmware was restored.
+      } else if (firmwareResult?.queued) {
+        const message = system.name + ' firmware is being installed. The game will open automatically.';
+        registerPendingLaunch(firmwareResult.taskId, safeFile, message);
+        return { ok: true, queued: true, taskId: firmwareResult.taskId, message };
+      } else {
+        throw Error(firmwareResult?.error || setupIssue);
       }
+    } else {
+      throw Error(setupIssue);
     }
-    throw Error(setupIssue);
   }
 
-  const game = {
-    file: safeFile,
-    system: system.id,
-    shortName: rawGameName(safeFile)
-  };
+  const dependencyResult = resolveLaunchDependencies(safeFile, system);
+  if (dependencyResult?.queued) return { ok: true, ...dependencyResult };
+  if (!dependencyResult?.ok) throw Error(dependencyResult?.error || 'Required game files could not be prepared.');
+
+  const game = { file: safeFile, system: system.id, shortName: rawGameName(safeFile) };
   if (isArcadeSystem(system)) {
     const audit = inspectArcadeArchiveSync(game);
-    if (audit.status === 'damaged' || audit.status === 'incomplete') throw Error(audit.message);
+    if (audit.status === 'damaged' || audit.status === 'incomplete') {
+      const repair = queueManagedGameRepair(safeFile, audit);
+      if (repair?.queued) return { ok: true, ...repair };
+      throw Error(repair?.error || audit.message);
+    }
   }
 
-  const emulator = configuredEmulator(system);
-  if (!emulator) throw Error(`${system.name} emulator is not installed or configured.`);
+  const emulator = selectLaunchEmulator(system, game);
+  if (!emulator) throw Error(system.name + ' emulator is not installed or configured.');
   let args;
   if (emulator.kind === 'libretro') {
     const controllerConfig = isArcadeSystem(system) ? ensureRetroArchArcadeControllerConfig() : '';
-    args = [
-      '-f',
-      ...(controllerConfig ? [`--appendconfig=${controllerConfig}`] : []),
-      '-L',
-      emulator.corePath,
-      safeFile
-    ];
+    args = ['-f', ...(controllerConfig ? ['--appendconfig=' + controllerConfig] : []), '-L', emulator.corePath, safeFile];
   } else if (emulator.kind === 'mame') {
-    args = [
-      game.shortName,
-      '-rompath', mameRomSearchPath(safeFile),
-      '-joystick',
-      ...(process.platform === 'win32' ? ['-joystickprovider', 'winhybrid'] : []),
-      '-skip_gameinfo',
-      '-noconfirm_quit',
-      '-nowindow'
-    ];
+    args = [game.shortName, '-rompath', mameRomSearchPath(safeFile), '-joystick', ...(process.platform === 'win32' ? ['-joystickprovider', 'winhybrid'] : []), '-skip_gameinfo', '-noconfirm_quit', '-nowindow'];
   } else {
     args = [...(system.args || []), safeFile];
   }
 
-  const child = spawn(emulator.executable, args, {
-    cwd: path.dirname(emulator.executable),
-    detached: true,
-    stdio: 'ignore'
+  const child = spawn(emulator.executable, args, { cwd: path.dirname(emulator.executable), detached: true, stdio: 'ignore' });
+  child.once('error', error => {
+    addActivity('error', system.name + ' launch failed: ' + error.message);
+    emitLaunch({ file: safeFile, status: 'failed', message: error.message });
   });
-  child.once('error', error => addActivity('error', `${system.name} launch failed: ${error.message}`));
   child.unref();
   const store = readStore();
   store.recent[safeFile] = Date.now();
   writeStore(store);
   const displayName = isArcadeSystem(system) ? arcadeDisplayTitle(game.shortName) : cleanName(safeFile);
-  addActivity('success', `Launched ${displayName} with ${emulator.label}`);
-  return true;
+  addActivity('success', 'Launched ' + displayName + ' with ' + emulator.label);
+  const result = { ok: true, launched: true, emulator: emulator.label, message: displayName + ' opened with ' + emulator.label + '.' };
+  if (options.automatic) emitLaunch({ file: safeFile, status: 'launched', emulator: emulator.label, message: result.message });
+  return result;
 }
-
 function openSystemSetup(systemId) {
   const system = systems.find(item => item.id === systemId);
   if (!system) return { ok: false, error: 'Unknown console configuration.' };
@@ -1323,7 +1496,7 @@ function getCatalogGames(source) {
   });
 }
 
-function queueRgsxDownload(source, folder, title, fileName) {
+function queueRgsxDownload(source, folder, title, fileName, options = {}) {
   if (!fs.existsSync(RGSX_PYTHON) || !fs.existsSync(RGSX_CLI)) {
     return { ok: false, error: 'RGSX runtime is not installed correctly. Open Activity for details.' };
   }
@@ -1336,7 +1509,7 @@ function queueRgsxDownload(source, folder, title, fileName) {
   if (!available) return { ok: false, error: 'The selected game is not present in the current RGSX catalog.' };
 
   const installed = installedCatalogFile(installedFiles(folder), fileName);
-  if (installed) {
+  if (installed && !options.force) {
     return {
       ok: true,
       downloaded: false,
@@ -1366,7 +1539,8 @@ function queueRgsxDownload(source, folder, title, fileName) {
     progress: 0,
     speed: '',
     downloadedBytes: 0,
-    totalBytes: 0
+    totalBytes: 0,
+    repair: Boolean(options.repair)
   };
   downloads.set(id, job);
   addActivity('info', `RGSX started: ${title}`, id);
@@ -1404,12 +1578,15 @@ function queueRgsxDownload(source, folder, title, fileName) {
   });
   child.on('close', code => {
     job.status = code === 0 ? 'complete' : 'error';
-    job.stage = code === 0 ? 'Ready to play' : 'Failed';
+    job.stage = code === 0 ? (job.dependency || job.repair ? 'Launching' : 'Ready to play') : 'Failed';
     job.finishedAt = Date.now();
     job.progress = code === 0 ? 100 : job.progress;
-    job.message = code === 0 ? 'Download complete. The game is ready in your library.' : `RGSX exited with code ${code}.`;
+    job.message = code === 0
+      ? (job.dependency ? 'Required files installed. Launching automatically.' : job.repair ? 'Fresh managed copy installed. Launching automatically.' : 'Download complete. The game is ready in your library.')
+      : `RGSX exited with code ${code}.`;
     emitDownload(job);
     addActivity(code === 0 ? 'success' : 'error', code === 0 ? `RGSX finished: ${title}` : `RGSX exited with code ${code}: ${title}`, id);
+    completePendingLaunch(id, code === 0, job.message);
   });
 
   return { ok: true, queued: true, taskId: id };
@@ -1587,6 +1764,7 @@ function queueRgsxFirmwareDownload(systemId) {
     job.message = code === 0 ? `${system.name} firmware is ready.` : `RGSX exited with code ${code}.`;
     emitDownload(job);
     addActivity(code === 0 ? 'success' : 'error', code === 0 ? `RGSX finished: ${system.name} BIOS` : `RGSX exited with code ${code}: ${system.name} BIOS`, id);
+    completePendingLaunch(id, code === 0, job.message);
   });
 
   return { ok: true, queued: true, taskId: id };
@@ -2198,8 +2376,7 @@ ipcMain.handle('favorite', (_, file) => {
 });
 ipcMain.handle('launch', (_, file) => {
   try {
-    launchGame(file);
-    return { ok: true };
+    return launchGame(file);
   } catch (error) {
     return { ok: false, error: error.message };
   }
