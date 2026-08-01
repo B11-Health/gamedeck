@@ -197,6 +197,18 @@
               </select>
             </label>
           </div>
+          <div class="discover-tools hidden" id="discoverTools">
+            <span class="result-count" id="catalogResultCount" aria-live="polite">0 titles</span>
+            <label class="sort-control catalog-filter-control">
+              <span>Show</span>
+              <select id="catalogFilter" aria-label="Filter catalog titles">
+                <option value="all">All titles</option>
+                <option value="available">Available</option>
+                <option value="downloaded">Downloaded</option>
+                <option value="installed">In library</option>
+              </select>
+            </label>
+          </div>
         </div>
         <span class="toolbar-context" id="toolbarContext">READY TO PLAY</span>
       </div>
@@ -227,7 +239,7 @@
           <div class="catalog-feature-copy">
             <div class="eyebrow" id="catalogFeatureSystem">RGSX TITLE</div>
             <h2 id="catalogFeatureTitle">Select a game</h2>
-            <div class="feature-facts" id="catalogFeatureFacts"></div>
+            <div class="feature-detail-head"><div class="feature-facts" id="catalogFeatureFacts"></div><span class="feature-source" id="catalogFeatureSource">CATALOG DETAILS</span></div>
             <p class="feature-description" id="catalogFeatureDescription">Browse the catalog, then choose a title for the full details.</p>
             <p class="feature-status" id="catalogFeatureMeta">Downloads are handled by RGSX.</p>
           </div>

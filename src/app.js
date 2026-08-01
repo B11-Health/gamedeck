@@ -27,6 +27,8 @@ const state = {
   catalog: [],
   catalogGames: [],
   catalogSystem: null,
+  catalogCache: new Map(),
+  catalogMemory: {},
   selectedSystem: 'all',
   focusedLibrarySystem: 'all',
   focusedGameId: null,
@@ -37,6 +39,7 @@ const state = {
   discoverZone: 'systems',
   query: '',
   catalogQuery: '',
+  catalogFilter: 'all',
   activities: [],
   downloads: [],
   activeCatalogTasks: new Map(),
@@ -390,7 +393,16 @@ function currentGames() {
 
 function filteredCatalogGames() {
   const query = state.catalogQuery;
-  return state.catalogGames.filter(game => !query || game.name.toLowerCase().includes(query));
+  return state.catalogGames.filter(game => {
+    const installed = Boolean(game.installedFile);
+    const ready = installed && game.installedReady !== false;
+    if (state.catalogFilter === 'available' && installed) return false;
+    if (state.catalogFilter === 'downloaded' && (!installed || ready)) return false;
+    if (state.catalogFilter === 'installed' && !ready) return false;
+    if (!query) return true;
+    const haystack = [game.name, game.fileName, game.region, ...(game.tags || [])].filter(Boolean).join(' ').toLowerCase();
+    return haystack.includes(query);
+  });
 }
 
 function currentCatalogGames() {
@@ -558,7 +570,9 @@ function requestArtwork(game, priority = false) {
 function updateCatalogArtwork(game, url) {
   if (!url) return;
   game.art = url;
-  $$(`[data-catalog-art="${game.id}"]`).forEach(image => { image.src = url; });
+  $(`[data-catalog-art="${game.id}"]`).forEach(image => { image.src = url; });
+  document.querySelector(`.catalog-game[data-id="${game.id}"]`)?.classList.remove('art-pending');
+  document.querySelector(`.catalog-game[data-id="${game.id}"]`)?.classList.add('has-art');
   const isFeatured = state.focusedCatalogId === game.id || (state.focusedCatalogId == null && currentCatalogGames()[0]?.id === game.id);
   if (isFeatured) {
     $('#catalogFeatureArt').innerHTML = `<img src="${escapeHtml(url)}" alt="${escapeHtml(game.name)} cover">`;
@@ -743,7 +757,7 @@ function renderSystems() {
   const systems = state.library.systems.map(system => {
     const focused = state.libraryZone === 'systems' && state.focusedLibrarySystem === system.id;
     const art = system.image ? `<img src="${escapeHtml(system.image)}" alt="">` : escapeHtml(system.icon);
-    const installed = Number(system.installedCount || 0);
+    const installed = Number(system.installedCount ?? systemById(system.systemId)?.installedCount ?? 0);
     const total = Number(system.count || 0);
     const countLabel = installed > 0 ? `${installed}/${total}` : String(total);
     const title = system.issue ? `${system.name} — ${system.issue}` : system.name;
@@ -971,6 +985,8 @@ function renderCatalogFeature(game) {
   const installed = Boolean(game.installedFile);
   const ready = installed && game.installedReady !== false;
   const cached = state.gameDetails.get(detailKey(game.fileName || game.name, state.catalogSystem.systemId));
+  feature.classList.toggle('details-loading', !cached);
+  $('#catalogFeatureSource').textContent = cached ? String(cached.source || 'GameDeck').toUpperCase() : 'MATCHING DETAILS';
   const description = installed && !ready
     ? `${game.name} has finished downloading for ${state.catalogSystem.name}. GameDeck can unpack the existing archive locally now—there is no need to download it again.`
     : fallbackDescription(game.name, state.catalogSystem.name, ready, game.edition);
@@ -1007,12 +1023,18 @@ function renderCatalogFeature(game) {
     const isFeatured = state.focusedCatalogId === game.id || (state.focusedCatalogId == null && currentCatalogGames()[0]?.id === game.id);
     if (!isFeatured) return;
     $('#catalogFeatureDescription').textContent = details.description || description;
-    $('#catalogFeatureFacts').innerHTML = factMarkup([game.region || game.tags?.[0], details.year, details.players && `${details.players} player${details.players === '1' ? '' : 's'}`, game.size || 'RGSX managed', ready ? 'Ready' : installed ? 'Downloaded' : 'Available']);
+    $('#catalogFeatureFacts').innerHTML = factMarkup([game.region || game.tags?.[0], details.year, details.genre, details.players && `${details.players} player${details.players === '1' ? '' : 's'}`, game.size || 'RGSX managed', ready ? 'Ready' : installed ? 'Downloaded' : 'Available']);
+    $('#catalogFeatureSource').textContent = String(details.source || 'GameDeck').toUpperCase();
+    feature.classList.remove('details-loading');
   });
 }
 
 function setFocusedCatalogGame(game, options = {}) {
   state.focusedCatalogId = game?.id ?? null;
+  if (state.catalogSystem && game) {
+    const memory = state.catalogMemory[state.catalogSystem.id] || {};
+    state.catalogMemory[state.catalogSystem.id] = { ...memory, focusedCatalogId: game.id };
+  }
   state.discoverZone = 'games';
   $$('.catalog-game').forEach(card => card.classList.toggle('active', Number(card.dataset.id) === state.focusedCatalogId));
   $$('.console-card').forEach(card => card.classList.remove('controller-focus'));
@@ -1022,17 +1044,19 @@ function setFocusedCatalogGame(game, options = {}) {
 
 function renderCatalogGames() {
   const games = currentCatalogGames();
+  const filteredTotal = filteredCatalogGames().length;
+  $('#catalogResultCount').textContent = `${filteredTotal.toLocaleString()} ${filteredTotal === 1 ? 'title' : 'titles'}`;
   $('#catalogGames').removeAttribute('aria-busy');
-  $('#catalogGames').innerHTML = games.map(game => {
+  $('#catalogGames').innerHTML = games.map((game, index) => {
     const active = game.id === state.focusedCatalogId;
     const downloading = downloadForGame(game) || (state.activeCatalogTasks.has(catalogTaskKey(game)) ? { progress: 0, stage: 'Preparing' } : null);
     const installed = Boolean(game.installedFile);
     const ready = installed && game.installedReady !== false;
     const art = game.art || assetFallback(game.name);
     const facts = [game.region || game.tags?.[0] || 'Catalog', game.size || 'RGSX'].filter(Boolean);
-    const action = ready ? 'Play' : downloading ? `${Math.round(Number(downloading.progress || 0))}%` : installed ? 'Install' : 'Add';
+    const action = ready ? 'Play' : downloading ? `${Math.round(Number(downloading.progress || 0))}%` : installed ? 'Finish' : 'Add';
     const cardState = ready ? 'IN LIBRARY' : downloading ? escapeHtml(downloading.stage || 'WORKING') : installed ? 'DOWNLOADED' : 'AVAILABLE';
-    return `<article class="catalog-game ${active ? 'active' : ''} ${ready ? 'installed' : ''} ${installed && !ready ? 'downloaded' : ''} ${downloading ? 'downloading' : ''}" tabindex="0" role="button" aria-label="${escapeHtml(game.name)} for ${escapeHtml(state.catalogSystem?.name || 'this console')}" data-id="${game.id}"><div class="catalog-media"><img class="catalog-media-backdrop" data-catalog-art="${game.id}" src="${escapeHtml(art)}" alt="" loading="lazy"><img class="catalog-poster" data-catalog-art="${game.id}" src="${escapeHtml(art)}" alt="${escapeHtml(game.name)} artwork" loading="lazy"><span class="catalog-platform">${escapeHtml(state.catalogSystem?.name || 'GAME')}</span><span class="catalog-state">${cardState}</span></div><div class="catalog-info"><b title="${escapeHtml(game.name)}">${escapeHtml(game.name)}</b><small>${facts.map(fact => `<span>${escapeHtml(fact)}</span>`).join('')}</small><p>${escapeHtml(cardDescription(game, state.catalogSystem))}</p><button class="import" data-id="${game.id}" ${downloading ? 'disabled' : ''}>${action}</button></div></article>`;
+    return `<article class="catalog-game ${game.art ? 'has-art' : 'art-pending'} ${active ? 'active' : ''} ${ready ? 'installed' : ''} ${installed && !ready ? 'downloaded' : ''} ${downloading ? 'downloading' : ''}" tabindex="0" role="button" aria-label="${escapeHtml(game.name)} for ${escapeHtml(state.catalogSystem?.name || 'this console')}" style="--delay:${Math.min(index, 14) * 18}ms" data-id="${game.id}"><div class="catalog-media"><img class="catalog-media-backdrop" data-catalog-art="${game.id}" src="${escapeHtml(art)}" alt="" loading="lazy"><img class="catalog-poster" data-catalog-art="${game.id}" src="${escapeHtml(art)}" alt="${escapeHtml(game.name)} artwork" loading="lazy"><span class="catalog-platform">${escapeHtml(state.catalogSystem?.name || 'GAME')}</span><span class="catalog-state">${cardState}</span></div><div class="catalog-info"><b title="${escapeHtml(game.name)}">${escapeHtml(game.name)}</b><small>${facts.map(fact => `<span>${escapeHtml(fact)}</span>`).join('')}</small><p>${escapeHtml(cardDescription(game, state.catalogSystem))}</p><button class="import" data-id="${game.id}" ${downloading ? 'disabled' : ''}>${action}</button></div></article>`;
   }).join('');
 
   $$('.catalog-game').forEach(card => {
@@ -1054,7 +1078,16 @@ function renderCatalogGames() {
   });
 
   if (!games.length) {
-    $('#catalogGames').innerHTML = '<div class="catalog-empty">No matching titles in this console catalog.</div>';
+    const emptyMessage = state.catalogQuery
+      ? `No titles match “${escapeHtml($('#search').value.trim())}”.`
+      : state.catalogFilter === 'installed'
+        ? 'No ready-to-play titles from this console are in your library yet.'
+        : state.catalogFilter === 'downloaded'
+          ? 'No downloaded titles are waiting for setup.'
+          : state.catalogFilter === 'available'
+            ? 'Every title in this catalog is already on your deck.'
+            : 'No titles are available in this console catalog.';
+    $('#catalogGames').innerHTML = `<div class="catalog-empty"><b>Nothing here yet</b><span>${emptyMessage}</span></div>`;
     renderCatalogFeature(null);
   } else if (state.focusedCatalogId == null || !games.some(game => game.id === state.focusedCatalogId)) {
     if (state.discoverZone === 'games') setFocusedCatalogGame(games[0]);
@@ -1072,6 +1105,10 @@ function renderCatalogProgress() {
   $('#catalogPager').classList.toggle('hidden', total === 0);
   $('#catalogProgress').textContent = `${shown.toLocaleString()} of ${total.toLocaleString()} titles ready to browse`;
   $('#catalogPager').style.setProperty('--catalog-progress', `${total ? (shown / total) * 100 : 0}%`);
+  if (state.catalogSystem) {
+    const memory = state.catalogMemory[state.catalogSystem.id] || {};
+    state.catalogMemory[state.catalogSystem.id] = { ...memory, query: state.catalogQuery, filter: state.catalogFilter, limit: state.catalogLimit, focusedCatalogId: state.focusedCatalogId };
+  }
   $('#catalogMore').textContent = `Load ${Math.min(CATALOG_PAGE_SIZE, Math.max(0, total - shown)).toLocaleString()} more`;
   $('#catalogMore').classList.toggle('hidden', shown >= total);
 }
@@ -1142,42 +1179,83 @@ async function catalogAction(game) {
   }
 }
 
-async function selectCatalog(id, enterGames = false) {
-  const system = state.catalog.find(item => item.id === id);
-  if (!system) return;
-  const request = ++catalogRequest;
-  state.catalogSystem = system;
-  state.focusedConsoleId = id;
-  state.focusedCatalogId = null;
-  state.catalogQuery = '';
-  state.catalogLimit = CATALOG_PAGE_SIZE;
-  state.catalogGames = [];
-  $('#search').value = '';
-  renderConsoleRail();
-  requestAnimationFrame(() => document.querySelector(`.console-card[data-id="${id}"]`)?.scrollIntoView({ block: 'nearest', inline: 'center' }));
-  $('#catalogTitle').textContent = system.name;
-  $('#catalogCount').textContent = `${system.count.toLocaleString()} titles · ${system.playable ? 'ready to play' : 'setup needed'}`;
-  renderCatalogSkeleton(system);
+function rememberCatalogContext() {
+  if (!state.catalogSystem) return;
+  const content = $('.content');
+  state.catalogMemory[state.catalogSystem.id] = {
+    query: state.catalogQuery,
+    filter: state.catalogFilter,
+    limit: state.catalogLimit,
+    focusedCatalogId: state.focusedCatalogId,
+    scrollTop: Number(content?.scrollTop || 0)
+  };
+}
 
-  const games = await window.deck.catalogGames(system.gamesFile);
-  if (request !== catalogRequest) return;
+function restoreCatalogContext(systemId) {
+  const memory = state.catalogMemory[systemId];
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    const content = $('.content');
+    if (!content) return;
+    content.scrollTop = Number(memory?.scrollTop || 0);
+    updateScrollChrome(content);
+    const focused = memory?.focusedCatalogId && document.querySelector(`.catalog-game[data-id="${memory.focusedCatalogId}"]`);
+    focused?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }));
+}
+
+function applyCatalogCollection(system, games, enterGames = false) {
   state.catalogGames = games;
   system.count = games.length;
   system.installedCount = games.filter(game => game.installedFile).length;
   $('#catalogCount').textContent = `${system.installedCount.toLocaleString()} installed · ${games.length.toLocaleString()} available · ${system.playable ? 'emulator ready' : 'setup needed'}`;
   renderConsoleRail();
-  if (enterGames && games.length) {
+  if (enterGames && games.length && !state.focusedCatalogId) {
     state.discoverZone = 'games';
-    state.focusedCatalogId = games[0].id;
+    state.focusedCatalogId = filteredCatalogGames()[0]?.id || games[0].id;
   }
   renderCatalogGames();
+  restoreCatalogContext(system.id);
+}
+
+async function selectCatalog(id, enterGames = false) {
+  const system = state.catalog.find(item => item.id === id);
+  if (!system) return;
+  if (state.catalogSystem?.id && state.catalogSystem.id !== id) rememberCatalogContext();
+  const memory = state.catalogMemory[id] || {};
+  const request = ++catalogRequest;
+  state.catalogSystem = system;
+  state.focusedConsoleId = id;
+  state.focusedCatalogId = memory.focusedCatalogId || null;
+  state.catalogQuery = memory.query || '';
+  state.catalogFilter = ['all', 'available', 'downloaded', 'installed'].includes(memory.filter) ? memory.filter : 'all';
+  state.catalogLimit = Math.max(CATALOG_PAGE_SIZE, Number(memory.limit || CATALOG_PAGE_SIZE));
+  state.catalogGames = [];
+  $('#search').value = state.catalogQuery;
+  $('#catalogFilter').value = state.catalogFilter;
+  renderConsoleRail();
+  requestAnimationFrame(() => document.querySelector(`.console-card[data-id="${id}"]`)?.scrollIntoView({ block: 'nearest', inline: 'center' }));
+  $('#catalogTitle').textContent = system.name;
+  $('#catalogCount').textContent = `${system.count.toLocaleString()} titles · ${system.playable ? 'ready to play' : 'setup needed'}`;
+
+  const cached = state.catalogCache.get(system.gamesFile);
+  if (cached) {
+    applyCatalogCollection(system, cached, enterGames);
+    return;
+  }
+
+  renderCatalogSkeleton(system);
+  const games = await window.deck.catalogGames(system.gamesFile);
+  if (request !== catalogRequest) return;
+  state.catalogCache.set(system.gamesFile, games);
+  applyCatalogCollection(system, games, enterGames);
 }
 
 function renderConsoleRail() {
   $('#consoleRail').innerHTML = state.catalog.map(system => {
     const active = state.catalogSystem?.id === system.id;
     const focused = state.discoverZone === 'systems' && state.focusedConsoleId === system.id;
-    return `<button type="button" class="console-card ${active ? 'active' : ''} ${focused ? 'controller-focus' : ''}" data-id="${escapeHtml(system.id)}" title="${escapeHtml(system.issue || '')}"><span class="console-state">${system.playable ? 'READY' : 'SETUP'}</span><b>${escapeHtml(system.name)}</b><small>${system.count.toLocaleString()} TITLES</small><img src="${escapeHtml(system.image)}" alt=""></button>`;
+    const installed = Number(system.installedCount || 0);
+    return `<button type="button" class="console-card ${system.playable ? 'playable' : 'needs-setup'} ${active ? 'active' : ''} ${focused ? 'controller-focus' : ''}" data-id="${escapeHtml(system.id)}" title="${escapeHtml(system.issue || '')}"><span class="console-state">${system.playable ? 'READY' : 'SETUP'}</span><b>${escapeHtml(system.name)}</b><small><span>${system.count.toLocaleString()} TITLES</span>${installed ? `<span>${installed.toLocaleString()} ON DECK</span>` : ''}</small><img src="${escapeHtml(system.image)}" alt=""></button>`;
   }).join('');
   $$('.console-card').forEach(card => {
     card.onclick = () => selectCatalog(card.dataset.id, true);
@@ -1457,6 +1535,8 @@ function render() {
   $('.control-legend').classList.toggle('hidden', community);
   $('.toolbar').classList.toggle('hidden', community);
   $('#libraryTools').classList.toggle('hidden', discover || community);
+  $('#discoverTools').classList.toggle('hidden', !discover || community);
+  $('#catalogFilter').value = state.catalogFilter;
   $('#toolbarContext').textContent = discover ? 'DOWNLOADS STAY VISIBLE WHILE YOU BROWSE' : arcadeSelected() ? 'ARCHIVES ARE CHECKED BEFORE LAUNCH' : 'CLICK OR PRESS A TO LAUNCH';
   $('#search').placeholder = discover ? 'Search this console catalog' : 'Search your collection';
   $('#gameSort').value = state.view === 'recent' ? 'recent' : state.sort;
@@ -1659,10 +1739,10 @@ function updateScrollChrome(content = $('.content')) {
 
 function changeView(view) {
   rememberShelfPosition();
+  if (state.view === 'discover' && view !== 'discover') rememberCatalogContext();
   state.view = view;
   state.query = '';
-  state.catalogQuery = '';
-  $('#search').value = '';
+  $('#search').value = view === 'discover' ? state.catalogQuery : '';
   if (view === 'discover') state.discoverZone = 'systems';
   else state.libraryZone = 'games';
   prepareRememberedShelf();
@@ -1769,7 +1849,11 @@ async function refreshCatalogAfterDownload(taskId) {
   if (gameKey != null) state.activeCatalogTasks.delete(gameKey);
   await loadLibrary(state.view !== 'discover');
   if (state.view === 'discover' && state.catalogSystem) {
-    state.catalogGames = await window.deck.catalogGames(state.catalogSystem.gamesFile);
+    const games = await window.deck.catalogGames(state.catalogSystem.gamesFile);
+    state.catalogGames = games;
+    state.catalogCache.set(state.catalogSystem.gamesFile, games);
+    state.catalogSystem.count = games.length;
+    state.catalogSystem.installedCount = games.filter(game => game.installedFile).length;
     renderCatalogGames();
   }
 }
@@ -1824,6 +1908,12 @@ $('#artworkFilter').onchange = event => {
   writePreference('artwork-filter', state.artworkFilter);
   render();
 };
+$('#catalogFilter').onchange = event => {
+  state.catalogFilter = ['available', 'downloaded', 'installed'].includes(event.target.value) ? event.target.value : 'all';
+  state.focusedCatalogId = null;
+  state.catalogLimit = CATALOG_PAGE_SIZE;
+  renderCatalogGames();
+};
 $('#gameSort').onchange = event => {
   if (!GAME_SORTS.has(event.target.value)) return;
   state.sort = event.target.value;
@@ -1835,6 +1925,10 @@ $('#search').oninput = event => {
     state.catalogQuery = event.target.value.toLowerCase();
     state.focusedCatalogId = null;
     state.catalogLimit = CATALOG_PAGE_SIZE;
+    if (state.catalogSystem) {
+      const memory = state.catalogMemory[state.catalogSystem.id] || {};
+      state.catalogMemory[state.catalogSystem.id] = { ...memory, query: state.catalogQuery, filter: state.catalogFilter, limit: state.catalogLimit, focusedCatalogId: null };
+    }
     renderCatalogGames();
   } else {
     state.query = event.target.value.toLowerCase();
@@ -1890,6 +1984,7 @@ $('#rescan').onclick = async () => {
   setLoading(true, 'Refreshing your deck', 'Scanning installed games and matching each title to its console.', 28);
   try {
     state.library = await window.deck.rescan();
+    state.catalogCache.clear();
     setLoading(true, 'Finishing the refresh', 'Updating artwork, favorites, and recent activity.', 86);
     await refreshDiagnostics();
     render();
@@ -2006,6 +2101,9 @@ $('.content').addEventListener('scroll', event => {
   if (!['discover', 'community'].includes(state.view)) {
     const key = shelfMemoryKey();
     state.shelfMemory[key] = { ...(state.shelfMemory[key] || {}), scrollTop: content.scrollTop };
+  } else if (state.view === 'discover' && state.catalogSystem) {
+    const memory = state.catalogMemory[state.catalogSystem.id] || {};
+    state.catalogMemory[state.catalogSystem.id] = { ...memory, scrollTop: content.scrollTop };
   }
   if (state.view === 'discover' && content.scrollHeight - content.scrollTop - content.clientHeight < 500) showMoreCatalog();
 }, { passive: true });
