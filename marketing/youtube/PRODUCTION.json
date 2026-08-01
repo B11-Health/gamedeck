@@ -15,5 +15,17 @@
     "sidechainDucking": true,
     "audioCodec": "AAC 256 kb/s stereo"
   },
-  "generatedAt": "2026-08-01T18:51:51.527Z"
+  "generatedAt": "2026-08-01T18:51:51.527Z",
+  "youtube": {
+    "channelName": "GameDeck",
+    "handle": "@GameDeckApp",
+    "channelId": "UCufqQr2nK29be6nMkbApspQ",
+    "channelUrl": "https://www.youtube.com/@GameDeckApp",
+    "videoId": "u-hBhTyaqzA",
+    "videoUrl": "https://youtu.be/u-hBhTyaqzA",
+    "visibility": "public",
+    "audience": "not made for kids",
+    "language": "en-US",
+    "captions": "published"
+  }
 }
