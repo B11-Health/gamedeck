@@ -34,6 +34,8 @@ GameDeck does **not** include ROMs, BIOS files, encryption keys, or commercial g
 - Automatic local sidecar metadata (`Game Name.json`, `.metadata.json`, or `metadata/`) plus expanded `boxart`, `covers`, and `media` artwork discovery
 - A prominent, transparent in-app support center for direct donations and founding sponsorships
 - Shelf-first compact mode plus an optional large-format Cinematic view
+- Sticky library controls, precise keyboard focus, artwork-quality filtering, and visible readiness states
+- Hierarchical selected-game actions with one-click cover replacement and metadata refresh
 - Collapsible systems rail and persistent title, recency, console, or size sorting
 - Visible download, verification, extraction, speed, and ETA states
 - RGSX integration when its optional local runtime is available

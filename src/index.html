@@ -152,10 +152,14 @@
           <p class="feature-status" id="spotlightMeta">Ready when you are.</p>
         </div>
         <div class="spotlight-actions">
-          <button class="primary" id="spotlightPlay">Play now</button>
-          <button id="spotlightFav">Save</button>
-          <button id="spotlightArtwork" title="Choose a local cover image">Change art</button>
-          <button id="spotlightDetails" title="Retry the metadata lookup">Refresh details</button>
+          <div class="spotlight-primary-actions">
+            <button class="primary" id="spotlightPlay">Play now</button>
+            <button id="spotlightFav">Save</button>
+          </div>
+          <div class="spotlight-utility-actions" aria-label="Game details tools">
+            <button id="spotlightArtwork" title="Choose a local cover image"><span aria-hidden="true">▧</span><b>Artwork</b></button>
+            <button id="spotlightDetails" title="Retry the metadata lookup"><span aria-hidden="true">↻</span><b>Details</b></button>
+          </div>
         </div>
       </section>
 
@@ -168,7 +172,7 @@
         <span><kbd>START</kbd> Change view</span>
       </div>
 
-      <div class="toolbar">
+      <div class="toolbar" id="libraryToolbar">
         <div class="toolbar-cluster">
           <label class="search">
             <span class="search-icon" aria-hidden="true">/</span>
@@ -375,7 +379,7 @@
     <div class="transfer-panel hidden" id="transferPanel"></div>
   </section>
 
-  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"><span class="toast-icon" aria-hidden="true">i</span><b class="toast-message"></b></div>
   <script src="app.js"></script>
 </body>
 </html>

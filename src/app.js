@@ -80,12 +80,23 @@ function escapeHtml(value) {
   })[character]);
 }
 
-function toast(message) {
+function toast(message, tone = 'info') {
   const element = $('#toast');
-  element.textContent = message;
-  element.classList.add('show');
+  const text = String(message || '');
+  const resolvedTone = tone !== 'info'
+    ? tone
+    : /could not|failed|error|missing|damaged|attention|required|blocked/i.test(text)
+      ? 'warning'
+      : /saved|ready|copied|refreshed|finished|complete|installed|launching/i.test(text)
+        ? 'success'
+        : 'info';
+  const icons = { info: 'i', success: '✓', warning: '!', progress: '↻' };
+  element.classList.remove('info', 'success', 'warning', 'progress');
+  element.classList.add(resolvedTone, 'show');
+  element.querySelector('.toast-icon').textContent = icons[resolvedTone] || icons.info;
+  element.querySelector('.toast-message').textContent = text;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => element.classList.remove('show'), 2600);
+  toastTimer = setTimeout(() => element.classList.remove('show'), resolvedTone === 'warning' ? 3600 : 2800);
 }
 
 function applyLayoutPreferences(announce = false) {
@@ -176,27 +187,55 @@ function factMarkup(items) {
 
 function setLoading(active, title = 'Starting GameDeck', message = 'Checking your library and emulator setup.', progress = 8) {
   const stage = $('#appLoading');
+  const steps = [
+    $('#loadingStepLibrary'),
+    $('#loadingStepLaunchers'),
+    $('#loadingStepArtwork'),
+    $('#loadingStepControls')
+  ];
+  const starts = [0, 32, 64, 88];
   clearTimeout(loadingHideTimer);
+
+  const updateProgress = value => {
+    const normalized = Math.min(100, Math.max(0, Number(value || 0)));
+    const activeIndex = normalized >= 100 ? steps.length - 1 : starts.reduce((index, threshold, candidate) => normalized >= threshold ? candidate : index, 0);
+    steps.forEach((step, index) => {
+      const done = normalized >= (starts[index + 1] ?? 100);
+      step.classList.toggle('done', done || normalized >= 100);
+      step.classList.toggle('active', normalized < 100 && index === activeIndex);
+    });
+    $('#loadingBar').style.width = normalized + '%';
+    $('#loadingPercent').textContent = Math.round(normalized) + '%';
+    $('#loadingPhase').textContent = normalized >= 100 ? 'READY' : 'STEP ' + (activeIndex + 1) + ' OF ' + steps.length;
+    $('#loadingTrack').setAttribute('aria-valuenow', String(Math.round(normalized)));
+    $('#loadingTrack').setAttribute('aria-valuetext', normalized >= 100 ? 'GameDeck ready' : title);
+  };
+
   if (!active) {
-    $('#loadingBar').style.width = '100%';
-    $('#loadingPercent').textContent = '100%';
-    $('#loadingTrack').setAttribute('aria-valuenow', '100');
-    stage.classList.add('complete');
+    updateProgress(100);
+    $('#loadingTitle').textContent = 'Your deck is ready';
+    const gameCount = Number(state.library?.games?.length || 0);
+    $('#loadingMessage').textContent = gameCount
+      ? gameCount.toLocaleString() + ' game' + (gameCount === 1 ? '' : 's') + ' organized and ready to browse.'
+      : 'Library controls are ready. Add games or open Discover whenever you are ready.';
+    stage.classList.add('ready');
     loadingHideTimer = setTimeout(() => {
-      stage.classList.add('hidden');
-      document.body.classList.remove('is-loading');
+      stage.classList.add('complete');
+      setTimeout(() => {
+        stage.classList.add('hidden');
+        document.body.classList.remove('is-loading');
+      }, 340);
     }, 260);
     return;
   }
-  stage.classList.remove('hidden', 'complete');
+
+  stage.classList.remove('hidden', 'complete', 'ready');
   document.body.classList.add('is-loading');
   $('#loadingTitle').textContent = title;
   $('#loadingMessage').textContent = message;
-  const value = Math.min(100, Math.max(0, Number(progress || 0)));
-  $('#loadingBar').style.width = `${value}%`;
-  $('#loadingPercent').textContent = `${Math.round(value)}%`;
-  $('#loadingTrack').setAttribute('aria-valuenow', String(Math.round(value)));
+  updateProgress(progress);
 }
+
 
 function renderCatalogSkeleton(system) {
   $('#catalogGames').setAttribute('aria-busy', 'true');
@@ -441,7 +480,7 @@ function renderArcadeDeck() {
   $('#arcadeAuditButton').disabled = Boolean(progress.running);
   $('#arcadeAuditButton').textContent = progress.running ? `Scanning ${percent}%` : 'Scan ROM-set health';
 
-  $('[data-arcade-filter]').forEach(button => {
+  $$('[data-arcade-filter]').forEach(button => {
     const active = button.dataset.arcadeFilter === state.arcadeFilter;
     button.classList.toggle('active', active);
     button.setAttribute('aria-pressed', String(active));
@@ -614,8 +653,9 @@ async function chooseFocusedArtwork() {
   const game = focusedGame();
   if (!game) return;
   const button = $('#spotlightArtwork');
+  const label = button.querySelector('b');
   button.disabled = true;
-  button.textContent = 'Choosing…';
+  label.textContent = 'Choosing…';
   try {
     const result = await window.deck.chooseGameArtwork(game.file);
     if (result?.canceled) return;
@@ -627,7 +667,7 @@ async function chooseFocusedArtwork() {
     toast(error.message || 'Artwork could not be changed');
   } finally {
     button.disabled = false;
-    button.textContent = 'Change art';
+    label.textContent = 'Artwork';
   }
 }
 
@@ -635,8 +675,9 @@ async function refreshFocusedDetails() {
   const game = focusedGame();
   if (!game) return;
   const button = $('#spotlightDetails');
+  const label = button.querySelector('b');
   button.disabled = true;
-  button.textContent = 'Refreshing…';
+  label.textContent = 'Refreshing…';
   const key = detailKey(game.artworkTitle || game.title, game.system);
   state.gameDetails.delete(key);
   try {
@@ -649,7 +690,7 @@ async function refreshFocusedDetails() {
     toast(error.message || 'Game details could not be refreshed');
   } finally {
     button.disabled = false;
-    button.textContent = 'Refresh details';
+    label.textContent = 'Details';
   }
 }
 
@@ -747,12 +788,14 @@ function runEmptyAction(action) {
 function renderGames() {
   const games = currentGames();
   $('#resultCount').textContent = `${games.length.toLocaleString()} ${games.length === 1 ? 'game' : 'games'}`;
-  $('#games').innerHTML = games.map(game => {
+  $('#games').innerHTML = games.map((game, index) => {
     const system = systemById(game.system);
     const active = game.id === state.focusedGameId;
     const arcade = isArcadeId(game.system);
     const healthClass = arcadeHealthClass(game);
     const blocked = arcade && healthClass === 'attention';
+    const artMissing = !game.art;
+    const playable = Boolean(system?.ready) && !blocked;
     const badge = arcade ? `<span class="archive-badge ${healthClass}">${escapeHtml(arcadeHealthLabel(game))}</span>` : '';
     const facts = arcade
       ? `<span class="game-shortname">${escapeHtml(game.shortName || 'ROM SET')}</span><span>${escapeHtml(game.format || 'ARCHIVE')}</span>`
@@ -760,7 +803,9 @@ function renderGames() {
     const status = arcade
       ? (game.archiveHealth === 'verified' ? 'Archive verified' : game.archiveHealthMessage || 'Health check pending')
       : relative(game.lastPlayed);
-    return `<article class="game ${arcade ? 'arcade-card' : ''} ${blocked ? 'health-attention' : ''} ${active ? 'active' : ''}" tabindex="0" role="button" aria-label="${blocked ? 'Review' : 'Play'} ${escapeHtml(game.title)} on ${escapeHtml(system?.name || 'GameDeck')}" data-id="${game.id}"><div class="cover" style="--c:${system?.color || '#8992a3'}"><div class="cover-art"><img data-game-art="${game.id}" src="${escapeHtml(gameArt(game))}" alt="${escapeHtml(game.title)} artwork" loading="lazy"></div><span class="cover-system">${escapeHtml(system?.short || 'GAME')}</span>${badge}<button class="fav ${game.favorite ? 'on' : ''}" aria-label="${game.favorite ? 'Remove favorite' : 'Favorite'}">${game.favorite ? 'SAVED' : 'SAVE'}</button><div class="cover-logo">${escapeHtml(system?.icon || 'G')}</div><div class="cover-title">${escapeHtml(game.title)}</div><button class="play" aria-label="${blocked ? 'ROM set needs attention' : `Play ${escapeHtml(game.title)}`}" ${blocked ? 'disabled' : ''}><span aria-hidden="true">${blocked ? '!' : '▶'}</span> ${blocked ? 'CHECK' : 'PLAY'}</button></div><div class="meta"><b title="${escapeHtml(game.title)}">${escapeHtml(game.title)}</b><div class="game-card-facts">${facts}</div><small><span class="ready-dot"></span>${escapeHtml(status)}</small></div></article>`;
+    const artStatus = artMissing ? '<span class="art-status">ART NEEDED</span>' : '';
+    const stateClasses = [artMissing ? 'missing-art' : 'has-art', game.favorite ? 'is-favorite' : '', game.lastPlayed ? 'is-recent' : '', playable ? 'is-playable' : 'needs-setup'].filter(Boolean).join(' ');
+    return `<article class="game ${stateClasses} ${arcade ? 'arcade-card' : ''} ${blocked ? 'health-attention' : ''} ${active ? 'active' : ''}" style="--delay:${Math.min(index, 14) * 18}ms" tabindex="0" role="button" aria-label="${blocked ? 'Review' : 'Play'} ${escapeHtml(game.title)} on ${escapeHtml(system?.name || 'GameDeck')}" data-id="${game.id}"><div class="cover" style="--c:${system?.color || '#8992a3'}"><div class="cover-art"><img data-game-art="${game.id}" src="${escapeHtml(gameArt(game))}" alt="${escapeHtml(game.title)} artwork" loading="lazy"></div><span class="cover-system">${escapeHtml(system?.short || 'GAME')}</span>${badge}${artStatus}<button class="fav ${game.favorite ? 'on' : ''}" aria-label="${game.favorite ? 'Remove favorite' : 'Favorite'}">${game.favorite ? 'SAVED' : 'SAVE'}</button><div class="cover-logo">${escapeHtml(system?.icon || 'G')}</div><div class="cover-title">${escapeHtml(game.title)}</div><button class="play" aria-label="${blocked ? 'ROM set needs attention' : `Play ${escapeHtml(game.title)}`}" ${blocked ? 'disabled' : ''}><span aria-hidden="true">${blocked ? '!' : '▶'}</span> ${blocked ? 'CHECK' : 'PLAY'}</button></div><div class="meta"><b title="${escapeHtml(game.title)}">${escapeHtml(game.title)}</b><div class="game-card-facts">${facts}</div><small><span class="ready-dot ${playable ? 'ok' : 'setup'}"></span>${escapeHtml(status)}</small></div></article>`;
   }).join('');
 
   renderEmptyState(games);
@@ -1508,6 +1553,12 @@ async function setupFocusedSystem() {
   } else toast(result.issue || 'Console is already configured');
 }
 
+function updateScrollChrome(content = $('.content')) {
+  const scrolled = Number(content?.scrollTop || 0) > 24;
+  $('#libraryToolbar')?.classList.toggle('is-stuck', scrolled);
+  document.body.classList.toggle('content-scrolled', scrolled);
+}
+
 function changeView(view) {
   state.view = view;
   state.query = '';
@@ -1516,6 +1567,7 @@ function changeView(view) {
   if (view === 'discover') state.discoverZone = 'systems';
   else state.libraryZone = 'games';
   $('.content').scrollTop = 0;
+  updateScrollChrome();
   render();
 }
 
@@ -1729,7 +1781,7 @@ $('#rescan').onclick = async () => {
   }
 };
 $('#arcadeAuditButton').onclick = () => refreshArcadeAudit(true);
-$('[data-arcade-filter]').forEach(button => {
+$$('[data-arcade-filter]').forEach(button => {
   button.onclick = () => {
     state.arcadeFilter = button.dataset.arcadeFilter;
     state.focusedGameId = null;
@@ -1830,9 +1882,9 @@ $('#saveSettings').onclick = async () => {
 $('#restartApp').onclick = () => window.deck.restartApp();
 
 $('.content').addEventListener('scroll', event => {
-  if (state.view !== 'discover') return;
   const content = event.currentTarget;
-  if (content.scrollHeight - content.scrollTop - content.clientHeight < 500) showMoreCatalog();
+  updateScrollChrome(content);
+  if (state.view === 'discover' && content.scrollHeight - content.scrollTop - content.clientHeight < 500) showMoreCatalog();
 }, { passive: true });
 
 window.addEventListener('gamepadconnected', () => {
@@ -1890,12 +1942,13 @@ window.deck.onDownload(download => {
 async function init() {
   applyLayoutPreferences();
   $('#gameSort').value = state.sort;
-  setLoading(true, 'Starting GameDeck', 'Checking RGSX, your emulators, and active transfers.', 12);
+  setLoading(true, 'Opening your deck', 'Checking local launchers and active transfers.', 10);
   await refreshDiagnostics();
-  setLoading(true, 'Reading your library', 'Organizing installed games, favorites, and recent plays.', 48);
+  setLoading(true, 'Reading your library', 'Organizing installed games, favorites, and recent plays.', 38);
   await loadLibrary(true);
-  setLoading(true, 'Polishing the shelves', 'Preparing artwork and controller navigation.', 88);
+  setLoading(true, 'Building the shelves', 'Preparing cover art, descriptions, and console groups.', 72);
   setControllerStatus();
+  setLoading(true, 'Couch mode ready', 'Keyboard and controller navigation are lined up.', 94);
   setInterval(handleGamepad, 90);
   setLoading(false);
   refreshArcadeAudit(false);

@@ -30,6 +30,12 @@ for (const id of [
   'mainContent',
   'sidebarToggle',
   'densityToggle',
+  'libraryToolbar',
+  'loadingPhase',
+  'loadingStepLibrary',
+  'loadingStepLaunchers',
+  'loadingStepArtwork',
+  'loadingStepControls',
   'setupToggle',
   'setupCoach',
   'setupSteps',
@@ -66,6 +72,8 @@ if (!renderer.includes("'community'")) fail('renderer view cycle is missing Comm
 if (!renderer.includes("setAttribute('aria-current', 'page')")) fail('main navigation must expose the active view accessibly');
 if (!renderer.includes('GAME_SORTS')) fail('renderer is missing persistent library sorting');
 if (!renderer.includes('sidebar-collapsed')) fail('renderer is missing the collapsible systems rail');
+if (!html.includes('toast-message') || !renderer.includes('updateScrollChrome')) fail('polished feedback and sticky toolbar behavior are missing');
+if (!renderer.includes('missing-art') || !renderer.includes('art-status')) fail('library artwork quality states are missing');
 if (!renderer.includes('renderSetupCoach') || !renderer.includes('setupReadiness')) fail('renderer is missing the zero-hassle ready check');
 if (!renderer.includes('surpriseMe')) fail('renderer is missing the random playable game action');
 if (!renderer.includes('artworkFilter') || !html.includes('id="artworkFilter"')) fail('library artwork quality filter is missing');
