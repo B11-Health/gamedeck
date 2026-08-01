@@ -20,7 +20,20 @@ const [main, preload, renderer, html, pkgText, donations] = await Promise.all([
 const pkg = JSON.parse(pkgText);
 const donationConfig = JSON.parse(donations);
 
-for (const id of ['games', 'discover', 'community', 'sponsorCard', 'donationMethods', 'settingLibrary']) {
+for (const id of [
+  'games',
+  'discover',
+  'community',
+  'sponsorCard',
+  'donationMethods',
+  'settingLibrary',
+  'mainContent',
+  'sidebarToggle',
+  'densityToggle',
+  'gameSort',
+  'resultCount',
+  'emptyTitle'
+]) {
   const matches = html.match(new RegExp(`id=["']${id}["']`, 'g')) || [];
   if (matches.length !== 1) fail(`expected one #${id}, found ${matches.length}`);
 }
@@ -33,6 +46,9 @@ for (const channel of ['settings', 'save-settings', 'sponsors', 'donations', 'op
 
 if (/C:\\\\Users\\\\[^'"\s]+/i.test(main)) fail('main.js contains a personal Windows user path');
 if (!renderer.includes("'community'")) fail('renderer view cycle is missing Community');
+if (!renderer.includes("setAttribute('aria-current', 'page')")) fail('main navigation must expose the active view accessibly');
+if (!renderer.includes('GAME_SORTS')) fail('renderer is missing persistent library sorting');
+if (!renderer.includes('sidebar-collapsed')) fail('renderer is missing the collapsible systems rail');
 if (!pkg.build?.win || !pkg.build?.mac || !pkg.build?.linux) fail('package metadata must configure Windows, macOS, and Linux');
 if (!Array.isArray(donationConfig.methods)) fail('donation methods must be an array');
 if (donationConfig.enabled && donationConfig.methods.length === 0) fail('enabled donations require at least one public method');

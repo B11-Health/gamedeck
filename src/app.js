@@ -1,6 +1,26 @@
 const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
 
+const GAME_SORTS = new Set(['title', 'recent', 'system', 'size']);
+
+function readPreference(key, fallback) {
+  try {
+    return localStorage.getItem(`gamedeck:${key}`) || fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function writePreference(key, value) {
+  try {
+    localStorage.setItem(`gamedeck:${key}`, value);
+  } catch {
+    // Preferences are a convenience; the launcher remains fully usable if storage is unavailable.
+  }
+}
+
+const savedSort = readPreference('sort', 'title');
+
 const state = {
   library: { systems: [], games: [] },
   catalog: [],
@@ -27,7 +47,10 @@ const state = {
   donations: null,
   sponsorTarget: '',
   transferExpanded: false,
-  catalogLimit: 120
+  catalogLimit: 120,
+  sort: GAME_SORTS.has(savedSort) ? savedSort : 'title',
+  density: readPreference('density', 'compact') === 'cinematic' ? 'cinematic' : 'compact',
+  sidebarCollapsed: readPreference('sidebar', 'expanded') === 'collapsed'
 };
 
 const views = ['home', 'discover', 'favorites', 'recent', 'community'];
@@ -54,6 +77,33 @@ function toast(message) {
   element.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => element.classList.remove('show'), 2600);
+}
+
+function applyLayoutPreferences(announce = false) {
+  const compact = state.density === 'compact';
+  document.body.classList.toggle('density-compact', compact);
+  document.body.classList.toggle('sidebar-collapsed', state.sidebarCollapsed);
+  $('#densityLabel').textContent = 'Cinematic';
+  $('#densityToggle').setAttribute('aria-pressed', String(!compact));
+  $('#densityToggle').setAttribute('aria-label', compact ? 'Enable cinematic view' : 'Disable cinematic view');
+  $('#densityToggle').title = `${compact ? 'Enable' : 'Disable'} cinematic view (Ctrl+Shift+D)`;
+  $('#sidebarToggle').setAttribute('aria-pressed', String(!state.sidebarCollapsed));
+  $('#sidebarToggle').setAttribute('aria-label', state.sidebarCollapsed ? 'Expand systems rail' : 'Collapse systems rail');
+  $('#sidebarToggle').title = `${state.sidebarCollapsed ? 'Expand' : 'Collapse'} systems rail (Ctrl+B)`;
+  if (announce) toast(`${compact ? 'Compact' : 'Cinematic'} view · systems ${state.sidebarCollapsed ? 'collapsed' : 'expanded'}`);
+  requestAnimationFrame(observeVisibleArtwork);
+}
+
+function toggleDensity() {
+  state.density = state.density === 'compact' ? 'cinematic' : 'compact';
+  writePreference('density', state.density);
+  applyLayoutPreferences(true);
+}
+
+function toggleSidebar() {
+  state.sidebarCollapsed = !state.sidebarCollapsed;
+  writePreference('sidebar', state.sidebarCollapsed ? 'collapsed' : 'expanded');
+  applyLayoutPreferences(true);
 }
 
 function relative(timestamp) {
@@ -250,11 +300,17 @@ function systemNeedsFirmware(system) {
 }
 
 function currentGames() {
-  let games = state.library.games;
+  let games = [...state.library.games];
   if (state.selectedSystem !== 'all') games = games.filter(game => game.system === state.selectedSystem);
   if (state.view === 'favorites') games = games.filter(game => game.favorite);
-  if (state.view === 'recent') games = games.filter(game => game.lastPlayed).sort((a, b) => b.lastPlayed - a.lastPlayed);
+  if (state.view === 'recent') games = games.filter(game => game.lastPlayed);
   if (state.query) games = games.filter(game => game.title.toLowerCase().includes(state.query));
+
+  const byTitle = (a, b) => a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' });
+  if (state.view === 'recent' || state.sort === 'recent') games.sort((a, b) => Number(b.lastPlayed || 0) - Number(a.lastPlayed || 0) || byTitle(a, b));
+  else if (state.sort === 'system') games.sort((a, b) => (systemById(a.system)?.name || '').localeCompare(systemById(b.system)?.name || '') || byTitle(a, b));
+  else if (state.sort === 'size') games.sort((a, b) => Number(b.size || 0) - Number(a.size || 0) || byTitle(a, b));
+  else games.sort(byTitle);
   return games;
 }
 
@@ -410,14 +466,15 @@ function setFocusedGame(game, options = {}) {
 
 function renderSystems() {
   const allFocused = state.libraryZone === 'systems' && state.focusedLibrarySystem === 'all';
-  const all = `<button class="system ${state.selectedSystem === 'all' ? 'active' : ''} ${allFocused ? 'controller-focus' : ''}" data-id="all"><span class="sys-icon" style="--c:#c8ff52">ALL</span><span class="sys-copy"><b>All games</b><small>Full collection</small></span><span class="count">${state.library.games.length}</span></button>`;
+  const all = `<button class="system ${state.selectedSystem === 'all' ? 'active' : ''} ${allFocused ? 'controller-focus' : ''}" data-id="all" title="All games"><span class="sys-icon" style="--c:#c8ff52">ALL</span><span class="sys-copy"><b>All games</b><small>Full collection</small></span><span class="count">${state.library.games.length}</span></button>`;
   const systems = state.library.systems.map(system => {
     const focused = state.libraryZone === 'systems' && state.focusedLibrarySystem === system.id;
     const art = system.image ? `<img src="${escapeHtml(system.image)}" alt="">` : escapeHtml(system.icon);
     const installed = Number(system.installedCount || 0);
     const total = Number(system.count || 0);
     const countLabel = installed > 0 ? `${installed}/${total}` : String(total);
-    return `<button class="system ${state.selectedSystem === system.id ? 'active' : ''} ${focused ? 'controller-focus' : ''}" data-id="${system.id}" title="${escapeHtml(system.issue || '')}"><span class="sys-icon" style="--c:${system.color}">${art}</span><span class="sys-copy"><b>${escapeHtml(system.name)}</b><small>${systemStatusLabel(system)}</small></span><span class="count">${countLabel}</span></button>`;
+    const title = system.issue ? `${system.name} — ${system.issue}` : system.name;
+    return `<button class="system ${state.selectedSystem === system.id ? 'active' : ''} ${focused ? 'controller-focus' : ''}" data-id="${system.id}" title="${escapeHtml(title)}"><span class="sys-icon" style="--c:${system.color}">${art}</span><span class="sys-copy"><b>${escapeHtml(system.name)}</b><small>${systemStatusLabel(system)}</small></span><span class="count">${countLabel}</span></button>`;
   }).join('');
   $('#systems').innerHTML = all + systems;
 
@@ -427,15 +484,82 @@ function renderSystems() {
   });
 }
 
+function configureEmptyAction(button, label, action, hidden = false) {
+  button.textContent = label;
+  button.dataset.action = action;
+  button.classList.toggle('hidden', hidden);
+}
+
+function renderEmptyState(games) {
+  const empty = $('#empty');
+  empty.classList.toggle('hidden', games.length > 0);
+  if (games.length) return;
+
+  const query = $('#search').value.trim();
+  const selected = systemById(state.selectedSystem);
+  let kicker = 'START YOUR COLLECTION';
+  let title = 'Your deck is ready';
+  let message = 'Browse RGSX or add a legally owned game to your configured library folder.';
+  let primary = ['Browse Discover', 'discover'];
+  let secondary = ['Open game folder', 'folder'];
+
+  if (query) {
+    kicker = 'NO MATCHES';
+    title = `Nothing found for “${query}”`;
+    message = 'Try a shorter title, switch consoles, or clear the search to see the full shelf again.';
+    primary = ['Clear search', 'clear-search'];
+    secondary = ['Browse Discover', 'discover'];
+  } else if (state.view === 'favorites') {
+    kicker = 'YOUR SAVED SHELF';
+    title = 'No favorites yet';
+    message = 'Save any game from its card or spotlight and it will stay one move away here.';
+    primary = ['Browse library', 'library'];
+    secondary = ['Browse Discover', 'discover'];
+  } else if (state.view === 'recent') {
+    kicker = 'PLAY HISTORY';
+    title = 'Nothing played yet';
+    message = 'Launch a game from your library and GameDeck will keep your quickest route back here.';
+    primary = ['Browse library', 'library'];
+    secondary = ['Browse Discover', 'discover'];
+  } else if (selected) {
+    kicker = selected.name.toUpperCase();
+    title = `No ${selected.name} games installed`;
+    message = 'Browse the RGSX catalog for this console or add a legally owned title to its game folder.';
+  }
+
+  $('#emptyKicker').textContent = kicker;
+  $('#emptyTitle').textContent = title;
+  $('#emptyMessage').textContent = message;
+  configureEmptyAction($('#emptyPrimary'), primary[0], primary[1]);
+  configureEmptyAction($('#emptySecondary'), secondary[0], secondary[1]);
+}
+
+function runEmptyAction(action) {
+  if (action === 'clear-search') {
+    state.query = '';
+    $('#search').value = '';
+    render();
+    $('#search').focus();
+  } else if (action === 'library') {
+    state.selectedSystem = 'all';
+    changeView('home');
+  } else if (action === 'discover') {
+    changeView('discover');
+  } else if (action === 'folder') {
+    window.deck.openLibrary();
+  }
+}
+
 function renderGames() {
   const games = currentGames();
+  $('#resultCount').textContent = `${games.length.toLocaleString()} ${games.length === 1 ? 'game' : 'games'}`;
   $('#games').innerHTML = games.map(game => {
     const system = systemById(game.system);
     const active = game.id === state.focusedGameId;
     return `<article class="game ${active ? 'active' : ''}" tabindex="0" role="button" aria-label="Play ${escapeHtml(game.title)} on ${escapeHtml(system?.name || 'GameDeck')}" data-id="${game.id}"><div class="cover" style="--c:${system?.color || '#8992a3'}"><div class="cover-art"><img data-game-art="${game.id}" src="${escapeHtml(gameArt(game))}" alt="${escapeHtml(game.title)} artwork" loading="lazy"></div><span class="cover-system">${escapeHtml(system?.short || 'GAME')}</span><button class="fav ${game.favorite ? 'on' : ''}" aria-label="${game.favorite ? 'Remove favorite' : 'Favorite'}">${game.favorite ? 'SAVED' : 'SAVE'}</button><div class="cover-logo">${escapeHtml(system?.icon || 'G')}</div><div class="cover-title">${escapeHtml(game.title)}</div><button class="play" aria-label="Play ${escapeHtml(game.title)}"><span aria-hidden="true">▶</span> PLAY</button></div><div class="meta"><b title="${escapeHtml(game.title)}">${escapeHtml(game.title)}</b><div class="game-card-facts"><span>${escapeHtml(system?.name || 'Game')}</span><span>${escapeHtml(sizeLabel(game.size))}</span></div><small><span class="ready-dot"></span>${escapeHtml(relative(game.lastPlayed))}</small></div></article>`;
   }).join('');
 
-  $('#empty').classList.toggle('hidden', games.length > 0);
+  renderEmptyState(games);
   $$('.game').forEach(card => {
     const game = games.find(item => item.id === card.dataset.id);
     card.onmouseenter = () => setFocusedGame(game);
@@ -823,7 +947,12 @@ async function openCommunityLink(target) {
 }
 
 function setActiveView(view) {
-  $$('.nav').forEach(button => button.classList.toggle('active', button.dataset.view === view));
+  $$('.nav').forEach(button => {
+    const active = button.dataset.view === view;
+    button.classList.toggle('active', active);
+    if (active) button.setAttribute('aria-current', 'page');
+    else button.removeAttribute('aria-current');
+  });
 }
 
 function render() {
@@ -838,8 +967,11 @@ function render() {
   $('#spotlight').classList.toggle('hidden', discover || community || !focusedGame());
   $('.control-legend').classList.toggle('hidden', community);
   $('.toolbar').classList.toggle('hidden', community);
+  $('#libraryTools').classList.toggle('hidden', discover || community);
   $('#toolbarContext').textContent = discover ? 'DOWNLOADS STAY VISIBLE WHILE YOU BROWSE' : 'CLICK OR PRESS A TO LAUNCH';
   $('#search').placeholder = discover ? 'Search this console catalog' : 'Search your collection';
+  $('#gameSort').value = state.view === 'recent' ? 'recent' : state.sort;
+  $('#gameSort').disabled = state.view === 'recent';
 
   if (community) {
     $('#empty').classList.add('hidden');
@@ -855,7 +987,7 @@ function render() {
 
   const selected = systemById(state.selectedSystem);
   $('#context').textContent = state.view === 'favorites' ? 'YOUR FAVORITES' : state.view === 'recent' ? 'RECENTLY PLAYED' : selected ? selected.name.toUpperCase() : 'ALL SYSTEMS';
-  $('#headline').innerHTML = state.view === 'favorites' ? 'Saved for<br><em>the next run.</em>' : state.view === 'recent' ? 'Jump straight<br><em>back in.</em>' : selected ? `${escapeHtml(selected.name)}<br><em>collection.</em>` : 'Your games.<br><em>One move away.</em>';
+  $('#headline').innerHTML = state.view === 'favorites' ? 'Saved for<br> <em>the next run.</em>' : state.view === 'recent' ? 'Jump straight<br> <em>back in.</em>' : selected ? `${escapeHtml(selected.name)}<br> <em>collection.</em>` : 'Your games.<br> <em>One move away.</em>';
   $('#gameCount').textContent = currentGames().length;
   $('#systemCount').textContent = state.library.systems.filter(system => system.count).length;
   $('#readyCount').textContent = state.library.systems.filter(system => system.ready).length;
@@ -1023,6 +1155,7 @@ function changeView(view) {
   $('#search').value = '';
   if (view === 'discover') state.discoverZone = 'systems';
   else state.libraryZone = 'games';
+  $('.content').scrollTop = 0;
   render();
 }
 
@@ -1128,6 +1261,14 @@ async function refreshCatalogAfterDownload(taskId) {
 }
 
 $$('.nav').forEach(button => button.onclick = () => changeView(button.dataset.view));
+$('#sidebarToggle').onclick = toggleSidebar;
+$('#densityToggle').onclick = toggleDensity;
+$('#gameSort').onchange = event => {
+  if (!GAME_SORTS.has(event.target.value)) return;
+  state.sort = event.target.value;
+  writePreference('sort', state.sort);
+  render();
+};
 $('#search').oninput = event => {
   if (state.view === 'discover') {
     state.catalogQuery = event.target.value.toLowerCase();
@@ -1141,6 +1282,16 @@ $('#search').oninput = event => {
 };
 
 document.onkeydown = event => {
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'b') {
+    event.preventDefault();
+    toggleSidebar();
+    return;
+  }
+  if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'd') {
+    event.preventDefault();
+    toggleDensity();
+    return;
+  }
   if (event.key === '/' && document.activeElement !== $('#search')) {
     event.preventDefault();
     $('#search').focus();
@@ -1151,7 +1302,19 @@ document.onkeydown = event => {
     openConsole($('#debugConsole').classList.contains('hidden'));
     return;
   }
-  if (['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName) && event.key !== 'Escape') return;
+  if (event.key === 'Escape' && document.activeElement === $('#search')) {
+    event.preventDefault();
+    if ($('#search').value) {
+      $('#search').value = '';
+      state.query = '';
+      state.catalogQuery = '';
+      render();
+    } else {
+      $('#search').blur();
+    }
+    return;
+  }
+  if (['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON', 'A'].includes(document.activeElement?.tagName) && event.key !== 'Escape') return;
   if (event.key === 'Escape') { event.preventDefault(); backAction(); return; }
   if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); activateFocused(); return; }
   const direction = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' }[event.key];
@@ -1173,8 +1336,9 @@ $('#rescan').onclick = async () => {
     setLoading(false);
   }
 };
-$('#folder').onclick = $('#emptyFolder').onclick = () => window.deck.openLibrary();
-$('#emptyDiscover').onclick = () => changeView('discover');
+$('#folder').onclick = () => window.deck.openLibrary();
+$('#emptyPrimary').onclick = event => runEmptyAction(event.currentTarget.dataset.action);
+$('#emptySecondary').onclick = event => runEmptyAction(event.currentTarget.dataset.action);
 $('#spotlightPlay').onclick = () => activateFocused();
 $('#spotlightFav').onclick = () => {
   const game = focusedGame();
@@ -1298,6 +1462,8 @@ window.deck.onDownload(download => {
 });
 
 async function init() {
+  applyLayoutPreferences();
+  $('#gameSort').value = state.sort;
   setLoading(true, 'Starting GameDeck', 'Checking RGSX, your emulators, and active transfers.', 12);
   await refreshDiagnostics();
   setLoading(true, 'Reading your library', 'Organizing installed games, favorites, and recent plays.', 48);
@@ -1308,7 +1474,20 @@ async function init() {
   setLoading(false);
   const captureView = new URLSearchParams(window.location.search).get('captureView');
   if (captureView && views.includes(captureView)) changeView(captureView);
-  else if (captureView === 'transfers') {
+  else if (captureView === 'cinematic') {
+    state.density = 'cinematic';
+    applyLayoutPreferences();
+    changeView('home');
+  } else if (captureView === 'empty-search') {
+    changeView('home');
+    $('#search').value = 'Definitely not installed';
+    state.query = $('#search').value.toLowerCase();
+    render();
+  } else if (captureView === 'collapsed') {
+    state.sidebarCollapsed = true;
+    applyLayoutPreferences();
+    changeView('home');
+  } else if (captureView === 'transfers') {
     changeView('discover');
     state.transferExpanded = true;
     state.downloads = [{

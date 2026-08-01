@@ -2,6 +2,16 @@
 
 All notable GameDeck releases are documented here.
 
+## 1.1.0 — 2026-07-31
+
+- Added a shelf-first compact layout that exposes complete game and catalog rows at common laptop sizes.
+- Preserved the original large-format presentation as a persistent Cinematic mode.
+- Added a collapsible systems rail with remembered state and icon-only navigation.
+- Added persistent sorting by title, recent play, console, or file size with live result counts.
+- Added tailored empty states for search, favorites, recent plays, individual consoles, and new libraries.
+- Improved keyboard behavior, active-view semantics, skip navigation, focus handling, and minimum-window responsiveness.
+- Added configurable capture dimensions for repeatable desktop UI regression checks.
+
 ## 1.0.1 — 2026-07-31
 
 - Enabled the public EVM donation card for Ethereum, Base, and Polygon.

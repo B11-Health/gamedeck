@@ -26,6 +26,8 @@ GameDeck does **not** include ROMs, BIOS files, encryption keys, or commercial g
 - Dedicated MAME and FinalBurn Neo catalog handling
 - BIOS-aware readiness checks with real setup locations
 - Cinematic title details, artwork caching, favorites, and recent plays
+- Shelf-first compact mode plus an optional large-format Cinematic view
+- Collapsible systems rail and persistent title, recency, console, or size sorting
 - Visible download, verification, extraction, speed, and ETA states
 - RGSX integration when its optional local runtime is available
 - Privacy-respecting community sponsor placements with a user opt-out
@@ -63,6 +65,14 @@ npm run dist:linux
 ```
 
 GameDeck checks common emulator and library locations automatically. Open **Community → This device** to override the library, RGSX, RetroArch executable, cores, or system/BIOS paths. Path changes apply after restart.
+
+### Keyboard shortcuts
+
+- `/` focuses library or catalog search
+- `Ctrl+B` toggles the systems rail
+- `Ctrl+Shift+D` toggles Cinematic view
+- Arrow keys move between systems and games; `Enter` launches the focused title
+- <code>`</code> opens the activity console; `Escape` backs out or clears search
 
 Environment overrides are also supported: `GAMEDECK_LIBRARY`, `GAMEDECK_RGSX_ROOT`, `GAMEDECK_EMULATION_ROOT`, `GAMEDECK_RETROARCH`, `GAMEDECK_RETROARCH_CORES`, `GAMEDECK_DUCKSTATION`, `GAMEDECK_PCSX2`, `GAMEDECK_PPSSPP`, `GAMEDECK_DOLPHIN`, and `GAMEDECK_CEMU`.
 

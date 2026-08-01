@@ -1342,9 +1342,13 @@ function diagnostics() {
 function createWindow() {
   const workArea = screen.getPrimaryDisplay().workAreaSize;
   const captureMode = process.env.GAMEDECK_CAPTURE === '1';
+  const requestedCaptureWidth = Number(process.env.GAMEDECK_CAPTURE_WIDTH || 0);
+  const requestedCaptureHeight = Number(process.env.GAMEDECK_CAPTURE_HEIGHT || 0);
+  const captureWidth = requestedCaptureWidth > 0 ? Math.max(980, requestedCaptureWidth) : 1500;
+  const captureHeight = requestedCaptureHeight > 0 ? Math.max(650, requestedCaptureHeight) : 900;
   mainWindow = new BrowserWindow({
-    width: Math.min(1500, workArea.width),
-    height: Math.min(900, workArea.height),
+    width: Math.min(captureMode ? captureWidth : 1500, workArea.width),
+    height: Math.min(captureMode ? captureHeight : 900, workArea.height),
     minWidth: 980,
     minHeight: 650,
     show: !captureMode,
