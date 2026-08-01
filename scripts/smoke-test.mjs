@@ -70,6 +70,9 @@ if (!renderer.includes('renderSetupCoach') || !renderer.includes('setupReadiness
 if (!renderer.includes('surpriseMe')) fail('renderer is missing the random playable game action');
 if (!renderer.includes('chooseFocusedArtwork') || !renderer.includes('refreshFocusedDetails')) fail('renderer is missing manual artwork or detail repair controls');
 if (!main.includes('artworkCoverage')) fail('diagnostics are missing artwork coverage');
+if (!renderer.includes('dataset.captureReady') || !main.includes('rendererReady')) fail('UI capture readiness handshake is missing');
+if (!preload.includes('includeLibrary = false')) fail('startup diagnostics must avoid a duplicate library scan');
+if (!main.includes('environmentOverrides') || !main.includes('GAMEDECK_LIBRARY')) fail('explicit environment overrides must take precedence over saved settings');
 if (!pkg.build?.win || !pkg.build?.mac || !pkg.build?.linux) fail('package metadata must configure Windows, macOS, and Linux');
 if (!Array.isArray(donationConfig.methods)) fail('donation methods must be an array');
 if (donationConfig.enabled && donationConfig.methods.length === 0) fail('enabled donations require at least one public method');

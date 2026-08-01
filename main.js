@@ -99,6 +99,18 @@ const defaultSettings = {
   sponsorManifestUrl: 'https://raw.githubusercontent.com/B11-Health/gamedeck/main/sponsors.json'
 };
 const runtimeSettings = { ...defaultSettings, ...readJson(SETTINGS_FILE, {}) };
+const environmentOverrides = {
+  libraryRoot: process.env.GAMEDECK_LIBRARY,
+  rgsxRoot: process.env.GAMEDECK_RGSX_ROOT,
+  emulationRoot: process.env.GAMEDECK_EMULATION_ROOT,
+  retroArchPath: process.env.GAMEDECK_RETROARCH,
+  retroArchCores: process.env.GAMEDECK_RETROARCH_CORES,
+  retroArchSystem: process.env.GAMEDECK_RETROARCH_SYSTEM,
+  mamePath: process.env.GAMEDECK_MAME
+};
+for (const [key, value] of Object.entries(environmentOverrides)) {
+  if (String(value || '').trim()) runtimeSettings[key] = String(value).trim();
+}
 
 const LIBRARY = path.resolve(runtimeSettings.libraryRoot);
 const RA = runtimeSettings.retroArchPath;
@@ -280,6 +292,7 @@ let mameConfiguredRomPaths = null;
 let arcadeAuditTask = null;
 let controllerHintsCache = null;
 const mameMetadataCache = new Map();
+const firmwareInventoryCache = new Map();
 const arcadeAuditCache = readJson(ARCADE_AUDIT_FILE, { version: 1, entries: {}, updatedAt: 0 });
 if (!arcadeAuditCache.entries || typeof arcadeAuditCache.entries !== 'object') arcadeAuditCache.entries = {};
 
@@ -300,9 +313,24 @@ function writeStore(data) {
   fs.writeFileSync(STORE, JSON.stringify(data, null, 2));
 }
 
-function walk(dir, out = []) {
+function walk(dir, out = [], seen = new Set()) {
   if (!fs.existsSync(dir)) return out;
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+  let realDir;
+  try {
+    realDir = fs.realpathSync(dir);
+  } catch {
+    return out;
+  }
+  const key = process.platform === 'win32' ? realDir.toLowerCase() : realDir;
+  if (seen.has(key)) return out;
+  seen.add(key);
+  let entries = [];
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return out;
+  }
+  for (const entry of entries) {
     if (entry.name.startsWith('.')) continue;
     const item = path.join(dir, entry.name);
     let isDirectory = entry.isDirectory();
@@ -313,7 +341,7 @@ function walk(dir, out = []) {
         isDirectory = false;
       }
     }
-    if (isDirectory) walk(item, out);
+    if (isDirectory) walk(item, out, seen);
     else out.push(item);
   }
   return out;
@@ -445,9 +473,23 @@ function toFileUrl(file) {
   return pathToFileURL(file).href;
 }
 
+function firmwareFiles(directory) {
+  const resolved = path.resolve(String(directory || ''));
+  if (!resolved || !fs.existsSync(resolved)) return [];
+  if (firmwareInventoryCache.has(resolved)) return firmwareInventoryCache.get(resolved);
+  const files = walk(resolved).map(file => path.basename(file));
+  firmwareInventoryCache.set(resolved, files);
+  return files;
+}
+
+function invalidateFirmwareInventory(directory = '') {
+  if (!directory) firmwareInventoryCache.clear();
+  else firmwareInventoryCache.delete(path.resolve(directory));
+}
+
 function systemBiosReady(system) {
   if (!system.bios && !system.biosPattern) return true;
-  const files = (system.biosDirs || []).flatMap(directory => walk(directory)).map(file => path.basename(file));
+  const files = (system.biosDirs || []).flatMap(firmwareFiles);
   if (system.bios) {
     const available = new Set(files.map(file => file.toLowerCase()));
     if (system.bios.some(file => available.has(file.toLowerCase()))) return true;
@@ -476,6 +518,7 @@ function restoreFirmwareFromExistingPack(system) {
       encoding: 'utf8',
       timeout: 60000
     });
+    if (extraction.status === 0) invalidateFirmwareInventory(destination);
     if (extraction.status === 0 && systemBiosReady(system)) {
       addActivity('success', `${system.name} firmware restored from the existing RGSX BIOS pack.`);
       return true;
@@ -1810,8 +1853,8 @@ function detectedControllerHints() {
   return controllerHintsCache;
 }
 
-function diagnostics() {
-  const library = getLibrary();
+function diagnostics(includeLibrary = true) {
+  const library = includeLibrary ? getLibrary() : { games: [] };
   const artworkCount = library.games.filter(game => Boolean(game.art)).length;
   return {
     library: LIBRARY,
@@ -1873,8 +1916,16 @@ function createWindow() {
     addActivity('success', 'GameDeck ready');
     const capturePath = String(process.env.GAMEDECK_CAPTURE_PATH || '');
     if (captureMode && capturePath) {
-      setTimeout(async () => {
+      (async () => {
         try {
+          const deadline = Date.now() + 90000;
+          let rendererReady = false;
+          while (Date.now() < deadline && !rendererReady) {
+            rendererReady = await mainWindow.webContents.executeJavaScript("document.body?.dataset.captureReady === 'true'").catch(() => false);
+            if (!rendererReady) await new Promise(resolve => setTimeout(resolve, 500));
+          }
+          if (!rendererReady) addActivity('info', `QA capture timed out waiting for ${captureView || 'default'} readiness.`);
+          await new Promise(resolve => setTimeout(resolve, 700));
           const image = await mainWindow.webContents.capturePage();
           fs.mkdirSync(path.dirname(capturePath), { recursive: true });
           fs.writeFileSync(capturePath, image.toPNG());
@@ -1884,7 +1935,7 @@ function createWindow() {
         } finally {
           app.quit();
         }
-      }, 6000);
+      })();
     }
   });
   mainWindow.webContents.on('console-message', (_, level, message, line, sourceId) => {
@@ -1926,7 +1977,7 @@ ipcMain.handle('artwork', (_, title, systemId, folder) => fetchArtwork(title, sy
 ipcMain.handle('game-details', (_, title, systemId, context) => fetchGameDetails(title, systemId, context));
 ipcMain.handle('refresh-game-details', (_, title, systemId, context) => refreshGameDetails(title, systemId, context));
 ipcMain.handle('choose-game-artwork', (_, file) => chooseGameArtwork(file));
-ipcMain.handle('diagnostics', () => diagnostics());
+ipcMain.handle('diagnostics', (_, includeLibrary) => diagnostics(includeLibrary !== false));
 ipcMain.handle('arcade-audit', (_, force) => auditArcadeLibrary(Boolean(force)));
 ipcMain.handle('settings', () => publicSettings());
 ipcMain.handle('save-settings', (_, changes) => {

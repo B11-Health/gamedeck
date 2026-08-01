@@ -8,6 +8,8 @@ All notable GameDeck releases are documented here.
 - Added a controller-friendly **Surprise me** action for selecting a random playable game from the current shelf.
 - Added manual cover correction and one-click metadata refresh from the selected-game spotlight.
 - Fixed persisted artwork cache discovery when cleaned titles differ from original ROM filenames.
+- Removed a duplicate full-library scan during startup and made UI captures wait for explicit renderer readiness.
+- Fixed settings precedence so explicit `GAMEDECK_*` environment variables now reliably override saved paths.
 - Added local JSON sidecar metadata support for complete descriptions, release details, genre, developer, publisher, rating, and player counts.
 - Expanded artwork discovery across adjacent images, artwork, boxart, covers, and media folders using both filename and cleaned title matches.
 - Added a prominent in-app support rally with one-click donation-address copy, sponsorship inquiry, and funding transparency actions.

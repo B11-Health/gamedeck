@@ -20,6 +20,7 @@ function writePreference(key, value) {
 }
 
 const savedSort = readPreference('sort', 'title');
+const requestedCaptureView = new URLSearchParams(window.location.search).get('captureView');
 
 const state = {
   library: { systems: [], games: [] },
@@ -46,7 +47,7 @@ const state = {
   sponsors: null,
   donations: null,
   diagnostics: null,
-  setupCoachOpen: readPreference('setup-coach', 'auto') === 'open',
+  setupCoachOpen: requestedCaptureView === 'setup' || readPreference('setup-coach', 'auto') === 'open',
   setupCoachDismissed: readPreference('setup-coach', 'auto') === 'dismissed',
   arcadeAudit: { total: 0, verified: 0, attention: 0, unchecked: 0, items: [] },
   arcadeAuditProgress: { running: false, done: 0, total: 0, current: '' },
@@ -1581,13 +1582,13 @@ function renderActivity() {
   output.scrollTop = output.scrollHeight;
 }
 
-async function refreshDiagnostics() {
-  const diagnostics = await window.deck.diagnostics();
+async function refreshDiagnostics(includeLibrary = false) {
+  const diagnostics = await window.deck.diagnostics(includeLibrary);
   state.diagnostics = diagnostics;
   state.controllerHints = diagnostics.controllers || [];
   state.activities = diagnostics.activity || [];
   state.downloads = diagnostics.downloads || [];
-  $('#debugHealth').innerHTML = `<span class="${diagnostics.rgsxRuntime ? 'ok' : 'bad'}">RGSX ${diagnostics.rgsxRuntime ? 'READY' : 'MISSING'}</span><span class="${diagnostics.retroarch ? 'ok' : 'bad'}">RETROARCH ${diagnostics.retroarch ? 'READY' : 'MISSING'}</span><span class="${diagnostics.mame ? 'ok' : 'bad'}">MAME ${diagnostics.mame ? 'READY' : 'MISSING'}</span><span>${diagnostics.arcade?.verified || 0}/${diagnostics.arcade?.total || 0} ARCADE VERIFIED</span><span>${diagnostics.systems.filter(system => system.ready).length} EMULATORS</span><span>${diagnostics.downloads.filter(download => download.status === 'running').length} ACTIVE</span>`;
+  $('#debugHealth').innerHTML = `<span class="${diagnostics.rgsxRuntime ? 'ok' : 'bad'}">RGSX ${diagnostics.rgsxRuntime ? 'READY' : 'MISSING'}</span><span class="${diagnostics.retroarch ? 'ok' : 'bad'}">RETROARCH ${diagnostics.retroarch ? 'READY' : 'MISSING'}</span><span class="${diagnostics.mame ? 'ok' : 'bad'}">MAME ${diagnostics.mame ? 'READY' : 'MISSING'}</span><span>${state.arcadeAudit?.verified || diagnostics.arcade?.verified || 0}/${state.arcadeAudit?.total || diagnostics.arcade?.total || 0} ARCADE VERIFIED</span><span>${diagnostics.systems.filter(system => system.ready).length} EMULATORS</span><span>${diagnostics.downloads.filter(download => download.status === 'running').length} ACTIVE</span>`;
   renderActivity();
   renderDownloads();
 }
@@ -1620,7 +1621,7 @@ async function refreshCatalogAfterDownload(taskId) {
   }
 }
 
-$('.nav').forEach(button => button.onclick = () => changeView(button.dataset.view));
+$$('.nav').forEach(button => button.onclick = () => changeView(button.dataset.view));
 $('#setupToggle').onclick = () => {
   const currentlyVisible = !$('#setupCoach').classList.contains('hidden');
   state.setupCoachOpen = !currentlyVisible;
@@ -1889,7 +1890,7 @@ async function init() {
   setInterval(handleGamepad, 90);
   setLoading(false);
   refreshArcadeAudit(false);
-  const captureView = new URLSearchParams(window.location.search).get('captureView');
+  const captureView = requestedCaptureView;
   if (captureView && views.includes(captureView)) changeView(captureView);
   else if (captureView === 'cinematic') {
     state.density = 'cinematic';
@@ -1939,6 +1940,7 @@ async function init() {
     state.arcadeFilter = 'attention';
     selectLibrarySystem('arcade');
   }
+  if (captureView) document.body.dataset.captureReady = 'true';
 }
 
 init().catch(error => {

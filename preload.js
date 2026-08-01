@@ -15,7 +15,7 @@ contextBridge.exposeInMainWorld('deck', {
   gameDetails: (title, systemId, context) => ipcRenderer.invoke('game-details', title, systemId, context),
   refreshGameDetails: (title, systemId, context) => ipcRenderer.invoke('refresh-game-details', title, systemId, context),
   chooseGameArtwork: file => ipcRenderer.invoke('choose-game-artwork', file),
-  diagnostics: () => ipcRenderer.invoke('diagnostics'),
+  diagnostics: (includeLibrary = false) => ipcRenderer.invoke('diagnostics', includeLibrary),
   arcadeAudit: force => ipcRenderer.invoke('arcade-audit', Boolean(force)),
   settings: () => ipcRenderer.invoke('settings'),
   saveSettings: changes => ipcRenderer.invoke('save-settings', changes),
