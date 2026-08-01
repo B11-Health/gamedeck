@@ -3,7 +3,12 @@
   "version": "1.0.0",
   "description": "A cinematic, local-first launcher for legally owned game libraries on Windows, macOS, and Linux.",
   "main": "main.js",
-  "author": "B11 Health",
+  "author": {
+    "name": "B11 Health",
+    "email": "184023492+B11-Health@users.noreply.github.com",
+    "url": "https://github.com/B11-Health"
+  },
+  "desktopName": "gamedeck.desktop",
   "license": "MIT",
   "homepage": "https://github.com/B11-Health/gamedeck#readme",
   "repository": {
@@ -82,6 +87,8 @@
     "linux": {
       "icon": "build/icons",
       "category": "Game",
+      "maintainer": "B11 Health <184023492+B11-Health@users.noreply.github.com>",
+      "syncDesktopName": true,
       "synopsis": "Local-first game library launcher",
       "target": [
         { "target": "AppImage", "arch": ["x64"] },
