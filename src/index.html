@@ -168,8 +168,8 @@
       </section>
 
       <div class="control-legend" id="controlLegend" data-mode="pointer" aria-label="Input help" aria-live="polite">
-        <span><kbd>CLICK</kbd> Preview / play</span>
-        <span><kbd>HOVER</kbd> Show details</span>
+        <span><kbd>CLICK</kbd> Preview</span>
+        <span><kbd>DOUBLE</kbd> Play</span>
         <span><kbd>☆</kbd> Favorite</span>
         <span><kbd>SCROLL</kbd> Browse</span>
         <span><kbd>/</kbd> Search</span>
@@ -224,7 +224,7 @@
         </div>
       </section>
 
-      <div id="games" class="game-grid"></div>
+      <div id="games" class="game-grid" role="list" aria-label="Game library"></div>
 
       <section id="discover" class="discover hidden">
         <div class="discover-label">
@@ -256,7 +256,7 @@
           </div>
           <span id="catalogCount"></span>
         </div>
-        <div id="catalogGames" class="catalog-grid"></div>
+        <div id="catalogGames" class="catalog-grid" role="list" aria-label="Discover titles"></div>
         <div id="catalogPager" class="catalog-pager hidden">
           <span id="catalogProgress">0 of 0 titles shown</span>
           <button id="catalogMore" type="button">Show next 300</button>

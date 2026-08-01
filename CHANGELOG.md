@@ -4,6 +4,8 @@ All notable GameDeck releases are documented here.
 
 ## [Unreleased]
 
+- Changed Library and Discover cards to preview on single click and act only through Play, Enter/A, or double-click; corrected nested-control semantics.
+
 - Added actionable Ready and Needs Attention transfer states, issue routing, library focus, and dismissible finished items.
 
 - Replaced the raw Activity log with a structured Status Center, issue/success filters, grouped repeats, and copyable diagnostics.

@@ -161,4 +161,17 @@ for (const asset of [
   }
 }
 
+
+const libraryRenderStart = renderer.indexOf('function renderGames()');
+const libraryClickStart = renderer.indexOf('card.onclick = event => {', libraryRenderStart);
+const libraryDoubleStart = renderer.indexOf('card.ondblclick = event => {', libraryClickStart);
+const libraryClickBody = renderer.slice(libraryClickStart, libraryDoubleStart);
+if (libraryClickStart < 0 || libraryDoubleStart < 0 || libraryClickBody.includes('launch(game.file)')) fail('single library card click must only preview');
+const catalogRenderStart = renderer.indexOf('function renderCatalogGames()');
+const catalogClickStart = renderer.indexOf('card.onclick = event => {', catalogRenderStart);
+const catalogDoubleStart = renderer.indexOf('card.ondblclick = event => {', catalogClickStart);
+const catalogClickBody = renderer.slice(catalogClickStart, catalogDoubleStart);
+if (catalogClickStart < 0 || catalogDoubleStart < 0 || catalogClickBody.includes('catalogAction(game)')) fail('single Discover card click must only preview');
+if (!renderer.includes('role="listitem"') || !html.includes('role="list" aria-label="Game library"')) fail('game cards must use non-nested list semantics');
+
 if (!process.exitCode) console.log('GameDeck smoke test passed.');
