@@ -1,0 +1,35 @@
+1
+00:00:00,700 --> 00:00:05,500
+Your games were never meant to disappear into folders.
+
+2
+00:00:05,500 --> 00:00:12,000
+GameDeck brings the collection you legally own into one cinematic, controller-first library.
+
+3
+00:00:12,000 --> 00:00:18,800
+From classic consoles and arcade favorites to modern emulation, every system feels connected.
+
+4
+00:00:18,800 --> 00:00:27,200
+GameDeck scans local files, checks emulator readiness, matches artwork, and puts every title one move away.
+
+5
+00:00:27,200 --> 00:00:34,200
+Browse by system. Search the catalog. Save favorites. Resume recent games.
+
+6
+00:00:34,200 --> 00:00:38,000
+Or let Surprise Me choose what comes next.
+
+7
+00:00:38,000 --> 00:00:45,000
+Setup stays visible. Downloads stay understandable. Your collection stays local-first.
+
+8
+00:00:45,000 --> 00:00:55,700
+Built for Windows, macOS, and Linux, GameDeck is open source, community driven, and designed around the games already yours.
+
+9
+00:00:55,700 --> 00:01:03,000
+This is more than a launcher. It's your library. Your history. Your deck. GameDeck.

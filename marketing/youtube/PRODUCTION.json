@@ -1,8 +1,19 @@
 {
   "video": "GameDeck-Official-Launch.mp4",
-  "resolution": "1280x720",
-  "narration": "Windows SAPI preview fallback",
-  "targetNarrationModel": "gemini-3.1-flash-tts-preview",
-  "background": "generated ambient fallback; intended track Quiet Focus (1).mp3",
-  "generatedAt": "2026-08-01T18:22:54.841Z"
+  "resolution": "1920x1080",
+  "frameRate": 30,
+  "durationSeconds": 64,
+  "narrationModel": "gemini-3.1-flash-tts-preview",
+  "narrationVoice": "Sulafat",
+  "narrationSource": "Gemini API via authenticated Google AI Studio key",
+  "music": "Quiet Focus.mp3",
+  "musicSource": "Suno v4.5-all",
+  "musicRights": "Created on Suno Free Plan; non-commercial preview use only",
+  "mix": {
+    "integratedLoudness": "-14.0 LUFS",
+    "truePeak": "-2.3 dBTP",
+    "sidechainDucking": true,
+    "audioCodec": "AAC 256 kb/s stereo"
+  },
+  "generatedAt": "2026-08-01T18:51:51.527Z"
 }

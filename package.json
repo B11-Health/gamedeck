@@ -30,12 +30,14 @@
     "dist:win": "electron-builder --win --x64 --publish never",
     "dist:mac": "electron-builder --mac --universal --publish never",
     "dist:linux": "electron-builder --linux --x64 --publish never",
-    "wallet:create": "node scripts/create-donation-wallet.mjs"
+    "wallet:create": "node scripts/create-donation-wallet.mjs",
+    "video:youtube": "node scripts/generate-youtube-video.cjs"
   },
   "devDependencies": {
     "electron": "^43.2.0",
     "electron-builder": "26.15.3",
-    "ethers": "6.17.0"
+    "ethers": "6.17.0",
+    "ffmpeg-static": "^5.3.0"
   },
   "build": {
     "appId": "io.gamedeck.launcher",

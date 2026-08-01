@@ -77,4 +77,4 @@ GameDeck is not affiliated with Nintendo, Sony, Microsoft, Sega, Valve, RetroArc
 
 ## Video and channel launch
 
-Channel copy, upload metadata, and the reproducible capture/render workflow are documented in [docs/YOUTUBE_LAUNCH.md](docs/YOUTUBE_LAUNCH.md).
+The current 1080p launch master is available at [marketing/youtube/GameDeck-Official-Launch.mp4](marketing/youtube/GameDeck-Official-Launch.mp4), with a companion subtitle file. Channel copy, upload metadata, audio specifications, licensing notes, and the reproducible Gemini TTS capture/render workflow are documented in [docs/YOUTUBE_LAUNCH.md](docs/YOUTUBE_LAUNCH.md).
