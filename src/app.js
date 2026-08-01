@@ -755,7 +755,7 @@ function enrichNextArtwork() {
 function updateCatalogArtwork(game, url) {
   if (!url) return;
   game.art = url;
-  $(`[data-catalog-art="${game.id}"]`).forEach(image => { image.src = url; });
+  $$(`[data-catalog-art="${game.id}"]`).forEach(image => { image.src = url; });
   document.querySelector(`.catalog-game[data-id="${game.id}"]`)?.classList.remove('art-pending');
   document.querySelector(`.catalog-game[data-id="${game.id}"]`)?.classList.add('has-art');
   const isFeatured = state.focusedCatalogId === game.id || (state.focusedCatalogId == null && currentCatalogGames()[0]?.id === game.id);

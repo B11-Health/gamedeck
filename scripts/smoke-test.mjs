@@ -198,6 +198,9 @@ if (!main.includes('AUTOMATION_MODE') || !main.includes("mainWindow.hide()")) fa
 if (!renderer.includes('GAMEDECK ORIGINAL') || !renderer.includes('function markGeneratedArtwork')) fail('premium generated artwork fallback is missing');
 if (renderer.includes('ART NEEDED')) fail('unmatched titles must use a finished GameDeck-original poster state');
 if (!renderer.includes('generatedArtworkCount')) fail('matched and generated artwork readiness must be reported separately');
+const catalogArtworkUpdate = renderer.slice(renderer.indexOf('function updateCatalogArtwork'), renderer.indexOf('function requestCatalogArtwork'));
+if (!catalogArtworkUpdate.includes('$(`[data-catalog-art=\"${game.id}\"]`).forEach')) fail('catalog artwork updates must use the multi-selector helper');
+if (!renderer.includes('$(`[data-catalog-art=\"${game.id}\"]`).forEach')) fail('catalog artwork updates must use the multi-selector helper');
 if (!main.includes('thumbnailTokens') || !main.includes('tokens.every')) fail('ordered token artwork matching is missing');
 
 if (!process.exitCode) console.log('GameDeck smoke test passed.');
