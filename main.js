@@ -2099,7 +2099,7 @@ function diagnostics(includeLibrary = true) {
     libraryExists: fs.existsSync(LIBRARY),
     libraryGameCount: library.games.length,
     artworkCount,
-    artworkCoverage: library.games.length ? Math.round((artworkCount / library.games.length) * 100) : 0,
+    artworkCoverage: library.games.length ? Math.round((artworkCount / library.games.length) * 1000) / 10 : 0,
     rgsxData: RGSX_DATA,
     rgsxRuntime: fs.existsSync(RGSX_PYTHON),
     retroarch: fs.existsSync(RA),

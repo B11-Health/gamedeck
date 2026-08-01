@@ -1651,7 +1651,7 @@ function setupReadiness() {
   const readyInstalled = installedSystems.filter(system => system.ready);
   const readySystems = systems.filter(system => system.ready);
   const artworkCount = games.filter(game => Boolean(game.art)).length;
-  const artworkCoverage = games.length ? Math.round((artworkCount / games.length) * 100) : 0;
+  const artworkCoverage = games.length ? Math.round((artworkCount / games.length) * 1000) / 10 : 0;
   const generatedArtworkCount = Math.max(0, games.length - artworkCount);
   const pads = navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean) : [];
   const controllerReady = pads.length > 0 || state.controllerHints.length > 0;
@@ -1683,7 +1683,7 @@ function setupReadiness() {
       ready: artworkReady,
       detail: games.length
         ? generatedArtworkCount
-          ? `${artworkCoverage}% matched · ${generatedArtworkCount.toLocaleString()} original GameDeck poster${generatedArtworkCount === 1 ? '' : 's'}.`
+          ? `${Number.isInteger(artworkCoverage) ? artworkCoverage.toFixed(0) : artworkCoverage.toFixed(1)}% source matched · ${generatedArtworkCount.toLocaleString()} original GameDeck poster${generatedArtworkCount === 1 ? '' : 's'}.`
           : '100% matched · every title has source artwork.'
         : 'Artwork matching starts as soon as games are found.'
     },
