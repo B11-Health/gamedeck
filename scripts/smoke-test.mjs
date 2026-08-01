@@ -32,6 +32,13 @@ for (const id of [
   'sidebarToggle',
   'densityToggle',
   'libraryToolbar',
+  'heroResume',
+  'heroDiscover',
+  'spotlightSource',
+  'heroDiscover',
+  'spotlightSource',
+  'heroResumeLabel',
+  'heroResume',
   'loadingPhase',
   'loadingStepLibrary',
   'loadingStepLaunchers',
@@ -80,6 +87,9 @@ if (!renderer.includes('loadingStepLibrary') || !renderer.includes('loadingPhase
 if (html.includes('loading-orbit') || html.includes('loading-console') || styles.includes('loadingSpin') || styles.includes('bootSweep')) fail('legacy animated loading spinner styles must stay removed');
 if (!html.includes('boot-panel') || !styles.includes('.loading-steps')) fail('premium status-driven boot panel is missing');
 if (!renderer.includes('surpriseMe')) fail('renderer is missing the random playable game action');
+if (!renderer.includes('renderHeroActions')) fail('renderer is missing context-aware hero actions');
+if (!renderer.includes('setLaunchingState') || !styles.includes('.game.launching')) fail('launch feedback states are missing');
+if (!renderer.includes('spotlightSource') || !styles.includes('.feature-source')) fail('metadata source feedback is missing');
 if (!renderer.includes('artworkFilter') || !html.includes('id="artworkFilter"')) fail('library artwork quality filter is missing');
 if (!renderer.includes('chooseFocusedArtwork') || !renderer.includes('refreshFocusedDetails')) fail('renderer is missing manual artwork or detail repair controls');
 if (!main.includes('artworkCoverage')) fail('diagnostics are missing artwork coverage');

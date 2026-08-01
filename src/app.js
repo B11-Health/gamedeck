@@ -47,6 +47,8 @@ const state = {
   sponsors: null,
   donations: null,
   diagnostics: null,
+  launchingFile: null,
+  shelfMemory: {},
   setupCoachOpen: requestedCaptureView === 'setup' || readPreference('setup-coach', 'auto') === 'open',
   setupCoachDismissed: readPreference('setup-coach', 'auto') === 'dismissed',
   arcadeAudit: { total: 0, verified: 0, attention: 0, unchecked: 0, items: [] },
@@ -604,10 +606,46 @@ function applyFocusedDetails(game, details) {
   const fallback = fallbackDescription(game.title, system?.name || 'this console', true);
   $('#spotlightDescription').textContent = details.description || fallback;
   $('#spotlightFacts').innerHTML = factMarkup([arcade && game.shortName?.toUpperCase(), system?.short || system?.name, details.year, details.genre, details.players && (details.players + ' player' + (details.players === '1' ? '' : 's')), details.buttons && (details.buttons + ' buttons'), details.developer || details.manufacturer, details.publisher, game.region, game.format, sizeLabel(game.size)]);
+  $('#spotlightSource').textContent = String(details.source || 'GameDeck').toUpperCase();
+  $('#spotlight').classList.remove('details-loading');
+}
+
+function shelfMemoryKey(view = state.view, system = state.selectedSystem) {
+  return view === 'home' ? 'home:' + system : view;
+}
+
+function rememberShelfPosition() {
+  const content = $('.content');
+  if (!content || ['discover', 'community'].includes(state.view)) return;
+  const key = shelfMemoryKey();
+  state.shelfMemory[key] = {
+    ...(state.shelfMemory[key] || {}),
+    scrollTop: content.scrollTop,
+    focusedGameId: state.focusedGameId
+  };
+}
+
+function prepareRememberedShelf() {
+  const remembered = state.shelfMemory[shelfMemoryKey()];
+  state.focusedGameId = remembered?.focusedGameId || null;
+}
+
+function restoreShelfPosition() {
+  const remembered = state.shelfMemory[shelfMemoryKey()];
+  requestAnimationFrame(() => {
+    const content = $('.content');
+    if (!content) return;
+    content.scrollTop = Number(remembered?.scrollTop || 0);
+    updateScrollChrome(content);
+  });
 }
 
 function setFocusedGame(game, options = {}) {
   state.focusedGameId = game?.id ?? null;
+  if (game && !['discover', 'community'].includes(state.view)) {
+    const key = shelfMemoryKey();
+    state.shelfMemory[key] = { ...(state.shelfMemory[key] || {}), focusedGameId: game.id };
+  }
   state.libraryZone = 'games';
   $$('.game').forEach(card => card.classList.toggle('active', card.dataset.id === state.focusedGameId));
   $$('.system').forEach(button => button.classList.remove('controller-focus'));
@@ -625,6 +663,8 @@ function setFocusedGame(game, options = {}) {
   const blocked = arcade && ['damaged', 'incomplete'].includes(game.archiveHealth);
   const fallback = fallbackDescription(game.title, system?.name || 'this console', true);
   const cached = state.gameDetails.get(detailKey(game.artworkTitle || game.title, game.system));
+  spotlight.classList.toggle('details-loading', !cached);
+  $('#spotlightSource').textContent = cached ? String(cached.source || 'GameDeck').toUpperCase() : 'MATCHING DETAILS';
   $('#spotlightSystem').textContent = `${system?.name || 'Game'} / ${blocked ? arcadeHealthLabel(game) : system?.ready ? 'READY TO PLAY' : 'SETUP NEEDED'}`;
   $('#spotlightTitle').textContent = game.title;
   $('#spotlightFacts').innerHTML = factMarkup([arcade && game.shortName?.toUpperCase(), system?.short || system?.name, cached?.year, cached?.players && `${cached.players} player${cached.players === '1' ? '' : 's'}`, cached?.buttons && `${cached.buttons} buttons`, game.format, sizeLabel(game.size)]);
@@ -678,6 +718,8 @@ async function refreshFocusedDetails() {
   const label = button.querySelector('b');
   button.disabled = true;
   label.textContent = 'Refreshing…';
+  $('#spotlight').classList.add('details-loading');
+  $('#spotlightSource').textContent = 'REFRESHING DETAILS';
   const key = detailKey(game.artworkTitle || game.title, game.system);
   state.gameDetails.delete(key);
   try {
@@ -691,6 +733,7 @@ async function refreshFocusedDetails() {
   } finally {
     button.disabled = false;
     label.textContent = 'Details';
+    $('#spotlight').classList.remove('details-loading');
   }
 }
 
@@ -805,7 +848,7 @@ function renderGames() {
       : relative(game.lastPlayed);
     const artStatus = artMissing ? '<span class="art-status">ART NEEDED</span>' : '';
     const stateClasses = [artMissing ? 'missing-art' : 'has-art', game.favorite ? 'is-favorite' : '', game.lastPlayed ? 'is-recent' : '', playable ? 'is-playable' : 'needs-setup'].filter(Boolean).join(' ');
-    return `<article class="game ${stateClasses} ${arcade ? 'arcade-card' : ''} ${blocked ? 'health-attention' : ''} ${active ? 'active' : ''}" style="--delay:${Math.min(index, 14) * 18}ms" tabindex="0" role="button" aria-label="${blocked ? 'Review' : 'Play'} ${escapeHtml(game.title)} on ${escapeHtml(system?.name || 'GameDeck')}" data-id="${game.id}"><div class="cover" style="--c:${system?.color || '#8992a3'}"><div class="cover-art"><img data-game-art="${game.id}" src="${escapeHtml(gameArt(game))}" alt="${escapeHtml(game.title)} artwork" loading="lazy"></div><span class="cover-system">${escapeHtml(system?.short || 'GAME')}</span>${badge}${artStatus}<button class="fav ${game.favorite ? 'on' : ''}" aria-label="${game.favorite ? 'Remove favorite' : 'Favorite'}">${game.favorite ? 'SAVED' : 'SAVE'}</button><div class="cover-logo">${escapeHtml(system?.icon || 'G')}</div><div class="cover-title">${escapeHtml(game.title)}</div><button class="play" aria-label="${blocked ? 'ROM set needs attention' : `Play ${escapeHtml(game.title)}`}" ${blocked ? 'disabled' : ''}><span aria-hidden="true">${blocked ? '!' : '▶'}</span> ${blocked ? 'CHECK' : 'PLAY'}</button></div><div class="meta"><b title="${escapeHtml(game.title)}">${escapeHtml(game.title)}</b><div class="game-card-facts">${facts}</div><small><span class="ready-dot ${playable ? 'ok' : 'setup'}"></span>${escapeHtml(status)}</small></div></article>`;
+    return `<article class="game ${game.file === state.launchingFile ? 'launching' : ''} ${stateClasses} ${arcade ? 'arcade-card' : ''} ${blocked ? 'health-attention' : ''} ${active ? 'active' : ''}" style="--delay:${Math.min(index, 14) * 18}ms" tabindex="0" role="button" aria-label="${blocked ? 'Review' : 'Play'} ${escapeHtml(game.title)} on ${escapeHtml(system?.name || 'GameDeck')}" data-id="${game.id}"><div class="cover" style="--c:${system?.color || '#8992a3'}"><div class="cover-art"><img data-game-art="${game.id}" src="${escapeHtml(gameArt(game))}" alt="${escapeHtml(game.title)} artwork" loading="lazy"></div><span class="cover-system">${escapeHtml(system?.short || 'GAME')}</span>${badge}${artStatus}<button class="fav ${game.favorite ? 'on' : ''}" aria-label="${game.favorite ? 'Remove favorite' : 'Favorite'}">${game.favorite ? 'SAVED' : 'SAVE'}</button><div class="cover-logo">${escapeHtml(system?.icon || 'G')}</div><div class="cover-title">${escapeHtml(game.title)}</div><button class="play" aria-label="${blocked ? 'ROM set needs attention' : `Play ${escapeHtml(game.title)}`}" ${blocked ? 'disabled' : ''}><span aria-hidden="true">${blocked ? '!' : '▶'}</span> ${blocked ? 'CHECK' : 'PLAY'}</button></div><div class="meta"><b title="${escapeHtml(game.title)}">${escapeHtml(game.title)}</b><div class="game-card-facts">${facts}</div><small><span class="ready-dot ${playable ? 'ok' : 'setup'}"></span>${escapeHtml(status)}</small></div></article>`;
   }).join('');
 
   renderEmptyState(games);
@@ -840,15 +883,18 @@ function renderGames() {
 }
 
 function selectLibrarySystem(id) {
+  rememberShelfPosition();
   state.selectedSystem = id;
   state.focusedLibrarySystem = id;
   state.view = 'home';
   state.query = '';
   $('#search').value = '';
   setActiveView('home');
+  prepareRememberedShelf();
   render();
-  const first = currentGames()[0];
-  if (first) setFocusedGame(first);
+  restoreShelfPosition();
+  const remembered = focusedGame() || currentGames()[0];
+  if (remembered) setFocusedGame(remembered);
 }
 
 async function toggleFavorite(game) {
@@ -857,9 +903,28 @@ async function toggleFavorite(game) {
   setFocusedGame(state.library.games.find(item => item.id === game.id) || currentGames()[0] || null);
 }
 
+function setLaunchingState(game, active) {
+  state.launchingFile = active && game ? game.file : null;
+  const card = game ? document.querySelector('.game[data-id="' + game.id + '"]') : null;
+  card?.classList.toggle('launching', active);
+  card?.setAttribute('aria-busy', String(active));
+  const playButton = card?.querySelector('.play');
+  if (playButton) {
+    playButton.disabled = active || ['damaged', 'incomplete'].includes(game.archiveHealth);
+    playButton.innerHTML = active ? '<span aria-hidden="true">↻</span> OPENING' : '<span aria-hidden="true">▶</span> PLAY';
+  }
+  if (game && state.focusedGameId === game.id) {
+    $('#spotlight').classList.toggle('launching', active);
+    $('#spotlightPlay').disabled = active || ['damaged', 'incomplete'].includes(game.archiveHealth);
+    $('#spotlightPlay').textContent = active ? 'Opening…' : ['damaged', 'incomplete'].includes(game.archiveHealth) ? 'Fix ROM set first' : 'Play now';
+  }
+}
+
 async function launch(file) {
+  if (state.launchingFile) return;
+  let game = null;
   try {
-    const game = state.library.games.find(item => item.file === file);
+    game = state.library.games.find(item => item.file === file);
     const system = game ? systemById(game.system) : null;
     if (game && ['damaged', 'incomplete'].includes(game.archiveHealth)) throw Error(game.archiveHealthMessage || 'This ROM set needs attention before launch');
     if (system && !system.ready && (system.issue || '').toLowerCase().includes('firmware')) {
@@ -878,12 +943,17 @@ async function launch(file) {
         return;
       }
     }
-    toast('Launching with the correct emulator...');
+    setLaunchingState(game, true);
+    toast('Opening ' + (game?.title || 'your game') + ' with the correct emulator…', 'progress');
     const result = await window.deck.launch(file);
     if (!result?.ok) throw Error(result?.error || 'Could not launch this game');
-    setTimeout(() => loadLibrary(false), 500);
+    setTimeout(() => {
+      setLaunchingState(game, false);
+      loadLibrary(false);
+    }, 1100);
   } catch (error) {
-    toast(error.message || 'Could not launch this game');
+    setLaunchingState(game, false);
+    toast(error.message || 'Could not launch this game', 'warning');
     openConsole(true);
   }
 }
@@ -1345,6 +1415,33 @@ function openSetupSettings() {
   setTimeout(() => $('#communitySettings')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
 }
 
+function renderHeroActions(selected) {
+  const button = $('#heroResume');
+  const label = $('#heroResumeLabel');
+  const icon = button.querySelector('span');
+  const candidates = state.library.games.filter(game => {
+    const system = systemById(game.system);
+    if (!system?.ready || ['damaged', 'incomplete'].includes(game.archiveHealth)) return false;
+    if (selected && game.system !== selected.id) return false;
+    if (state.view === 'favorites' && !game.favorite) return false;
+    return true;
+  });
+  const recent = [...candidates].filter(game => game.lastPlayed).sort((a, b) => Number(b.lastPlayed) - Number(a.lastPlayed))[0];
+  if (recent) {
+    button.dataset.gameId = recent.id;
+    icon.textContent = '▶';
+    label.textContent = 'Continue ' + recent.title;
+    button.title = 'Launch ' + recent.title;
+  } else {
+    delete button.dataset.gameId;
+    icon.textContent = '✦';
+    label.textContent = candidates.length ? 'Surprise me' : 'Finish setup';
+    button.title = candidates.length ? 'Choose a playable game' : 'Open the ready check';
+  }
+  button.classList.toggle('needs-setup', !candidates.length);
+  $('#heroDiscover').textContent = selected ? 'Discover more ' + (selected.short || selected.name) : 'Browse Discover';
+}
+
 function render() {
   renderSystems();
   setActiveView(state.view);
@@ -1393,6 +1490,7 @@ function render() {
     : selected?.id === 'mame'
       ? 'Standalone MAME takes priority, validates ROM sets, and launches with couch controls.'
       : 'Pick a title and GameDeck chooses the right emulator automatically.';
+  renderHeroActions(selected);
   $('#gameCount').textContent = currentGames().length;
   $('#systemCount').textContent = state.library.systems.filter(system => system.count).length;
   $('#readyCount').textContent = state.library.systems.filter(system => system.ready).length;
@@ -1560,15 +1658,16 @@ function updateScrollChrome(content = $('.content')) {
 }
 
 function changeView(view) {
+  rememberShelfPosition();
   state.view = view;
   state.query = '';
   state.catalogQuery = '';
   $('#search').value = '';
   if (view === 'discover') state.discoverZone = 'systems';
   else state.libraryZone = 'games';
-  $('.content').scrollTop = 0;
-  updateScrollChrome();
+  prepareRememberedShelf();
   render();
+  restoreShelfPosition();
 }
 
 function cycleView(delta = 1) {
@@ -1676,6 +1775,26 @@ async function refreshCatalogAfterDownload(taskId) {
 }
 
 for (const button of document.querySelectorAll('.nav')) button.onclick = () => changeView(button.dataset.view);
+$('#heroResume').onclick = () => {
+  const gameId = $('#heroResume').dataset.gameId;
+  if (gameId) {
+    const game = state.library.games.find(item => item.id === gameId);
+    if (game) {
+      setFocusedGame(game, { scroll: true });
+      launch(game.file);
+      return;
+    }
+  }
+  if ($('#heroResume').classList.contains('needs-setup')) {
+    state.setupCoachOpen = true;
+    state.setupCoachDismissed = false;
+    renderSetupCoach();
+    $('#setupCoach').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
+  surpriseMe();
+};
+$('#heroDiscover').onclick = () => changeView('discover');
 $('#setupToggle').onclick = () => {
   const currentlyVisible = !$('#setupCoach').classList.contains('hidden');
   state.setupCoachOpen = !currentlyVisible;
@@ -1884,6 +2003,10 @@ $('#restartApp').onclick = () => window.deck.restartApp();
 $('.content').addEventListener('scroll', event => {
   const content = event.currentTarget;
   updateScrollChrome(content);
+  if (!['discover', 'community'].includes(state.view)) {
+    const key = shelfMemoryKey();
+    state.shelfMemory[key] = { ...(state.shelfMemory[key] || {}), scrollTop: content.scrollTop };
+  }
   if (state.view === 'discover' && content.scrollHeight - content.scrollTop - content.clientHeight < 500) showMoreCatalog();
 }, { passive: true });
 
