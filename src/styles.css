@@ -3811,3 +3811,62 @@ body.input-controller .catalog-game.active {
   .status-filters button { flex: 1; justify-content: center; }
   .debug-head > div:last-child button:first-child { display: none; }
 }
+
+
+/* Transfer completion and recovery */
+.transfer-summary { grid-template-columns: 39px minmax(0, 1fr) 94px 50px 16px; }
+.transfer-dock.running { border-color: #72e7ff4f; }
+.transfer-dock.complete { border-color: #69e8a04f; }
+.transfer-dock.error { border-color: #f0b75f66; }
+.transfer-dock.running .transfer-glyph { color: #72e7ff; border-color: #72e7ff44; background: #72e7ff12; }
+.transfer-dock.complete .transfer-glyph { color: #07130d; border-color: #69e8a0; background: #69e8a0; box-shadow: 0 0 22px #69e8a026; }
+.transfer-dock.error .transfer-glyph { color: #171109; border-color: #f0b75f; background: #f0b75f; box-shadow: 0 0 22px #f0b75f22; }
+.transfer-dock.complete .transfer-copy small { color: #69e8a0; }
+.transfer-dock.error .transfer-copy small { color: #f0c878; }
+.transfer-dock.complete .transfer-summary > strong { color: #69e8a0; font-size: 8px; letter-spacing: .06em; }
+.transfer-dock.error .transfer-summary > strong { color: #f0b75f; }
+.transfer-item.actionable {
+  margin: 3px 0;
+  padding-right: 7px;
+  padding-left: 7px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: border-color .18s ease, background .18s ease, transform .18s ease;
+}
+.transfer-item.actionable:hover, .transfer-item.actionable:focus-visible {
+  outline: none;
+  border-color: #53647a;
+  background: #121b27;
+  transform: translateY(-1px);
+}
+.transfer-item.complete.actionable:hover, .transfer-item.complete.actionable:focus-visible { border-color: #69e8a04a; background: #69e8a009; }
+.transfer-item.error.actionable:hover, .transfer-item.error.actionable:focus-visible { border-color: #f0b75f55; background: #f0b75f09; }
+.transfer-item.complete > strong { color: #69e8a0; font-size: 7px; letter-spacing: .05em; }
+.transfer-item.error .transfer-item-copy > div > span, .transfer-item.error > strong { color: #f0b75f; }
+.transfer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+  padding: 10px 12px 12px;
+  border-top: 1px solid #ffffff0d;
+  background: #090f16;
+}
+.transfer-actions button {
+  min-height: 32px;
+  padding: 0 11px;
+  border: 1px solid #334154;
+  border-radius: 9px;
+  color: #aeb9c8;
+  background: #111822;
+  font: 800 7px 'Space Grotesk';
+  cursor: pointer;
+}
+.transfer-actions button:hover { color: #eef5fc; border-color: #607089; }
+.transfer-actions #transferOpenLibrary { margin-right: auto; color: #72e7ff; border-color: #72e7ff38; background: #72e7ff0a; }
+@media (max-width: 520px) {
+  .transfer-summary { grid-template-columns: 36px minmax(0, 1fr) 42px 14px; }
+  .transfer-meter { display: none; }
+  .transfer-actions { flex-wrap: wrap; }
+}

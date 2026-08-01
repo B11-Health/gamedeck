@@ -43,6 +43,7 @@ const state = {
   activities: [],
   activityFilter: 'all',
   downloads: [],
+  dismissedDownloads: new Set(),
   activeCatalogTasks: new Map(),
   artworkLoading: new Set(),
   gameDetails: new Map(),
@@ -312,16 +313,45 @@ function downloadForGame(game) {
   return state.downloads.find(download => fileTaskIdentity(download.fileName) === identity && download.status === 'running');
 }
 
+function transferGame(download) {
+  return state.catalogGames.find(item => fileTaskIdentity(item.fileName) === fileTaskIdentity(download.fileName))
+    || state.library.games.find(item => item.title === download.title || fileTaskIdentity(item.file) === fileTaskIdentity(download.fileName));
+}
+
+function openTransferResult(download) {
+  if (!download) return;
+  if (download.status === 'error') {
+    state.activityFilter = 'issues';
+    openConsole(true);
+    setTimeout(renderActivity, 80);
+    return;
+  }
+  const game = transferGame(download);
+  if (game?.file) {
+    state.selectedSystem = game.system;
+    changeView('home');
+    setFocusedGame(game, { scroll: true });
+    toast(`${game.title} is ready in your library`, 'success');
+    return;
+  }
+  window.deck.openLibrary();
+}
+
 function renderDownloads() {
   const now = Date.now();
   const downloads = state.downloads
-    .filter(download => download.status === 'running' || now - Number(download.finishedAt || now) < (download.status === 'error' ? 60000 : 14000))
+    .filter(download => {
+      if (download.status !== 'running' && state.dismissedDownloads.has(download.id)) return false;
+      return download.status === 'running' || now - Number(download.finishedAt || now) < (download.status === 'error' ? 60000 : 14000);
+    })
     .sort((a, b) => Number(b.startedAt || 0) - Number(a.startedAt || 0));
   const running = downloads.filter(download => download.status === 'running');
+  const finished = downloads.filter(download => download.status !== 'running');
   const dock = $('#transferDock');
   updateStatusBadge();
   if (!downloads.length) {
     dock.classList.add('hidden');
+    $('#transferActions').classList.add('hidden');
     return;
   }
 
@@ -333,26 +363,58 @@ function renderDownloads() {
   const speed = primary.speed || '';
   const eta = etaLabel(primary);
   const transferred = primary.totalBytes ? `${transferSize(primary.downloadedBytes)} of ${transferSize(primary.totalBytes)}` : '';
-  const detail = [transferred, speed, eta].filter(Boolean).join(' · ') || primary.message || 'RGSX is preparing the transfer.';
+  const runningDetail = [transferred, speed, eta].filter(Boolean).join(' · ') || primary.message || 'RGSX is preparing the transfer.';
+  const detail = primary.status === 'complete'
+    ? primary.message || 'Added to your library and ready for its final setup check.'
+    : primary.status === 'error'
+      ? primary.error || primary.message || 'Open Issues for the exact transfer detail.'
+      : runningDetail;
 
-  $('#transferKicker').textContent = running.length > 1 ? `${running.length} ACTIVE DOWNLOADS` : primary.status === 'complete' ? 'DOWNLOAD COMPLETE' : primary.status === 'error' ? 'DOWNLOAD NEEDS ATTENTION' : String(primary.stage || 'DOWNLOADING').toUpperCase();
+  const dockState = primary.status === 'error' ? 'error' : running.length ? 'running' : 'complete';
+  dock.classList.remove('running', 'complete', 'error');
+  dock.classList.add(dockState);
+  $('#transferGlyph').textContent = dockState === 'complete' ? '✓' : dockState === 'error' ? '!' : '↓';
+  $('#transferKicker').textContent = running.length > 1
+    ? `${running.length} ACTIVE DOWNLOADS`
+    : primary.status === 'complete'
+      ? 'READY FOR YOUR LIBRARY'
+      : primary.status === 'error'
+        ? 'TRANSFER NEEDS ATTENTION'
+        : String(primary.stage || 'DOWNLOADING').toUpperCase();
   $('#transferTitle').textContent = running.length > 1 ? `${running.length} games are joining your deck` : primary.title;
   $('#transferDetail').textContent = detail;
-  $('#transferPercent').textContent = primary.status === 'error' ? '!' : `${progress}%`;
-  $('#transferBar').style.width = `${progress}%`;
+  $('#transferPercent').textContent = primary.status === 'error' ? '!' : primary.status === 'complete' ? 'READY' : `${progress}%`;
+  $('#transferBar').style.width = `${primary.status === 'complete' ? 100 : progress}%`;
   $('.transfer-meter').classList.toggle('indeterminate', primary.status === 'running' && progress === 0);
   $('#transferSummary').setAttribute('aria-expanded', String(state.transferExpanded));
+  $('#transferSummary').setAttribute('aria-label', `${$('#transferKicker').textContent}: ${primary.title}. ${detail}`);
   dock.classList.toggle('expanded', state.transferExpanded);
   dock.classList.remove('hidden');
 
   $('#transferPanel').innerHTML = downloads.map(download => {
-    const game = state.catalogGames.find(item => fileTaskIdentity(item.fileName) === fileTaskIdentity(download.fileName)) || state.library.games.find(item => item.title === download.title);
+    const game = transferGame(download);
     const art = game?.art || assetFallback(download.title, '#263347', '#10141c');
     const itemProgress = Math.min(100, Math.max(0, Number(download.progress || 0)));
-    const itemDetail = [download.systemName, download.speed, etaLabel(download)].filter(Boolean).join(' · ') || download.message || '';
-    return `<article class="transfer-item ${escapeHtml(download.status)}"><img src="${escapeHtml(art)}" alt=""><div class="transfer-item-copy"><div><b title="${escapeHtml(download.title)}">${escapeHtml(download.title)}</b><span>${escapeHtml(download.stage || download.status)}</span></div><small>${escapeHtml(itemDetail)}</small><div class="transfer-item-track ${download.status === 'running' && itemProgress === 0 ? 'indeterminate' : ''}"><span style="width:${itemProgress}%"></span></div></div><strong>${download.status === 'error' ? '!' : `${Math.round(itemProgress)}%`}</strong></article>`;
+    const itemDetail = [download.systemName, download.speed, etaLabel(download)].filter(Boolean).join(' · ') || download.error || download.message || '';
+    const stage = download.status === 'complete' ? 'Ready' : download.status === 'error' ? 'Needs attention' : download.stage || 'Downloading';
+    const value = download.status === 'error' ? 'FIX' : download.status === 'complete' ? 'READY' : `${Math.round(itemProgress)}%`;
+    const actionable = download.status === 'complete' || download.status === 'error';
+    return `<article class="transfer-item ${escapeHtml(download.status)} ${actionable ? 'actionable' : ''}" data-download-id="${escapeHtml(download.id)}" ${actionable ? 'tabindex="0" role="button"' : ''}><img src="${escapeHtml(art)}" alt=""><div class="transfer-item-copy"><div><b title="${escapeHtml(download.title)}">${escapeHtml(download.title)}</b><span>${escapeHtml(stage)}</span></div><small>${escapeHtml(itemDetail)}</small><div class="transfer-item-track ${download.status === 'running' && itemProgress === 0 ? 'indeterminate' : ''}"><span style="width:${download.status === 'complete' ? 100 : itemProgress}%"></span></div></div><strong>${value}</strong></article>`;
   }).join('');
   $('#transferPanel').classList.toggle('hidden', !state.transferExpanded);
+  $('#transferActions').classList.toggle('hidden', !state.transferExpanded || finished.length === 0);
+  $('#transferDismissFinished').textContent = finished.length === 1 ? 'Dismiss finished' : `Dismiss ${finished.length} finished`;
+
+  document.querySelectorAll('.transfer-item.actionable').forEach(item => {
+    const activate = () => openTransferResult(downloads.find(download => download.id === item.dataset.downloadId));
+    item.onclick = activate;
+    item.onkeydown = event => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        activate();
+      }
+    };
+  });
 
   clearTimeout(transferHideTimer);
   if (!running.length) transferHideTimer = setTimeout(renderDownloads, primary.status === 'error' ? 61000 : 15000);
@@ -2310,6 +2372,13 @@ $('#transferSummary').onclick = () => {
   state.transferExpanded = !state.transferExpanded;
   renderDownloads();
 };
+$('#transferOpenLibrary').onclick = () => window.deck.openLibrary();
+$('#transferDismissFinished').onclick = () => {
+  state.downloads.filter(download => download.status !== 'running').forEach(download => state.dismissedDownloads.add(download.id));
+  if (!state.downloads.some(download => download.status === 'running')) state.transferExpanded = false;
+  renderDownloads();
+  toast('Finished transfers dismissed');
+};
 
 $('#openGithub').onclick = () => openCommunityLink('https://github.com/B11-Health/gamedeck');
 $('#openContributing').onclick = () => openCommunityLink('https://github.com/B11-Health/gamedeck/blob/main/CONTRIBUTING.md');
@@ -2425,10 +2494,12 @@ window.deck.onArcadeAudit(progress => {
   renderArcadeDeck();
 });
 window.deck.onDownload(download => {
+  if (download.status === 'running') state.dismissedDownloads.delete(download.id);
   const index = state.downloads.findIndex(item => item.id === download.id);
   if (index === -1) state.downloads = [download, ...state.downloads];
   else state.downloads[index] = download;
   renderDownloads();
+  if (!$('#debugConsole').classList.contains('hidden')) renderActivity();
 
   const game = state.catalogGames.find(item => fileTaskIdentity(item.fileName) === fileTaskIdentity(download.fileName));
   if (game) {
@@ -2481,6 +2552,16 @@ async function init() {
     state.sidebarCollapsed = true;
     applyLayoutPreferences();
     changeView('home');
+  } else if (captureView === 'transfer-ready') {
+    changeView('home');
+    const now = Date.now();
+    state.transferExpanded = true;
+    state.downloads = [{
+      id: 'qa-ready-transfer', source: 'RGSX QA', folder: 'snes', systemId: 'snes', systemName: 'Super Nintendo',
+      title: 'Chrono Trigger', fileName: 'Chrono Trigger (USA).sfc', status: 'complete', stage: 'Complete',
+      message: 'Added to your library and ready to play.', progress: 100, startedAt: now - 42000, finishedAt: now
+    }];
+    renderDownloads();
   } else if (captureView === 'status') {
     changeView('home');
     const now = Date.now();

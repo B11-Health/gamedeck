@@ -4,6 +4,8 @@ All notable GameDeck releases are documented here.
 
 ## [Unreleased]
 
+- Added actionable Ready and Needs Attention transfer states, issue routing, library focus, and dismissible finished items.
+
 - Replaced the raw Activity log with a structured Status Center, issue/success filters, grouped repeats, and copyable diagnostics.
 
 - Added a clear-search affordance and immediate refresh/scanning feedback in the global header.
