@@ -4,6 +4,8 @@ All notable GameDeck releases are documented here.
 
 ## [Unreleased]
 
+- Replaced the raw Activity log with a structured Status Center, issue/success filters, grouped repeats, and copyable diagnostics.
+
 - Added a clear-search affordance and immediate refresh/scanning feedback in the global header.
 
 - Added live path health, device-readiness summaries, and accurate unsaved-change states to Community settings.

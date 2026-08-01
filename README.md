@@ -46,6 +46,7 @@ GameDeck does **not** include ROMs, BIOS files, encryption keys, or commercial g
 - Hierarchical selected-game actions with one-click cover replacement and metadata refresh
 - Collapsible systems rail and persistent title, recency, console, or size sorting
 - Visible download, verification, extraction, speed, and ETA states
+- Structured Status Center with issue filters, grouped events, and copyable diagnostics
 - RGSX integration when its optional local runtime is available
 - Privacy-respecting community sponsor placements with a user opt-out
 - Public donation addresses only; wallet secrets are never part of the app

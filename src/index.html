@@ -26,7 +26,7 @@
       <button class="header-button view-button" id="densityToggle" type="button" aria-pressed="false" title="Enable cinematic view"><span aria-hidden="true">▦</span><span class="button-label" id="densityLabel">Cinematic</span></button>
       <button class="header-button setup-button" id="setupToggle" type="button" aria-pressed="false" title="Open the GameDeck ready check"><span class="setup-pulse" aria-hidden="true"></span><span class="button-label">Setup</span></button>
       <span class="controller-pill" id="controllerStatus">No controller</span>
-      <button class="header-button activity-button" id="consoleToggle" title="Open activity console">Activity <span id="activityCount" class="activity-count hidden">0</span></button>
+      <button class="header-button activity-button" id="consoleToggle" title="Open status center">Status <span id="activityCount" class="activity-count hidden">0</span></button>
       <button class="header-button compact" id="rescan" title="Rescan library"><span class="refresh-icon" aria-hidden="true">↻</span><span class="button-label" id="rescanLabel">Refresh</span></button>
     </div>
   </header>
@@ -377,16 +377,25 @@
     </section>
   </main>
 
-  <aside class="debug-console hidden" id="debugConsole" aria-label="Activity console">
+  <aside class="debug-console hidden" id="debugConsole" aria-label="GameDeck status center">
     <div class="debug-head">
-      <div><span>GAMEDECK</span><b>Activity console</b></div>
+      <div><span>SYSTEM STATUS</span><b>Status center</b></div>
       <div>
-        <button id="consoleClear">Clear</button>
+        <button id="consoleCopy">Copy report</button>
+        <button id="consoleClear">Clear history</button>
         <button id="consoleClose">Close</button>
       </div>
     </div>
     <div class="debug-health" id="debugHealth"></div>
-    <pre id="debugOutput">Waiting for activity...</pre>
+    <div class="status-toolbar">
+      <div class="status-summary"><b id="statusSummaryTitle">Everything looks quiet</b><span id="statusSummaryMessage">No recent issues or transfers.</span></div>
+      <div class="status-filters" role="group" aria-label="Filter status events">
+        <button class="active" type="button" data-activity-filter="all" aria-pressed="true">All <span id="statusAllCount">0</span></button>
+        <button type="button" data-activity-filter="issues" aria-pressed="false">Issues <span id="statusIssueCount">0</span></button>
+        <button type="button" data-activity-filter="success" aria-pressed="false">Success <span id="statusSuccessCount">0</span></button>
+      </div>
+    </div>
+    <div id="debugOutput" class="activity-list" role="log" aria-live="polite"><div class="activity-empty">Waiting for activity…</div></div>
   </aside>
 
   <section class="transfer-dock hidden" id="transferDock" aria-label="Download activity" aria-live="polite">

@@ -41,6 +41,7 @@ const state = {
   catalogQuery: '',
   catalogFilter: 'all',
   activities: [],
+  activityFilter: 'all',
   downloads: [],
   activeCatalogTasks: new Map(),
   artworkLoading: new Set(),
@@ -318,9 +319,7 @@ function renderDownloads() {
     .sort((a, b) => Number(b.startedAt || 0) - Number(a.startedAt || 0));
   const running = downloads.filter(download => download.status === 'running');
   const dock = $('#transferDock');
-  const badge = $('#activityCount');
-  badge.textContent = String(running.length);
-  badge.classList.toggle('hidden', running.length === 0);
+  updateStatusBadge();
   if (!downloads.length) {
     dock.classList.add('hidden');
     return;
@@ -1963,10 +1962,132 @@ function formatActivity(entry) {
   return `[${time}] ${entry.level.toUpperCase().padEnd(7)} ${entry.message}`;
 }
 
+function activityCategory(entry) {
+  if (entry.level === 'error' || entry.level === 'warning') return 'issues';
+  if (entry.level === 'success') return 'success';
+  return 'info';
+}
+
+function activityGlyph(category) {
+  return category === 'issues' ? '!' : category === 'success' ? '✓' : 'i';
+}
+
+function groupedActivities(entries) {
+  const groups = [];
+  const byKey = new Map();
+  for (const entry of [...entries].reverse()) {
+    const key = `${entry.level}:${entry.message}`;
+    const existing = byKey.get(key);
+    if (existing) {
+      existing.count += 1;
+      continue;
+    }
+    const group = { ...entry, count: 1 };
+    byKey.set(key, group);
+    groups.push(group);
+  }
+  return groups.slice(0, 120);
+}
+
+function updateStatusBadge() {
+  const badge = $('#activityCount');
+  const button = $('#consoleToggle');
+  if (!badge || !button) return;
+  const recentThreshold = Date.now() - (10 * 60 * 1000);
+  const issues = state.activities.filter(entry => activityCategory(entry) === 'issues' && Number(entry.at || 0) >= recentThreshold).length;
+  const running = state.downloads.filter(download => download.status === 'running').length;
+  const value = issues || running;
+  badge.textContent = String(value);
+  badge.classList.toggle('hidden', value === 0);
+  badge.classList.toggle('issue', issues > 0);
+  button.classList.toggle('has-issue', issues > 0);
+  button.classList.toggle('has-transfer', issues === 0 && running > 0);
+  button.title = issues
+    ? `${issues} recent issue${issues === 1 ? '' : 's'} · open status center`
+    : running
+      ? `${running} active transfer${running === 1 ? '' : 's'} · open status center`
+      : 'Open status center';
+}
+
 function renderActivity() {
   const output = $('#debugOutput');
-  output.textContent = state.activities.length ? state.activities.map(formatActivity).join('\n') : 'Waiting for activity...';
-  output.scrollTop = output.scrollHeight;
+  const issueCount = state.activities.filter(entry => activityCategory(entry) === 'issues').length;
+  const successCount = state.activities.filter(entry => activityCategory(entry) === 'success').length;
+  const running = state.downloads.filter(download => download.status === 'running').length;
+  $('#statusAllCount').textContent = String(state.activities.length);
+  $('#statusIssueCount').textContent = String(issueCount);
+  $('#statusSuccessCount').textContent = String(successCount);
+
+  const title = issueCount
+    ? `${issueCount} issue${issueCount === 1 ? '' : 's'} need attention`
+    : running
+      ? `${running} transfer${running === 1 ? '' : 's'} in progress`
+      : state.activities.length
+        ? 'Everything looks healthy'
+        : 'Everything looks quiet';
+  const message = issueCount
+    ? 'Open an issue below for the exact launcher, file, or network detail.'
+    : running
+      ? 'Transfers continue in the dock while you browse.'
+      : state.activities.length
+        ? 'Recent checks and actions completed without a blocking problem.'
+        : 'No recent issues or transfers.';
+  $('#statusSummaryTitle').textContent = title;
+  $('#statusSummaryMessage').textContent = message;
+  $('.status-summary').classList.toggle('attention', issueCount > 0);
+  $('.status-summary').classList.toggle('active', issueCount === 0 && running > 0);
+
+  document.querySelectorAll('[data-activity-filter]').forEach(button => {
+    const active = button.dataset.activityFilter === state.activityFilter;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', String(active));
+  });
+
+  const filtered = state.activities.filter(entry => {
+    if (state.activityFilter === 'issues') return activityCategory(entry) === 'issues';
+    if (state.activityFilter === 'success') return activityCategory(entry) === 'success';
+    return true;
+  });
+  const groups = groupedActivities(filtered);
+  if (!groups.length) {
+    const copy = state.activityFilter === 'issues'
+      ? 'No issues are recorded.'
+      : state.activityFilter === 'success'
+        ? 'No completed actions are recorded yet.'
+        : 'Waiting for activity…';
+    output.innerHTML = `<div class="activity-empty"><span aria-hidden="true">${state.activityFilter === 'issues' ? '✓' : '·'}</span><b>${escapeHtml(copy)}</b><small>GameDeck will add launcher, transfer, and setup events here.</small></div>`;
+  } else {
+    output.innerHTML = groups.map(entry => {
+      const category = activityCategory(entry);
+      const time = new Date(entry.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const count = entry.count > 1 ? `<span class="activity-repeat">×${entry.count}</span>` : '';
+      return `<article class="activity-row ${category}"><span class="activity-glyph" aria-hidden="true">${activityGlyph(category)}</span><div><b>${escapeHtml(entry.message)}</b><small>${time} · ${escapeHtml(String(entry.level || 'info').toUpperCase())}</small></div>${count}</article>`;
+    }).join('');
+  }
+  output.scrollTop = 0;
+  updateStatusBadge();
+}
+
+function diagnosticReport() {
+  const diagnostics = state.diagnostics || {};
+  const systems = (diagnostics.systems || []).map(system => `${system.ready ? 'READY' : 'SETUP'}  ${system.name}${system.issue ? ` — ${system.issue}` : ''}`).join('\n');
+  const activity = state.activities.slice(-80).map(formatActivity).join('\n');
+  return [
+    'GAMEDECK STATUS REPORT',
+    `Generated: ${new Date().toLocaleString()}`,
+    `Version: ${diagnostics.settings?.version || state.settings?.version || 'development'}`,
+    `Platform: ${diagnostics.platform || state.settings?.platform || 'desktop'} ${diagnostics.arch || state.settings?.arch || ''}`.trim(),
+    `Library: ${diagnostics.library || state.settings?.libraryRoot || 'not configured'}`,
+    `RGSX: ${diagnostics.rgsxRuntime ? 'ready' : 'missing'}`,
+    `RetroArch: ${diagnostics.retroarch ? 'ready' : 'missing'}`,
+    `MAME: ${diagnostics.mame ? 'ready' : 'missing'}`,
+    '',
+    'SYSTEMS',
+    systems || 'No system diagnostics available.',
+    '',
+    'RECENT ACTIVITY',
+    activity || 'No activity recorded.'
+  ].join('\n');
 }
 
 async function refreshDiagnostics(includeLibrary = false) {
@@ -2170,6 +2291,16 @@ $('#catalogSetup').onclick = () => setupFocusedSystem();
 $('#catalogMore').onclick = () => showMoreCatalog(true);
 $('#consoleToggle').onclick = () => openConsole($('#debugConsole').classList.contains('hidden'));
 $('#consoleClose').onclick = () => openConsole(false);
+$('#consoleCopy').onclick = async () => {
+  await window.deck.copyText(diagnosticReport());
+  toast('Status report copied', 'success');
+};
+document.querySelectorAll('[data-activity-filter]').forEach(button => {
+  button.onclick = () => {
+    state.activityFilter = button.dataset.activityFilter;
+    renderActivity();
+  };
+});
 $('#consoleClear').onclick = async () => {
   await window.deck.clearActivity();
   state.activities = [];
@@ -2350,6 +2481,25 @@ async function init() {
     state.sidebarCollapsed = true;
     applyLayoutPreferences();
     changeView('home');
+  } else if (captureView === 'status') {
+    changeView('home');
+    const now = Date.now();
+    state.activities = [
+      { id: 'qa-ready', at: now - 8000, level: 'info', message: 'GameDeck ready' },
+      { id: 'qa-issue-1', at: now - 6200, level: 'error', message: 'RetroArch core is missing for Super Nintendo.' },
+      { id: 'qa-issue-2', at: now - 5600, level: 'error', message: 'RetroArch core is missing for Super Nintendo.' },
+      { id: 'qa-success', at: now - 2400, level: 'success', message: 'Custom artwork saved for Chrono Trigger.' }
+    ];
+    state.downloads = [{ id: 'qa-download', status: 'running', title: 'Super Metroid', progress: 44, startedAt: now - 12000 }];
+    state.diagnostics = {
+      platform: 'win32', arch: 'x64', library: 'C:\\Games\\GameDeck', rgsxRuntime: true, retroarch: true, mame: false,
+      settings: { version: '1.1.0' }, systems: [{ name: 'Super Nintendo', ready: false, issue: 'Core missing' }]
+    };
+    $('#debugHealth').innerHTML = '<span class="ok">RGSX READY</span><span class="ok">RETROARCH READY</span><span class="bad">MAME MISSING</span><span>1 ACTIVE</span>';
+    $('#debugConsole').classList.remove('hidden');
+    $('#consoleToggle').classList.add('active');
+    renderActivity();
+    renderDownloads();
   } else if (captureView === 'transfers') {
     changeView('discover');
     state.transferExpanded = true;

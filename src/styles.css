@@ -3703,3 +3703,111 @@ body.input-controller .catalog-game.active {
 @keyframes refreshSpin { to { transform: rotate(360deg); } }
 @media (max-width: 1100px) { .header-button.compact .refresh-icon { margin-right: 0; } .header-button.compact .button-label { display: none; } }
 @media (prefers-reduced-motion: reduce) { .header-button.scanning .refresh-icon { animation: none; } }
+
+
+/* Status center */
+.debug-console { grid-template-rows: auto auto auto minmax(0, 1fr); }
+.debug-head > div:last-child { display: flex; align-items: center; gap: 6px; }
+.debug-head button { white-space: nowrap; }
+.status-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--line);
+  background: #0d131c;
+}
+.status-summary { min-width: 0; display: grid; gap: 3px; }
+.status-summary b { color: #dce6f2; font: 600 12px 'Space Grotesk'; }
+.status-summary span { overflow: hidden; color: #718096; font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+.status-summary.attention b { color: #f0b75f; }
+.status-summary.active b { color: #72e7ff; }
+.status-filters { flex: none; display: flex; align-items: center; gap: 5px; }
+.status-filters button {
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 9px;
+  border: 1px solid #303d4e;
+  border-radius: 999px;
+  color: #8c99ab;
+  background: #0a1018;
+  font: 800 7px 'Space Grotesk';
+  cursor: pointer;
+}
+.status-filters button span {
+  min-width: 16px;
+  padding: 2px 4px;
+  border-radius: 999px;
+  color: #b8c5d6;
+  background: #ffffff0c;
+  text-align: center;
+}
+.status-filters button:hover, .status-filters button.active { color: #eaf2fb; border-color: #607089; background: #131d29; }
+.status-filters button[data-activity-filter=issues].active { color: #f0c878; border-color: #f0b75f55; background: #f0b75f0d; }
+.activity-list {
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  padding: 12px;
+  color: #aeb8c8;
+  background: radial-gradient(circle at 100% 0, #72e7ff08, transparent 32%), #080d14;
+  font: inherit;
+  white-space: normal;
+}
+.activity-row {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 12px;
+  border: 1px solid #293647;
+  border-radius: 13px;
+  background: linear-gradient(135deg, #0f1721, #0b1119);
+  box-shadow: inset 0 1px #ffffff08;
+}
+.activity-glyph {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  color: #071016;
+  background: #72e7ff;
+  font: 900 11px 'Space Grotesk';
+}
+.activity-row > div { min-width: 0; display: grid; gap: 4px; }
+.activity-row b { overflow: hidden; color: #d9e3ee; font-size: 9px; line-height: 1.4; text-overflow: ellipsis; }
+.activity-row small { color: #637187; font: 700 6px 'Space Grotesk'; letter-spacing: .1em; }
+.activity-row.success { border-color: #69e8a024; }
+.activity-row.success .activity-glyph { background: #69e8a0; }
+.activity-row.issues { border-color: #f0b75f38; background: linear-gradient(135deg, #191309, #0d1016); }
+.activity-row.issues .activity-glyph { background: #f0b75f; }
+.activity-repeat { padding: 4px 6px; border-radius: 999px; color: #93a2b5; background: #ffffff0b; font: 800 7px 'Space Grotesk'; }
+.activity-empty {
+  min-height: 240px;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 7px;
+  padding: 30px;
+  color: #718096;
+  text-align: center;
+}
+.activity-empty > span { width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid #39485b; border-radius: 13px; color: #72e7ff; background: #0e1721; font: 800 15px 'Space Grotesk'; }
+.activity-empty b { color: #d6e0ec; font: 600 13px 'Space Grotesk'; }
+.activity-empty small { max-width: 34ch; line-height: 1.5; }
+.activity-count.issue { color: #1b1105; background: #f0b75f; }
+.activity-button.has-issue { color: #f0c878; border-color: #f0b75f4f; }
+.activity-button.has-transfer { color: #72e7ff; border-color: #72e7ff40; }
+@media (max-width: 720px) {
+  .status-toolbar { align-items: flex-start; flex-direction: column; }
+  .status-filters { width: 100%; }
+  .status-filters button { flex: 1; justify-content: center; }
+  .debug-head > div:last-child button:first-child { display: none; }
+}
