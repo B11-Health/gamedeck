@@ -53,7 +53,7 @@ jobs:
             dist/*.zip
             dist/*.AppImage
             dist/*.deb
-            dist/*.yml
+            dist/latest*.yml
             dist/*.blockmap
             dist/SHA256SUMS-*.txt
           if-no-files-found: error
