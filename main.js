@@ -245,7 +245,7 @@ const thumbnailRepos = {
 };
 
 const systems = [
-  { id: 'snes', name: 'Super Nintendo', short: 'SNES', color: '#8b5cf6', folders: ['snes', 'sufami', 'satellaview'], exts: ['.sfc', '.smc', '.zip'], core: coreFile('snes9x_libretro'), icon: 'S' },
+  { id: 'snes', name: 'Super Nintendo', short: 'SNES', color: '#8b5cf6', folders: ['snes', 'sufami', 'satellaview'], exts: ['.sfc', '.smc', '.bs', '.zip'], core: coreFile('snes9x_libretro'), icon: 'S' },
   { id: 'nes', name: 'Nintendo Entertainment System', short: 'NES', color: '#ef4444', folders: ['nes', 'fds'], exts: ['.nes', '.fds', '.zip'], core: coreFile('mesen_libretro'), icon: 'N' },
   { id: 'n64', name: 'Nintendo 64', short: 'N64', color: '#22c55e', folders: ['n64', 'n64dd'], exts: ['.n64', '.z64', '.v64', '.zip'], core: coreFile('mupen64plus_next_libretro'), icon: '64' },
   { id: 'gb', name: 'Game Boy and Color', short: 'GB / GBC', color: '#84cc16', folders: ['gb', 'gbc'], exts: ['.gb', '.gbc', '.zip'], core: coreFile('sameboy_libretro'), icon: 'GB' },
@@ -378,6 +378,22 @@ function normalizeName(value) {
 function fileIdentity(value) {
   const leaf = String(value || '').replace(/\\/g, '/').split('/').pop() || '';
   return leaf.replace(/\.[^.]+$/, '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+}
+
+function catalogFileIdentities(value) {
+  const normalized = String(value || '').replace(/\\/g, '/').replace(/\.[^.]+$/, '');
+  return [...new Set([
+    fileIdentity(value),
+    normalized.toLowerCase().replace(/[^a-z0-9]+/g, '')
+  ].filter(Boolean))];
+}
+
+function installedCatalogFile(installed, value) {
+  for (const identity of catalogFileIdentities(value)) {
+    const file = installed.get(identity);
+    if (file) return file;
+  }
+  return '';
 }
 
 function isArcadeSystem(systemOrId) {
@@ -1267,7 +1283,7 @@ function getCatalogGames(source) {
   const installed = installedFiles(folder);
   return readCatalogRows(file).map((row, index) => {
     const tags = gameTags(row[0]);
-    const installedFile = installed.get(fileIdentity(row[0])) || '';
+    const installedFile = installedCatalogFile(installed, row[0]);
     return {
       id: index,
       name: cleanName(row[0]),
@@ -1294,7 +1310,7 @@ function queueRgsxDownload(source, folder, title, fileName) {
   const available = readJson(platform.gamesFile, []).some(row => row[0] === fileName);
   if (!available) return { ok: false, error: 'The selected game is not present in the current RGSX catalog.' };
 
-  const installed = installedFiles(folder).get(fileIdentity(fileName));
+  const installed = installedCatalogFile(installedFiles(folder), fileName);
   if (installed) {
     return {
       ok: true,

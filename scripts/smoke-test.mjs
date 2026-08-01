@@ -72,6 +72,8 @@ for (const channel of ['settings', 'save-settings', 'sponsors', 'donations', 'op
 }
 
 if (!main.includes('configuredEmulator') || !main.includes("launchMode: 'mame'") || !main.includes("'-nowindow'")) fail('standalone MAME routing is missing');
+if (!main.includes("'.bs'")) fail('Satellaview .bs ROM support is missing');
+if (!main.includes('catalogFileIdentities') || !main.includes('installedCatalogFile')) fail('catalog path identity matching is missing');
 if (!main.includes('inspectArcadeArchive') || !renderer.includes('renderArcadeDeck')) fail('arcade health diagnostics are missing');
 if (!preload.includes('onArcadeAudit')) fail('arcade audit progress bridge is missing');
 
