@@ -42,6 +42,7 @@ GameDeck does **not** include ROMs, BIOS files, encryption keys, or commercial g
 - A prominent, transparent in-app support center for direct donations and founding sponsorships
 - Shelf-first compact mode plus an optional large-format Cinematic view
 - Sticky library controls, precise keyboard focus, artwork-quality filtering, and visible readiness states
+- Explicit clear-search affordance and immediate refresh/scanning feedback
 - Hierarchical selected-game actions with one-click cover replacement and metadata refresh
 - Collapsible systems rail and persistent title, recency, console, or size sorting
 - Visible download, verification, extraction, speed, and ETA states

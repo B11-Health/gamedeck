@@ -27,7 +27,7 @@
       <button class="header-button setup-button" id="setupToggle" type="button" aria-pressed="false" title="Open the GameDeck ready check"><span class="setup-pulse" aria-hidden="true"></span><span class="button-label">Setup</span></button>
       <span class="controller-pill" id="controllerStatus">No controller</span>
       <button class="header-button activity-button" id="consoleToggle" title="Open activity console">Activity <span id="activityCount" class="activity-count hidden">0</span></button>
-      <button class="header-button compact" id="rescan" title="Rescan library">Refresh</button>
+      <button class="header-button compact" id="rescan" title="Rescan library"><span class="refresh-icon" aria-hidden="true">↻</span><span class="button-label" id="rescanLabel">Refresh</span></button>
     </div>
   </header>
 
@@ -181,6 +181,7 @@
             <span class="search-icon" aria-hidden="true">/</span>
             <span class="sr-only">Search games</span>
             <input id="search" placeholder="Search your collection" autocomplete="off" aria-keyshortcuts="/">
+            <button class="search-clear hidden" id="searchClear" type="button" aria-label="Clear search" title="Clear search">×</button>
             <kbd>/</kbd>
           </label>
           <div class="library-tools" id="libraryTools">

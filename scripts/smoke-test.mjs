@@ -32,6 +32,8 @@ for (const id of [
   'sidebarToggle',
   'densityToggle',
   'libraryToolbar',
+  'rescanLabel',
+  'searchClear',
   'settingMameState',
   'settingSystemState',
   'settingCoresState',

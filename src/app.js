@@ -1651,6 +1651,7 @@ function render() {
   $('#catalogFilter').value = state.catalogFilter;
   $('#toolbarContext').textContent = discover ? 'DOWNLOADS STAY VISIBLE WHILE YOU BROWSE' : arcadeSelected() ? 'ARCHIVES ARE CHECKED BEFORE LAUNCH' : 'CLICK OR PRESS A TO LAUNCH';
   $('#search').placeholder = discover ? 'Search this console catalog' : 'Search your collection';
+  updateSearchChrome();
   $('#gameSort').value = state.view === 'recent' ? 'recent' : state.sort;
   $('#gameSort').disabled = state.view === 'recent';
 
@@ -1841,6 +1842,42 @@ async function setupFocusedSystem() {
     state.transferExpanded = true;
     renderDownloads();
   } else toast(result.issue || 'Console is already configured');
+}
+
+function updateSearchChrome() {
+  const search = $('#search');
+  const clear = $('#searchClear');
+  if (!search || !clear) return;
+  const hasQuery = Boolean(search.value.trim());
+  clear.classList.toggle('hidden', !hasQuery);
+  clear.setAttribute('aria-hidden', String(!hasQuery));
+  search.closest('.search')?.classList.toggle('has-query', hasQuery);
+}
+
+function clearSearch(options = {}) {
+  $('#search').value = '';
+  if (state.view === 'discover') {
+    state.catalogQuery = '';
+    state.focusedCatalogId = null;
+    state.catalogLimit = CATALOG_PAGE_SIZE;
+    if (state.catalogSystem) {
+      const memory = state.catalogMemory[state.catalogSystem.id] || {};
+      state.catalogMemory[state.catalogSystem.id] = { ...memory, query: '', limit: state.catalogLimit, focusedCatalogId: null };
+    }
+  } else {
+    state.query = '';
+  }
+  updateSearchChrome();
+  render();
+  if (options.focus) $('#search').focus();
+}
+
+function setRescanBusy(active) {
+  const button = $('#rescan');
+  button.disabled = active;
+  button.classList.toggle('scanning', active);
+  button.setAttribute('aria-busy', String(active));
+  $('#rescanLabel').textContent = active ? 'Scanning' : 'Refresh';
 }
 
 function updateScrollChrome(content = $('.content')) {
@@ -2053,6 +2090,8 @@ $('#search').oninput = event => {
   }
 };
 
+$('#searchClear').onclick = () => clearSearch({ focus: true });
+
 document.onkeydown = event => {
   setInputMode('keyboard');
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'b') {
@@ -2077,14 +2116,8 @@ document.onkeydown = event => {
   }
   if (event.key === 'Escape' && document.activeElement === $('#search')) {
     event.preventDefault();
-    if ($('#search').value) {
-      $('#search').value = '';
-      state.query = '';
-      state.catalogQuery = '';
-      render();
-    } else {
-      $('#search').blur();
-    }
+    if ($('#search').value) clearSearch({ focus: true });
+    else $('#search').blur();
     return;
   }
   if (['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON', 'A'].includes(document.activeElement?.tagName) && event.key !== 'Escape') return;
@@ -2099,6 +2132,7 @@ document.onkeydown = event => {
 };
 
 $('#rescan').onclick = async () => {
+  setRescanBusy(true);
   setLoading(true, 'Refreshing your deck', 'Scanning installed games and matching each title to its console.', 28);
   try {
     state.library = await window.deck.rescan();
@@ -2110,6 +2144,7 @@ $('#rescan').onclick = async () => {
     toast('RGSX library refreshed');
   } finally {
     setLoading(false);
+    setRescanBusy(false);
   }
 };
 $('#arcadeAuditButton').onclick = () => refreshArcadeAudit(true);

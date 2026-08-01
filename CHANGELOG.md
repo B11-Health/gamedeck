@@ -4,6 +4,8 @@ All notable GameDeck releases are documented here.
 
 ## [Unreleased]
 
+- Added a clear-search affordance and immediate refresh/scanning feedback in the global header.
+
 - Added live path health, device-readiness summaries, and accurate unsaved-change states to Community settings.
 
 - Added an input-aware control legend, controller-mode focus feedback, and clear Favorites terminology throughout the library.
