@@ -1962,6 +1962,7 @@ async function fetchLibretroArtwork(title, systemId, folder, cache) {
 
 async function fetchArtwork(title, systemId, folder = '') {
   const platformId = tgdbPlatforms[systemId];
+  const detailTitle = lookupTitleName(title);
   const cache = cachedArtworkPath(title, systemId, folder);
   if (fs.existsSync(cache)) return toFileUrl(cache);
   if (artworkMisses.has(cache)) return '';

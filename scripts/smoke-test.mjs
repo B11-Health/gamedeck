@@ -182,6 +182,7 @@ if (!renderer.includes('role="listitem"') || !html.includes('role="list" aria-la
 
 if (!main.includes("artworkTitle: isArcadeSystem(system) ? title : shortName") || !main.includes('metadataTitle: title')) fail('library games must separate exact artwork identity from clean metadata identity');
 if (!main.includes('thumbnailCdnRepository') || !main.includes('thumbnails.libretro.com')) fail('official Libretro CDN artwork source is missing');
+if (!main.includes("const detailTitle = lookupTitleName(title);")) fail('artwork fallback lookup title must be defined');
 if (!main.includes('revisionNumeric') || !main.includes('inferredRegions')) fail('artwork candidate normalization is missing');
 if (!renderer.includes('function gameMetadataTitle') || !renderer.includes('function scheduleArtworkEnrichment')) fail('background artwork enrichment is missing');
 
