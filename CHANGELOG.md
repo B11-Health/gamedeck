@@ -7,6 +7,7 @@ All notable GameDeck releases are documented here.
 - Replaced the rotating loading spinner with a calm four-stage startup panel for library, launcher, artwork, and control readiness.
 - Added context-aware hero actions that continue the latest playable game, choose a surprise title, or open setup when needed.
 - Added immediate opening-state feedback on game cards and a visible metadata-source badge in the selected-game spotlight.
+- Library shelves now remember focused titles and scroll position when switching views or consoles.
 - Added a zero-hassle ready check for game-library, emulator, artwork, and controller status with direct setup actions.
 - Added a controller-friendly **Surprise me** action for selecting a random playable game from the current shelf.
 - Added manual cover correction and one-click metadata refresh from the selected-game spotlight.

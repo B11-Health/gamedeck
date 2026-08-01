@@ -31,6 +31,7 @@ GameDeck does **not** include ROMs, BIOS files, encryption keys, or commercial g
 - A calm four-stage startup panel that reports library, launcher, artwork, and control readiness
 - Context-aware hero actions for continuing a recent game, choosing a surprise title, or finishing setup
 - Immediate launch feedback and visible metadata-source continuity in the selected-game spotlight
+- Remembers focus and scroll position independently across Library, Favorites, Recent, and console shelves
 - A built-in ready check for library, launcher, artwork, and controller setup
 - One-click **Surprise me** picks a random playable title from the current shelf
 - Manual cover correction and one-click metadata refresh for titles that need a better match
