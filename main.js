@@ -568,6 +568,38 @@ function gameRegion(tags) {
   return tags.find(tag => regions.some(region => new RegExp(`(^|[, ])${region}($|[, ])`, 'i').test(tag))) || '';
 }
 
+function localGameMetadata(title, context = {}) {
+  const file = String(context.file || '');
+  if (!file || !fs.existsSync(file)) return null;
+  const directory = path.dirname(file);
+  const base = path.basename(file, path.extname(file));
+  const candidates = [
+    path.join(directory, `${base}.json`),
+    path.join(directory, `${base}.metadata.json`),
+    path.join(directory, 'metadata', `${base}.json`),
+    path.join(directory, 'media', 'metadata', `${base}.json`)
+  ];
+  const source = candidates.find(candidate => fs.existsSync(candidate));
+  if (!source) return null;
+  const data = readJson(source, null);
+  if (!data || typeof data !== 'object') return null;
+  const description = String(data.description || data.overview || data.summary || '').replace(/\s+/g, ' ').trim();
+  if (!description) return null;
+  const releaseDate = String(data.releaseDate || data.release_date || data.released || '').trim();
+  return {
+    title: String(data.title || data.name || lookupTitleName(title)).trim(),
+    description,
+    releaseDate,
+    year: String(data.year || releaseDate.match(/\b(19|20)\d{2}\b/)?.[0] || '').trim(),
+    players: String(data.players || data.playerCount || '').trim(),
+    rating: String(data.rating || '').trim(),
+    genre: String(data.genre || '').trim(),
+    developer: String(data.developer || '').trim(),
+    publisher: String(data.publisher || '').trim(),
+    source: 'Local metadata'
+  };
+}
+
 function fallbackGameDetails(title, systemId, context = {}) {
   const system = systems.find(item => item.id === systemId);
   const gameTitle = lookupTitleName(title) || String(context.name || 'Selected game');
@@ -591,10 +623,12 @@ function fallbackGameDetails(title, systemId, context = {}) {
 
 async function fetchGameDetails(title, systemId, context = {}) {
   const localArcade = isArcadeSystem(systemId) ? mameGameMetadata(context.shortName || title) : null;
-  const fallback = { ...fallbackGameDetails(title, systemId, context), ...(localArcade || {}) };
+  const localMetadata = localGameMetadata(title, context);
+  const fallback = { ...fallbackGameDetails(title, systemId, context), ...(localArcade || {}), ...(localMetadata || {}) };
   const platformId = tgdbPlatforms[systemId];
   const cacheFile = cachedDetailsPath(title, systemId);
   const cached = readJson(cacheFile, null);
+  if (localMetadata?.description) return localMetadata;
   if (cached?.description) return cached;
   if (!platformId || detailMisses.has(cacheFile) || Date.now() < detailBackoffUntil) return fallback;
   if (detailRequests.has(cacheFile)) return detailRequests.get(cacheFile);
@@ -659,11 +693,12 @@ function resolveGameArt(file, title, systemId, folder) {
   const dir = path.dirname(file);
   const base = path.basename(file, path.extname(file));
   const candidates = [];
+  const artNames = [...new Set([base, title, lookupTitleName(title)].filter(Boolean))];
+  const artFolders = ['', 'images', 'artwork', 'boxart', 'boxarts', 'covers', path.join('media', 'images'), path.join('media', 'boxart'), path.join('media', 'covers')];
   for (const extension of ART_EXTS) {
-    candidates.push(path.join(dir, `${base}${extension}`));
-    candidates.push(path.join(dir, 'images', `${base}${extension}`));
-    candidates.push(path.join(dir, 'media', 'images', `${base}${extension}`));
-    candidates.push(path.join(dir, 'artwork', `${base}${extension}`));
+    for (const artFolder of artFolders) {
+      for (const artName of artNames) candidates.push(path.join(dir, artFolder, `${artName}${extension}`));
+    }
     if (isArcadeSystem(systemId) && MAME && fs.existsSync(MAME)) {
       const mameRoot = path.dirname(MAME);
       for (const mediaFolder of ['flyers', 'snap', 'titles', 'cabinets', 'marquees']) {
@@ -890,6 +925,8 @@ function getLibrary() {
       artworkTitle: title,
       artworkFolder: folder,
       shortName,
+      edition: editionLabel(file),
+      region: gameRegion(gameTags(file)),
       format: path.extname(file).replace('.', '').toUpperCase(),
       archiveHealth: archive?.status || '',
       archiveHealthMessage: archive?.message || '',

@@ -28,6 +28,8 @@ GameDeck does **not** include ROMs, BIOS files, encryption keys, or commercial g
 - Scoped Xbox/XInput arcade profiles that preserve global emulator settings
 - BIOS-aware readiness checks with real setup locations
 - Cinematic title details, artwork caching, favorites, and recent plays
+- Automatic local sidecar metadata (`Game Name.json`, `.metadata.json`, or `metadata/`) plus expanded `boxart`, `covers`, and `media` artwork discovery
+- A prominent, transparent in-app support center for direct donations and founding sponsorships
 - Shelf-first compact mode plus an optional large-format Cinematic view
 - Collapsible systems rail and persistent title, recency, console, or size sorting
 - Visible download, verification, extraction, speed, and ETA states

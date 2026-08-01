@@ -584,11 +584,14 @@ function setFocusedGame(game, options = {}) {
     name: game.title,
     systemName: system?.name,
     shortName: game.shortName,
+    file: game.file,
+    edition: game.edition,
+    region: game.region,
     installed: true
   }, details => {
     if (state.focusedGameId !== game.id) return;
     $('#spotlightDescription').textContent = details.description || fallback;
-    $('#spotlightFacts').innerHTML = factMarkup([arcade && game.shortName?.toUpperCase(), system?.short || system?.name, details.year, details.players && `${details.players} player${details.players === '1' ? '' : 's'}`, details.buttons && `${details.buttons} buttons`, game.format, sizeLabel(game.size)]);
+    $('#spotlightFacts').innerHTML = factMarkup([arcade && game.shortName?.toUpperCase(), system?.short || system?.name, details.year, details.genre, details.players && `${details.players} player${details.players === '1' ? '' : 's'}`, details.buttons && `${details.buttons} buttons`, details.developer || details.manufacturer, game.region, game.format, sizeLabel(game.size)]);
   });
 
   if (options.scroll) {
@@ -1065,6 +1068,9 @@ function populateCommunity() {
   }
 
   const donations = state.donations || {};
+  const primaryDonation = (donations.methods || [])[0];
+  $('#copyDonationAddress').disabled = !primaryDonation?.address;
+  $('#copyDonationAddress').textContent = primaryDonation?.address ? `Copy ${primaryDonation.network || 'donation'} address` : 'Donation address coming soon';
   $('#donationHeadline').textContent = donations.headline || 'Fuel the next build';
   $('#donationMessage').textContent = donations.message || 'Public donation methods are being configured. Wallet secrets never ship with GameDeck.';
   $('#donationMethods').innerHTML = (donations.methods || []).map(method => `
@@ -1543,6 +1549,16 @@ $('#openContributing').onclick = () => openCommunityLink('https://github.com/B11
 $('#openArcadeGuide').onclick = () => openCommunityLink('https://github.com/B11-Health/gamedeck/blob/main/docs/ARCADE.md');
 $('#openArcadeFeedback').onclick = () => openCommunityLink('https://github.com/B11-Health/gamedeck/issues/new/choose');
 $('#openFunding').onclick = () => openCommunityLink('https://github.com/B11-Health/gamedeck/blob/main/FUNDING.md');
+$('#supportTransparency').onclick = () => openCommunityLink('https://github.com/B11-Health/gamedeck/blob/main/FUNDING.md');
+$('#sponsorPrimary').onclick = () => openCommunityLink('https://github.com/B11-Health/gamedeck/issues/new?template=sponsorship.yml');
+$('#copyDonationAddress').onclick = async () => {
+  const method = (state.donations?.methods || [])[0];
+  if (!method?.address) return;
+  await window.deck.copyText(method.address);
+  $('#copyDonationAddress').textContent = 'Address copied';
+  toast('Donation address copied');
+  setTimeout(() => { if ($('#copyDonationAddress')) $('#copyDonationAddress').textContent = `Copy ${method.network || 'donation'} address`; }, 1800);
+};
 $('#sponsorAction').onclick = () => {
   if (state.sponsorTarget) openCommunityLink(state.sponsorTarget);
   else $('#settingSponsors').scrollIntoView({ behavior: 'smooth', block: 'center' });

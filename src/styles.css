@@ -3048,3 +3048,43 @@ body.density-compact .catalog-grid { gap: 15px; }
   .arcade-metrics > div { padding-block: 7px; }
   .arcade-filters { margin-top: 8px; }
 }
+
+
+.support-rally {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(260px, .55fr);
+  gap: 28px;
+  align-items: center;
+  padding: 34px;
+  border: 1px solid #72e7ff4a;
+  border-radius: 25px;
+  background:
+    radial-gradient(circle at 82% 18%, #9b8cff2b, transparent 31%),
+    radial-gradient(circle at 9% 85%, #72e7ff1f, transparent 34%),
+    linear-gradient(135deg, #111b2a, #0a1019 64%);
+  box-shadow: inset 0 1px #ffffff12, 0 28px 70px #0006;
+}
+.support-rally::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(110deg, transparent 25%, #ffffff08 45%, transparent 65%);
+  transform: translateX(-100%);
+  animation: support-sheen 9s ease-in-out infinite;
+}
+@keyframes support-sheen { 0%, 70% { transform: translateX(-110%); } 90%, 100% { transform: translateX(110%); } }
+.support-rally h2 { max-width: 760px; margin: 2px 0 0; font: 650 clamp(28px, 4vw, 46px)/1.02 'Space Grotesk'; letter-spacing: -1.8px; }
+.support-rally p { max-width: 76ch; margin: 15px 0 0; color: #a6b4c6; font-size: 13px; line-height: 1.7; }
+.support-rally-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 23px; }
+.support-rally-actions button { min-height: 44px; padding: 0 17px; border: 1px solid #3a4a5e; border-radius: 12px; color: #edf7ff; background: #111b28; font-size: 10px; font-weight: 800; cursor: pointer; }
+.support-rally-actions button:hover { transform: translateY(-1px); border-color: #72e7ff; }
+.support-rally-actions .primary { color: #061117; border-color: #72e7ff; background: #72e7ff; box-shadow: 0 12px 34px #72e7ff24; }
+.support-rally-actions button:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+.support-rally-proof { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+.support-rally-proof span { min-height: 76px; display: grid; align-content: center; gap: 7px; padding: 14px; border: 1px solid #ffffff14; border-radius: 15px; background: #060b12a8; }
+.support-rally-proof b { color: #72e7ff; font: 750 18px/1 'Space Grotesk'; }
+.support-rally-proof small { color: #97a5b7; font-size: 9px; font-weight: 700; line-height: 1.35; }
+@media (max-width: 900px) { .support-rally { grid-template-columns: 1fr; } }

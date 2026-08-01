@@ -1,3 +1,9 @@
+## [Unreleased]
+
+- Added local JSON sidecar metadata support for complete descriptions, release details, genre, developer, publisher, rating, and player counts.
+- Expanded artwork discovery across adjacent images, artwork, boxart, covers, and media folders using both filename and cleaned title matches.
+- Added a prominent in-app support rally with one-click donation-address copy, sponsorship inquiry, and funding transparency actions.
+
 # Changelog
 
 All notable GameDeck releases are documented here.
