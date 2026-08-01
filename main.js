@@ -970,7 +970,12 @@ function getLibrary() {
   const games = walk(LIBRARY).map(file => {
     const system = detectSystem(file);
     if (!isPlayableFile(file, system)) return null;
-    const stat = fs.statSync(file);
+    let stat;
+    try {
+      stat = fs.statSync(file);
+    } catch {
+      return null;
+    }
     const shortName = rawGameName(file);
     const title = isArcadeSystem(system) ? arcadeDisplayTitle(shortName) : cleanName(file);
     const folder = path.relative(LIBRARY, file).split(path.sep)[0].toLowerCase();
@@ -1693,6 +1698,54 @@ function publicSettings() {
   };
 }
 
+function inspectSettings(changes = {}) {
+  const current = publicSettings();
+  const values = { ...current, ...changes };
+  const specs = {
+    libraryRoot: { kind: 'directory', label: 'Game library', required: true, ready: 'Library folder found', missing: 'Choose an existing game-library folder' },
+    rgsxRoot: { kind: 'directory', label: 'RGSX', required: false, ready: 'RGSX folder found', missing: 'Optional · Discover transfers unavailable' },
+    retroArchPath: { kind: 'file', label: 'RetroArch', required: false, ready: 'RetroArch executable found', missing: 'Optional · standalone emulators may still work' },
+    retroArchCores: { kind: 'directory', label: 'RetroArch cores', required: false, ready: 'Core folder found', missing: 'Optional · needed for RetroArch systems' },
+    retroArchSystem: { kind: 'directory', label: 'System / BIOS', required: false, ready: 'System folder found', missing: 'Optional · firmware checks may need this folder' },
+    mamePath: { kind: 'file', label: 'MAME', required: false, ready: 'Standalone MAME found', missing: 'Optional · current MAME sets use this path' }
+  };
+  const fields = {};
+  for (const [key, spec] of Object.entries(specs)) {
+    const value = String(values[key] || '').trim();
+    let exists = false;
+    let correctKind = false;
+    if (value) {
+      try {
+        const stat = fs.statSync(path.normalize(value));
+        exists = true;
+        correctKind = spec.kind === 'file' ? stat.isFile() : stat.isDirectory();
+      } catch {
+        exists = false;
+      }
+    }
+    const ready = exists && correctKind;
+    fields[key] = {
+      ...spec,
+      value,
+      exists,
+      ready,
+      tone: ready ? 'ok' : spec.required ? 'bad' : 'muted',
+      message: ready ? spec.ready : value && exists ? `Expected a ${spec.kind}` : spec.missing
+    };
+  }
+  const readyCount = Object.values(fields).filter(field => field.ready).length;
+  const requiredReady = Object.values(fields).filter(field => field.required).every(field => field.ready);
+  return {
+    fields,
+    readyCount,
+    total: Object.keys(fields).length,
+    requiredReady,
+    summary: requiredReady
+      ? `${readyCount} of ${Object.keys(fields).length} device paths ready`
+      : 'Choose a valid game-library folder to continue'
+  };
+}
+
 function saveSettings(changes = {}) {
   const current = readJson(SETTINGS_FILE, {});
   const next = { ...current };
@@ -1996,6 +2049,7 @@ ipcMain.handle('choose-game-artwork', (_, file) => chooseGameArtwork(file));
 ipcMain.handle('diagnostics', (_, includeLibrary) => diagnostics(includeLibrary !== false));
 ipcMain.handle('arcade-audit', (_, force) => auditArcadeLibrary(Boolean(force)));
 ipcMain.handle('settings', () => publicSettings());
+ipcMain.handle('inspect-settings', (_, changes) => inspectSettings(changes || {}));
 ipcMain.handle('save-settings', (_, changes) => {
   try {
     return saveSettings(changes);

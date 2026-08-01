@@ -18,6 +18,7 @@ contextBridge.exposeInMainWorld('deck', {
   diagnostics: (includeLibrary = false) => ipcRenderer.invoke('diagnostics', includeLibrary),
   arcadeAudit: force => ipcRenderer.invoke('arcade-audit', Boolean(force)),
   settings: () => ipcRenderer.invoke('settings'),
+  inspectSettings: changes => ipcRenderer.invoke('inspect-settings', changes),
   saveSettings: changes => ipcRenderer.invoke('save-settings', changes),
   chooseDirectory: kind => ipcRenderer.invoke('choose-directory', kind),
   sponsors: () => ipcRenderer.invoke('sponsors'),

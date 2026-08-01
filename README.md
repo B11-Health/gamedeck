@@ -22,6 +22,8 @@ GameDeck does **not** include ROMs, BIOS files, encryption keys, or commercial g
 
 - One local-first library across Windows, macOS, and Linux
 - Controller, keyboard, and mouse navigation
+- Input-aware help that adapts instantly to pointer, keyboard, or controller use
+- Live device-path health with clear required, optional, unsaved, and restart states
 - RetroArch core discovery plus standalone DuckStation, PCSX2, PPSSPP, Dolphin, and Cemu routing
 - Dedicated MAME and FinalBurn Neo catalog handling with pre-launch ROM-set health checks
 - Full arcade names and local year, manufacturer, player, button, and control metadata from installed MAME

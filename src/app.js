@@ -47,10 +47,12 @@ const state = {
   gameDetails: new Map(),
   detailLoading: new Set(),
   settings: null,
+  settingsBaseline: null,
   sponsors: null,
   donations: null,
   diagnostics: null,
   launchingFile: null,
+  inputMode: 'pointer',
   shelfMemory: {},
   setupCoachOpen: requestedCaptureView === 'setup' || readPreference('setup-coach', 'auto') === 'open',
   setupCoachDismissed: readPreference('setup-coach', 'auto') === 'dismissed',
@@ -76,6 +78,8 @@ let artworkActive = 0;
 let detailTimer = null;
 let loadingHideTimer = null;
 let transferHideTimer = null;
+let settingsInspectTimer = null;
+let settingsInspectionRequest = 0;
 const artworkQueue = [];
 const completionRefreshes = new Set();
 
@@ -188,6 +192,32 @@ function cardDescription(game, system) {
 
 function factMarkup(items) {
   return items.filter(Boolean).map(item => `<span>${escapeHtml(item)}</span>`).join('');
+}
+
+const INPUT_LEGENDS = {
+  pointer: [
+    ['CLICK', 'Preview / play'], ['HOVER', 'Show details'], ['☆', 'Favorite'], ['SCROLL', 'Browse'], ['/', 'Search']
+  ],
+  keyboard: [
+    ['ENTER', 'Play'], ['ESC', 'Back'], ['ARROWS', 'Move'], ['/', 'Search'], ['CTRL+B', 'Systems']
+  ],
+  controller: [
+    ['A', 'Select / play'], ['B', 'Back'], ['X', 'Surprise me'], ['Y', 'Setup'], ['D-PAD', 'Move']
+  ]
+};
+
+function setInputMode(mode) {
+  if (!INPUT_LEGENDS[mode]) return;
+  if (state.inputMode === mode && document.body.dataset.inputMode === mode) return;
+  state.inputMode = mode;
+  document.body.dataset.inputMode = mode;
+  document.body.classList.toggle('input-controller', mode === 'controller');
+  document.body.classList.toggle('input-keyboard', mode === 'keyboard');
+  document.body.classList.toggle('input-pointer', mode === 'pointer');
+  const legend = $('#controlLegend');
+  if (!legend) return;
+  legend.dataset.mode = mode;
+  legend.innerHTML = INPUT_LEGENDS[mode].map(([key, label]) => `<span><kbd>${key}</kbd> ${label}</span>`).join('');
 }
 
 function setLoading(active, title = 'Starting GameDeck', message = 'Checking your library and emulator setup.', progress = 8) {
@@ -688,7 +718,7 @@ function setFocusedGame(game, options = {}) {
     : `${relative(game.lastPlayed)} · Opens with ${launcher}${arcade && game.archiveHealth === 'verified' ? ' · Archive verified' : ''}`;
   $('#spotlightPlay').disabled = blocked;
   $('#spotlightPlay').textContent = blocked ? 'Fix ROM set first' : 'Play now';
-  $('#spotlightFav').textContent = game.favorite ? 'Remove save' : 'Save game';
+  $('#spotlightFav').textContent = game.favorite ? 'Remove favorite' : 'Add favorite';
   $('#spotlightArt').innerHTML = `<img src="${escapeHtml(art)}" alt="${escapeHtml(game.title)} cover">`;
   $('#spotlightBackdrop').src = art;
   spotlight.classList.remove('hidden');
@@ -804,7 +834,7 @@ function renderEmptyState(games) {
   } else if (state.view === 'favorites') {
     kicker = 'YOUR SAVED SHELF';
     title = 'No favorites yet';
-    message = 'Save any game from its card or spotlight and it will stay one move away here.';
+    message = 'Favorite any game from its card or spotlight and it will stay one move away here.';
     primary = ['Browse library', 'library'];
     secondary = ['Browse Discover', 'discover'];
   } else if (state.view === 'recent') {
@@ -862,7 +892,7 @@ function renderGames() {
       : relative(game.lastPlayed);
     const artStatus = artMissing ? '<span class="art-status">ART NEEDED</span>' : '';
     const stateClasses = [artMissing ? 'missing-art' : 'has-art', game.favorite ? 'is-favorite' : '', game.lastPlayed ? 'is-recent' : '', playable ? 'is-playable' : 'needs-setup'].filter(Boolean).join(' ');
-    return `<article class="game ${game.file === state.launchingFile ? 'launching' : ''} ${stateClasses} ${arcade ? 'arcade-card' : ''} ${blocked ? 'health-attention' : ''} ${active ? 'active' : ''}" style="--delay:${Math.min(index, 14) * 18}ms" tabindex="0" role="button" aria-label="${blocked ? 'Review' : 'Play'} ${escapeHtml(game.title)} on ${escapeHtml(system?.name || 'GameDeck')}" data-id="${game.id}"><div class="cover" style="--c:${system?.color || '#8992a3'}"><div class="cover-art"><img data-game-art="${game.id}" src="${escapeHtml(gameArt(game))}" alt="${escapeHtml(game.title)} artwork" loading="lazy"></div><span class="cover-system">${escapeHtml(system?.short || 'GAME')}</span>${badge}${artStatus}<button class="fav ${game.favorite ? 'on' : ''}" aria-label="${game.favorite ? 'Remove favorite' : 'Favorite'}">${game.favorite ? 'SAVED' : 'SAVE'}</button><div class="cover-logo">${escapeHtml(system?.icon || 'G')}</div><div class="cover-title">${escapeHtml(game.title)}</div><button class="play" aria-label="${blocked ? 'ROM set needs attention' : `Play ${escapeHtml(game.title)}`}" ${blocked ? 'disabled' : ''}><span aria-hidden="true">${blocked ? '!' : '▶'}</span> ${blocked ? 'CHECK' : 'PLAY'}</button></div><div class="meta"><b title="${escapeHtml(game.title)}">${escapeHtml(game.title)}</b><div class="game-card-facts">${facts}</div><small><span class="ready-dot ${playable ? 'ok' : 'setup'}"></span>${escapeHtml(status)}</small></div></article>`;
+    return `<article class="game ${game.file === state.launchingFile ? 'launching' : ''} ${stateClasses} ${arcade ? 'arcade-card' : ''} ${blocked ? 'health-attention' : ''} ${active ? 'active' : ''}" style="--delay:${Math.min(index, 14) * 18}ms" tabindex="0" role="button" aria-label="${blocked ? 'Review' : 'Play'} ${escapeHtml(game.title)} on ${escapeHtml(system?.name || 'GameDeck')}" data-id="${game.id}"><div class="cover" style="--c:${system?.color || '#8992a3'}"><div class="cover-art"><img data-game-art="${game.id}" src="${escapeHtml(gameArt(game))}" alt="${escapeHtml(game.title)} artwork" loading="lazy"></div><span class="cover-system">${escapeHtml(system?.short || 'GAME')}</span>${badge}${artStatus}<button class="fav ${game.favorite ? 'on' : ''}" aria-label="${game.favorite ? 'Remove favorite' : 'Favorite'}"><span aria-hidden="true">${game.favorite ? '★' : '☆'}</span></button><div class="cover-logo">${escapeHtml(system?.icon || 'G')}</div><div class="cover-title">${escapeHtml(game.title)}</div><button class="play" aria-label="${blocked ? 'ROM set needs attention' : `Play ${escapeHtml(game.title)}`}" ${blocked ? 'disabled' : ''}><span aria-hidden="true">${blocked ? '!' : '▶'}</span> ${blocked ? 'CHECK' : 'PLAY'}</button></div><div class="meta"><b title="${escapeHtml(game.title)}">${escapeHtml(game.title)}</b><div class="game-card-facts">${facts}</div><small><span class="ready-dot ${playable ? 'ok' : 'setup'}"></span>${escapeHtml(status)}</small></div></article>`;
   }).join('');
 
   renderEmptyState(games);
@@ -912,9 +942,11 @@ function selectLibrarySystem(id) {
 }
 
 async function toggleFavorite(game) {
+  const wasFavorite = Boolean(game.favorite);
   state.library = await window.deck.favorite(game.file);
   render();
   setFocusedGame(state.library.games.find(item => item.id === game.id) || currentGames()[0] || null);
+  toast(wasFavorite ? 'Removed from favorites' : 'Added to favorites', 'success');
 }
 
 function setLaunchingState(game, active) {
@@ -1285,6 +1317,84 @@ function shortAddress(value) {
   return address.length > 24 ? `${address.slice(0, 10)}…${address.slice(-8)}` : address;
 }
 
+function readSettingsForm() {
+  return {
+    libraryRoot: $('#settingLibrary').value.trim(),
+    rgsxRoot: $('#settingRgsx').value.trim(),
+    retroArchPath: $('#settingRetroArch').value.trim(),
+    retroArchCores: $('#settingCores').value.trim(),
+    retroArchSystem: $('#settingSystem').value.trim(),
+    mamePath: $('#settingMame').value.trim(),
+    sponsorsEnabled: $('#settingSponsors').checked
+  };
+}
+
+function settingsSignature(value) {
+  const source = value || {};
+  return JSON.stringify({
+    libraryRoot: String(source.libraryRoot || '').trim(),
+    rgsxRoot: String(source.rgsxRoot || '').trim(),
+    retroArchPath: String(source.retroArchPath || '').trim(),
+    retroArchCores: String(source.retroArchCores || '').trim(),
+    retroArchSystem: String(source.retroArchSystem || '').trim(),
+    mamePath: String(source.mamePath || '').trim(),
+    sponsorsEnabled: source.sponsorsEnabled !== false
+  });
+}
+
+function renderSettingsInspection(inspection) {
+  if (!inspection?.fields) return;
+  const fieldTargets = {
+    libraryRoot: '#settingLibraryState',
+    rgsxRoot: '#settingRgsxState',
+    retroArchPath: '#settingRetroArchState',
+    retroArchCores: '#settingCoresState',
+    retroArchSystem: '#settingSystemState',
+    mamePath: '#settingMameState'
+  };
+  for (const [key, selector] of Object.entries(fieldTargets)) {
+    const element = $(selector);
+    const field = inspection.fields[key];
+    if (!element || !field) continue;
+    element.textContent = field.message;
+    element.classList.remove('ok', 'bad', 'muted');
+    element.classList.add(field.tone || 'muted');
+    element.closest('.setting-field')?.classList.toggle('path-ready', Boolean(field.ready));
+  }
+  const readiness = $('#settingsReadiness');
+  readiness.classList.toggle('ready', Boolean(inspection.requiredReady));
+  readiness.classList.toggle('attention', !inspection.requiredReady);
+  $('#settingsReadinessIcon').textContent = inspection.requiredReady ? '✓' : '!';
+  $('#settingsReadinessTitle').textContent = inspection.requiredReady ? inspection.summary : 'Library setup needs attention';
+  $('#settingsReadinessMessage').textContent = inspection.requiredReady
+    ? 'Optional emulator paths can be added as your collection grows.'
+    : inspection.summary;
+}
+
+async function inspectSettingsForm() {
+  const request = ++settingsInspectionRequest;
+  try {
+    const inspection = await window.deck.inspectSettings(readSettingsForm());
+    if (request !== settingsInspectionRequest) return;
+    renderSettingsInspection(inspection);
+  } catch (error) {
+    $('#settingsReadinessTitle').textContent = 'Could not validate paths';
+    $('#settingsReadinessMessage').textContent = error.message || 'Path validation is temporarily unavailable.';
+  }
+}
+
+function updateSettingsDirtyState(options = {}) {
+  if (!state.settingsBaseline) return;
+  const dirty = settingsSignature(readSettingsForm()) !== settingsSignature(state.settingsBaseline);
+  $('#saveSettings').disabled = !dirty;
+  $('#communitySettings').classList.toggle('has-unsaved', dirty);
+  if (!options.preserveStatus) {
+    $('#settingsStatus').textContent = dirty ? 'Unsaved changes' : 'All changes saved';
+  }
+  clearTimeout(settingsInspectTimer);
+  settingsInspectTimer = setTimeout(inspectSettingsForm, options.immediate ? 0 : 240);
+}
+
 function populateCommunity() {
   const settings = state.settings || {};
   $('#settingLibrary').value = settings.libraryRoot || '';
@@ -1295,6 +1405,8 @@ function populateCommunity() {
   $('#settingMame').value = settings.mamePath || '';
   $('#settingSponsors').checked = settings.sponsorsEnabled !== false;
   $('#runtimeBadge').textContent = `${String(settings.platform || 'desktop').toUpperCase()} · ${String(settings.arch || '')} · v${settings.version || 'dev'}`;
+  state.settingsBaseline = readSettingsForm();
+  updateSettingsDirtyState({ immediate: true });
 
   const sponsor = state.sponsors?.placements?.[0];
   const sponsorCard = $('#sponsorCard');
@@ -1793,14 +1905,19 @@ function handleGamepad() {
 
   const pressed = index => Boolean(pad.buttons[index]?.pressed && !gamepadState.buttons[index]);
   const startIndex = pad.mapping === 'standard' ? 9 : 7;
-  if (pressed(0)) activateFocused();
-  if (pressed(1)) backAction();
-  if (pressed(2) && !['discover', 'community'].includes(state.view)) surpriseMe();
-  if (pressed(3)) setupFocusedSystem();
-  if (pressed(4)) cycleView(-1);
-  if (pressed(5)) cycleView(1);
-  if (pressed(8)) openConsole($('#debugConsole').classList.contains('hidden'));
-  if (pressed(startIndex)) cycleView(1);
+  const actions = {
+    select: pressed(0), back: pressed(1), surprise: pressed(2), setup: pressed(3),
+    previous: pressed(4), next: pressed(5), activity: pressed(8), start: pressed(startIndex)
+  };
+  if (direction || Object.values(actions).some(Boolean)) setInputMode('controller');
+  if (actions.select) activateFocused();
+  if (actions.back) backAction();
+  if (actions.surprise && !['discover', 'community'].includes(state.view)) surpriseMe();
+  if (actions.setup) setupFocusedSystem();
+  if (actions.previous) cycleView(-1);
+  if (actions.next) cycleView(1);
+  if (actions.activity) openConsole($('#debugConsole').classList.contains('hidden'));
+  if (actions.start) cycleView(1);
   gamepadState.buttons = [...pad.buttons].map(button => button.pressed);
 }
 
@@ -1937,6 +2054,7 @@ $('#search').oninput = event => {
 };
 
 document.onkeydown = event => {
+  setInputMode('keyboard');
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'b') {
     event.preventDefault();
     toggleSidebar();
@@ -2060,20 +2178,23 @@ $$('[data-browse]').forEach(button => {
       retroArchSystem: '#settingSystem',
       mamePath: '#settingMame'
     }[setting];
-    if (input) $(input).value = result.path;
+    if (input) {
+      $(input).value = result.path;
+      updateSettingsDirtyState({ immediate: true });
+    }
   };
 });
 
+const settingInputs = ['#settingLibrary', '#settingRgsx', '#settingRetroArch', '#settingCores', '#settingSystem', '#settingMame'];
+for (const selector of settingInputs) {
+  $(selector).addEventListener('input', () => updateSettingsDirtyState());
+  $(selector).addEventListener('change', () => updateSettingsDirtyState({ immediate: true }));
+}
+$('#settingSponsors').addEventListener('change', () => updateSettingsDirtyState({ immediate: true }));
+
+
 $('#saveSettings').onclick = async () => {
-  const changes = {
-    libraryRoot: $('#settingLibrary').value,
-    rgsxRoot: $('#settingRgsx').value,
-    retroArchPath: $('#settingRetroArch').value,
-    retroArchCores: $('#settingCores').value,
-    retroArchSystem: $('#settingSystem').value,
-    mamePath: $('#settingMame').value,
-    sponsorsEnabled: $('#settingSponsors').checked
-  };
+  const changes = readSettingsForm();
   $('#saveSettings').disabled = true;
   $('#saveSettings').textContent = 'Saving…';
   try {
@@ -2089,8 +2210,8 @@ $('#saveSettings').onclick = async () => {
     $('#settingsStatus').textContent = error.message;
     toast(error.message);
   } finally {
-    $('#saveSettings').disabled = false;
     $('#saveSettings').textContent = 'Save settings';
+    updateSettingsDirtyState({ preserveStatus: true, immediate: true });
   }
 };
 $('#restartApp').onclick = () => window.deck.restartApp();
@@ -2107,6 +2228,11 @@ $('.content').addEventListener('scroll', event => {
   }
   if (state.view === 'discover' && content.scrollHeight - content.scrollTop - content.clientHeight < 500) showMoreCatalog();
 }, { passive: true });
+
+window.addEventListener('pointermove', event => {
+  if (event.pointerType !== 'touch' && (Math.abs(event.movementX || 0) + Math.abs(event.movementY || 0) > 0)) setInputMode('pointer');
+}, { passive: true });
+window.addEventListener('pointerdown', () => setInputMode('pointer'), { passive: true });
 
 window.addEventListener('gamepadconnected', () => {
   gamepadState.initialized = false;
@@ -2162,6 +2288,7 @@ window.deck.onDownload(download => {
 
 async function init() {
   applyLayoutPreferences();
+  setInputMode('pointer');
   $('#gameSort').value = state.sort;
   setLoading(true, 'Opening your deck', 'Checking local launchers and active transfers.', 10);
   await refreshDiagnostics();

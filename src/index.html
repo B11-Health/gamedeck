@@ -167,13 +167,12 @@
         </div>
       </section>
 
-      <div class="control-legend" aria-label="Controller help">
-        <span><kbd>A</kbd> Select / Play</span>
-        <span><kbd>B</kbd> Back</span>
-        <span><kbd>Y</kbd> Setup</span>
-        <span><kbd>X</kbd> Surprise</span>
-        <span><kbd>D-PAD</kbd> Move</span>
-        <span><kbd>START</kbd> Change view</span>
+      <div class="control-legend" id="controlLegend" data-mode="pointer" aria-label="Input help" aria-live="polite">
+        <span><kbd>CLICK</kbd> Preview / play</span>
+        <span><kbd>HOVER</kbd> Show details</span>
+        <span><kbd>☆</kbd> Favorite</span>
+        <span><kbd>SCROLL</kbd> Browse</span>
+        <span><kbd>/</kbd> Search</span>
       </div>
 
       <div class="toolbar" id="libraryToolbar">
@@ -348,19 +347,24 @@
             <div class="runtime-badge" id="runtimeBadge">Detecting platform…</div>
           </div>
 
+          <div class="settings-readiness" id="settingsReadiness" aria-live="polite">
+            <span class="settings-readiness-icon" id="settingsReadinessIcon" aria-hidden="true">·</span>
+            <span><b id="settingsReadinessTitle">Checking this device</b><small id="settingsReadinessMessage">Validating library and emulator paths.</small></span>
+          </div>
+
           <div class="settings-grid">
-            <label class="setting-field"><span>Game library</span><div><input id="settingLibrary" autocomplete="off"><button type="button" data-browse="libraryRoot">Browse</button></div></label>
-            <label class="setting-field"><span>RGSX root <small>optional outside Windows</small></span><div><input id="settingRgsx" autocomplete="off"><button type="button" data-browse="rgsxRoot">Browse</button></div></label>
-            <label class="setting-field"><span>RetroArch executable</span><div><input id="settingRetroArch" autocomplete="off"><button type="button" data-browse="retroArchPath">Browse</button></div></label>
-            <label class="setting-field"><span>RetroArch cores</span><div><input id="settingCores" autocomplete="off"><button type="button" data-browse="retroArchCores">Browse</button></div></label>
-            <label class="setting-field"><span>RetroArch system / BIOS</span><div><input id="settingSystem" autocomplete="off"><button type="button" data-browse="retroArchSystem">Browse</button></div></label>
-            <label class="setting-field"><span>Standalone MAME <small>recommended for current sets</small></span><div><input id="settingMame" autocomplete="off"><button type="button" data-browse="mamePath">Browse</button></div></label>
+            <label class="setting-field"><span>Game library</span><div><input id="settingLibrary" autocomplete="off"><button type="button" data-browse="libraryRoot">Browse</button></div><small class="setting-state" id="settingLibraryState">Checking path…</small></label>
+            <label class="setting-field"><span>RGSX root <small>optional outside Windows</small></span><div><input id="settingRgsx" autocomplete="off"><button type="button" data-browse="rgsxRoot">Browse</button></div><small class="setting-state" id="settingRgsxState">Checking path…</small></label>
+            <label class="setting-field"><span>RetroArch executable</span><div><input id="settingRetroArch" autocomplete="off"><button type="button" data-browse="retroArchPath">Browse</button></div><small class="setting-state" id="settingRetroArchState">Checking path…</small></label>
+            <label class="setting-field"><span>RetroArch cores</span><div><input id="settingCores" autocomplete="off"><button type="button" data-browse="retroArchCores">Browse</button></div><small class="setting-state" id="settingCoresState">Checking path…</small></label>
+            <label class="setting-field"><span>RetroArch system / BIOS</span><div><input id="settingSystem" autocomplete="off"><button type="button" data-browse="retroArchSystem">Browse</button></div><small class="setting-state" id="settingSystemState">Checking path…</small></label>
+            <label class="setting-field"><span>Standalone MAME <small>recommended for current sets</small></span><div><input id="settingMame" autocomplete="off"><button type="button" data-browse="mamePath">Browse</button></div><small class="setting-state" id="settingMameState">Checking path…</small></label>
             <label class="setting-toggle"><input type="checkbox" id="settingSponsors"><span><b>Show community sponsor placements</b><small>Static creative only; GameDeck does not build advertising profiles.</small></span></label>
           </div>
           <div class="settings-actions">
             <span id="settingsStatus">Changes to paths apply after restart.</span>
             <button id="restartApp" class="hidden">Restart now</button>
-            <button id="saveSettings" class="primary">Save settings</button>
+            <button id="saveSettings" class="primary" disabled>Save settings</button>
           </div>
         </section>
 

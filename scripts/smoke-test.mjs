@@ -32,6 +32,16 @@ for (const id of [
   'sidebarToggle',
   'densityToggle',
   'libraryToolbar',
+  'settingMameState',
+  'settingSystemState',
+  'settingCoresState',
+  'settingRetroArchState',
+  'settingRgsxState',
+  'settingLibraryState',
+  'settingsReadinessMessage',
+  'settingsReadinessTitle',
+  'settingsReadiness',
+  'controlLegend',
   'discoverTools',
   'catalogResultCount',
   'catalogFilter',
@@ -69,7 +79,7 @@ for (const id of [
   if (matches.length !== 1) fail(`expected one #${id}, found ${matches.length}`);
 }
 
-for (const channel of ['settings', 'save-settings', 'sponsors', 'donations', 'open-external', 'arcade-audit', 'refresh-game-details', 'choose-game-artwork']) {
+for (const channel of ['settings', 'save-settings', 'sponsors', 'donations', 'open-external', 'arcade-audit', 'refresh-game-details', 'choose-game-artwork', 'inspect-settings']) {
   if (!main.includes(`'${channel}'`)) fail(`main process is missing ${channel}`);
   const preloadName = channel.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
   if (!preload.includes(preloadName)) fail(`preload bridge is missing ${preloadName}`);
