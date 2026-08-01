@@ -12,4 +12,14 @@ npm run wallet:create
 
 The command requires an interactive terminal, a 12+ character password, and recovery-phrase verification. It writes the encrypted keystore to `Documents/GameDeck Vault`, outside this repository. Back up both the encrypted file and the handwritten recovery phrase before publishing the public address or accepting funds.
 
+## Public EVM donation address
+
+GameDeck's current public receiving address is:
+
+```text
+0x39ed6722B64534e08073cCaefb1000381eAfF9bc
+```
+
+The same receiving address is configured for Ethereum, Base, and Polygon. Verify both the network and the full address before sending, and use a small test transaction first. GameDeck will never ask for a recovery phrase, private key, keystore, or wallet password.
+
 Sponsorships follow the [public placement and privacy rules](docs/SPONSORSHIP.md). Financial support never buys roadmap control, access to user data, or an unlabeled advertisement.

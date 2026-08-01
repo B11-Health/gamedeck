@@ -18,6 +18,7 @@ const [main, preload, renderer, html, pkgText, donations] = await Promise.all([
   read('config/donations.json')
 ]);
 const pkg = JSON.parse(pkgText);
+const donationConfig = JSON.parse(donations);
 
 for (const id of ['games', 'discover', 'community', 'sponsorCard', 'donationMethods', 'settingLibrary']) {
   const matches = html.match(new RegExp(`id=["']${id}["']`, 'g')) || [];
@@ -33,7 +34,23 @@ for (const channel of ['settings', 'save-settings', 'sponsors', 'donations', 'op
 if (/C:\\\\Users\\\\[^'"\s]+/i.test(main)) fail('main.js contains a personal Windows user path');
 if (!renderer.includes("'community'")) fail('renderer view cycle is missing Community');
 if (!pkg.build?.win || !pkg.build?.mac || !pkg.build?.linux) fail('package metadata must configure Windows, macOS, and Linux');
-if (!Array.isArray(JSON.parse(donations).methods)) fail('donation methods must be an array');
+if (!Array.isArray(donationConfig.methods)) fail('donation methods must be an array');
+if (donationConfig.enabled && donationConfig.methods.length === 0) fail('enabled donations require at least one public method');
+
+const forbiddenWalletFields = new Set(['privatekey', 'mnemonic', 'seed', 'recoveryphrase', 'keystore', 'password']);
+const inspectDonationFields = value => {
+  if (!value || typeof value !== 'object') return;
+  for (const [key, nested] of Object.entries(value)) {
+    if (forbiddenWalletFields.has(key.toLowerCase())) fail(`donation config contains forbidden wallet field: ${key}`);
+    inspectDonationFields(nested);
+  }
+};
+inspectDonationFields(donationConfig);
+
+for (const method of donationConfig.methods) {
+  if (!method?.label || !method?.address) fail('each donation method requires a label and public address');
+  if (method.id === 'evm' && !/^0x[0-9a-fA-F]{40}$/.test(method.address)) fail('EVM donation address is malformed');
+}
 
 for (const asset of [
   'assets/branding/gamedeck-mark-source.png',

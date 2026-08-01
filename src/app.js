@@ -766,7 +766,7 @@ function populateCommunity() {
   $('#settingCores').value = settings.retroArchCores || '';
   $('#settingSystem').value = settings.retroArchSystem || '';
   $('#settingSponsors').checked = settings.sponsorsEnabled !== false;
-  $('#runtimeBadge').textContent = `${String(settings.platform || 'desktop').toUpperCase()} · ${String(settings.arch || '')} · v${settings.version || '1.0.0'}`;
+  $('#runtimeBadge').textContent = `${String(settings.platform || 'desktop').toUpperCase()} · ${String(settings.arch || '')} · v${settings.version || 'dev'}`;
 
   const sponsor = state.sponsors?.placements?.[0];
   const sponsorCard = $('#sponsorCard');
@@ -790,7 +790,8 @@ function populateCommunity() {
   $('#donationMessage').textContent = donations.message || 'Public donation methods are being configured. Wallet secrets never ship with GameDeck.';
   $('#donationMethods').innerHTML = (donations.methods || []).map(method => `
     <button type="button" class="donation-method" data-address="${escapeHtml(method.address)}" title="Copy ${escapeHtml(method.label)} address">
-      <b>${escapeHtml(method.label)}</b><code>${escapeHtml(shortAddress(method.address))}</code><span>COPY</span>
+      <b>${escapeHtml(method.label)}<small>${escapeHtml(method.network || 'Public receiving address')}</small></b>
+      <code>${escapeHtml(shortAddress(method.address))}</code><span>COPY</span>
     </button>`).join('');
   $$('.donation-method').forEach(button => {
     button.onclick = async () => {

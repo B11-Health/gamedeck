@@ -2348,7 +2348,8 @@ main > aside {
   text-align: left;
   cursor: pointer;
 }
-.donation-method b { font-size: 10px; }
+.donation-method b { display: grid; gap: 3px; font-size: 10px; }
+.donation-method b small { margin: 0; color: #68768a; font-size: 7px; font-weight: 700; letter-spacing: .04em; }
 .donation-method code { overflow: hidden; color: #7e8ca0; font: 9px ui-monospace, monospace; text-overflow: ellipsis; white-space: nowrap; }
 .donation-method span { color: #72e7ff; font-size: 8px; font-weight: 800; }
 

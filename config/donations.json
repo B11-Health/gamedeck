@@ -1,6 +1,14 @@
 {
-  "enabled": false,
+  "enabled": true,
   "headline": "Fuel the next build",
-  "message": "A public donation address will appear here after the maintainer completes the secure local wallet setup. No wallet secret is ever bundled with GameDeck.",
-  "methods": []
+  "message": "Support open GameDeck development with a direct EVM donation. Confirm the network and receiving address before sending; wallet secrets never ship with the app.",
+  "methods": [
+    {
+      "id": "evm",
+      "label": "EVM donation",
+      "network": "Ethereum · Base · Polygon",
+      "address": "0x39ed6722B64534e08073cCaefb1000381eAfF9bc",
+      "explorerUrl": "https://etherscan.io/address/0x39ed6722B64534e08073cCaefb1000381eAfF9bc"
+    }
+  ]
 }
