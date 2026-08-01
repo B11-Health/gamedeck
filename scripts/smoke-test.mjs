@@ -68,6 +68,7 @@ if (!renderer.includes('GAME_SORTS')) fail('renderer is missing persistent libra
 if (!renderer.includes('sidebar-collapsed')) fail('renderer is missing the collapsible systems rail');
 if (!renderer.includes('renderSetupCoach') || !renderer.includes('setupReadiness')) fail('renderer is missing the zero-hassle ready check');
 if (!renderer.includes('surpriseMe')) fail('renderer is missing the random playable game action');
+if (!renderer.includes('artworkFilter') || !html.includes('id="artworkFilter"')) fail('library artwork quality filter is missing');
 if (!renderer.includes('chooseFocusedArtwork') || !renderer.includes('refreshFocusedDetails')) fail('renderer is missing manual artwork or detail repair controls');
 if (!main.includes('artworkCoverage')) fail('diagnostics are missing artwork coverage');
 if (!renderer.includes('dataset.captureReady') || !main.includes('rendererReady')) fail('UI capture readiness handshake is missing');

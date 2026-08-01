@@ -42,16 +42,34 @@
     </aside>
 
     <section class="content" id="mainContent" tabindex="-1">
-      <section class="loading-stage" id="appLoading" aria-live="polite" aria-label="Loading GameDeck">
-        <div class="loading-orbit" aria-hidden="true"><span><img src="../assets/branding/gamedeck-mark-source.png" alt=""></span></div>
-        <div class="loading-copy">
-          <div class="eyebrow">PREPARING YOUR DECK</div>
-          <h2 id="loadingTitle">Starting GameDeck</h2>
-          <p id="loadingMessage">Checking your library and emulator setup.</p>
-          <div class="loading-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="8" id="loadingTrack">
-            <span id="loadingBar" style="width:8%"></span>
+      <section class="loading-stage" id="appLoading" aria-live="polite" aria-label="Preparing GameDeck">
+        <div class="loading-ambient" aria-hidden="true"><span></span><span></span><span></span></div>
+        <div class="boot-panel">
+          <div class="boot-visual" aria-hidden="true">
+            <div class="boot-mark"><img src="../assets/branding/gamedeck-mark-source.png" alt=""></div>
+            <div class="boot-cards">
+              <span style="--i:0"><i>PLAY</i></span>
+              <span style="--i:1"><i>DISCOVER</i></span>
+              <span style="--i:2"><i>REPEAT</i></span>
+            </div>
+            <small>YOUR LIBRARY · ONE MOVE AWAY</small>
           </div>
-          <small id="loadingPercent">8%</small>
+          <div class="loading-copy">
+            <div class="loading-kicker"><span>GAMEDECK STARTUP</span><b id="loadingPhase">STEP 1 OF 4</b></div>
+            <h2 id="loadingTitle">Starting GameDeck</h2>
+            <p id="loadingMessage">Checking your library and emulator setup.</p>
+            <div class="loading-steps" aria-label="Startup progress">
+              <div class="loading-step active" id="loadingStepLibrary"><i></i><span><b>Library</b><small>Finding your games</small></span></div>
+              <div class="loading-step" id="loadingStepLaunchers"><i></i><span><b>Launchers</b><small>Checking play routes</small></span></div>
+              <div class="loading-step" id="loadingStepArtwork"><i></i><span><b>Artwork</b><small>Building the shelves</small></span></div>
+              <div class="loading-step" id="loadingStepControls"><i></i><span><b>Controls</b><small>Preparing couch mode</small></span></div>
+            </div>
+            <div class="loading-progress-row">
+              <div class="loading-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="8" id="loadingTrack"><span id="loadingBar" style="width:8%"></span></div>
+              <small id="loadingPercent">8%</small>
+            </div>
+            <div class="loading-foot"><span>LOCAL-FIRST</span><span>NO ACCOUNT REQUIRED</span><span>YOUR GAMES STAY YOURS</span></div>
+          </div>
         </div>
       </section>
 
@@ -160,7 +178,7 @@
           </label>
           <div class="library-tools" id="libraryTools">
             <button class="surprise-button" id="surpriseMe" type="button" title="Choose a random playable game"><span aria-hidden="true">✦</span> Surprise me</button>
-            <span class="result-count" id="resultCount" aria-live="polite">0 games</span>
+            <label class="sort-control quality-filter"><span>Show</span><select id="artworkFilter" aria-label="Filter library by artwork"><option value="all">All games</option><option value="missing-art">Missing artwork</option></select></label><span class="result-count" id="resultCount" aria-live="polite">0 games</span>
             <label class="sort-control">
               <span>Sort</span>
               <select id="gameSort" aria-label="Sort games">

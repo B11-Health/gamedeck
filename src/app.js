@@ -52,6 +52,7 @@ const state = {
   arcadeAudit: { total: 0, verified: 0, attention: 0, unchecked: 0, items: [] },
   arcadeAuditProgress: { running: false, done: 0, total: 0, current: '' },
   arcadeFilter: 'all',
+  artworkFilter: readPreference('artwork-filter', 'all') === 'missing-art' ? 'missing-art' : 'all',
   controllerHints: [],
   sponsorTarget: '',
   transferExpanded: false,
@@ -334,6 +335,7 @@ function currentGames() {
   if (state.view === 'favorites') games = games.filter(game => game.favorite);
   if (state.view === 'recent') games = games.filter(game => game.lastPlayed);
   if (state.query) games = games.filter(game => game.title.toLowerCase().includes(state.query) || String(game.shortName || '').toLowerCase().includes(state.query));
+  if (state.artworkFilter === 'missing-art') games = games.filter(game => !game.art);
   if (arcadeSelected() && state.arcadeFilter === 'verified') games = games.filter(game => game.archiveHealth === 'verified');
   if (arcadeSelected() && state.arcadeFilter === 'attention') games = games.filter(game => ['damaged', 'incomplete'].includes(game.archiveHealth));
 
@@ -439,7 +441,7 @@ function renderArcadeDeck() {
   $('#arcadeAuditButton').disabled = Boolean(progress.running);
   $('#arcadeAuditButton').textContent = progress.running ? `Scanning ${percent}%` : 'Scan ROM-set health';
 
-  $$('[data-arcade-filter]').forEach(button => {
+  $('[data-arcade-filter]').forEach(button => {
     const active = button.dataset.arcadeFilter === state.arcadeFilter;
     button.classList.toggle('active', active);
     button.setAttribute('aria-pressed', String(active));
@@ -1621,7 +1623,7 @@ async function refreshCatalogAfterDownload(taskId) {
   }
 }
 
-$$('.nav').forEach(button => button.onclick = () => changeView(button.dataset.view));
+for (const button of document.querySelectorAll('.nav')) button.onclick = () => changeView(button.dataset.view);
 $('#setupToggle').onclick = () => {
   const currentlyVisible = !$('#setupCoach').classList.contains('hidden');
   state.setupCoachOpen = !currentlyVisible;
@@ -1644,6 +1646,13 @@ $('#setupCheck').onclick = () => runReadyCheck();
 $('#surpriseMe').onclick = () => surpriseMe();
 $('#sidebarToggle').onclick = toggleSidebar;
 $('#densityToggle').onclick = toggleDensity;
+$('#artworkFilter').value = state.artworkFilter;
+$('#artworkFilter').onchange = event => {
+  state.artworkFilter = event.target.value === 'missing-art' ? 'missing-art' : 'all';
+  state.focusedGameId = null;
+  writePreference('artwork-filter', state.artworkFilter);
+  render();
+};
 $('#gameSort').onchange = event => {
   if (!GAME_SORTS.has(event.target.value)) return;
   state.sort = event.target.value;
@@ -1720,7 +1729,7 @@ $('#rescan').onclick = async () => {
   }
 };
 $('#arcadeAuditButton').onclick = () => refreshArcadeAudit(true);
-$$('[data-arcade-filter]').forEach(button => {
+$('[data-arcade-filter]').forEach(button => {
   button.onclick = () => {
     state.arcadeFilter = button.dataset.arcadeFilter;
     state.focusedGameId = null;
