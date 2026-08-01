@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld('deck', {
   artwork: (title, systemId, folder) => ipcRenderer.invoke('artwork', title, systemId, folder),
   gameDetails: (title, systemId, context) => ipcRenderer.invoke('game-details', title, systemId, context),
   diagnostics: () => ipcRenderer.invoke('diagnostics'),
+  arcadeAudit: force => ipcRenderer.invoke('arcade-audit', Boolean(force)),
   settings: () => ipcRenderer.invoke('settings'),
   saveSettings: changes => ipcRenderer.invoke('save-settings', changes),
   chooseDirectory: kind => ipcRenderer.invoke('choose-directory', kind),
@@ -32,5 +33,10 @@ contextBridge.exposeInMainWorld('deck', {
     const listener = (_, download) => callback(download);
     ipcRenderer.on('download-update', listener);
     return () => ipcRenderer.removeListener('download-update', listener);
+  },
+  onArcadeAudit: callback => {
+    const listener = (_, progress) => callback(progress);
+    ipcRenderer.on('arcade-audit-progress', listener);
+    return () => ipcRenderer.removeListener('arcade-audit-progress', listener);
   }
 });

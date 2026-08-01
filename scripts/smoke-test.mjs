@@ -32,17 +32,27 @@ for (const id of [
   'densityToggle',
   'gameSort',
   'resultCount',
-  'emptyTitle'
+  'emptyTitle',
+  'arcadeDeck',
+  'arcadeAuditButton',
+  'openArcadeGuide',
+  'openArcadeFeedback',
+  'arcadeControllerState',
+  'settingMame'
 ]) {
   const matches = html.match(new RegExp(`id=["']${id}["']`, 'g')) || [];
   if (matches.length !== 1) fail(`expected one #${id}, found ${matches.length}`);
 }
 
-for (const channel of ['settings', 'save-settings', 'sponsors', 'donations', 'open-external']) {
+for (const channel of ['settings', 'save-settings', 'sponsors', 'donations', 'open-external', 'arcade-audit']) {
   if (!main.includes(`'${channel}'`)) fail(`main process is missing ${channel}`);
   const preloadName = channel.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
   if (!preload.includes(preloadName)) fail(`preload bridge is missing ${preloadName}`);
 }
+
+if (!main.includes('configuredEmulator') || !main.includes("launchMode: 'mame'") || !main.includes("'-nowindow'")) fail('standalone MAME routing is missing');
+if (!main.includes('inspectArcadeArchive') || !renderer.includes('renderArcadeDeck')) fail('arcade health diagnostics are missing');
+if (!preload.includes('onArcadeAudit')) fail('arcade audit progress bridge is missing');
 
 if (/C:\\\\Users\\\\[^'"\s]+/i.test(main)) fail('main.js contains a personal Windows user path');
 if (!renderer.includes("'community'")) fail('renderer view cycle is missing Community');
@@ -71,6 +81,8 @@ for (const method of donationConfig.methods) {
 for (const asset of [
   'assets/branding/gamedeck-mark-source.png',
   'assets/branding/gamedeck-hero.png',
+  'docs/ARCADE.md',
+  'docs/COMMUNITY_LAUNCH.md',
   'build/icon.ico',
   'build/icon.icns',
   'build/icons/512x512.png'

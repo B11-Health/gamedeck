@@ -45,6 +45,10 @@ const state = {
   settings: null,
   sponsors: null,
   donations: null,
+  arcadeAudit: { total: 0, verified: 0, attention: 0, unchecked: 0, items: [] },
+  arcadeAuditProgress: { running: false, done: 0, total: 0, current: '' },
+  arcadeFilter: 'all',
+  controllerHints: [],
   sponsorTarget: '',
   transferExpanded: false,
   catalogLimit: 120,
@@ -290,6 +294,27 @@ function systemStatusLabel(system) {
   return system?.ready ? 'READY' : 'SETUP';
 }
 
+function isArcadeId(id) {
+  return id === 'arcade' || id === 'mame';
+}
+
+function arcadeSelected() {
+  return isArcadeId(state.selectedSystem) && !['discover', 'community'].includes(state.view);
+}
+
+function arcadeHealthLabel(game) {
+  if (game.archiveHealth === 'verified') return game.system === 'mame' ? 'ROM SET VERIFIED' : 'ARCHIVE VERIFIED';
+  if (game.archiveHealth === 'damaged') return 'DAMAGED ARCHIVE';
+  if (game.archiveHealth === 'incomplete') return 'ROMSET INCOMPLETE';
+  return 'CHECK PENDING';
+}
+
+function arcadeHealthClass(game) {
+  if (game.archiveHealth === 'verified') return 'verified';
+  if (['damaged', 'incomplete'].includes(game.archiveHealth)) return 'attention';
+  return 'checking';
+}
+
 function gameArt(game) {
   const system = systemById(game.system);
   return game.art || assetFallback(game.title, system?.color || '#24334b', '#101722');
@@ -304,7 +329,9 @@ function currentGames() {
   if (state.selectedSystem !== 'all') games = games.filter(game => game.system === state.selectedSystem);
   if (state.view === 'favorites') games = games.filter(game => game.favorite);
   if (state.view === 'recent') games = games.filter(game => game.lastPlayed);
-  if (state.query) games = games.filter(game => game.title.toLowerCase().includes(state.query));
+  if (state.query) games = games.filter(game => game.title.toLowerCase().includes(state.query) || String(game.shortName || '').toLowerCase().includes(state.query));
+  if (arcadeSelected() && state.arcadeFilter === 'verified') games = games.filter(game => game.archiveHealth === 'verified');
+  if (arcadeSelected() && state.arcadeFilter === 'attention') games = games.filter(game => ['damaged', 'incomplete'].includes(game.archiveHealth));
 
   const byTitle = (a, b) => a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' });
   if (state.view === 'recent' || state.sort === 'recent') games.sort((a, b) => Number(b.lastPlayed || 0) - Number(a.lastPlayed || 0) || byTitle(a, b));
@@ -338,9 +365,100 @@ function catalogTaskKey(game) {
 function setControllerStatus() {
   const pads = navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean) : [];
   const pad = pads[0];
+  const paired = !pad && state.controllerHints.length > 0;
   const pill = $('#controllerStatus');
-  pill.textContent = pad ? `${String(pad.id || 'Controller').split('(')[0].trim().slice(0, 25)} connected` : 'No controller';
+  pill.textContent = pad ? `${String(pad.id || 'Controller').split('(')[0].trim().slice(0, 25)} connected` : paired ? 'Xbox paired · press a button' : 'No controller';
   pill.classList.toggle('connected', Boolean(pad));
+  pill.classList.toggle('paired', paired);
+  const panel = $('.arcade-controller');
+  if (!panel) return;
+  panel.classList.toggle('connected', Boolean(pad));
+  panel.classList.toggle('paired', paired);
+  $('#arcadeControllerState').textContent = pad ? (pad.mapping === 'standard' ? 'Xbox layout ready' : 'Controller detected') : paired ? 'Xbox paired — wake to play' : 'Waiting for controller';
+  const controllerCount = pad ? pads.length : paired ? state.controllerHints.length : 0;
+  $('#arcadeControllerCount').textContent = `${controllerCount} ${pad ? (controllerCount === 1 ? 'PAD' : 'PADS') : paired ? 'PAIRED' : 'PADS'}`;
+  $('#arcadeControllerDetail').textContent = pad
+    ? `${String(pad.id || 'Controller').split('(')[0].trim().slice(0, 36)} · D-pad and left stick enabled for arcade movement.`
+    : paired
+      ? `${state.controllerHints[0]} is available. Press any button so the app can claim the active gamepad slot.`
+      : 'Connect an Xbox controller, then use either the D-pad or left stick.';
+}
+
+function applyArcadeAudit(snapshot) {
+  if (!snapshot) return;
+  state.arcadeAudit = snapshot;
+  const entries = new Map((snapshot.items || []).map(item => [item.file, item]));
+  for (const game of state.library.games) {
+    const entry = entries.get(game.file);
+    if (!entry) continue;
+    game.archiveHealth = entry.status;
+    game.archiveHealthMessage = entry.message;
+  }
+}
+
+function renderArcadeDeck() {
+  const deck = $('#arcadeDeck');
+  if (!deck) return;
+  const visible = arcadeSelected();
+  deck.classList.toggle('hidden', !visible);
+  if (!visible) return;
+
+  const games = state.library.games.filter(game => game.system === state.selectedSystem);
+  const verified = games.filter(game => game.archiveHealth === 'verified').length;
+  const attention = games.filter(game => ['damaged', 'incomplete'].includes(game.archiveHealth)).length;
+  const unchecked = games.filter(game => !game.archiveHealth || game.archiveHealth === 'unchecked').length;
+  const artwork = games.length ? Math.round((games.filter(game => game.art).length / games.length) * 100) : 0;
+  const progress = state.arcadeAuditProgress;
+
+  $('#arcadeTotal').textContent = games.length.toLocaleString();
+  $('#arcadeVerified').textContent = verified.toLocaleString();
+  $('#arcadeAttention').textContent = attention.toLocaleString();
+  $('#arcadeArtwork').textContent = `${artwork}%`;
+  $('#arcadeHealthState').textContent = progress.running
+    ? `Checking ${progress.current || 'your arcade library'}…`
+    : attention
+      ? `${attention} set${attention === 1 ? '' : 's'} need attention. Launch is blocked only where the archive or ROM set is unsafe.`
+      : unchecked
+        ? `${unchecked} set${unchecked === 1 ? '' : 's'} still need an integrity check.`
+        : games.length
+          ? `All ${games.length} set${games.length === 1 ? '' : 's'} passed the available integrity checks.`
+          : 'Add legally owned ZIP or 7Z sets to this system folder to begin.';
+
+  const progressPanel = $('#arcadeAuditProgress');
+  const percent = progress.total ? Math.round((progress.done / progress.total) * 100) : 0;
+  progressPanel.classList.toggle('hidden', !progress.running);
+  progressPanel.setAttribute('aria-valuenow', String(percent));
+  $('#arcadeAuditBar').style.width = `${percent}%`;
+  $('#arcadeAuditCopy').textContent = progress.total
+    ? `${progress.done} of ${progress.total} archives checked${progress.current ? ` · ${progress.current}` : ''}`
+    : 'Reading cached arcade health…';
+  $('#arcadeAuditButton').disabled = Boolean(progress.running);
+  $('#arcadeAuditButton').textContent = progress.running ? `Scanning ${percent}%` : 'Scan ROM-set health';
+
+  $$('[data-arcade-filter]').forEach(button => {
+    const active = button.dataset.arcadeFilter === state.arcadeFilter;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', String(active));
+  });
+  setControllerStatus();
+}
+
+async function refreshArcadeAudit(force = false) {
+  const hasArcade = state.library.games.some(game => isArcadeId(game.system));
+  if (!hasArcade) return;
+  state.arcadeAuditProgress = { running: true, done: 0, total: 0, current: '' };
+  renderArcadeDeck();
+  try {
+    const snapshot = await window.deck.arcadeAudit(force);
+    applyArcadeAudit(snapshot);
+    state.library.games.filter(game => isArcadeId(game.system) && !game.art).reverse().forEach(game => requestArtwork(game, true));
+    state.arcadeAuditProgress = { running: false, done: snapshot.total, total: snapshot.total, current: '' };
+    render();
+  } catch (error) {
+    state.arcadeAuditProgress = { running: false, done: 0, total: 0, current: '' };
+    toast(error.message || 'Arcade health scan could not finish');
+    renderArcadeDeck();
+  }
 }
 
 function updateGameArtwork(game, url) {
@@ -352,12 +470,20 @@ function updateGameArtwork(game, url) {
     $('#spotlightBackdrop').src = url;
   }
   renderDownloads();
+  if (arcadeSelected()) renderArcadeDeck();
 }
 
-function queueArtwork(key, work) {
-  if (state.artworkLoading.has(key)) return;
+function queueArtwork(key, work, priority = false) {
+  if (state.artworkLoading.has(key)) {
+    if (priority) {
+      const index = artworkQueue.findIndex(item => item.key === key);
+      if (index > 0) artworkQueue.unshift(...artworkQueue.splice(index, 1));
+    }
+    return;
+  }
   state.artworkLoading.add(key);
-  artworkQueue.push({ key, work });
+  if (priority) artworkQueue.unshift({ key, work });
+  else artworkQueue.push({ key, work });
   pumpArtworkQueue();
 }
 
@@ -373,13 +499,13 @@ function pumpArtworkQueue() {
   }
 }
 
-function requestArtwork(game) {
+function requestArtwork(game, priority = false) {
   if (!game || game.art) return;
   const key = `library:${game.id}`;
   queueArtwork(key, async () => {
     const url = await window.deck.artwork(game.artworkTitle || game.title, game.system, game.artworkFolder || '');
     updateGameArtwork(game, url);
-  });
+  }, priority);
 }
 
 function updateCatalogArtwork(game, url) {
@@ -435,14 +561,20 @@ function setFocusedGame(game, options = {}) {
 
   const system = systemById(game.system);
   const art = gameArt(game);
-  const launcher = system?.core ? 'RetroArch' : system?.name || 'your configured emulator';
+  const launcher = system?.emulatorLabel || (system?.core ? 'RetroArch' : system?.name || 'your configured emulator');
+  const arcade = isArcadeId(game.system);
+  const blocked = arcade && ['damaged', 'incomplete'].includes(game.archiveHealth);
   const fallback = fallbackDescription(game.title, system?.name || 'this console', true);
   const cached = state.gameDetails.get(detailKey(game.artworkTitle || game.title, game.system));
-  $('#spotlightSystem').textContent = `${system?.name || 'Game'} / ${system?.ready ? 'READY TO PLAY' : 'SETUP NEEDED'}`;
+  $('#spotlightSystem').textContent = `${system?.name || 'Game'} / ${blocked ? arcadeHealthLabel(game) : system?.ready ? 'READY TO PLAY' : 'SETUP NEEDED'}`;
   $('#spotlightTitle').textContent = game.title;
-  $('#spotlightFacts').innerHTML = factMarkup([system?.short || system?.name, cached?.year, cached?.players && `${cached.players} player${cached.players === '1' ? '' : 's'}`, sizeLabel(game.size)]);
+  $('#spotlightFacts').innerHTML = factMarkup([arcade && game.shortName?.toUpperCase(), system?.short || system?.name, cached?.year, cached?.players && `${cached.players} player${cached.players === '1' ? '' : 's'}`, cached?.buttons && `${cached.buttons} buttons`, game.format, sizeLabel(game.size)]);
   $('#spotlightDescription').textContent = cached?.description || fallback;
-  $('#spotlightMeta').textContent = `${relative(game.lastPlayed)} · Opens with ${launcher}`;
+  $('#spotlightMeta').textContent = blocked
+    ? game.archiveHealthMessage || 'This ROM set needs attention before it can launch.'
+    : `${relative(game.lastPlayed)} · Opens with ${launcher}${arcade && game.archiveHealth === 'verified' ? ' · Archive verified' : ''}`;
+  $('#spotlightPlay').disabled = blocked;
+  $('#spotlightPlay').textContent = blocked ? 'Fix ROM set first' : 'Play now';
   $('#spotlightFav').textContent = game.favorite ? 'Remove save' : 'Save game';
   $('#spotlightArt').innerHTML = `<img src="${escapeHtml(art)}" alt="${escapeHtml(game.title)} cover">`;
   $('#spotlightBackdrop').src = art;
@@ -451,11 +583,12 @@ function setFocusedGame(game, options = {}) {
   queueGameDetails(game.artworkTitle || game.title, game.system, {
     name: game.title,
     systemName: system?.name,
+    shortName: game.shortName,
     installed: true
   }, details => {
     if (state.focusedGameId !== game.id) return;
     $('#spotlightDescription').textContent = details.description || fallback;
-    $('#spotlightFacts').innerHTML = factMarkup([system?.short || system?.name, details.year, details.players && `${details.players} player${details.players === '1' ? '' : 's'}`, sizeLabel(game.size)]);
+    $('#spotlightFacts').innerHTML = factMarkup([arcade && game.shortName?.toUpperCase(), system?.short || system?.name, details.year, details.players && `${details.players} player${details.players === '1' ? '' : 's'}`, details.buttons && `${details.buttons} buttons`, game.format, sizeLabel(game.size)]);
   });
 
   if (options.scroll) {
@@ -474,7 +607,12 @@ function renderSystems() {
     const total = Number(system.count || 0);
     const countLabel = installed > 0 ? `${installed}/${total}` : String(total);
     const title = system.issue ? `${system.name} — ${system.issue}` : system.name;
-    return `<button class="system ${state.selectedSystem === system.id ? 'active' : ''} ${focused ? 'controller-focus' : ''}" data-id="${system.id}" title="${escapeHtml(title)}"><span class="sys-icon" style="--c:${system.color}">${art}</span><span class="sys-copy"><b>${escapeHtml(system.name)}</b><small>${systemStatusLabel(system)}</small></span><span class="count">${countLabel}</span></button>`;
+    const arcadeGames = isArcadeId(system.id) ? state.library.games.filter(game => game.system === system.id) : [];
+    const arcadeAttention = arcadeGames.filter(game => ['damaged', 'incomplete'].includes(game.archiveHealth)).length;
+    const status = isArcadeId(system.id) && arcadeGames.length
+      ? (arcadeAttention ? `${arcadeAttention} SET${arcadeAttention === 1 ? '' : 'S'} TO CHECK` : `${arcadeGames.filter(game => game.archiveHealth === 'verified').length} PREFLIGHT OK`)
+      : systemStatusLabel(system);
+    return `<button class="system ${state.selectedSystem === system.id ? 'active' : ''} ${focused ? 'controller-focus' : ''}" data-id="${system.id}" title="${escapeHtml(title)}"><span class="sys-icon" style="--c:${system.color}">${art}</span><span class="sys-copy"><b>${escapeHtml(system.name)}</b><small>${escapeHtml(status)}</small></span><span class="count">${countLabel}</span></button>`;
   }).join('');
   $('#systems').innerHTML = all + systems;
 
@@ -556,7 +694,17 @@ function renderGames() {
   $('#games').innerHTML = games.map(game => {
     const system = systemById(game.system);
     const active = game.id === state.focusedGameId;
-    return `<article class="game ${active ? 'active' : ''}" tabindex="0" role="button" aria-label="Play ${escapeHtml(game.title)} on ${escapeHtml(system?.name || 'GameDeck')}" data-id="${game.id}"><div class="cover" style="--c:${system?.color || '#8992a3'}"><div class="cover-art"><img data-game-art="${game.id}" src="${escapeHtml(gameArt(game))}" alt="${escapeHtml(game.title)} artwork" loading="lazy"></div><span class="cover-system">${escapeHtml(system?.short || 'GAME')}</span><button class="fav ${game.favorite ? 'on' : ''}" aria-label="${game.favorite ? 'Remove favorite' : 'Favorite'}">${game.favorite ? 'SAVED' : 'SAVE'}</button><div class="cover-logo">${escapeHtml(system?.icon || 'G')}</div><div class="cover-title">${escapeHtml(game.title)}</div><button class="play" aria-label="Play ${escapeHtml(game.title)}"><span aria-hidden="true">▶</span> PLAY</button></div><div class="meta"><b title="${escapeHtml(game.title)}">${escapeHtml(game.title)}</b><div class="game-card-facts"><span>${escapeHtml(system?.name || 'Game')}</span><span>${escapeHtml(sizeLabel(game.size))}</span></div><small><span class="ready-dot"></span>${escapeHtml(relative(game.lastPlayed))}</small></div></article>`;
+    const arcade = isArcadeId(game.system);
+    const healthClass = arcadeHealthClass(game);
+    const blocked = arcade && healthClass === 'attention';
+    const badge = arcade ? `<span class="archive-badge ${healthClass}">${escapeHtml(arcadeHealthLabel(game))}</span>` : '';
+    const facts = arcade
+      ? `<span class="game-shortname">${escapeHtml(game.shortName || 'ROM SET')}</span><span>${escapeHtml(game.format || 'ARCHIVE')}</span>`
+      : `<span>${escapeHtml(system?.name || 'Game')}</span><span>${escapeHtml(sizeLabel(game.size))}</span>`;
+    const status = arcade
+      ? (game.archiveHealth === 'verified' ? 'Archive verified' : game.archiveHealthMessage || 'Health check pending')
+      : relative(game.lastPlayed);
+    return `<article class="game ${arcade ? 'arcade-card' : ''} ${blocked ? 'health-attention' : ''} ${active ? 'active' : ''}" tabindex="0" role="button" aria-label="${blocked ? 'Review' : 'Play'} ${escapeHtml(game.title)} on ${escapeHtml(system?.name || 'GameDeck')}" data-id="${game.id}"><div class="cover" style="--c:${system?.color || '#8992a3'}"><div class="cover-art"><img data-game-art="${game.id}" src="${escapeHtml(gameArt(game))}" alt="${escapeHtml(game.title)} artwork" loading="lazy"></div><span class="cover-system">${escapeHtml(system?.short || 'GAME')}</span>${badge}<button class="fav ${game.favorite ? 'on' : ''}" aria-label="${game.favorite ? 'Remove favorite' : 'Favorite'}">${game.favorite ? 'SAVED' : 'SAVE'}</button><div class="cover-logo">${escapeHtml(system?.icon || 'G')}</div><div class="cover-title">${escapeHtml(game.title)}</div><button class="play" aria-label="${blocked ? 'ROM set needs attention' : `Play ${escapeHtml(game.title)}`}" ${blocked ? 'disabled' : ''}><span aria-hidden="true">${blocked ? '!' : '▶'}</span> ${blocked ? 'CHECK' : 'PLAY'}</button></div><div class="meta"><b title="${escapeHtml(game.title)}">${escapeHtml(game.title)}</b><div class="game-card-facts">${facts}</div><small><span class="ready-dot"></span>${escapeHtml(status)}</small></div></article>`;
   }).join('');
 
   renderEmptyState(games);
@@ -567,11 +715,16 @@ function renderGames() {
     card.onclick = event => {
       if (event.target.closest('button')) return;
       setFocusedGame(game);
+      if (['damaged', 'incomplete'].includes(game.archiveHealth)) {
+        toast(game.archiveHealthMessage || 'This ROM set needs attention');
+        return;
+      }
       launch(game.file);
     };
     card.querySelector('.play').onclick = event => {
       event.stopPropagation();
       setFocusedGame(game);
+      if (['damaged', 'incomplete'].includes(game.archiveHealth)) return;
       launch(game.file);
     };
     card.querySelector('.fav').onclick = async event => {
@@ -607,6 +760,7 @@ async function launch(file) {
   try {
     const game = state.library.games.find(item => item.file === file);
     const system = game ? systemById(game.system) : null;
+    if (game && ['damaged', 'incomplete'].includes(game.archiveHealth)) throw Error(game.archiveHealthMessage || 'This ROM set needs attention before launch');
     if (system && !system.ready && (system.issue || '').toLowerCase().includes('firmware')) {
       const result = await window.deck.setupSystem(system.id);
       if (result?.queued) {
@@ -889,6 +1043,7 @@ function populateCommunity() {
   $('#settingRetroArch').value = settings.retroArchPath || '';
   $('#settingCores').value = settings.retroArchCores || '';
   $('#settingSystem').value = settings.retroArchSystem || '';
+  $('#settingMame').value = settings.mamePath || '';
   $('#settingSponsors').checked = settings.sponsorsEnabled !== false;
   $('#runtimeBadge').textContent = `${String(settings.platform || 'desktop').toUpperCase()} · ${String(settings.arch || '')} · v${settings.version || 'dev'}`;
 
@@ -965,10 +1120,11 @@ function render() {
   $('#games').classList.toggle('hidden', discover || community);
   $('.hero').classList.toggle('hidden', discover || community);
   $('#spotlight').classList.toggle('hidden', discover || community || !focusedGame());
+  renderArcadeDeck();
   $('.control-legend').classList.toggle('hidden', community);
   $('.toolbar').classList.toggle('hidden', community);
   $('#libraryTools').classList.toggle('hidden', discover || community);
-  $('#toolbarContext').textContent = discover ? 'DOWNLOADS STAY VISIBLE WHILE YOU BROWSE' : 'CLICK OR PRESS A TO LAUNCH';
+  $('#toolbarContext').textContent = discover ? 'DOWNLOADS STAY VISIBLE WHILE YOU BROWSE' : arcadeSelected() ? 'ARCHIVES ARE CHECKED BEFORE LAUNCH' : 'CLICK OR PRESS A TO LAUNCH';
   $('#search').placeholder = discover ? 'Search this console catalog' : 'Search your collection';
   $('#gameSort').value = state.view === 'recent' ? 'recent' : state.sort;
   $('#gameSort').disabled = state.view === 'recent';
@@ -987,7 +1143,20 @@ function render() {
 
   const selected = systemById(state.selectedSystem);
   $('#context').textContent = state.view === 'favorites' ? 'YOUR FAVORITES' : state.view === 'recent' ? 'RECENTLY PLAYED' : selected ? selected.name.toUpperCase() : 'ALL SYSTEMS';
-  $('#headline').innerHTML = state.view === 'favorites' ? 'Saved for<br> <em>the next run.</em>' : state.view === 'recent' ? 'Jump straight<br> <em>back in.</em>' : selected ? `${escapeHtml(selected.name)}<br> <em>collection.</em>` : 'Your games.<br> <em>One move away.</em>';
+  $('#headline').innerHTML = state.view === 'favorites'
+    ? 'Saved for<br> <em>the next run.</em>'
+    : state.view === 'recent'
+      ? 'Jump straight<br> <em>back in.</em>'
+      : selected?.id === 'arcade'
+        ? 'Arcade legends.<br> <em>Checked before launch.</em>'
+        : selected?.id === 'mame'
+          ? 'The full cabinet.<br> <em>One clean launch.</em>'
+          : selected ? `${escapeHtml(selected.name)}<br> <em>collection.</em>` : 'Your games.<br> <em>One move away.</em>';
+  $('#subhead').textContent = selected?.id === 'arcade'
+    ? 'FinalBurn Neo, full game names, matched artwork, and Xbox-ready controls.'
+    : selected?.id === 'mame'
+      ? 'Standalone MAME takes priority, validates ROM sets, and launches with couch controls.'
+      : 'Pick a title and GameDeck chooses the right emulator automatically.';
   $('#gameCount').textContent = currentGames().length;
   $('#systemCount').textContent = state.library.systems.filter(system => system.count).length;
   $('#readyCount').textContent = state.library.systems.filter(system => system.ready).length;
@@ -1225,9 +1394,10 @@ function renderActivity() {
 
 async function refreshDiagnostics() {
   const diagnostics = await window.deck.diagnostics();
+  state.controllerHints = diagnostics.controllers || [];
   state.activities = diagnostics.activity || [];
   state.downloads = diagnostics.downloads || [];
-  $('#debugHealth').innerHTML = `<span class="${diagnostics.rgsxRuntime ? 'ok' : 'bad'}">RGSX ${diagnostics.rgsxRuntime ? 'READY' : 'MISSING'}</span><span class="${diagnostics.retroarch ? 'ok' : 'bad'}">RETROARCH ${diagnostics.retroarch ? 'READY' : 'MISSING'}</span><span>${diagnostics.systems.filter(system => system.ready).length} EMULATORS</span><span>${diagnostics.downloads.filter(download => download.status === 'running').length} ACTIVE</span>`;
+  $('#debugHealth').innerHTML = `<span class="${diagnostics.rgsxRuntime ? 'ok' : 'bad'}">RGSX ${diagnostics.rgsxRuntime ? 'READY' : 'MISSING'}</span><span class="${diagnostics.retroarch ? 'ok' : 'bad'}">RETROARCH ${diagnostics.retroarch ? 'READY' : 'MISSING'}</span><span class="${diagnostics.mame ? 'ok' : 'bad'}">MAME ${diagnostics.mame ? 'READY' : 'MISSING'}</span><span>${diagnostics.arcade?.verified || 0}/${diagnostics.arcade?.total || 0} ARCADE VERIFIED</span><span>${diagnostics.systems.filter(system => system.ready).length} EMULATORS</span><span>${diagnostics.downloads.filter(download => download.status === 'running').length} ACTIVE</span>`;
   renderActivity();
   renderDownloads();
 }
@@ -1331,11 +1501,20 @@ $('#rescan').onclick = async () => {
     state.library = await window.deck.rescan();
     setLoading(true, 'Finishing the refresh', 'Updating artwork, favorites, and recent activity.', 86);
     render();
+    refreshArcadeAudit(false);
     toast('RGSX library refreshed');
   } finally {
     setLoading(false);
   }
 };
+$('#arcadeAuditButton').onclick = () => refreshArcadeAudit(true);
+$$('[data-arcade-filter]').forEach(button => {
+  button.onclick = () => {
+    state.arcadeFilter = button.dataset.arcadeFilter;
+    state.focusedGameId = null;
+    render();
+  };
+});
 $('#folder').onclick = () => window.deck.openLibrary();
 $('#emptyPrimary').onclick = event => runEmptyAction(event.currentTarget.dataset.action);
 $('#emptySecondary').onclick = event => runEmptyAction(event.currentTarget.dataset.action);
@@ -1361,6 +1540,8 @@ $('#transferSummary').onclick = () => {
 
 $('#openGithub').onclick = () => openCommunityLink('https://github.com/B11-Health/gamedeck');
 $('#openContributing').onclick = () => openCommunityLink('https://github.com/B11-Health/gamedeck/blob/main/CONTRIBUTING.md');
+$('#openArcadeGuide').onclick = () => openCommunityLink('https://github.com/B11-Health/gamedeck/blob/main/docs/ARCADE.md');
+$('#openArcadeFeedback').onclick = () => openCommunityLink('https://github.com/B11-Health/gamedeck/issues/new/choose');
 $('#openFunding').onclick = () => openCommunityLink('https://github.com/B11-Health/gamedeck/blob/main/FUNDING.md');
 $('#sponsorAction').onclick = () => {
   if (state.sponsorTarget) openCommunityLink(state.sponsorTarget);
@@ -1377,7 +1558,8 @@ $$('[data-browse]').forEach(button => {
       rgsxRoot: '#settingRgsx',
       retroArchPath: '#settingRetroArch',
       retroArchCores: '#settingCores',
-      retroArchSystem: '#settingSystem'
+      retroArchSystem: '#settingSystem',
+      mamePath: '#settingMame'
     }[setting];
     if (input) $(input).value = result.path;
   };
@@ -1390,6 +1572,7 @@ $('#saveSettings').onclick = async () => {
     retroArchPath: $('#settingRetroArch').value,
     retroArchCores: $('#settingCores').value,
     retroArchSystem: $('#settingSystem').value,
+    mamePath: $('#settingMame').value,
     sponsorsEnabled: $('#settingSponsors').checked
   };
   $('#saveSettings').disabled = true;
@@ -1433,6 +1616,16 @@ window.deck.onActivity(entry => {
   renderActivity();
   if (entry.message.startsWith('RGSX finished:')) refreshCatalogAfterDownload(entry.taskId);
 });
+window.deck.onArcadeAudit(progress => {
+  state.arcadeAuditProgress = {
+    running: Boolean(progress.running),
+    done: Number(progress.done || 0),
+    total: Number(progress.total || 0),
+    current: progress.current || ''
+  };
+  if (progress.items) applyArcadeAudit(progress);
+  renderArcadeDeck();
+});
 window.deck.onDownload(download => {
   const index = state.downloads.findIndex(item => item.id === download.id);
   if (index === -1) state.downloads = [download, ...state.downloads];
@@ -1472,6 +1665,7 @@ async function init() {
   setControllerStatus();
   setInterval(handleGamepad, 90);
   setLoading(false);
+  refreshArcadeAudit(false);
   const captureView = new URLSearchParams(window.location.search).get('captureView');
   if (captureView && views.includes(captureView)) changeView(captureView);
   else if (captureView === 'cinematic') {
@@ -1511,6 +1705,11 @@ async function init() {
     renderDownloads();
   } else if (captureView === 'loading') {
     setLoading(true, 'Matching artwork', 'Building the visual shelves without interrupting your library.', 72);
+  } else if (captureView === 'arcade') {
+    selectLibrarySystem('arcade');
+  } else if (captureView === 'arcade-attention') {
+    state.arcadeFilter = 'attention';
+    selectLibrarySystem('arcade');
   }
 }
 

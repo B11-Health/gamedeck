@@ -23,7 +23,9 @@ GameDeck does **not** include ROMs, BIOS files, encryption keys, or commercial g
 - One local-first library across Windows, macOS, and Linux
 - Controller, keyboard, and mouse navigation
 - RetroArch core discovery plus standalone DuckStation, PCSX2, PPSSPP, Dolphin, and Cemu routing
-- Dedicated MAME and FinalBurn Neo catalog handling
+- Dedicated MAME and FinalBurn Neo catalog handling with pre-launch ROM-set health checks
+- Full arcade names and local year, manufacturer, player, button, and control metadata from installed MAME
+- Scoped Xbox/XInput arcade profiles that preserve global emulator settings
 - BIOS-aware readiness checks with real setup locations
 - Cinematic title details, artwork caching, favorites, and recent plays
 - Shelf-first compact mode plus an optional large-format Cinematic view
@@ -66,6 +68,10 @@ npm run dist:linux
 
 GameDeck checks common emulator and library locations automatically. Open **Community → This device** to override the library, RGSX, RetroArch executable, cores, or system/BIOS paths. Path changes apply after restart.
 
+### Arcade libraries
+
+The Arcade Command Center verifies ZIP/7z integrity, uses native MAME verification for standalone-MAME titles, and blocks only the unsafe set instead of entering a download retry loop. Read the [arcade setup guide](docs/ARCADE.md) for compatible set layouts, BIOS/parent lookup, Xbox mappings, artwork folders, and troubleshooting.
+
 ### Keyboard shortcuts
 
 - `/` focuses library or catalog search
@@ -74,12 +80,13 @@ GameDeck checks common emulator and library locations automatically. Open **Comm
 - Arrow keys move between systems and games; `Enter` launches the focused title
 - <code>`</code> opens the activity console; `Escape` backs out or clears search
 
-Environment overrides are also supported: `GAMEDECK_LIBRARY`, `GAMEDECK_RGSX_ROOT`, `GAMEDECK_EMULATION_ROOT`, `GAMEDECK_RETROARCH`, `GAMEDECK_RETROARCH_CORES`, `GAMEDECK_DUCKSTATION`, `GAMEDECK_PCSX2`, `GAMEDECK_PPSSPP`, `GAMEDECK_DOLPHIN`, and `GAMEDECK_CEMU`.
+Environment overrides are also supported: `GAMEDECK_LIBRARY`, `GAMEDECK_RGSX_ROOT`, `GAMEDECK_EMULATION_ROOT`, `GAMEDECK_RETROARCH`, `GAMEDECK_RETROARCH_CORES`, `GAMEDECK_RETROARCH_SYSTEM`, `GAMEDECK_MAME`, `GAMEDECK_DUCKSTATION`, `GAMEDECK_PCSX2`, `GAMEDECK_PPSSPP`, `GAMEDECK_DOLPHIN`, and `GAMEDECK_CEMU`.
 
 ## Community
 
 - Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
 - Check the [roadmap](ROADMAP.md) and [open issues](https://github.com/B11-Health/gamedeck/issues).
+- Use the [arcade community launch kit](docs/COMMUNITY_LAUNCH.md) for evidence, screenshots, channel rules, and outreach sequencing.
 - Report security problems privately using [SECURITY.md](SECURITY.md).
 - See [FUNDING.md](FUNDING.md) and the transparent [sponsorship policy](docs/SPONSORSHIP.md).
 

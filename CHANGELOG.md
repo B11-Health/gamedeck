@@ -2,6 +2,16 @@
 
 All notable GameDeck releases are documented here.
 
+## Unreleased
+
+- Added an Arcade Command Center for MAME and FinalBurn Neo with verified, attention, artwork, and controller status at a glance.
+- Added cached ZIP/7z integrity checks and native MAME `-verifyroms` validation, with exact launch blocking for damaged or incomplete sets.
+- Added full arcade title and machine metadata from the installed MAME database.
+- Added standalone MAME discovery and launch routing for current sets, while retaining compatible RetroArch-core fallbacks.
+- Added a scoped RetroArch XInput profile for two Xbox controllers and Windows MAME `winhybrid` input routing.
+- Added local MAME flyer, snapshot, title, cabinet, and marquee artwork matching plus priority artwork loading for arcade shelves.
+- Added an in-app arcade readiness community update, setup guide, and policy-aware community launch kit.
+
 ## 1.1.0 — 2026-07-31
 
 - Added a shelf-first compact layout that exposes complete game and catalog rows at common laptop sizes.

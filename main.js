@@ -67,6 +67,15 @@ const detectedRetroArch = firstExisting([
   process.platform === 'linux' && findOnPath(['retroarch'])
 ].filter(Boolean));
 
+const detectedMame = firstExisting([
+  process.env.GAMEDECK_MAME,
+  process.platform === 'win32' && path.join(localAppData, 'Programs', 'MAME', 'mame.exe'),
+  process.platform === 'win32' && path.join(programFiles, 'MAME', 'mame.exe'),
+  process.platform === 'win32' && findOnPath(['mame.exe', 'mame64.exe']),
+  process.platform === 'darwin' && '/Applications/MAME.app/Contents/MacOS/mame',
+  process.platform === 'linux' && findOnPath(['mame'])
+].filter(Boolean));
+
 const detectedCoreDir = firstExisting([
   process.env.GAMEDECK_RETROARCH_CORES,
   detectedRetroArch && path.join(path.dirname(detectedRetroArch), 'cores'),
@@ -82,6 +91,7 @@ const defaultSettings = {
   emulationRoot: process.env.GAMEDECK_EMULATION_ROOT || path.join(HOME_DIR, 'Games', 'Emulation'),
   retroArchPath: detectedRetroArch,
   retroArchCores: detectedCoreDir,
+  mamePath: detectedMame,
   retroArchSystem: process.env.GAMEDECK_RETROARCH_SYSTEM || (detectedRetroArch
     ? path.join(path.dirname(detectedRetroArch), 'system')
     : path.join(HOME_DIR, '.config', 'retroarch', 'system')),
@@ -94,6 +104,7 @@ const LIBRARY = path.resolve(runtimeSettings.libraryRoot);
 const RA = runtimeSettings.retroArchPath;
 const CORES = runtimeSettings.retroArchCores;
 const RA_SYSTEM = runtimeSettings.retroArchSystem;
+const MAME = runtimeSettings.mamePath;
 const RGSX_ROOT = path.resolve(runtimeSettings.rgsxRoot);
 const EMULATION_ROOT = path.resolve(runtimeSettings.emulationRoot);
 const RGSX_DATA = path.join(RGSX_ROOT, 'saves', 'ports', 'rgsx');
@@ -116,6 +127,8 @@ const RGSX_FIRMWARE_PACK = firstExisting([
 const STORE = path.join(app.getPath('userData'), 'library.json');
 const ART_CACHE = path.join(app.getPath('userData'), 'artwork');
 const DETAILS_CACHE = path.join(app.getPath('userData'), 'details');
+const ARCADE_AUDIT_FILE = path.join(app.getPath('userData'), 'arcade-audit.json');
+const ARCADE_CONTROLLER_CONFIG = path.join(app.getPath('userData'), 'retroarch-arcade.cfg');
 const SPONSORS_FILE = path.join(__dirname, 'sponsors.json');
 const DONATIONS_FILE = path.join(__dirname, 'config', 'donations.json');
 const ART_EXTS = ['.png', '.jpg', '.jpeg', '.webp', '.gif'];
@@ -154,7 +167,8 @@ const emulatorPaths = {
     process.platform === 'win32' && findOnPath(['Cemu.exe']),
     process.platform === 'darwin' && '/Applications/Cemu.app/Contents/MacOS/Cemu',
     process.platform === 'linux' && findOnPath(['cemu'])
-  ].filter(Boolean))
+  ].filter(Boolean)),
+  mame: MAME
 };
 
 const firmwareSearchRoots = [
@@ -233,8 +247,8 @@ const systems = [
   { id: 'saturn', name: 'Sega Saturn', short: 'SATURN', color: '#38bdf8', folders: ['saturn'], exts: ['.cue', '.chd'], core: coreFile('mednafen_saturn_libretro'), bios: ['sega_101.bin', 'mpr-17933.bin'], biosDirs: [RA_SYSTEM, ...firmwareSearchRoots], icon: 'ST' },
   { id: 'dreamcast', name: 'Dreamcast', short: 'DC', color: '#fb923c', folders: ['dreamcast'], exts: ['.gdi', '.cdi', '.chd'], core: coreFile('flycast_libretro'), icon: 'DC' },
   { id: 'atari2600', name: 'Atari 2600', short: 'ATARI', color: '#f59e0b', folders: ['atari2600'], exts: ['.a26', '.bin', '.zip'], core: coreFile('stella_libretro'), icon: 'A' },
-  { id: 'arcade', name: 'FinalBurn Neo', short: 'ARCADE', color: '#ec4899', folders: ['fbneo', 'arcade', 'neogeo'], exts: ['.zip', '.7z'], core: coreFile('fbneo_libretro'), icon: 'AR' },
-  { id: 'mame', name: 'MAME', short: 'MAME', color: '#f43f8f', folders: ['mame'], exts: ['.zip', '.7z'], core: coreFile('mame_libretro'), icon: 'M' },
+  { id: 'arcade', name: 'FinalBurn Neo', short: 'FBNEO', color: '#ec4899', folders: ['fbneo', 'neogeo'], exts: ['.zip', '.7z'], core: coreFile('fbneo_libretro'), icon: 'FB' },
+  { id: 'mame', name: 'MAME', short: 'MAME', color: '#f43f8f', folders: ['mame', 'arcade'], exts: ['.zip', '.7z'], core: coreFile('mame_libretro'), exe: emulatorPaths.mame, preferExe: true, launchMode: 'mame', icon: 'M' },
   { id: 'ps1', name: 'PlayStation', short: 'PS1', color: '#94a3b8', folders: ['psx', 'ps1'], exts: ['.cue', '.chd', '.pbp'], exe: emulatorPaths.duckstation, args: ['-batch', '-fullscreen'], biosPattern: /^scph[a-z0-9_-]*\.(?:bin|rom)$/i, biosHint: 'a BIOS file named like scph1001.bin or scph5500.rom', biosDirs: [path.join(localAppData, 'DuckStation', 'bios'), path.join(applicationSupport, 'DuckStation', 'bios'), path.join(HOME_DIR, '.local', 'share', 'duckstation', 'bios'), path.join(RGSX_ROOT, 'roms', 'bios')], icon: 'PS' },
   { id: 'ps2', name: 'PlayStation 2', short: 'PS2', color: '#3b82f6', folders: ['ps2'], exts: ['.iso', '.chd'], exe: emulatorPaths.pcsx2, args: ['-fullscreen', '-batch', '--'], biosPattern: /^scph[a-z0-9_-]*\.(?:bin|rom)$/i, biosHint: 'a BIOS file named like scph39001.bin or scph70012.rom', biosDirs: [path.join(DOCUMENTS_DIR, 'PCSX2', 'bios'), path.join(applicationSupport, 'PCSX2', 'bios'), path.join(HOME_DIR, '.config', 'PCSX2', 'bios'), path.join(HOME_DIR, '.local', 'share', 'PCSX2', 'bios'), path.join(RGSX_ROOT, 'roms', 'bios')], icon: 'P2' },
   { id: 'psp', name: 'PlayStation Portable', short: 'PSP', color: '#06b6d4', folders: ['psp'], exts: ['.iso', '.cso', '.pbp'], exe: emulatorPaths.ppsspp, icon: 'PP' },
@@ -261,6 +275,13 @@ const catalogRowsCache = new Map();
 let artworkBackoffUntil = 0;
 let artworkBackoffLogged = false;
 let detailBackoffUntil = 0;
+let mameTitleIndex = null;
+let mameConfiguredRomPaths = null;
+let arcadeAuditTask = null;
+let controllerHintsCache = null;
+const mameMetadataCache = new Map();
+const arcadeAuditCache = readJson(ARCADE_AUDIT_FILE, { version: 1, entries: {}, updatedAt: 0 });
+if (!arcadeAuditCache.entries || typeof arcadeAuditCache.entries !== 'object') arcadeAuditCache.entries = {};
 
 function readJson(file, fallback) {
   try {
@@ -313,13 +334,105 @@ function rawGameName(file) {
   return leaf.replace(/\.[^.]+$/, '').trim();
 }
 
+function lookupTitleName(value) {
+  const text = String(value || '').trim();
+  const extension = path.extname(text).toLowerCase();
+  const knownExtensions = new Set([...systems.flatMap(system => system.exts), ...ART_EXTS]);
+  if (!knownExtensions.has(extension)) return text;
+  const leaf = text.replace(/\\/g, '/').split('/').pop() || text;
+  return leaf.slice(0, -extension.length).trim();
+}
+
 function normalizeName(value) {
-  return cleanName(value).toLowerCase().replace(/[^a-z0-9]+/g, '');
+  return lookupTitleName(value).toLowerCase().replace(/[^a-z0-9]+/g, '');
 }
 
 function fileIdentity(value) {
   const leaf = String(value || '').replace(/\\/g, '/').split('/').pop() || '';
   return leaf.replace(/\.[^.]+$/, '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+}
+
+function isArcadeSystem(systemOrId) {
+  const id = typeof systemOrId === 'string' ? systemOrId : systemOrId?.id;
+  return id === 'arcade' || id === 'mame';
+}
+
+function getMameTitleIndex() {
+  if (mameTitleIndex) return mameTitleIndex;
+  mameTitleIndex = new Map();
+  if (!MAME || !fs.existsSync(MAME)) return mameTitleIndex;
+  const listing = spawnSync(MAME, ['-listfull'], {
+    cwd: path.dirname(MAME),
+    windowsHide: true,
+    encoding: 'utf8',
+    timeout: 15000,
+    maxBuffer: 16 * 1024 * 1024
+  });
+  if (listing.status !== 0) return mameTitleIndex;
+  for (const line of String(listing.stdout || '').split(/\r?\n/)) {
+    const match = line.match(/^(\S+)\s+"(.*)"$/);
+    if (match) mameTitleIndex.set(match[1].toLowerCase(), match[2].replace(/""/g, '"'));
+  }
+  return mameTitleIndex;
+}
+
+function arcadeDisplayTitle(shortName) {
+  const raw = rawGameName(shortName);
+  return getMameTitleIndex().get(raw.toLowerCase()) || cleanName(raw);
+}
+
+function decodeXmlText(value) {
+  return String(value || '')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&');
+}
+
+function xmlAttribute(markup, name) {
+  return decodeXmlText(markup.match(new RegExp(`\\b${name}="([^"]*)"`))?.[1] || '');
+}
+
+function mameGameMetadata(shortName) {
+  const key = rawGameName(shortName).toLowerCase();
+  if (!key || !MAME || !fs.existsSync(MAME)) return null;
+  if (mameMetadataCache.has(key)) return mameMetadataCache.get(key);
+  const query = spawnSync(MAME, ['-listxml', key], {
+    cwd: path.dirname(MAME),
+    windowsHide: true,
+    encoding: 'utf8',
+    timeout: 10000,
+    maxBuffer: 4 * 1024 * 1024
+  });
+  if (query.status !== 0) {
+    mameMetadataCache.set(key, null);
+    return null;
+  }
+  const xml = String(query.stdout || '');
+  const machine = xml.match(/<machine\b[^>]*>[\s\S]*?<\/machine>/)?.[0] || '';
+  const input = machine.match(/<input\b[^>]*>/)?.[0] || '';
+  const control = machine.match(/<control\b[^>]*>/)?.[0] || '';
+  const description = decodeXmlText(machine.match(/<description>([\s\S]*?)<\/description>/)?.[1] || arcadeDisplayTitle(key));
+  const year = decodeXmlText(machine.match(/<year>([\s\S]*?)<\/year>/)?.[1] || '');
+  const manufacturer = decodeXmlText(machine.match(/<manufacturer>([\s\S]*?)<\/manufacturer>/)?.[1] || '');
+  const players = xmlAttribute(input, 'players');
+  const buttons = xmlAttribute(control, 'buttons');
+  const controlType = xmlAttribute(control, 'type');
+  const ways = xmlAttribute(control, 'ways');
+  const inputSummary = [players && `${players} player${players === '1' ? '' : 's'}`, controlType && `${ways ? `${ways}-way ` : ''}${controlType}`, buttons && `${buttons} buttons`].filter(Boolean).join(' · ');
+  const metadata = {
+    title: description,
+    description: `${description}${year ? ` (${year})` : ''}${manufacturer ? ` by ${manufacturer}` : ''} is indexed by the installed MAME database.${inputSummary ? ` Cabinet input: ${inputSummary}.` : ''}`,
+    year,
+    players,
+    buttons,
+    controlType,
+    manufacturer,
+    source: 'MAME'
+  };
+  mameMetadataCache.set(key, metadata);
+  return metadata;
 }
 
 function editionLabel(value) {
@@ -385,10 +498,25 @@ function systemFirmwareIssue(system) {
   return `${system.name} firmware is required in ${preferredDir}.`;
 }
 
+function configuredEmulator(system) {
+  const standaloneReady = Boolean(system.exe && fs.existsSync(system.exe));
+  const corePath = system.core ? path.join(CORES, system.core) : '';
+  const coreReady = Boolean(system.core && fs.existsSync(RA) && fs.existsSync(corePath));
+  if (system.preferExe && standaloneReady) {
+    return { kind: system.launchMode || 'standalone', executable: system.exe, label: system.id === 'mame' ? 'MAME standalone' : system.name };
+  }
+  if (coreReady) return { kind: 'libretro', executable: RA, corePath, label: system.id === 'arcade' ? 'RetroArch · FinalBurn Neo' : `RetroArch · ${system.name}` };
+  if (standaloneReady) return { kind: system.launchMode || 'standalone', executable: system.exe, label: system.name };
+  return null;
+}
+
 function systemSetupIssue(system) {
-  if (system.core && !fs.existsSync(RA)) return 'RetroArch is not installed.';
-  if (system.core && !fs.existsSync(path.join(CORES, system.core))) return `${system.name} core is not installed.`;
-  if (!system.core && (!system.exe || !fs.existsSync(system.exe))) return `${system.name} emulator is not installed or configured.`;
+  if (!configuredEmulator(system)) {
+    if (system.preferExe && system.core) return `${system.name} needs standalone MAME or its RetroArch core.`;
+    if (system.core && !fs.existsSync(RA)) return 'RetroArch is not installed.';
+    if (system.core && !fs.existsSync(path.join(CORES, system.core))) return `${system.name} core is not installed.`;
+    return `${system.name} emulator is not installed or configured.`;
+  }
   if (!systemBiosReady(system)) return systemFirmwareIssue(system);
   return '';
 }
@@ -419,7 +547,7 @@ function isPlayableFile(file, system) {
 }
 
 function cachedArtworkPath(title, systemId, folder = '') {
-  const identity = rawGameName(title).toLowerCase().replace(/[^a-z0-9]+/g, '');
+  const identity = lookupTitleName(title).toLowerCase().replace(/[^a-z0-9]+/g, '');
   const key = crypto.createHash('sha1').update(`${folder}:${systemId}:${identity}`).digest('hex');
   return path.join(ART_CACHE, `${key}.image`);
 }
@@ -442,7 +570,7 @@ function gameRegion(tags) {
 
 function fallbackGameDetails(title, systemId, context = {}) {
   const system = systems.find(item => item.id === systemId);
-  const gameTitle = cleanName(title) || String(context.name || 'Selected game');
+  const gameTitle = lookupTitleName(title) || String(context.name || 'Selected game');
   const systemName = system?.name || String(context.systemName || 'this console');
   const edition = String(context.edition || '').trim();
   const region = String(context.region || '').trim();
@@ -462,7 +590,8 @@ function fallbackGameDetails(title, systemId, context = {}) {
 }
 
 async function fetchGameDetails(title, systemId, context = {}) {
-  const fallback = fallbackGameDetails(title, systemId, context);
+  const localArcade = isArcadeSystem(systemId) ? mameGameMetadata(context.shortName || title) : null;
+  const fallback = { ...fallbackGameDetails(title, systemId, context), ...(localArcade || {}) };
   const platformId = tgdbPlatforms[systemId];
   const cacheFile = cachedDetailsPath(title, systemId);
   const cached = readJson(cacheFile, null);
@@ -476,7 +605,7 @@ async function fetchGameDetails(title, systemId, context = {}) {
       if (!key) return fallback;
       const params = new URLSearchParams({
         apikey: key,
-        name: cleanName(title),
+        name: lookupTitleName(title),
         'filter[platform]': String(platformId)
       });
       const response = await fetch(`https://api.thegamesdb.net/v1/Games/ByGameName?${params}`, { signal: AbortSignal.timeout(8000) });
@@ -497,16 +626,19 @@ async function fetchGameDetails(title, systemId, context = {}) {
         title: String(game.game_title || fallback.title).trim(),
         description: overview,
         releaseDate,
-        year: releaseDate.match(/\b(19|20)\d{2}\b/)?.[0] || '',
-        players: String(game.players || '').trim(),
+        year: releaseDate.match(/\b(19|20)\d{2}\b/)?.[0] || fallback.year || '',
+        players: String(game.players || '').trim() || fallback.players || '',
         rating: Number.isFinite(Number(game.rating)) && Number(game.rating) > 0 ? Number(game.rating).toFixed(1) : '',
+        buttons: fallback.buttons || '',
+        controlType: fallback.controlType || '',
+        manufacturer: fallback.manufacturer || '',
         source: 'TheGamesDB'
       };
       fs.mkdirSync(DETAILS_CACHE, { recursive: true });
       fs.writeFileSync(cacheFile, JSON.stringify(details, null, 2));
       return details;
     } catch (error) {
-      addActivity('info', `Game details are temporarily unavailable for ${cleanName(title)}: ${error.message}`);
+      addActivity('info', `Game details are temporarily unavailable for ${lookupTitleName(title)}: ${error.message}`);
       return fallback;
     } finally {
       detailRequests.delete(cacheFile);
@@ -532,11 +664,210 @@ function resolveGameArt(file, title, systemId, folder) {
     candidates.push(path.join(dir, 'images', `${base}${extension}`));
     candidates.push(path.join(dir, 'media', 'images', `${base}${extension}`));
     candidates.push(path.join(dir, 'artwork', `${base}${extension}`));
+    if (isArcadeSystem(systemId) && MAME && fs.existsSync(MAME)) {
+      const mameRoot = path.dirname(MAME);
+      for (const mediaFolder of ['flyers', 'snap', 'titles', 'cabinets', 'marquees']) {
+        candidates.push(path.join(mameRoot, mediaFolder, `${base}${extension}`));
+        candidates.push(path.join(mameRoot, mediaFolder, base, `0000${extension}`));
+      }
+    }
   }
   candidates.push(cachedArtworkPath(base, systemId, folder));
   candidates.push(cachedArtworkPath(title, systemId));
   const found = candidates.find(candidate => fs.existsSync(candidate));
   return found ? toFileUrl(found) : '';
+}
+
+function archiveFingerprint(file) {
+  try {
+    const stat = fs.statSync(file);
+    return `${stat.size}:${Math.round(stat.mtimeMs)}`;
+  } catch {
+    return '';
+  }
+}
+
+function cachedArchiveAudit(file) {
+  const entry = arcadeAuditCache.entries?.[file];
+  if (!entry || entry.fingerprint !== archiveFingerprint(file)) {
+    return { status: 'unchecked', message: 'Waiting for an archive integrity check.', checkedAt: 0 };
+  }
+  return entry;
+}
+
+function saveArcadeAuditCache() {
+  try {
+    arcadeAuditCache.updatedAt = Date.now();
+    fs.mkdirSync(path.dirname(ARCADE_AUDIT_FILE), { recursive: true });
+    fs.writeFileSync(ARCADE_AUDIT_FILE, JSON.stringify(arcadeAuditCache, null, 2));
+  } catch (error) {
+    addActivity('info', `Arcade audit cache could not be saved: ${error.message}`);
+  }
+}
+
+function configuredMameRomPaths() {
+  if (mameConfiguredRomPaths) return mameConfiguredRomPaths;
+  mameConfiguredRomPaths = [];
+  if (!MAME || !fs.existsSync(MAME)) return mameConfiguredRomPaths;
+  const config = spawnSync(MAME, ['-showconfig'], {
+    cwd: path.dirname(MAME),
+    windowsHide: true,
+    encoding: 'utf8',
+    timeout: 10000,
+    maxBuffer: 4 * 1024 * 1024
+  });
+  const value = String(config.stdout || '').match(/^rompath\s+(.+)$/m)?.[1]?.trim().replace(/^"|"$/g, '') || 'roms';
+  mameConfiguredRomPaths = value.split(';').map(item => item.trim()).filter(Boolean);
+  return mameConfiguredRomPaths;
+}
+
+function mameRomSearchPath(file) {
+  const romDirectory = path.dirname(file);
+  const candidates = [romDirectory, ...configuredMameRomPaths()];
+  if (path.basename(romDirectory).toLowerCase() === 'roms') {
+    const chdDirectory = path.join(path.dirname(romDirectory), 'CHDs');
+    if (fs.existsSync(chdDirectory)) candidates.push(chdDirectory);
+  }
+  return [...new Set(candidates)].join(';');
+}
+
+function processResult(executable, args, options = {}) {
+  return new Promise(resolve => {
+    let output = '';
+    let settled = false;
+    let timer = null;
+    const child = spawn(executable, args, {
+      cwd: options.cwd || path.dirname(executable),
+      windowsHide: true,
+      stdio: ['ignore', 'pipe', 'pipe']
+    });
+    const finish = result => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve(result);
+    };
+    const collect = chunk => { output = `${output}${chunk}`.slice(-12000); };
+    child.stdout?.on('data', collect);
+    child.stderr?.on('data', collect);
+    child.once('error', error => finish({ ok: false, code: -1, output, error: error.message }));
+    child.once('close', code => finish({ ok: code === 0, code, output }));
+    timer = setTimeout(() => {
+      child.kill();
+      finish({ ok: false, code: -1, output, error: 'Timed out' });
+    }, options.timeout || 20000);
+  });
+}
+
+async function inspectArcadeArchive(game) {
+  const extension = path.extname(game.file).toLowerCase();
+  const fingerprint = archiveFingerprint(game.file);
+  const base = { fingerprint, checkedAt: Date.now(), format: extension.replace('.', '').toUpperCase() };
+  if (!fingerprint) return { ...base, status: 'damaged', message: 'The archive is missing or unreadable.' };
+  const size = Number(fingerprint.split(':')[0] || 0);
+  if (size < 64) return { ...base, status: 'damaged', message: 'The archive is empty or incomplete.' };
+  if (!SEVEN_ZIP || !fs.existsSync(SEVEN_ZIP)) {
+    return { ...base, status: 'unchecked', message: 'Install 7-Zip or configure RGSX to enable integrity checks.' };
+  }
+  const container = await processResult(SEVEN_ZIP, ['t', '-bso0', '-bsp0', '-bse1', '--', game.file], { timeout: 30000 });
+  if (!container.ok) {
+    const detail = String(container.output || container.error || '').split(/\r?\n/).filter(Boolean).slice(-1)[0] || 'Integrity check failed.';
+    return { ...base, status: 'damaged', message: `Archive damage detected: ${detail}` };
+  }
+  if (game.system === 'mame' && MAME && fs.existsSync(MAME)) {
+    const verification = await processResult(MAME, ['-verifyroms', game.shortName, '-rompath', mameRomSearchPath(game.file)], { timeout: 45000 });
+    if (!verification.ok) {
+      return { ...base, status: 'incomplete', message: 'MAME reports missing, mismatched, parent, or BIOS files for this ROM set.' };
+    }
+    return { ...base, status: 'verified', message: 'Archive and MAME ROM-set verification passed.' };
+  }
+  return { ...base, status: 'verified', message: 'Archive integrity passed. FBNeo compatibility still depends on a matching ROM-set version.' };
+}
+
+function inspectArcadeArchiveSync(game) {
+  const cached = cachedArchiveAudit(game.file);
+  if (cached.status !== 'unchecked' && game.system !== 'mame') return cached;
+  const fingerprint = archiveFingerprint(game.file);
+  const extension = path.extname(game.file).toLowerCase();
+  const base = { fingerprint, checkedAt: Date.now(), format: extension.replace('.', '').toUpperCase() };
+  const size = Number(fingerprint.split(':')[0] || 0);
+  let result;
+  if (!fingerprint || size < 64) {
+    result = { ...base, status: 'damaged', message: 'The archive is empty, incomplete, or unreadable.' };
+  } else if (!SEVEN_ZIP || !fs.existsSync(SEVEN_ZIP)) {
+    result = { ...base, status: 'unchecked', message: 'Archive integrity could not be checked because 7-Zip is unavailable.' };
+  } else {
+    const container = spawnSync(SEVEN_ZIP, ['t', '-bso0', '-bsp0', '-bse1', '--', game.file], {
+      windowsHide: true,
+      encoding: 'utf8',
+      timeout: 30000,
+      maxBuffer: 2 * 1024 * 1024
+    });
+    result = container.status === 0
+      ? { ...base, status: 'verified', message: 'Archive integrity passed.' }
+      : { ...base, status: 'damaged', message: 'Archive damage detected. Replace it with a verified dump; GameDeck will not redownload it automatically.' };
+    if (result.status === 'verified' && game.system === 'mame' && MAME && fs.existsSync(MAME)) {
+      const verify = spawnSync(MAME, ['-verifyroms', game.shortName, '-rompath', mameRomSearchPath(game.file)], {
+        cwd: path.dirname(MAME),
+        windowsHide: true,
+        encoding: 'utf8',
+        timeout: 45000,
+        maxBuffer: 4 * 1024 * 1024
+      });
+      result = verify.status === 0
+        ? { ...base, status: 'verified', message: 'Archive and MAME ROM-set verification passed.' }
+        : { ...base, status: 'incomplete', message: 'MAME reports missing, mismatched, parent, or BIOS files for this ROM set.' };
+    }
+  }
+  arcadeAuditCache.entries[game.file] = result;
+  saveArcadeAuditCache();
+  return result;
+}
+
+function arcadeAuditSnapshot(games) {
+  const arcadeGames = games.filter(game => isArcadeSystem(game.system));
+  const items = arcadeGames.map(game => ({ file: game.file, shortName: game.shortName, ...cachedArchiveAudit(game.file) }));
+  return {
+    total: items.length,
+    verified: items.filter(item => item.status === 'verified').length,
+    attention: items.filter(item => ['damaged', 'incomplete'].includes(item.status)).length,
+    unchecked: items.filter(item => item.status === 'unchecked').length,
+    zip: arcadeGames.filter(game => game.format === 'ZIP').length,
+    sevenZip: arcadeGames.filter(game => game.format === '7Z').length,
+    updatedAt: Math.max(0, ...items.map(item => Number(item.checkedAt || 0))),
+    items
+  };
+}
+
+function emitArcadeAuditProgress(payload) {
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('arcade-audit-progress', payload);
+}
+
+async function auditArcadeLibrary(force = false) {
+  if (arcadeAuditTask) return arcadeAuditTask;
+  arcadeAuditTask = (async () => {
+    const library = getLibrary();
+    const games = library.games.filter(game => isArcadeSystem(game.system));
+    const pending = games.filter(game => force || cachedArchiveAudit(game.file).status === 'unchecked');
+    let cursor = 0;
+    let done = 0;
+    emitArcadeAuditProgress({ running: true, done, total: pending.length, current: '' });
+    const workers = Array.from({ length: Math.min(3, pending.length) }, async () => {
+      while (cursor < pending.length) {
+        const game = pending[cursor++];
+        const result = await inspectArcadeArchive(game);
+        arcadeAuditCache.entries[game.file] = result;
+        done += 1;
+        emitArcadeAuditProgress({ running: true, done, total: pending.length, current: game.title, status: result.status });
+      }
+    });
+    await Promise.all(workers);
+    if (pending.length) saveArcadeAuditCache();
+    const snapshot = arcadeAuditSnapshot(games);
+    emitArcadeAuditProgress({ running: false, done: pending.length, total: pending.length, ...snapshot });
+    return snapshot;
+  })().finally(() => { arcadeAuditTask = null; });
+  return arcadeAuditTask;
 }
 
 function getLibrary() {
@@ -545,8 +876,10 @@ function getLibrary() {
     const system = detectSystem(file);
     if (!isPlayableFile(file, system)) return null;
     const stat = fs.statSync(file);
-    const title = cleanName(file);
+    const shortName = rawGameName(file);
+    const title = isArcadeSystem(system) ? arcadeDisplayTitle(shortName) : cleanName(file);
     const folder = path.relative(LIBRARY, file).split(path.sep)[0].toLowerCase();
+    const archive = isArcadeSystem(system) ? cachedArchiveAudit(file) : null;
     return {
       id: Buffer.from(file).toString('base64url'),
       title,
@@ -554,8 +887,12 @@ function getLibrary() {
       system: system.id,
       size: stat.size,
       art: resolveGameArt(file, title, system.id, folder),
-      artworkTitle: rawGameName(file),
+      artworkTitle: title,
       artworkFolder: folder,
+      shortName,
+      format: path.extname(file).replace('.', '').toUpperCase(),
+      archiveHealth: archive?.status || '',
+      archiveHealthMessage: archive?.message || '',
       favorite: state.favorites.includes(file),
       lastPlayed: state.recent[file] || null
     };
@@ -569,6 +906,8 @@ function getLibrary() {
       image: rgsxSystemArtwork(system.folders),
       ready: systemReady(system),
       issue: systemSetupIssue(system),
+      emulatorKind: configuredEmulator(system)?.kind || '',
+      emulatorLabel: configuredEmulator(system)?.label || '',
       count: games.filter(game => game.system === system.id).length,
       installedCount: installedBySystem[system.id] || 0
     })),
@@ -640,6 +979,28 @@ function safeLibraryFile(file) {
   return resolved;
 }
 
+function ensureRetroArchArcadeControllerConfig() {
+  const lines = [
+    'input_autodetect_enable = "true"',
+    'input_player1_joypad_index = "0"',
+    'input_player2_joypad_index = "1"',
+    'input_player1_analog_dpad_mode = "1"',
+    'input_player2_analog_dpad_mode = "1"'
+  ];
+  if (process.platform === 'win32') lines.unshift('input_joypad_driver = "xinput"');
+  const content = `${lines.join('\n')}\n`;
+  try {
+    fs.mkdirSync(path.dirname(ARCADE_CONTROLLER_CONFIG), { recursive: true });
+    if (!fs.existsSync(ARCADE_CONTROLLER_CONFIG) || fs.readFileSync(ARCADE_CONTROLLER_CONFIG, 'utf8') !== content) {
+      fs.writeFileSync(ARCADE_CONTROLLER_CONFIG, content);
+    }
+    return ARCADE_CONTROLLER_CONFIG;
+  } catch (error) {
+    addActivity('info', `Arcade controller profile could not be refreshed: ${error.message}`);
+    return '';
+  }
+}
+
 function launchGame(file) {
   const safeFile = safeLibraryFile(file);
   const system = detectSystem(safeFile);
@@ -656,29 +1017,54 @@ function launchGame(file) {
     throw Error(setupIssue);
   }
 
-  let executable;
+  const game = {
+    file: safeFile,
+    system: system.id,
+    shortName: rawGameName(safeFile)
+  };
+  if (isArcadeSystem(system)) {
+    const audit = inspectArcadeArchiveSync(game);
+    if (audit.status === 'damaged' || audit.status === 'incomplete') throw Error(audit.message);
+  }
+
+  const emulator = configuredEmulator(system);
+  if (!emulator) throw Error(`${system.name} emulator is not installed or configured.`);
   let args;
-  if (system.core) {
-    executable = RA;
-    args = ['-f', '-L', path.join(CORES, system.core), safeFile];
+  if (emulator.kind === 'libretro') {
+    const controllerConfig = isArcadeSystem(system) ? ensureRetroArchArcadeControllerConfig() : '';
+    args = [
+      '-f',
+      ...(controllerConfig ? [`--appendconfig=${controllerConfig}`] : []),
+      '-L',
+      emulator.corePath,
+      safeFile
+    ];
+  } else if (emulator.kind === 'mame') {
+    args = [
+      game.shortName,
+      '-rompath', mameRomSearchPath(safeFile),
+      '-joystick',
+      ...(process.platform === 'win32' ? ['-joystickprovider', 'winhybrid'] : []),
+      '-skip_gameinfo',
+      '-noconfirm_quit',
+      '-nowindow'
+    ];
   } else {
-    executable = system.exe;
     args = [...(system.args || []), safeFile];
   }
 
-  if (!executable || !fs.existsSync(executable)) {
-    throw Error(`${system.name} emulator is not installed or configured.`);
-  }
-  if (system.core && !fs.existsSync(path.join(CORES, system.core))) {
-    throw Error(`${system.name} RetroArch core is not installed.`);
-  }
-
-  const child = spawn(executable, args, { detached: true, stdio: 'ignore' });
+  const child = spawn(emulator.executable, args, {
+    cwd: path.dirname(emulator.executable),
+    detached: true,
+    stdio: 'ignore'
+  });
+  child.once('error', error => addActivity('error', `${system.name} launch failed: ${error.message}`));
   child.unref();
   const store = readStore();
   store.recent[safeFile] = Date.now();
   writeStore(store);
-  addActivity('success', `Launched ${cleanName(safeFile)} with ${system.name}`);
+  const displayName = isArcadeSystem(system) ? arcadeDisplayTitle(game.shortName) : cleanName(safeFile);
+  addActivity('success', `Launched ${displayName} with ${emulator.label}`);
   return true;
 }
 
@@ -692,7 +1078,9 @@ function openSystemSetup(systemId) {
   if (system.bios || system.biosPattern) {
     return { ok: false, error: firmwareResult.error || `${system.name} firmware is required. Download via RGSX is unavailable.` };
   }
-  const folder = (system.biosDirs || []).find(directory => directory) || (system.core ? RA_SYSTEM : system.exe ? path.dirname(system.exe) : LIBRARY);
+  const emulator = configuredEmulator(system);
+  const folder = (system.biosDirs || []).find(directory => directory)
+    || (emulator?.kind === 'mame' ? path.dirname(emulator.executable) : system.core ? RA_SYSTEM : system.exe ? path.dirname(system.exe) : LIBRARY);
   fs.mkdirSync(folder, { recursive: true });
   shell.openPath(folder);
   const issue = systemSetupIssue(system);
@@ -1083,7 +1471,7 @@ function queueRgsxFirmwareDownload(systemId) {
 }
 
 function thumbnailNameCandidates(title) {
-  const raw = rawGameName(title);
+  const raw = lookupTitleName(title);
   const expanded = raw
     .replace(/\((JP|JPN|J)\)/gi, '(Japan)')
     .replace(/\((US|U)\)/gi, '(USA)')
@@ -1141,7 +1529,7 @@ async function fetchArtwork(title, systemId, folder = '') {
       if (!key) return '';
       const params = new URLSearchParams({
         apikey: key,
-        name: cleanName(title),
+        name: lookupTitleName(title),
         'filter[platform]': String(platformId)
       });
       const gameResponse = await fetch(`https://api.thegamesdb.net/v1/Games/ByGameName?${params}`);
@@ -1179,7 +1567,7 @@ async function fetchArtwork(title, systemId, folder = '') {
       artworkBackoffLogged = false;
       return toFileUrl(cache);
     } catch (error) {
-      addActivity('error', `Artwork lookup failed for ${cleanName(title)}: ${error.message}`);
+      addActivity('error', `Artwork lookup failed for ${lookupTitleName(title)}: ${error.message}`);
       return '';
     } finally {
       artworkRequests.delete(cache);
@@ -1198,6 +1586,7 @@ function publicSettings() {
     retroArchPath: RA,
     retroArchCores: CORES,
     retroArchSystem: RA_SYSTEM,
+    mamePath: MAME,
     sponsorsEnabled: runtimeSettings.sponsorsEnabled !== false,
     sponsorManifestUrl: runtimeSettings.sponsorManifestUrl || '',
     platform: process.platform,
@@ -1210,7 +1599,7 @@ function publicSettings() {
 function saveSettings(changes = {}) {
   const current = readJson(SETTINGS_FILE, {});
   const next = { ...current };
-  const pathKeys = ['libraryRoot', 'rgsxRoot', 'emulationRoot', 'retroArchPath', 'retroArchCores', 'retroArchSystem'];
+  const pathKeys = ['libraryRoot', 'rgsxRoot', 'emulationRoot', 'retroArchPath', 'retroArchCores', 'retroArchSystem', 'mamePath'];
   let restartRequired = false;
 
   for (const key of pathKeys) {
@@ -1244,13 +1633,14 @@ async function chooseDirectory(kind) {
     emulationRoot: 'Choose your emulation folder',
     retroArchPath: 'Choose the RetroArch executable',
     retroArchCores: 'Choose the RetroArch cores folder',
-    retroArchSystem: 'Choose the RetroArch system / BIOS folder'
+    retroArchSystem: 'Choose the RetroArch system / BIOS folder',
+    mamePath: 'Choose the MAME executable'
   };
   if (!titles[kind]) throw Error('Unsupported folder setting.');
   const result = await dialog.showOpenDialog(mainWindow, {
     title: titles[kind],
     defaultPath: publicSettings()[kind] || HOME_DIR,
-    properties: kind === 'retroArchPath' ? ['openFile'] : ['openDirectory', 'createDirectory']
+    properties: ['retroArchPath', 'mamePath'].includes(kind) ? ['openFile'] : ['openDirectory', 'createDirectory']
   });
   return result.canceled ? { canceled: true } : { canceled: false, path: result.filePaths[0] };
 }
@@ -1320,6 +1710,29 @@ function openExternal(target) {
   return shell.openExternal(parsed.toString());
 }
 
+function detectedControllerHints() {
+  if (controllerHintsCache) return controllerHintsCache;
+  controllerHintsCache = [];
+  if (process.platform !== 'win32') return controllerHintsCache;
+  const script = "Get-PnpDevice -PresentOnly -ErrorAction SilentlyContinue | Where-Object { $_.FriendlyName -match 'Xbox Wireless Controller|XINPUT compatible input device|Gamepad' } | Select-Object -ExpandProperty FriendlyName | Sort-Object -Unique | ConvertTo-Json -Compress";
+  const result = spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], {
+    windowsHide: true,
+    encoding: 'utf8',
+    timeout: 6000,
+    maxBuffer: 512 * 1024
+  });
+  if (result.status !== 0 || !String(result.stdout || '').trim()) return controllerHintsCache;
+  try {
+    const parsed = JSON.parse(String(result.stdout).trim());
+    const names = (Array.isArray(parsed) ? parsed : [parsed]).map(value => String(value)).filter(Boolean);
+    const xbox = names.some(name => /xbox|xinput/i.test(name));
+    controllerHintsCache = [...(xbox ? ['Xbox Wireless Controller'] : []), ...names.filter(name => !/xbox|xinput/i.test(name))].slice(0, 4);
+  } catch {
+    controllerHintsCache = [];
+  }
+  return controllerHintsCache;
+}
+
 function diagnostics() {
   const library = getLibrary();
   return {
@@ -1327,12 +1740,17 @@ function diagnostics() {
     rgsxData: RGSX_DATA,
     rgsxRuntime: fs.existsSync(RGSX_PYTHON),
     retroarch: fs.existsSync(RA),
+    mame: Boolean(MAME && fs.existsSync(MAME)),
+    archiveInspector: Boolean(SEVEN_ZIP && fs.existsSync(SEVEN_ZIP)),
+    arcade: arcadeAuditSnapshot(library.games),
+    controllers: detectedControllerHints(),
     platform: process.platform,
     arch: process.arch,
     settings: publicSettings(),
     systems: systems.map(system => {
       const count = library.games.filter(game => game.system === system.id).length;
-      return { id: system.id, name: system.name, ready: systemReady(system), issue: systemSetupIssue(system), count, installedCount: count };
+      const emulator = configuredEmulator(system);
+      return { id: system.id, name: system.name, ready: systemReady(system), issue: systemSetupIssue(system), emulatorKind: emulator?.kind || '', emulatorLabel: emulator?.label || '', count, installedCount: count };
     }),
     downloads: [...downloads.values()],
     activity
@@ -1425,6 +1843,7 @@ ipcMain.handle('prepare-game', (_, file) => prepareGameArchive(file));
 ipcMain.handle('artwork', (_, title, systemId, folder) => fetchArtwork(title, systemId, folder));
 ipcMain.handle('game-details', (_, title, systemId, context) => fetchGameDetails(title, systemId, context));
 ipcMain.handle('diagnostics', () => diagnostics());
+ipcMain.handle('arcade-audit', (_, force) => auditArcadeLibrary(Boolean(force)));
 ipcMain.handle('settings', () => publicSettings());
 ipcMain.handle('save-settings', (_, changes) => {
   try {
@@ -1460,6 +1879,7 @@ ipcMain.handle('clear-activity', () => {
 
 app.whenReady().then(() => {
   primeFirmwareFolders();
+  ensureRetroArchArcadeControllerConfig();
   createWindow();
 });
 app.on('activate', () => {

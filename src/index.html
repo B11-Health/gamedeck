@@ -66,6 +66,45 @@
         </div>
       </div>
 
+      <section class="arcade-deck hidden" id="arcadeDeck" aria-labelledby="arcadeDeckTitle">
+        <div class="arcade-command">
+          <div class="arcade-command-head">
+            <div>
+              <div class="eyebrow">ARCADE COMMAND CENTER</div>
+              <h2 id="arcadeDeckTitle">Cabinet-ready. Guesswork gone.</h2>
+              <p id="arcadeHealthState">Checking archive integrity, emulator routing, and artwork matches.</p>
+            </div>
+            <button id="arcadeAuditButton" type="button">Scan ROM-set health</button>
+          </div>
+          <div class="arcade-metrics" aria-live="polite">
+            <div><strong id="arcadeTotal">0</strong><span>SETS FOUND</span></div>
+            <div class="good"><strong id="arcadeVerified">0</strong><span>PREFLIGHT OK</span></div>
+            <div class="warn"><strong id="arcadeAttention">0</strong><span>NEED ATTENTION</span></div>
+            <div><strong id="arcadeArtwork">0%</strong><span>ARTWORK</span></div>
+          </div>
+          <div class="arcade-audit-progress hidden" id="arcadeAuditProgress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <span><i id="arcadeAuditBar"></i></span><small id="arcadeAuditCopy">Preparing archive scan…</small>
+          </div>
+          <div class="arcade-filters" role="group" aria-label="Filter arcade library by health">
+            <button class="active" type="button" data-arcade-filter="all" aria-pressed="true">All sets</button>
+            <button type="button" data-arcade-filter="verified" aria-pressed="false">Preflight clear</button>
+            <button type="button" data-arcade-filter="attention" aria-pressed="false">Needs attention</button>
+          </div>
+        </div>
+        <aside class="arcade-controller" aria-label="Xbox arcade controls">
+          <div class="arcade-controller-head">
+            <div><span class="controller-orbit" aria-hidden="true"></span><div><small>XINPUT COUCH MODE</small><b id="arcadeControllerState">Waiting for controller</b></div></div>
+            <span id="arcadeControllerCount">0 PADS</span>
+          </div>
+          <p id="arcadeControllerDetail">Connect an Xbox controller, then use either the D-pad or left stick.</p>
+          <div class="arcade-mapping">
+            <span><kbd>VIEW</kbd> Coin</span><span><kbd>MENU</kbd> Start</span>
+            <span><kbd>A</kbd> 1</span><span><kbd>B</kbd> 2</span><span><kbd>X</kbd> 3</span><span><kbd>Y</kbd> 4</span>
+            <span><kbd>LB</kbd> 5</span><span><kbd>RB</kbd> 6</span>
+          </div>
+        </aside>
+      </section>
+
       <section class="spotlight hidden" id="spotlight" aria-label="Selected game">
         <div class="feature-backdrop" aria-hidden="true"><img id="spotlightBackdrop" alt=""></div>
         <div class="spotlight-art" id="spotlightArt"></div>
@@ -184,6 +223,24 @@
           </div>
         </section>
 
+        <article class="community-release" aria-labelledby="arcadeReleaseTitle">
+          <div class="release-copy">
+            <div class="card-kicker">ARCADE READINESS PREVIEW</div>
+            <h2 id="arcadeReleaseTitle">MAME and FBNeo, without the mystery.</h2>
+            <p>GameDeck now identifies arcade sets by their real names, checks archives before launch, routes current MAME sets to standalone MAME, and gives FinalBurn Neo its own Xbox-ready launch profile.</p>
+            <div class="release-actions">
+              <button class="primary" id="openArcadeGuide">Read the arcade guide</button>
+              <button id="openArcadeFeedback">Share arcade feedback</button>
+            </div>
+          </div>
+          <div class="release-proof" aria-label="Arcade release highlights">
+            <span><b>01</b><small>Preflight archive health</small></span>
+            <span><b>02</b><small>Full MAME title metadata</small></span>
+            <span><b>03</b><small>XInput couch controls</small></span>
+            <span><b>04</b><small>Local-first artwork matching</small></span>
+          </div>
+        </article>
+
         <div class="community-grid">
           <article class="community-card sponsor-card" id="sponsorCard">
             <div class="card-kicker" id="sponsorEyebrow">COMMUNITY SPONSOR</div>
@@ -218,6 +275,7 @@
             <label class="setting-field"><span>RetroArch executable</span><div><input id="settingRetroArch" autocomplete="off"><button type="button" data-browse="retroArchPath">Browse</button></div></label>
             <label class="setting-field"><span>RetroArch cores</span><div><input id="settingCores" autocomplete="off"><button type="button" data-browse="retroArchCores">Browse</button></div></label>
             <label class="setting-field"><span>RetroArch system / BIOS</span><div><input id="settingSystem" autocomplete="off"><button type="button" data-browse="retroArchSystem">Browse</button></div></label>
+            <label class="setting-field"><span>Standalone MAME <small>recommended for current sets</small></span><div><input id="settingMame" autocomplete="off"><button type="button" data-browse="mamePath">Browse</button></div></label>
             <label class="setting-toggle"><input type="checkbox" id="settingSponsors"><span><b>Show community sponsor placements</b><small>Static creative only; GameDeck does not build advertising profiles.</small></span></label>
           </div>
           <div class="settings-actions">
