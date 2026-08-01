@@ -4,6 +4,10 @@ All notable GameDeck releases are documented here.
 
 ## [Unreleased]
 
+- Validated Saturn `.m3u` members before launch and kept automation sessions alive when the visible window is closed.
+
+- Added cached official thumbnail directory indexes and safe cross-repository matching for translated, abbreviated, and neighboring-console filenames.
+
 - Split exact filename artwork identity from clean metadata identity, added revision/region aliases, the official Libretro CDN, and throttled background cover enrichment.
 
 - Changed Library and Discover cards to preview on single click and act only through Play, Enter/A, or double-click; corrected nested-control semantics.

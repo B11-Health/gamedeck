@@ -26,12 +26,13 @@ GameDeck does **not** include ROMs, BIOS files, encryption keys, or commercial g
 - Input-aware help that adapts instantly to pointer, keyboard, or controller use
 - Live device-path health with clear required, optional, unsaved, and restart states
 - RetroArch core discovery plus standalone DuckStation, PCSX2, PPSSPP, Dolphin, and Cemu routing
+- Validated multi-disc Saturn `.m3u` playlists that reject missing disc members before launch
 - Dedicated MAME and FinalBurn Neo catalog handling with pre-launch ROM-set health checks
 - Full arcade names and local year, manufacturer, player, button, and control metadata from installed MAME
 - Scoped Xbox/XInput arcade profiles that preserve global emulator settings
 - BIOS-aware readiness checks with real setup locations
 - Cinematic title details, artwork caching, favorites, and recent plays
-- Exact No-Intro filename matching, revision aliases, Libretro CDN fallback, and quiet background cover enrichment
+- Exact No-Intro filename matching, revision aliases, Libretro CDN fallback, indexed fuzzy title matching, and quiet background cover enrichment
 - A calm four-stage startup panel that reports library, launcher, artwork, and control readiness
 - Context-aware hero actions for continuing a recent game, choosing a surprise title, or finishing setup
 - Immediate launch feedback and visible metadata-source continuity in the selected-game spotlight

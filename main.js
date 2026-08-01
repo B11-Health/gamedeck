@@ -276,6 +276,8 @@ const tgdbPlatforms = {
   psp: 13, gamecube: 2, wii: 9, wiiu: 38
 };
 
+const AUTOMATION_MODE = process.argv.some(argument => String(argument).startsWith('--remote-debugging-port'));
+let appIsQuitting = false;
 let mainWindow = null;
 let activity = [];
 const downloads = new Map();
@@ -284,6 +286,7 @@ const artworkMisses = new Set();
 const detailRequests = new Map();
 const detailMisses = new Set();
 const catalogRowsCache = new Map();
+const thumbnailIndexRequests = new Map();
 let artworkBackoffUntil = 0;
 let artworkBackoffLogged = false;
 let detailBackoffUntil = 0;
@@ -606,7 +609,18 @@ function detectSystem(file) {
 }
 
 function isPlayableFile(file, system) {
-  return system && system.exts.includes(path.extname(file).toLowerCase());
+  const extension = path.extname(file).toLowerCase();
+  if (!system || !system.exts.includes(extension)) return false;
+  if (extension !== '.m3u') return true;
+  try {
+    const entries = fs.readFileSync(file, 'utf8')
+      .split(/\r?\n/)
+      .map(value => value.trim())
+      .filter(value => value && !value.startsWith('#'));
+    return entries.length > 0 && entries.every(value => fs.existsSync(path.resolve(path.dirname(file), value)));
+  } catch {
+    return false;
+  }
 }
 
 function cachedArtworkPath(title, systemId, folder = '') {
@@ -1619,7 +1633,7 @@ function thumbnailNameCandidates(title) {
   ]).filter(Boolean);
   const regionless = cleanName(withoutDumpTags) || stripNonRegionTags(withoutDumpTags);
   const inferredRegions = ['USA', 'USA, Europe', 'World', 'Europe', 'Japan'].map(region => `${regionless} (${region})`);
-  const names = [...base, ...articleVariants, ...punctuationVariants, ...inferredRegions]
+  const names = [...base, ...inferredRegions, ...articleVariants, ...punctuationVariants]
     .map(value => value.replace(/\s+/g, ' ').trim())
     .filter(Boolean);
   return [...new Set(names.flatMap(name => [name, name.replace(/[&*/:`<>?\\|]/g, '_')]))].slice(0, 32);
@@ -1630,6 +1644,8 @@ function thumbnailRepoCandidates(systemId, folder) {
   const system = systems.find(item => item.id === systemId);
   if (system) repositories.push(...system.folders.map(item => thumbnailRepos[item]));
   if (systemId === 'arcade') repositories.push('MAME', 'SNK_-_Neo_Geo');
+  if (systemId === 'gamegear') repositories.push('Sega_-_Mega_Drive_-_Genesis', 'Sega_-_Master_System_-_Mark_III');
+  if (systemId === 'gamecube') repositories.push('Nintendo_-_Wii');
   return [...new Set(repositories.filter(Boolean))];
 }
 
@@ -1637,29 +1653,115 @@ function thumbnailCdnRepository(repository) {
   return String(repository || '').replace(/_-_/g, ' - ').replace(/_/g, ' ');
 }
 
+function thumbnailIdentity(value) {
+  return cleanName(String(value || '').replace(/\.png$/i, ''))
+    .toLowerCase()
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9]+/g, '');
+}
+
+function thumbnailRegionScore(value, requested) {
+  const candidate = String(value || '').toLowerCase();
+  const source = String(requested || '').toLowerCase();
+  let score = 0;
+  for (const region of ['usa', 'world', 'europe', 'japan', 'australia']) {
+    if (source.includes(region) && candidate.includes(region)) score += 30;
+  }
+  if (candidate.includes('(usa')) score += 8;
+  else if (candidate.includes('(world')) score += 6;
+  else if (candidate.includes('(europe')) score += 4;
+  else if (candidate.includes('(japan')) score += 2;
+  return score;
+}
+
+async function thumbnailIndex(repository) {
+  if (thumbnailIndexRequests.has(repository)) return thumbnailIndexRequests.get(repository);
+  const request = (async () => {
+    try {
+      const directory = thumbnailCdnRepository(repository);
+      const response = await fetch(`https://thumbnails.libretro.com/${encodeURIComponent(directory)}/Named_Boxarts/`, { signal: AbortSignal.timeout(12000) });
+      if (!response.ok) return [];
+      const markup = await response.text();
+      return [...markup.matchAll(/href="([^"]+\.png)"/gi)].map(match => {
+        try {
+          return decodeURIComponent(match[1].replace(/&amp;/g, '&'));
+        } catch {
+          return match[1];
+        }
+      });
+    } catch {
+      return [];
+    }
+  })();
+  thumbnailIndexRequests.set(repository, request);
+  return request;
+}
+
+async function saveThumbnailResponse(response, cache) {
+  if (!response.ok || !String(response.headers.get('content-type')).startsWith('image/')) return '';
+  const bytes = Buffer.from(await response.arrayBuffer());
+  if (!bytes.length || bytes.length > 12 * 1024 * 1024) return '';
+  fs.mkdirSync(ART_CACHE, { recursive: true });
+  fs.writeFileSync(cache, bytes);
+  return toFileUrl(cache);
+}
+
+async function fetchIndexedLibretroArtwork(repository, title, names, cache) {
+  const entries = await thumbnailIndex(repository);
+  if (!entries.length) return '';
+  const targets = [...new Set(names.map(thumbnailIdentity).filter(value => value.length >= 4))];
+  const matches = entries.map(entry => {
+    const identity = thumbnailIdentity(entry);
+    let relation = 0;
+    for (const target of targets) {
+      if (identity === target) relation = Math.max(relation, 1000);
+      else if (target.length >= 8 && identity.startsWith(target)) relation = Math.max(relation, 700 - Math.min(200, identity.length - target.length));
+      else if (identity.length >= 8 && target.startsWith(identity)) relation = Math.max(relation, 650 - Math.min(200, target.length - identity.length));
+    }
+    return { entry, identity, score: relation + thumbnailRegionScore(entry, title) };
+  }).filter(match => match.score >= 500).sort((a, b) => b.score - a.score || a.entry.length - b.entry.length);
+  const match = matches[0];
+  if (!match) return '';
+  try {
+    const directory = thumbnailCdnRepository(repository);
+    const url = `https://thumbnails.libretro.com/${encodeURIComponent(directory)}/Named_Boxarts/${encodeURIComponent(match.entry).replace(/%2F/gi, '_')}`;
+    const response = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    return saveThumbnailResponse(response, cache);
+  } catch {
+    return '';
+  }
+}
+
 async function fetchLibretroArtwork(title, systemId, folder, cache) {
   const repositories = thumbnailRepoCandidates(systemId, folder);
   const names = thumbnailNameCandidates(title);
+  const directNames = names.slice(0, 5);
   for (const repository of repositories) {
     const cdnRepository = thumbnailCdnRepository(repository);
-    for (const name of names) {
+    for (const name of directNames) {
       const encodedName = encodeURIComponent(name).replace(/%2F/gi, '_');
-      const urls = [
-        `https://thumbnails.libretro.com/${encodeURIComponent(cdnRepository)}/Named_Boxarts/${encodedName}.png`,
-        `https://raw.githubusercontent.com/libretro-thumbnails/${repository}/master/Named_Boxarts/${encodedName}.png`
-      ];
-      for (const url of urls) {
-        try {
-          const response = await fetch(url, { signal: AbortSignal.timeout(8000) });
-          if (!response.ok || !String(response.headers.get('content-type')).startsWith('image/')) continue;
-          const bytes = Buffer.from(await response.arrayBuffer());
-          if (!bytes.length || bytes.length > 12 * 1024 * 1024) continue;
-          fs.mkdirSync(ART_CACHE, { recursive: true });
-          fs.writeFileSync(cache, bytes);
-          return toFileUrl(cache);
-        } catch {
-          // Try the next candidate or source. TheGamesDB remains the final fallback.
-        }
+      try {
+        const response = await fetch(`https://thumbnails.libretro.com/${encodeURIComponent(cdnRepository)}/Named_Boxarts/${encodedName}.png`, { signal: AbortSignal.timeout(8000) });
+        const found = await saveThumbnailResponse(response, cache);
+        if (found) return found;
+      } catch {
+        // Continue to indexed and GitHub fallbacks.
+      }
+    }
+  }
+  for (const repository of repositories) {
+    const indexed = await fetchIndexedLibretroArtwork(repository, title, names, cache);
+    if (indexed) return indexed;
+  }
+  for (const repository of repositories) {
+    for (const name of names.slice(0, 5)) {
+      const encodedName = encodeURIComponent(name).replace(/%2F/gi, '_');
+      try {
+        const response = await fetch(`https://raw.githubusercontent.com/libretro-thumbnails/${repository}/master/Named_Boxarts/${encodedName}.png`, { signal: AbortSignal.timeout(8000) });
+        const found = await saveThumbnailResponse(response, cache);
+        if (found) return found;
+      } catch {
+        // TheGamesDB remains the final fallback.
       }
     }
   }
@@ -2029,6 +2131,12 @@ function createWindow() {
     }
   });
   mainWindow.center();
+  mainWindow.on('close', event => {
+    if (!AUTOMATION_MODE || appIsQuitting) return;
+    event.preventDefault();
+    mainWindow.hide();
+    addActivity('info', 'GameDeck automation continues with the window hidden.');
+  });
   if (captureMode) mainWindow.once('ready-to-show', () => mainWindow.showInactive());
   const captureView = String(process.env.GAMEDECK_CAPTURE_VIEW || '');
   mainWindow.loadFile('src/index.html', captureView ? { query: { captureView } } : undefined);
@@ -2133,6 +2241,10 @@ ipcMain.handle('restart-app', () => {
 ipcMain.handle('clear-activity', () => {
   activity = [];
   return true;
+});
+
+app.on('before-quit', () => {
+  appIsQuitting = true;
 });
 
 app.whenReady().then(() => {

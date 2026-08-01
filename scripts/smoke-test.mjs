@@ -180,4 +180,12 @@ if (!main.includes('thumbnailCdnRepository') || !main.includes('thumbnails.libre
 if (!main.includes('revisionNumeric') || !main.includes('inferredRegions')) fail('artwork candidate normalization is missing');
 if (!renderer.includes('function gameMetadataTitle') || !renderer.includes('function scheduleArtworkEnrichment')) fail('background artwork enrichment is missing');
 
+
+if (!main.includes('thumbnailIndexRequests') || !main.includes('fetchIndexedLibretroArtwork') || !main.includes('thumbnailIdentity')) fail('indexed fuzzy artwork matching is missing');
+if (!main.includes("systemId === 'gamegear'") || !main.includes("systemId === 'gamecube'")) fail('safe cross-repository artwork fallback is missing');
+
+
+if (!main.includes("extension !== '.m3u'") || !main.includes("value.startsWith('#')")) fail('Saturn M3U validation is missing');
+if (!main.includes('AUTOMATION_MODE') || !main.includes("mainWindow.hide()")) fail('automation-mode hide-on-close behavior is missing');
+
 if (!process.exitCode) console.log('GameDeck smoke test passed.');
