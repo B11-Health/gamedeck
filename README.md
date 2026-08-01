@@ -74,3 +74,7 @@ Environment overrides are also supported: `GAMEDECK_LIBRARY`, `GAMEDECK_RGSX_ROO
 - See [FUNDING.md](FUNDING.md) and the transparent [sponsorship policy](docs/SPONSORSHIP.md).
 
 GameDeck is not affiliated with Nintendo, Sony, Microsoft, Sega, Valve, RetroArch, or emulator projects referenced for compatibility. Product names belong to their respective owners.
+
+## Video and channel launch
+
+Channel copy, upload metadata, and the reproducible capture/render workflow are documented in [docs/YOUTUBE_LAUNCH.md](docs/YOUTUBE_LAUNCH.md).

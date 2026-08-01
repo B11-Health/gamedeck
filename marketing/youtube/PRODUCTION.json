@@ -1,0 +1,8 @@
+{
+  "video": "GameDeck-Official-Launch.mp4",
+  "resolution": "1280x720",
+  "narration": "Windows SAPI preview fallback",
+  "targetNarrationModel": "gemini-3.1-flash-tts-preview",
+  "background": "generated ambient fallback; intended track Quiet Focus (1).mp3",
+  "generatedAt": "2026-08-01T18:22:54.841Z"
+}
