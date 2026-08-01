@@ -4,6 +4,7 @@ All notable GameDeck releases are documented here.
 
 ## [Unreleased]
 
+- Replaced the rotating loading spinner with a calm four-stage startup panel for library, launcher, artwork, and control readiness.
 - Added a zero-hassle ready check for game-library, emulator, artwork, and controller status with direct setup actions.
 - Added a controller-friendly **Surprise me** action for selecting a random playable game from the current shelf.
 - Added manual cover correction and one-click metadata refresh from the selected-game spotlight.

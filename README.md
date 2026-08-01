@@ -28,6 +28,7 @@ GameDeck does **not** include ROMs, BIOS files, encryption keys, or commercial g
 - Scoped Xbox/XInput arcade profiles that preserve global emulator settings
 - BIOS-aware readiness checks with real setup locations
 - Cinematic title details, artwork caching, favorites, and recent plays
+- A calm four-stage startup panel that reports library, launcher, artwork, and control readiness
 - A built-in ready check for library, launcher, artwork, and controller setup
 - One-click **Surprise me** picks a random playable title from the current shelf
 - Manual cover correction and one-click metadata refresh for titles that need a better match
@@ -41,6 +42,12 @@ GameDeck does **not** include ROMs, BIOS files, encryption keys, or commercial g
 - RGSX integration when its optional local runtime is available
 - Privacy-respecting community sponsor placements with a user opt-out
 - Public donation addresses only; wallet secrets are never part of the app
+
+## Startup without the fake wait
+
+GameDeck no longer hides startup behind a spinning logo. The boot panel advances through four concrete stages—library, launchers, artwork, and controls—then gets out of the way. Progress remains readable, local-first, and honest even when a large collection takes longer to scan.
+
+![GameDeck startup sequence](docs/images/gamedeck-startup.png)
 
 ## Ready without the guesswork
 

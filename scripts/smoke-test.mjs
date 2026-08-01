@@ -9,11 +9,12 @@ const fail = message => {
   process.exitCode = 1;
 };
 
-const [main, preload, renderer, html, pkgText, donations] = await Promise.all([
+const [main, preload, renderer, html, styles, pkgText, donations] = await Promise.all([
   read('main.js'),
   read('preload.js'),
   read('src/app.js'),
   read('src/index.html'),
+  read('src/styles.css'),
   read('package.json'),
   read('config/donations.json')
 ]);
@@ -75,6 +76,9 @@ if (!renderer.includes('sidebar-collapsed')) fail('renderer is missing the colla
 if (!html.includes('toast-message') || !renderer.includes('updateScrollChrome')) fail('polished feedback and sticky toolbar behavior are missing');
 if (!renderer.includes('missing-art') || !renderer.includes('art-status')) fail('library artwork quality states are missing');
 if (!renderer.includes('renderSetupCoach') || !renderer.includes('setupReadiness')) fail('renderer is missing the zero-hassle ready check');
+if (!renderer.includes('loadingStepLibrary') || !renderer.includes('loadingPhase')) fail('renderer is missing staged startup progress');
+if (html.includes('loading-orbit') || html.includes('loading-console') || styles.includes('loadingSpin') || styles.includes('bootSweep')) fail('legacy animated loading spinner styles must stay removed');
+if (!html.includes('boot-panel') || !styles.includes('.loading-steps')) fail('premium status-driven boot panel is missing');
 if (!renderer.includes('surpriseMe')) fail('renderer is missing the random playable game action');
 if (!renderer.includes('artworkFilter') || !html.includes('id="artworkFilter"')) fail('library artwork quality filter is missing');
 if (!renderer.includes('chooseFocusedArtwork') || !renderer.includes('refreshFocusedDetails')) fail('renderer is missing manual artwork or detail repair controls');
@@ -107,6 +111,7 @@ for (const asset of [
   'docs/ARCADE.md',
   'docs/COMMUNITY_LAUNCH.md',
   'docs/images/gamedeck-ready-check.png',
+  'docs/images/gamedeck-startup.png',
   'build/icon.ico',
   'build/icon.icns',
   'build/icons/512x512.png'
