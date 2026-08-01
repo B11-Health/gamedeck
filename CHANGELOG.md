@@ -1,15 +1,16 @@
-## [Unreleased]
-
-- Added local JSON sidecar metadata support for complete descriptions, release details, genre, developer, publisher, rating, and player counts.
-- Expanded artwork discovery across adjacent images, artwork, boxart, covers, and media folders using both filename and cleaned title matches.
-- Added a prominent in-app support rally with one-click donation-address copy, sponsorship inquiry, and funding transparency actions.
-
 # Changelog
 
 All notable GameDeck releases are documented here.
 
-## Unreleased
+## [Unreleased]
 
+- Added a zero-hassle ready check for game-library, emulator, artwork, and controller status with direct setup actions.
+- Added a controller-friendly **Surprise me** action for selecting a random playable game from the current shelf.
+- Added manual cover correction and one-click metadata refresh from the selected-game spotlight.
+- Fixed persisted artwork cache discovery when cleaned titles differ from original ROM filenames.
+- Added local JSON sidecar metadata support for complete descriptions, release details, genre, developer, publisher, rating, and player counts.
+- Expanded artwork discovery across adjacent images, artwork, boxart, covers, and media folders using both filename and cleaned title matches.
+- Added a prominent in-app support rally with one-click donation-address copy, sponsorship inquiry, and funding transparency actions.
 - Added an Arcade Command Center for MAME and FinalBurn Neo with verified, attention, artwork, and controller status at a glance.
 - Added cached ZIP/7z integrity checks and native MAME `-verifyroms` validation, with exact launch blocking for damaged or incomplete sets.
 - Added full arcade title and machine metadata from the installed MAME database.

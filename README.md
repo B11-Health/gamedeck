@@ -28,6 +28,9 @@ GameDeck does **not** include ROMs, BIOS files, encryption keys, or commercial g
 - Scoped Xbox/XInput arcade profiles that preserve global emulator settings
 - BIOS-aware readiness checks with real setup locations
 - Cinematic title details, artwork caching, favorites, and recent plays
+- A built-in ready check for library, launcher, artwork, and controller setup
+- One-click **Surprise me** picks a random playable title from the current shelf
+- Manual cover correction and one-click metadata refresh for titles that need a better match
 - Automatic local sidecar metadata (`Game Name.json`, `.metadata.json`, or `metadata/`) plus expanded `boxart`, `covers`, and `media` artwork discovery
 - A prominent, transparent in-app support center for direct donations and founding sponsorships
 - Shelf-first compact mode plus an optional large-format Cinematic view
@@ -36,6 +39,14 @@ GameDeck does **not** include ROMs, BIOS files, encryption keys, or commercial g
 - RGSX integration when its optional local runtime is available
 - Privacy-respecting community sponsor placements with a user opt-out
 - Public donation addresses only; wallet secrets are never part of the app
+
+## Ready without the guesswork
+
+GameDeck explains exactly what is ready and what still needs attention. The in-app ready check scans the library, compatible launchers, artwork coverage, and controller support, then offers a direct path to the relevant setup screen. Press **X** on a standard controller or choose **Surprise me** to jump to a random playable game.
+
+Selected games also expose **Change art** and **Refresh details** actions, so a mismatched cover or sparse description can be corrected without touching cache folders or configuration files.
+
+![GameDeck ready check](docs/images/gamedeck-ready-check.png)
 
 ## Install
 

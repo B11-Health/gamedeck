@@ -45,6 +45,9 @@ const state = {
   settings: null,
   sponsors: null,
   donations: null,
+  diagnostics: null,
+  setupCoachOpen: readPreference('setup-coach', 'auto') === 'open',
+  setupCoachDismissed: readPreference('setup-coach', 'auto') === 'dismissed',
   arcadeAudit: { total: 0, verified: 0, attention: 0, unchecked: 0, items: [] },
   arcadeAuditProgress: { running: false, done: 0, total: 0, current: '' },
   arcadeFilter: 'all',
@@ -547,6 +550,20 @@ function observeVisibleArtwork() {
   $$('[data-game-art], [data-catalog-art]').forEach(image => artworkObserver.observe(image));
 }
 
+function gameDetailsContext(game) {
+  const system = systemById(game?.system);
+  return { name: game?.title, systemName: system?.name, shortName: game?.shortName, file: game?.file, edition: game?.edition, region: game?.region, installed: true };
+}
+
+function applyFocusedDetails(game, details) {
+  if (!game || state.focusedGameId !== game.id || !details) return;
+  const system = systemById(game.system);
+  const arcade = isArcadeId(game.system);
+  const fallback = fallbackDescription(game.title, system?.name || 'this console', true);
+  $('#spotlightDescription').textContent = details.description || fallback;
+  $('#spotlightFacts').innerHTML = factMarkup([arcade && game.shortName?.toUpperCase(), system?.short || system?.name, details.year, details.genre, details.players && (details.players + ' player' + (details.players === '1' ? '' : 's')), details.buttons && (details.buttons + ' buttons'), details.developer || details.manufacturer, details.publisher, game.region, game.format, sizeLabel(game.size)]);
+}
+
 function setFocusedGame(game, options = {}) {
   state.focusedGameId = game?.id ?? null;
   state.libraryZone = 'games';
@@ -580,23 +597,56 @@ function setFocusedGame(game, options = {}) {
   $('#spotlightBackdrop').src = art;
   spotlight.classList.remove('hidden');
   requestArtwork(game);
-  queueGameDetails(game.artworkTitle || game.title, game.system, {
-    name: game.title,
-    systemName: system?.name,
-    shortName: game.shortName,
-    file: game.file,
-    edition: game.edition,
-    region: game.region,
-    installed: true
-  }, details => {
-    if (state.focusedGameId !== game.id) return;
-    $('#spotlightDescription').textContent = details.description || fallback;
-    $('#spotlightFacts').innerHTML = factMarkup([arcade && game.shortName?.toUpperCase(), system?.short || system?.name, details.year, details.genre, details.players && `${details.players} player${details.players === '1' ? '' : 's'}`, details.buttons && `${details.buttons} buttons`, details.developer || details.manufacturer, game.region, game.format, sizeLabel(game.size)]);
+  queueGameDetails(game.artworkTitle || game.title, game.system, gameDetailsContext(game), details => {
+    applyFocusedDetails(game, details);
   });
 
   if (options.scroll) {
     const card = document.querySelector(`.game[data-id="${game.id}"]`);
     card?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
+}
+
+async function chooseFocusedArtwork() {
+  const game = focusedGame();
+  if (!game) return;
+  const button = $('#spotlightArtwork');
+  button.disabled = true;
+  button.textContent = 'Choosing…';
+  try {
+    const result = await window.deck.chooseGameArtwork(game.file);
+    if (result?.canceled) return;
+    if (!result?.ok || !result.url) throw Error(result?.error || 'Artwork could not be saved');
+    updateGameArtwork(game, result.url);
+    setFocusedGame(game);
+    toast('Custom artwork saved');
+  } catch (error) {
+    toast(error.message || 'Artwork could not be changed');
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Change art';
+  }
+}
+
+async function refreshFocusedDetails() {
+  const game = focusedGame();
+  if (!game) return;
+  const button = $('#spotlightDetails');
+  button.disabled = true;
+  button.textContent = 'Refreshing…';
+  const key = detailKey(game.artworkTitle || game.title, game.system);
+  state.gameDetails.delete(key);
+  try {
+    const details = await window.deck.refreshGameDetails(game.artworkTitle || game.title, game.system, gameDetailsContext(game));
+    if (!details) throw Error('No details were returned');
+    state.gameDetails.set(key, details);
+    applyFocusedDetails(game, details);
+    toast(details.source === 'GameDeck' ? 'Using local GameDeck details for now' : 'Details refreshed from ' + (details.source || 'metadata source'));
+  } catch (error) {
+    toast(error.message || 'Game details could not be refreshed');
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Refresh details';
   }
 }
 
@@ -1116,6 +1166,137 @@ function setActiveView(view) {
   });
 }
 
+function setupReadiness() {
+  const diagnostics = state.diagnostics || {};
+  const games = state.library.games || [];
+  const systems = state.library.systems || [];
+  const installedSystems = systems.filter(system => Number(system.installedCount || system.count || 0) > 0);
+  const readyInstalled = installedSystems.filter(system => system.ready);
+  const readySystems = systems.filter(system => system.ready);
+  const artworkCount = games.filter(game => Boolean(game.art)).length;
+  const artworkCoverage = games.length ? Math.round((artworkCount / games.length) * 100) : 0;
+  const pads = navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean) : [];
+  const controllerReady = pads.length > 0 || state.controllerHints.length > 0;
+  const libraryReady = games.length > 0;
+  const launcherReady = games.length ? readyInstalled.length > 0 : readySystems.length > 0;
+  const artworkReady = games.length > 0 && artworkCount > 0;
+  const steps = [
+    {
+      id: 'library',
+      label: 'Game library',
+      ready: libraryReady,
+      detail: libraryReady
+        ? `${games.length.toLocaleString()} title${games.length === 1 ? '' : 's'} found and organized.`
+        : diagnostics.libraryExists
+          ? 'Library folder is ready. Add owned games or browse Discover.'
+          : 'Choose a library folder to begin.'
+    },
+    {
+      id: 'launchers',
+      label: 'Launchers',
+      ready: launcherReady,
+      detail: launcherReady
+        ? `${games.length ? readyInstalled.length : readySystems.length} emulator route${(games.length ? readyInstalled.length : readySystems.length) === 1 ? '' : 's'} ready.`
+        : 'No launcher is ready for the installed collection yet.'
+    },
+    {
+      id: 'artwork',
+      label: 'Artwork',
+      ready: artworkReady,
+      detail: games.length ? `${artworkCoverage}% matched · ${artworkCount.toLocaleString()} covers ready.` : 'Artwork matching starts as soon as games are found.'
+    },
+    {
+      id: 'controls',
+      label: 'Controls',
+      ready: true,
+      detail: controllerReady ? 'Controller detected and couch mode is ready.' : 'Keyboard and mouse are ready; connect a controller anytime.'
+    }
+  ];
+  return {
+    steps,
+    score: Math.round((steps.filter(step => step.ready).length / steps.length) * 100),
+    libraryReady,
+    launcherReady,
+    artworkCoverage,
+    coreReady: libraryReady && launcherReady
+  };
+}
+
+function renderSetupCoach() {
+  const coach = $('#setupCoach');
+  if (!coach) return;
+  const readiness = setupReadiness();
+  const libraryView = !['discover', 'community'].includes(state.view);
+  const needsHelp = !readiness.coreReady;
+  const visible = libraryView && (state.setupCoachOpen || (!state.setupCoachDismissed && needsHelp));
+  coach.classList.toggle('hidden', !visible);
+  $('#setupToggle').classList.toggle('active', visible);
+  $('#setupToggle').classList.toggle('attention', needsHelp);
+  $('#setupToggle').setAttribute('aria-pressed', String(visible));
+  if (!visible) return;
+
+  $('#setupScore').textContent = `${readiness.score}%`;
+  $('#setupCoachTitle').textContent = readiness.coreReady ? 'Your deck is ready to play.' : 'Your easiest route to play.';
+  $('#setupCoachMessage').textContent = !readiness.libraryReady
+    ? 'Add legally owned games or browse Discover. GameDeck will organize the rest.'
+    : !readiness.launcherReady
+      ? 'Your games are here. Connect one compatible emulator to unlock one-click play.'
+      : readiness.artworkCoverage < 80
+        ? 'Launching is ready. Artwork will continue filling in quietly as you browse.'
+        : 'Library, launchers, artwork, and controls are lined up for couch play.';
+  $('#setupSteps').innerHTML = readiness.steps.map(step => `
+    <div class="setup-step ${step.ready ? 'ready' : 'pending'}">
+      <span class="setup-step-icon" aria-hidden="true">${step.ready ? '✓' : '·'}</span>
+      <span><b>${escapeHtml(step.label)}</b><small>${escapeHtml(step.detail)}</small></span>
+    </div>`).join('');
+  const primary = $('#setupPrimary');
+  primary.textContent = !readiness.libraryReady ? 'Browse Discover' : !readiness.launcherReady ? 'Open launcher setup' : 'Review settings';
+  primary.dataset.action = !readiness.libraryReady ? 'discover' : 'settings';
+}
+
+function surpriseMe() {
+  if (['discover', 'community'].includes(state.view)) changeView('home');
+  const candidates = currentGames().filter(game => {
+    const system = systemById(game.system);
+    return system?.ready && !['damaged', 'incomplete'].includes(game.archiveHealth);
+  });
+  if (!candidates.length) {
+    state.setupCoachOpen = true;
+    state.setupCoachDismissed = false;
+    writePreference('setup-coach', 'open');
+    renderSetupCoach();
+    toast('Finish setup to unlock Surprise me');
+    return;
+  }
+  const alternatives = candidates.filter(game => game.id !== state.focusedGameId);
+  const pool = alternatives.length ? alternatives : candidates;
+  const game = pool[Math.floor(Math.random() * pool.length)];
+  setFocusedGame(game, { scroll: true });
+  toast(`Tonight's pick: ${game.title}`);
+}
+
+async function runReadyCheck() {
+  const button = $('#setupCheck');
+  button.disabled = true;
+  button.textContent = 'Checking…';
+  setLoading(true, 'Running the ready check', 'Scanning games, launchers, artwork, and controller support.', 34);
+  try {
+    state.library = await window.deck.rescan();
+    await refreshDiagnostics();
+    render();
+    toast(setupReadiness().coreReady ? 'GameDeck is ready to play' : 'Ready check complete');
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Run ready check';
+    setLoading(false);
+  }
+}
+
+function openSetupSettings() {
+  changeView('community');
+  setTimeout(() => $('#communitySettings')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
+}
+
 function render() {
   renderSystems();
   setActiveView(state.view);
@@ -1125,6 +1306,7 @@ function render() {
   $('#community').classList.toggle('hidden', !community);
   $('#games').classList.toggle('hidden', discover || community);
   $('.hero').classList.toggle('hidden', discover || community);
+  renderSetupCoach();
   $('#spotlight').classList.toggle('hidden', discover || community || !focusedGame());
   renderArcadeDeck();
   $('.control-legend').classList.toggle('hidden', community);
@@ -1379,6 +1561,7 @@ function handleGamepad() {
   const startIndex = pad.mapping === 'standard' ? 9 : 7;
   if (pressed(0)) activateFocused();
   if (pressed(1)) backAction();
+  if (pressed(2) && !['discover', 'community'].includes(state.view)) surpriseMe();
   if (pressed(3)) setupFocusedSystem();
   if (pressed(4)) cycleView(-1);
   if (pressed(5)) cycleView(1);
@@ -1400,6 +1583,7 @@ function renderActivity() {
 
 async function refreshDiagnostics() {
   const diagnostics = await window.deck.diagnostics();
+  state.diagnostics = diagnostics;
   state.controllerHints = diagnostics.controllers || [];
   state.activities = diagnostics.activity || [];
   state.downloads = diagnostics.downloads || [];
@@ -1436,7 +1620,27 @@ async function refreshCatalogAfterDownload(taskId) {
   }
 }
 
-$$('.nav').forEach(button => button.onclick = () => changeView(button.dataset.view));
+$('.nav').forEach(button => button.onclick = () => changeView(button.dataset.view));
+$('#setupToggle').onclick = () => {
+  const currentlyVisible = !$('#setupCoach').classList.contains('hidden');
+  state.setupCoachOpen = !currentlyVisible;
+  state.setupCoachDismissed = false;
+  writePreference('setup-coach', state.setupCoachOpen ? 'open' : 'auto');
+  if (state.setupCoachOpen && ['discover', 'community'].includes(state.view)) changeView('home');
+  else renderSetupCoach();
+};
+$('#setupDismiss').onclick = () => {
+  state.setupCoachOpen = false;
+  state.setupCoachDismissed = true;
+  writePreference('setup-coach', 'dismissed');
+  renderSetupCoach();
+};
+$('#setupPrimary').onclick = event => {
+  if (event.currentTarget.dataset.action === 'discover') changeView('discover');
+  else openSetupSettings();
+};
+$('#setupCheck').onclick = () => runReadyCheck();
+$('#surpriseMe').onclick = () => surpriseMe();
 $('#sidebarToggle').onclick = toggleSidebar;
 $('#densityToggle').onclick = toggleDensity;
 $('#gameSort').onchange = event => {
@@ -1506,6 +1710,7 @@ $('#rescan').onclick = async () => {
   try {
     state.library = await window.deck.rescan();
     setLoading(true, 'Finishing the refresh', 'Updating artwork, favorites, and recent activity.', 86);
+    await refreshDiagnostics();
     render();
     refreshArcadeAudit(false);
     toast('RGSX library refreshed');
@@ -1529,6 +1734,8 @@ $('#spotlightFav').onclick = () => {
   const game = focusedGame();
   if (game) toggleFavorite(game);
 };
+$('#spotlightArtwork').onclick = () => chooseFocusedArtwork();
+$('#spotlightDetails').onclick = () => refreshFocusedDetails();
 $('#catalogFeatureAction').onclick = () => catalogAction(focusedCatalogGame() || currentCatalogGames()[0]);
 $('#catalogSetup').onclick = () => setupFocusedSystem();
 $('#catalogMore').onclick = () => showMoreCatalog(true);
@@ -1721,6 +1928,11 @@ async function init() {
     renderDownloads();
   } else if (captureView === 'loading') {
     setLoading(true, 'Matching artwork', 'Building the visual shelves without interrupting your library.', 72);
+  } else if (captureView === 'setup') {
+    state.setupCoachOpen = true;
+    state.setupCoachDismissed = false;
+    changeView('home');
+    renderSetupCoach();
   } else if (captureView === 'arcade') {
     selectLibrarySystem('arcade');
   } else if (captureView === 'arcade-attention') {

@@ -13,6 +13,8 @@ contextBridge.exposeInMainWorld('deck', {
   prepareGame: file => ipcRenderer.invoke('prepare-game', file),
   artwork: (title, systemId, folder) => ipcRenderer.invoke('artwork', title, systemId, folder),
   gameDetails: (title, systemId, context) => ipcRenderer.invoke('game-details', title, systemId, context),
+  refreshGameDetails: (title, systemId, context) => ipcRenderer.invoke('refresh-game-details', title, systemId, context),
+  chooseGameArtwork: file => ipcRenderer.invoke('choose-game-artwork', file),
   diagnostics: () => ipcRenderer.invoke('diagnostics'),
   arcadeAudit: force => ipcRenderer.invoke('arcade-audit', Boolean(force)),
   settings: () => ipcRenderer.invoke('settings'),

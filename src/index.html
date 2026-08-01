@@ -24,6 +24,7 @@
     <div class="head-actions">
       <button class="header-button view-button" id="sidebarToggle" type="button" aria-pressed="true" title="Collapse systems rail (Ctrl+B)"><span aria-hidden="true">☰</span><span class="button-label">Systems</span></button>
       <button class="header-button view-button" id="densityToggle" type="button" aria-pressed="false" title="Enable cinematic view"><span aria-hidden="true">▦</span><span class="button-label" id="densityLabel">Cinematic</span></button>
+      <button class="header-button setup-button" id="setupToggle" type="button" aria-pressed="false" title="Open the GameDeck ready check"><span class="setup-pulse" aria-hidden="true"></span><span class="button-label">Setup</span></button>
       <span class="controller-pill" id="controllerStatus">No controller</span>
       <button class="header-button activity-button" id="consoleToggle" title="Open activity console">Activity <span id="activityCount" class="activity-count hidden">0</span></button>
       <button class="header-button compact" id="rescan" title="Rescan library">Refresh</button>
@@ -65,6 +66,23 @@
           <div><strong id="systemCount">0</strong><span>SYSTEMS</span></div>
         </div>
       </div>
+
+      <section class="setup-coach hidden" id="setupCoach" aria-labelledby="setupCoachTitle">
+        <div class="setup-coach-copy">
+          <div class="setup-score" aria-hidden="true"><strong id="setupScore">0%</strong><span>READY</span></div>
+          <div>
+            <div class="eyebrow">GAMEDECK READY CHECK</div>
+            <h2 id="setupCoachTitle">Your easiest route to play.</h2>
+            <p id="setupCoachMessage">Checking your library, launchers, artwork, and controls.</p>
+          </div>
+        </div>
+        <div class="setup-steps" id="setupSteps" aria-live="polite"></div>
+        <div class="setup-coach-actions">
+          <button class="primary" id="setupPrimary" type="button">Finish setup</button>
+          <button id="setupCheck" type="button">Run ready check</button>
+          <button class="quiet" id="setupDismiss" type="button">Hide</button>
+        </div>
+      </section>
 
       <section class="arcade-deck hidden" id="arcadeDeck" aria-labelledby="arcadeDeckTitle">
         <div class="arcade-command">
@@ -118,6 +136,8 @@
         <div class="spotlight-actions">
           <button class="primary" id="spotlightPlay">Play now</button>
           <button id="spotlightFav">Save</button>
+          <button id="spotlightArtwork" title="Choose a local cover image">Change art</button>
+          <button id="spotlightDetails" title="Retry the metadata lookup">Refresh details</button>
         </div>
       </section>
 
@@ -125,6 +145,7 @@
         <span><kbd>A</kbd> Select / Play</span>
         <span><kbd>B</kbd> Back</span>
         <span><kbd>Y</kbd> Setup</span>
+        <span><kbd>X</kbd> Surprise</span>
         <span><kbd>D-PAD</kbd> Move</span>
         <span><kbd>START</kbd> Change view</span>
       </div>
@@ -138,6 +159,7 @@
             <kbd>/</kbd>
           </label>
           <div class="library-tools" id="libraryTools">
+            <button class="surprise-button" id="surpriseMe" type="button" title="Choose a random playable game"><span aria-hidden="true">✦</span> Surprise me</button>
             <span class="result-count" id="resultCount" aria-live="polite">0 games</span>
             <label class="sort-control">
               <span>Sort</span>
@@ -278,7 +300,7 @@
           </article>
         </div>
 
-        <section class="settings-card">
+        <section class="settings-card" id="communitySettings">
           <div class="settings-heading">
             <div>
               <div class="card-kicker">THIS DEVICE</div>

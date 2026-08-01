@@ -30,6 +30,11 @@ for (const id of [
   'mainContent',
   'sidebarToggle',
   'densityToggle',
+  'setupToggle',
+  'setupCoach',
+  'setupSteps',
+  'surpriseMe',
+  'communitySettings',
   'gameSort',
   'resultCount',
   'emptyTitle',
@@ -37,6 +42,8 @@ for (const id of [
   'arcadeAuditButton',
   'openArcadeGuide',
   'openArcadeFeedback',
+  'spotlightArtwork',
+  'spotlightDetails',
   'arcadeControllerState',
   'settingMame'
 ]) {
@@ -44,7 +51,7 @@ for (const id of [
   if (matches.length !== 1) fail(`expected one #${id}, found ${matches.length}`);
 }
 
-for (const channel of ['settings', 'save-settings', 'sponsors', 'donations', 'open-external', 'arcade-audit']) {
+for (const channel of ['settings', 'save-settings', 'sponsors', 'donations', 'open-external', 'arcade-audit', 'refresh-game-details', 'choose-game-artwork']) {
   if (!main.includes(`'${channel}'`)) fail(`main process is missing ${channel}`);
   const preloadName = channel.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
   if (!preload.includes(preloadName)) fail(`preload bridge is missing ${preloadName}`);
@@ -59,6 +66,10 @@ if (!renderer.includes("'community'")) fail('renderer view cycle is missing Comm
 if (!renderer.includes("setAttribute('aria-current', 'page')")) fail('main navigation must expose the active view accessibly');
 if (!renderer.includes('GAME_SORTS')) fail('renderer is missing persistent library sorting');
 if (!renderer.includes('sidebar-collapsed')) fail('renderer is missing the collapsible systems rail');
+if (!renderer.includes('renderSetupCoach') || !renderer.includes('setupReadiness')) fail('renderer is missing the zero-hassle ready check');
+if (!renderer.includes('surpriseMe')) fail('renderer is missing the random playable game action');
+if (!renderer.includes('chooseFocusedArtwork') || !renderer.includes('refreshFocusedDetails')) fail('renderer is missing manual artwork or detail repair controls');
+if (!main.includes('artworkCoverage')) fail('diagnostics are missing artwork coverage');
 if (!pkg.build?.win || !pkg.build?.mac || !pkg.build?.linux) fail('package metadata must configure Windows, macOS, and Linux');
 if (!Array.isArray(donationConfig.methods)) fail('donation methods must be an array');
 if (donationConfig.enabled && donationConfig.methods.length === 0) fail('enabled donations require at least one public method');
@@ -83,6 +94,7 @@ for (const asset of [
   'assets/branding/gamedeck-hero.png',
   'docs/ARCADE.md',
   'docs/COMMUNITY_LAUNCH.md',
+  'docs/images/gamedeck-ready-check.png',
   'build/icon.ico',
   'build/icon.icns',
   'build/icons/512x512.png'

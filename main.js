@@ -708,6 +708,7 @@ function resolveGameArt(file, title, systemId, folder) {
     }
   }
   candidates.push(cachedArtworkPath(base, systemId, folder));
+  candidates.push(cachedArtworkPath(title, systemId, folder));
   candidates.push(cachedArtworkPath(title, systemId));
   const found = candidates.find(candidate => fs.existsSync(candidate));
   return found ? toFileUrl(found) : '';
@@ -1663,6 +1664,45 @@ function saveSettings(changes = {}) {
   return { ok: true, restartRequired, settings: { ...publicSettings(), ...next } };
 }
 
+async function chooseGameArtwork(file) {
+  const safeFile = safeLibraryFile(file);
+  const system = detectSystem(safeFile);
+  if (!system) throw Error('Could not identify this game system.');
+  const shortName = rawGameName(safeFile);
+  const title = isArcadeSystem(system) ? arcadeDisplayTitle(shortName) : cleanName(safeFile);
+  const folder = path.relative(LIBRARY, safeFile).split(path.sep)[0].toLowerCase();
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: `Choose artwork for ${title}`,
+    defaultPath: path.dirname(safeFile),
+    properties: ['openFile'],
+    filters: [{ name: 'Game artwork', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif'] }]
+  });
+  if (result.canceled || !result.filePaths[0]) return { canceled: true };
+  const source = result.filePaths[0];
+  const stat = fs.statSync(source);
+  if (!stat.isFile() || stat.size < 16 || stat.size > 20 * 1024 * 1024) throw Error('Choose an image smaller than 20 MB.');
+  const target = cachedArtworkPath(title, system.id, folder);
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.copyFileSync(source, target);
+  artworkMisses.delete(target);
+  addActivity('success', `Custom artwork saved for ${title}.`);
+  return { ok: true, url: toFileUrl(target), title };
+}
+
+async function refreshGameDetails(title, systemId, context = {}) {
+  const cacheFile = cachedDetailsPath(title, systemId);
+  try {
+    if (fs.existsSync(cacheFile)) fs.unlinkSync(cacheFile);
+  } catch (error) {
+    addActivity('info', `Could not clear cached details for ${lookupTitleName(title)}: ${error.message}`);
+  }
+  detailMisses.delete(cacheFile);
+  detailBackoffUntil = 0;
+  const details = await fetchGameDetails(title, systemId, context);
+  addActivity('success', `Game details refreshed for ${lookupTitleName(title)}.`);
+  return details;
+}
+
 async function chooseDirectory(kind) {
   const titles = {
     libraryRoot: 'Choose your game library',
@@ -1772,8 +1812,13 @@ function detectedControllerHints() {
 
 function diagnostics() {
   const library = getLibrary();
+  const artworkCount = library.games.filter(game => Boolean(game.art)).length;
   return {
     library: LIBRARY,
+    libraryExists: fs.existsSync(LIBRARY),
+    libraryGameCount: library.games.length,
+    artworkCount,
+    artworkCoverage: library.games.length ? Math.round((artworkCount / library.games.length) * 100) : 0,
     rgsxData: RGSX_DATA,
     rgsxRuntime: fs.existsSync(RGSX_PYTHON),
     retroarch: fs.existsSync(RA),
@@ -1879,6 +1924,8 @@ ipcMain.handle('import-owned', (_, source, folder, title, fileName) => queueRgsx
 ipcMain.handle('prepare-game', (_, file) => prepareGameArchive(file));
 ipcMain.handle('artwork', (_, title, systemId, folder) => fetchArtwork(title, systemId, folder));
 ipcMain.handle('game-details', (_, title, systemId, context) => fetchGameDetails(title, systemId, context));
+ipcMain.handle('refresh-game-details', (_, title, systemId, context) => refreshGameDetails(title, systemId, context));
+ipcMain.handle('choose-game-artwork', (_, file) => chooseGameArtwork(file));
 ipcMain.handle('diagnostics', () => diagnostics());
 ipcMain.handle('arcade-audit', (_, force) => auditArcadeLibrary(Boolean(force)));
 ipcMain.handle('settings', () => publicSettings());
