@@ -1660,6 +1660,13 @@ function thumbnailIdentity(value) {
     .replace(/[^a-z0-9]+/g, '');
 }
 
+function thumbnailTokens(value) {
+  return cleanName(String(value || '').replace(/\.png$/i, ''))
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .match(/[a-z0-9]+/g) || [];
+}
+
 function thumbnailRegionScore(value, requested) {
   const candidate = String(value || '').toLowerCase();
   const source = String(requested || '').toLowerCase();
@@ -1710,13 +1717,20 @@ async function fetchIndexedLibretroArtwork(repository, title, names, cache) {
   const entries = await thumbnailIndex(repository);
   if (!entries.length) return '';
   const targets = [...new Set(names.map(thumbnailIdentity).filter(value => value.length >= 4))];
+  const targetTokenSets = names.map(thumbnailTokens).filter(tokens => tokens.length >= 5);
   const matches = entries.map(entry => {
     const identity = thumbnailIdentity(entry);
+    const candidateTokens = thumbnailTokens(entry);
     let relation = 0;
     for (const target of targets) {
       if (identity === target) relation = Math.max(relation, 1000);
       else if (target.length >= 8 && identity.startsWith(target)) relation = Math.max(relation, 700 - Math.min(200, identity.length - target.length));
       else if (identity.length >= 8 && target.startsWith(identity)) relation = Math.max(relation, 650 - Math.min(200, target.length - identity.length));
+    }
+    for (const tokens of targetTokenSets) {
+      if (tokens.every(token => candidateTokens.includes(token))) {
+        relation = Math.max(relation, 580 - Math.min(120, Math.max(0, candidateTokens.length - tokens.length) * 5));
+      }
     }
     return { entry, identity, score: relation + thumbnailRegionScore(entry, title) };
   }).filter(match => match.score >= 500).sort((a, b) => b.score - a.score || a.entry.length - b.entry.length);

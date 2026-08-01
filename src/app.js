@@ -395,7 +395,7 @@ function renderDownloads() {
 
   $('#transferPanel').innerHTML = downloads.map(download => {
     const game = transferGame(download);
-    const art = game?.art || assetFallback(download.title, '#263347', '#10141c');
+    const art = game?.art || assetFallback(download.title, '#263347', '#10141c', download.systemName || 'TRANSFER');
     const itemProgress = Math.min(100, Math.max(0, Number(download.progress || 0)));
     const itemDetail = [download.systemName, download.speed, etaLabel(download)].filter(Boolean).join(' · ') || download.error || download.message || '';
     const stage = download.status === 'complete' ? 'Ready' : download.status === 'error' ? 'Needs attention' : download.stage || 'Downloading';
@@ -422,9 +422,45 @@ function renderDownloads() {
   if (!running.length) transferHideTimer = setTimeout(renderDownloads, primary.status === 'error' ? 61000 : 15000);
 }
 
-function assetFallback(text, colorA = '#1b2233', colorB = '#0f131a') {
-  const safeText = String(text || 'GAME').replace(/[<>&]/g, '').slice(0, 20);
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 900"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="${colorA}"/><stop offset="1" stop-color="${colorB}"/></linearGradient></defs><rect width="600" height="900" rx="34" fill="url(#g)"/><circle cx="455" cy="155" r="190" fill="rgba(255,255,255,.06)"/><path d="M-80 610 680 300v180L-80 790Z" fill="rgba(255,255,255,.05)"/><text x="52" y="720" fill="rgba(255,255,255,.94)" font-family="sans-serif" font-size="52" font-weight="700">${safeText}</text></svg>`;
+function assetFallback(text, colorA = '#1b2233', colorB = '#0f131a', label = 'GAMEDECK') {
+  const raw = String(text || 'GAME').replace(/\s+/g, ' ').trim();
+  const words = raw.split(' ');
+  const lines = ['', ''];
+  for (const word of words) {
+    const slot = lines[0].length < 18 ? 0 : 1;
+    const candidate = `${lines[slot]} ${word}`.trim();
+    if (slot === 0 && candidate.length > 18 && lines[0]) lines[1] = word;
+    else lines[slot] = candidate;
+  }
+  if (!lines[1] && lines[0].length > 18) {
+    lines[1] = lines[0].slice(18).trim();
+    lines[0] = lines[0].slice(0, 18).trim();
+  }
+  lines[0] = lines[0].slice(0, 22);
+  lines[1] = lines[1].slice(0, 22);
+  const xml = value => String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const lineOne = xml(lines[0] || 'GAME');
+  const lineTwo = xml(lines[1]);
+  const systemLabel = xml(String(label || 'GAMEDECK').toUpperCase().slice(0, 28));
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 900">
+    <defs>
+      <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="${colorA}"/><stop offset=".58" stop-color="${colorB}"/><stop offset="1" stop-color="#070b12"/></linearGradient>
+      <linearGradient id="edge" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#72e7ff"/><stop offset="1" stop-color="#c8ff52"/></linearGradient>
+      <radialGradient id="glow"><stop stop-color="#72e7ff" stop-opacity=".28"/><stop offset="1" stop-color="#72e7ff" stop-opacity="0"/></radialGradient>
+    </defs>
+    <rect width="600" height="900" rx="36" fill="url(#bg)"/>
+    <circle cx="492" cy="126" r="260" fill="url(#glow)"/>
+    <g fill="none" stroke="rgba(255,255,255,.09)"><path d="M-80 605 680 274"/><path d="M-80 655 680 324"/><path d="M-80 705 680 374"/></g>
+    <rect x="38" y="38" width="524" height="824" rx="26" fill="none" stroke="rgba(255,255,255,.12)"/>
+    <rect x="38" y="38" width="166" height="5" rx="3" fill="url(#edge)"/>
+    <g transform="translate(52 78)"><circle cx="28" cy="28" r="27" fill="rgba(6,12,20,.66)" stroke="rgba(114,231,255,.52)"/><path d="M14 30c0-12 8-20 20-20 7 0 13 2 18 7l-8 8c-3-3-6-4-10-4-6 0-10 4-10 10s4 10 11 10c3 0 6-1 8-2v-5h-10v-9h21v20c-5 5-12 8-20 8-12 0-20-8-20-23Z" fill="#dffbff"/></g>
+    <text x="126" y="95" fill="rgba(255,255,255,.82)" font-family="Arial,sans-serif" font-size="17" font-weight="700" letter-spacing="4">GAMEDECK ORIGINAL</text>
+    <text x="126" y="124" fill="rgba(255,255,255,.45)" font-family="Arial,sans-serif" font-size="12" font-weight="700" letter-spacing="3">${systemLabel}</text>
+    <text x="52" y="684" fill="#f4f8ff" font-family="Arial,sans-serif" font-size="48" font-weight="700">${lineOne}</text>
+    ${lineTwo ? `<text x="52" y="744" fill="#f4f8ff" font-family="Arial,sans-serif" font-size="48" font-weight="700">${lineTwo}</text>` : ''}
+    <text x="52" y="815" fill="rgba(255,255,255,.52)" font-family="Arial,sans-serif" font-size="13" font-weight="700" letter-spacing="4">LOCAL COLLECTION · PLAYER OWNED</text>
+    <circle cx="524" cy="809" r="13" fill="#c8ff52"/><circle cx="490" cy="809" r="13" fill="#72e7ff"/>
+  </svg>`;
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
@@ -459,7 +495,7 @@ function arcadeHealthClass(game) {
 
 function gameArt(game) {
   const system = systemById(game.system);
-  return game.art || assetFallback(game.title, system?.color || '#24334b', '#101722');
+  return game.art || assetFallback(game.title, system?.color || '#24334b', '#101722', system?.short || system?.name || 'GAMEDECK');
 }
 
 function systemNeedsFirmware(system) {
@@ -657,12 +693,23 @@ function pumpArtworkQueue() {
   }
 }
 
+function markGeneratedArtwork(game) {
+  const card = document.querySelector(`.game[data-id="${game.id}"]`);
+  const status = card?.querySelector('.art-status');
+  if (status) {
+    status.textContent = 'GAMEDECK ART';
+    status.classList.remove('matching');
+    status.classList.add('generated');
+  }
+}
+
 function requestArtwork(game, priority = false) {
   if (!game || game.art) return;
   const key = `library:${game.id}`;
   queueArtwork(key, async () => {
     const url = await window.deck.artwork(game.artworkTitle || game.title, game.system, game.artworkFolder || '');
-    updateGameArtwork(game, url);
+    if (url) updateGameArtwork(game, url);
+    else markGeneratedArtwork(game);
   }, priority);
 }
 
@@ -998,7 +1045,8 @@ function renderGames() {
     const status = arcade
       ? (game.archiveHealth === 'verified' ? 'Archive verified' : game.archiveHealthMessage || 'Health check pending')
       : relative(game.lastPlayed);
-    const artStatus = artMissing ? '<span class="art-status">ART NEEDED</span>' : '';
+    const generatedArt = artMissing && artworkEnrichmentTried.has(game.id);
+    const artStatus = artMissing ? `<span class="art-status ${generatedArt ? 'generated' : 'matching'}">${generatedArt ? 'GAMEDECK ART' : 'MATCHING ART'}</span>` : '';
     const stateClasses = [artMissing ? 'missing-art' : 'has-art', game.favorite ? 'is-favorite' : '', game.lastPlayed ? 'is-recent' : '', playable ? 'is-playable' : 'needs-setup'].filter(Boolean).join(' ');
     return `<article class="game ${game.file === state.launchingFile ? 'launching' : ''} ${stateClasses} ${arcade ? 'arcade-card' : ''} ${blocked ? 'health-attention' : ''} ${active ? 'active' : ''}" style="--delay:${Math.min(index, 14) * 18}ms" tabindex="0" role="listitem" aria-current="${active}" aria-label="Select ${escapeHtml(game.title)} on ${escapeHtml(system?.name || 'GameDeck')}" data-id="${game.id}"><div class="cover" style="--c:${system?.color || '#8992a3'}"><div class="cover-art"><img data-game-art="${game.id}" src="${escapeHtml(gameArt(game))}" alt="${escapeHtml(game.title)} artwork" loading="lazy"></div><span class="cover-system">${escapeHtml(system?.short || 'GAME')}</span>${badge}${artStatus}<button class="fav ${game.favorite ? 'on' : ''}" aria-label="${game.favorite ? 'Remove favorite' : 'Favorite'}"><span aria-hidden="true">${game.favorite ? '★' : '☆'}</span></button><div class="cover-logo">${escapeHtml(system?.icon || 'G')}</div><div class="cover-title">${escapeHtml(game.title)}</div><button class="play" aria-label="${blocked ? 'ROM set needs attention' : `Play ${escapeHtml(game.title)}`}" ${blocked ? 'disabled' : ''}><span aria-hidden="true">${blocked ? '!' : '▶'}</span> ${blocked ? 'CHECK' : 'PLAY'}</button></div><div class="meta"><b title="${escapeHtml(game.title)}">${escapeHtml(game.title)}</b><div class="game-card-facts">${facts}</div><small><span class="ready-dot ${playable ? 'ok' : 'setup'}"></span>${escapeHtml(status)}</small></div></article>`;
   }).join('');
@@ -1123,7 +1171,7 @@ function renderCatalogFeature(game) {
     return;
   }
 
-  const fallback = assetFallback(game.name);
+  const fallback = assetFallback(game.name, '#263347', '#10141c', state.catalogSystem?.name || 'DISCOVER');
   const art = game.art || fallback;
   const downloading = downloadForGame(game) || (state.activeCatalogTasks.has(catalogTaskKey(game)) ? { stage: 'Preparing', progress: 0 } : null);
   const installed = Boolean(game.installedFile);
@@ -1200,7 +1248,7 @@ function renderCatalogGames() {
     const downloading = downloadForGame(game) || (state.activeCatalogTasks.has(catalogTaskKey(game)) ? { progress: 0, stage: 'Preparing' } : null);
     const installed = Boolean(game.installedFile);
     const ready = installed && game.installedReady !== false;
-    const art = game.art || assetFallback(game.name);
+    const art = game.art || assetFallback(game.name, '#263347', '#10141c', state.catalogSystem?.name || 'DISCOVER');
     const facts = [game.region || game.tags?.[0] || 'Catalog', game.size || 'RGSX'].filter(Boolean);
     const action = ready ? 'Play' : downloading ? `${Math.round(Number(downloading.progress || 0))}%` : installed ? 'Finish' : 'Add';
     const cardState = ready ? 'IN LIBRARY' : downloading ? escapeHtml(downloading.stage || 'WORKING') : installed ? 'DOWNLOADED' : 'AVAILABLE';
@@ -1604,11 +1652,12 @@ function setupReadiness() {
   const readySystems = systems.filter(system => system.ready);
   const artworkCount = games.filter(game => Boolean(game.art)).length;
   const artworkCoverage = games.length ? Math.round((artworkCount / games.length) * 100) : 0;
+  const generatedArtworkCount = Math.max(0, games.length - artworkCount);
   const pads = navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean) : [];
   const controllerReady = pads.length > 0 || state.controllerHints.length > 0;
   const libraryReady = games.length > 0;
   const launcherReady = games.length ? readyInstalled.length > 0 : readySystems.length > 0;
-  const artworkReady = games.length > 0 && artworkCount > 0;
+  const artworkReady = games.length > 0;
   const steps = [
     {
       id: 'library',
@@ -1632,7 +1681,11 @@ function setupReadiness() {
       id: 'artwork',
       label: 'Artwork',
       ready: artworkReady,
-      detail: games.length ? `${artworkCoverage}% matched · ${artworkCount.toLocaleString()} covers ready.` : 'Artwork matching starts as soon as games are found.'
+      detail: games.length
+        ? generatedArtworkCount
+          ? `${artworkCoverage}% matched · ${generatedArtworkCount.toLocaleString()} original GameDeck poster${generatedArtworkCount === 1 ? '' : 's'}.`
+          : '100% matched · every title has source artwork.'
+        : 'Artwork matching starts as soon as games are found.'
     },
     {
       id: 'controls',
@@ -1647,6 +1700,7 @@ function setupReadiness() {
     libraryReady,
     launcherReady,
     artworkCoverage,
+    generatedArtworkCount,
     coreReady: libraryReady && launcherReady
   };
 }
@@ -1672,7 +1726,9 @@ function renderSetupCoach() {
       ? 'Your games are here. Connect one compatible emulator to unlock one-click play.'
       : readiness.artworkCoverage < 80
         ? 'Launching is ready. Artwork will continue filling in quietly as you browse.'
-        : 'Library, launchers, artwork, and controls are lined up for couch play.';
+        : readiness.generatedArtworkCount
+          ? 'Every title has a polished poster; source matching continues quietly for the final exceptions.'
+          : 'Library, launchers, artwork, and controls are lined up for couch play.';
   $('#setupSteps').innerHTML = readiness.steps.map(step => `
     <div class="setup-step ${step.ready ? 'ready' : 'pending'}">
       <span class="setup-step-icon" aria-hidden="true">${step.ready ? '✓' : '·'}</span>
@@ -2619,6 +2675,10 @@ async function init() {
     state.sidebarCollapsed = true;
     applyLayoutPreferences();
     changeView('home');
+  } else if (captureView === 'generated-art') {
+    changeView('home');
+    state.library.games.filter(game => !game.art).forEach(game => artworkEnrichmentTried.add(game.id));
+    render();
   } else if (captureView === 'transfer-ready') {
     changeView('home');
     const now = Date.now();

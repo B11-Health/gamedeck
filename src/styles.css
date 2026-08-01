@@ -3870,3 +3870,11 @@ body.input-controller .catalog-game.active {
   .transfer-meter { display: none; }
   .transfer-actions { flex-wrap: wrap; }
 }
+
+
+/* Original GameDeck artwork fallback */
+.art-status.matching { color: #f4ce86; border-color: #f5c66d38; background: #1a130bc9; }
+.art-status.matching::after { content: ''; width: 4px; height: 4px; margin-left: 5px; display: inline-block; border-radius: 50%; background: #f0b75f; animation: detailPulse 1.1s ease-in-out infinite; }
+.art-status.generated { color: #bff7ff; border-color: #72e7ff42; background: #071721d9; box-shadow: 0 0 18px #72e7ff12; }
+.game.missing-art .cover-art img { opacity: .92; filter: saturate(.92) contrast(1.02); }
+.game.missing-art:hover .cover-art img, .game.missing-art.active .cover-art img { opacity: 1; }

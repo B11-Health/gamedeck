@@ -188,4 +188,10 @@ if (!main.includes("systemId === 'gamegear'") || !main.includes("systemId === 'g
 if (!main.includes("extension !== '.m3u'") || !main.includes("value.startsWith('#')")) fail('Saturn M3U validation is missing');
 if (!main.includes('AUTOMATION_MODE') || !main.includes("mainWindow.hide()")) fail('automation-mode hide-on-close behavior is missing');
 
+
+if (!renderer.includes('GAMEDECK ORIGINAL') || !renderer.includes('function markGeneratedArtwork')) fail('premium generated artwork fallback is missing');
+if (renderer.includes('ART NEEDED')) fail('unmatched titles must use a finished GameDeck-original poster state');
+if (!renderer.includes('generatedArtworkCount')) fail('matched and generated artwork readiness must be reported separately');
+if (!main.includes('thumbnailTokens') || !main.includes('tokens.every')) fail('ordered token artwork matching is missing');
+
 if (!process.exitCode) console.log('GameDeck smoke test passed.');

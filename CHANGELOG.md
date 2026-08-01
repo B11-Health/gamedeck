@@ -4,6 +4,8 @@ All notable GameDeck releases are documented here.
 
 ## [Unreleased]
 
+- Added ordered-token artwork matching and premium GameDeck-original fallback posters for titles without a trustworthy source cover.
+
 - Validated Saturn `.m3u` members before launch and kept automation sessions alive when the visible window is closed.
 
 - Added cached official thumbnail directory indexes and safe cross-repository matching for translated, abbreviated, and neighboring-console filenames.
