@@ -18,6 +18,11 @@
     ['z', 0], ['x', 8], ['a', 1], ['s', 9],
     ['q', 10], ['w', 11], ['Enter', 3], ['Shift', 2]
   ]);
+  const PLAY_STYLE_DETAILS = Object.freeze({
+    couch: { label: 'Couch co-op', short: 'COUCH', title: 'Play together on this PC', text: 'Local controllers join automatically. No invitation or network is required.' },
+    remote: { label: 'Remote Play', short: 'REMOTE', title: 'Stream the game to a friend', text: 'Only the host needs the game. Video and controller input are encrypted.' },
+    sync: { label: 'Synced netplay', short: 'SYNC', title: 'Run the game on both PCs', text: 'Lowest latency. Everyone needs the matching game revision and core.' }
+  });
 
   let remoteStatus = { active: false, phase: 'idle', title: '', playerCount: 1, maxPlayers: 0, message: 'Ready for Remote Play Together.' };
   let syncStatus = { active: false, phase: 'idle', title: '', playerCount: 0, maxPlayers: 0, message: 'Ready for synchronized netplay.' };
@@ -124,8 +129,14 @@
       const badge = button.querySelector('[data-style-badge]');
       if (badge) badge.textContent = recommended ? 'RECOMMENDED' : labels[button.dataset.playStyle];
     });
-    $('#multiplayerCoachTitle').textContent = recommendation.title;
-    $('#multiplayerCoachText').textContent = recommendation.text;
+    const detail = PLAY_STYLE_DETAILS[currentPlayStyle] || PLAY_STYLE_DETAILS.remote;
+    const recommendedDetail = PLAY_STYLE_DETAILS[recommendation.style] || PLAY_STYLE_DETAILS.remote;
+    const selectedIsRecommended = currentPlayStyle === recommendation.style;
+    $('#multiplayerCoachKicker').textContent = selectedIsRecommended
+      ? 'RECOMMENDED FOR THIS SETUP'
+      : `${detail.short} SELECTED · ${recommendedDetail.short} RECOMMENDED`;
+    $('#multiplayerCoachTitle').textContent = selectedIsRecommended ? recommendation.title : detail.title;
+    $('#multiplayerCoachText').textContent = selectedIsRecommended ? recommendation.text : detail.text;
   }
 
   function playerRailState() {
@@ -146,23 +157,35 @@
 
   function renderPlayerRail() {
     const { controllers, maxPlayers, displaySlots, readyCount } = playerRailState();
-    const modeLabel = currentPlayStyle === 'couch' ? 'LOCAL' : currentPlayStyle === 'sync' ? 'MATCHED' : 'REMOTE';
-    const title = multiplayerTitle(selectedGame()?.title || 'This game');
+    const modeLabel = currentPlayStyle === 'couch' ? 'LOCAL LOBBY' : currentPlayStyle === 'sync' ? 'MATCHED LOBBY' : 'REMOTE LOBBY';
     const slots = Array.from({ length: displaySlots }, (_, index) => {
       const player = index + 1;
       const available = player <= maxPlayers;
       const ready = available && player <= readyCount;
-      let detail = 'Waiting for player';
-      if (!available) detail = `${title} supports ${maxPlayers}`;
-      else if (player === 1) detail = currentPlayStyle === 'remote' && guestPeer ? 'Remote player' : 'Host ready';
-      else if (currentPlayStyle === 'couch') detail = player <= controllers ? 'Controller connected' : 'Connect controller';
-      else if (currentPlayStyle === 'sync') detail = ready ? 'Exact match connected' : 'Invite required';
-      else detail = ready ? 'Encrypted input connected' : 'Invite required';
-      const label = !available ? `P${player} locked` : ready ? (player === 1 ? 'Player one' : `Player ${player}`) : `Open slot ${player}`;
-      const state = !available ? `${maxPlayers}P GAME` : ready ? 'READY' : 'WAITING';
+      let label = player === 1 ? 'Host' : `Player ${player}`;
+      let detail = 'Waiting';
+      let state = 'WAITING';
+      if (!available) {
+        label = 'Locked';
+        detail = `${maxPlayers}-player game`;
+        state = 'LOCKED';
+      } else if (player === 1) {
+        label = currentPlayStyle === 'remote' && guestPeer ? 'Guest' : 'Host';
+        detail = 'Ready';
+        state = 'READY';
+      } else if (currentPlayStyle === 'couch') {
+        detail = player <= controllers ? 'Controller ready' : 'Connect controller';
+        state = ready ? 'READY' : 'WAITING';
+      } else if (currentPlayStyle === 'sync') {
+        detail = ready ? 'Exact match' : 'Invite required';
+        state = ready ? 'READY' : 'WAITING';
+      } else {
+        detail = ready ? 'Connected' : 'Invite required';
+        state = ready ? 'READY' : 'WAITING';
+      }
       return `<div class="multiplayer-player-slot ${!available ? 'locked' : ready ? 'ready' : 'waiting'}"><span>P${player}</span><div><b>${label}</b><small>${detail}</small></div><i>${state}</i></div>`;
     }).join('');
-    const markup = `<div class="multiplayer-player-rail-label"><span>${modeLabel}</span><b>${Math.min(readyCount, maxPlayers)}/${maxPlayers}</b><small>READY</small></div>${slots}`;
+    const markup = `<div class="multiplayer-player-rail-label"><span>${modeLabel}</span><b>${Math.min(readyCount, maxPlayers)} of ${maxPlayers}</b><small>READY</small></div><div class="multiplayer-player-slots">${slots}</div>`;
     $('#multiplayerPlayerRail').innerHTML = markup;
     const activeRail = $('#multiplayerActivePlayerRail');
     if (activeRail) activeRail.innerHTML = markup;
@@ -421,9 +444,14 @@
       const supported = Boolean(basic?.ok && basic.supported);
       const verified = Boolean(match?.ok && match.supported);
       card.classList.toggle('unsupported', !supported);
-      $('#netplayGameMeta').textContent = supported
-        ? `${basic.systemName} · ${Math.min(4, basic.maxPlayers)}-player title · 4-slot lobby · ${match?.coreLabel || basic.coreFile || 'Libretro core'}`
-        : basic?.issue || 'This game is not yet supported for multiplayer.';
+      if (supported) {
+        const coreLabel = match?.coreLabel || basic.coreFile || 'Libretro core';
+        const meta = [basic.systemName, `${Math.min(4, basic.maxPlayers)}-player game`];
+        if (coreLabel && coreLabel !== basic.systemName) meta.push(coreLabel);
+        $('#netplayGameMeta').textContent = meta.join(' · ');
+      } else {
+        $('#netplayGameMeta').textContent = basic?.issue || 'This game is not yet supported for multiplayer.';
+      }
       $('#multiplayerMatchId').textContent = verified
         ? `GAME ${match.matchId} · CORE ${match.coreMatchId}`
         : match?.issue || 'Exact-match netplay unavailable';

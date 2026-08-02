@@ -2,7 +2,7 @@
 
 GameDeck 1.2 presents local and online multiplayer in one controller-first command center. Select a game, choose **Multiplayer**, press **M**, or press **Start** on a standard controller.
 
-The command center compares connected controllers, streaming support, and exact-match readiness to recommend the best play style. A compact lobby rail shows open and ready player slots. **Paste invite** reads the clipboard only after the user presses the button and routes recognized `GDREMOTE2`, `GDREMOTEANSWER2`, or `GDPLAY1` codes to the correct role and mode.
+The command center follows a calm **game → play style → lobby → launch** flow. The selected game, compatibility state, and local match IDs appear once at the top; a compact three-way switch selects Couch, Remote Play, or Synced; and a full-width lobby keeps all four player positions readable from a couch. The guidance panel always describes the selected mode while still marking the recommended route. **Paste invite** reads the clipboard only after the user presses the button and routes recognized `GDREMOTE2`, `GDREMOTEANSWER2`, or `GDPLAY1` codes to the correct role and mode.
 
 ## Play styles
 
@@ -28,7 +28,7 @@ GameDeck always shows P1 through P4 so the lobby layout remains predictable acro
 
 The lobby never increases a game's native player count. It makes the limit explicit before launch or invitation sharing.
 
-The setup view keeps one primary action visible at a time. Stream quality, relay region, and total-player controls stay inside **Session options** until opened. Once a room starts, GameDeck removes the setup card, resets the dialog scroll position, and shows one live dashboard containing session status, P1–P4 readiness, the invitation, and End Session. Remote Play reveals **Connect this player** only after a response code is present.
+The setup view keeps one primary action visible at a time. Stream quality, relay region, and total-player controls stay inside **Session options** until opened. Mode explanations are not repeated inside the launch panel, and Couch setup reduces to controller readiness plus the launch action. Once a room starts, GameDeck removes the setup card, resets the dialog scroll position, and shows one live dashboard containing session status, P1–P4 readiness, the invitation, and End Session. Remote Play reveals **Connect this player** only after a response code is present.
 
 ## Metal Slug 3 validation target
 

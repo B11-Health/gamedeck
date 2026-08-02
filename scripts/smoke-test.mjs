@@ -276,14 +276,15 @@ if (!html.includes('data-play-style="couch"') || !html.includes('data-play-style
 if (!netplayRenderer.includes('startSyncHost') || !netplayRenderer.includes('joinSyncRoom') || !netplayRenderer.includes('launchCouchCoop')) fail('multiplayer mode launch flows are incomplete');
 if (!main.includes('netplayMatchInfo') || !main.includes('coreMatchId')) fail('local ROM/core match verification is missing');
 if (!styles.includes('.multiplayer-style-grid') || !styles.includes('.multiplayer-readiness')) fail('multiplayer command center visual system is missing');
-if (!netplayRenderer.includes('displaySlots: 4') || !netplayRenderer.includes("state = !available ? `${maxPlayers}P GAME`") || !netplayRenderer.includes("class=\"multiplayer-player-slot ${!available ? 'locked'")) fail('four-slot lobby and native game-limit states are missing');
-if (!netplayRenderer.includes('4-slot lobby') || !netplayRenderer.includes('Math.min(4, Number(maxPlayers || 2))')) fail('four-player selection cap is missing');
+if (!netplayRenderer.includes('displaySlots: 4') || !netplayRenderer.includes("state = 'LOCKED'") || !netplayRenderer.includes("class=\"multiplayer-player-slot ${!available ? 'locked'")) fail('four-slot lobby and native game-limit states are missing');
+if (!html.includes('id="multiplayerLobbyCard"') || !netplayRenderer.includes('Math.min(4, Number(maxPlayers || 2))')) fail('four-player lobby or selection cap is missing');
 if (!styles.includes('.multiplayer-player-slot.locked') || !styles.includes('@media (max-height: 950px)')) fail('four-slot locked state or laptop-height layout is missing');
 if (!netplayRenderer.includes('commandWindow.scrollTop = 0') || !styles.includes('.session-active .multiplayer-selected-card') || !styles.includes('.multiplayer-active-player-rail')) fail('live multiplayer must reset scroll and replace the setup card with the active player rail');
 if (!html.includes('class="multiplayer-advanced"') || html.includes('id="multiplayerCoachAction"') || !styles.includes('.multiplayer-match-pill:hover button')) fail('simplified multiplayer action hierarchy is missing');
 if (!netplayRenderer.includes('renderAcceptAnswerAction') || !html.includes('class="netplay-primary hidden" id="netplayAcceptAnswer"')) fail('Remote Play response action must stay hidden until usable');
 if (!netplayRenderer.includes('recommendationForSetup') || !netplayRenderer.includes('renderPlayerRail') || !netplayRenderer.includes('routeClipboardInvite')) fail('guided multiplayer recommendation or invite routing is missing');
 if (!styles.includes('.multiplayer-coach') || !styles.includes('.multiplayer-player-rail') || !styles.includes('.multiplayer-style-badge')) fail('guided multiplayer lobby styling is missing');
+if (!html.includes('class="multiplayer-setup-flow"') || !html.includes('class="multiplayer-lobby-card"') || !styles.includes('.multiplayer-player-slots') || !netplayRenderer.includes('PLAY_STYLE_DETAILS')) fail('calm game, mode, and lobby flow is missing');
 if (!main.includes('brotliCompressSync') || !main.includes('brotliDecompressSync')) fail('Discord-sized Brotli Remote Play codes are missing');
 if (!netplayRenderer.includes('remotePlayInput') || !netplayRenderer.includes('navigator.getGamepads')) fail('remote gamepad forwarding is missing');
 if (!html.includes('Only the host needs the game') || !html.includes('NO ROM TRANSFER') || !html.includes('NATIVE RETROPAD INPUT')) fail('Remote Play ownership and privacy guidance are missing');
