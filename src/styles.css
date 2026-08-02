@@ -2340,6 +2340,80 @@ main > aside {
   letter-spacing: 2.6px;
 }
 
+.discord-community-hub {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(300px, .65fr);
+  gap: 18px;
+}
+.discord-community-primary {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 22px;
+  min-height: 230px;
+  padding: 30px;
+  border: 1px solid #7c68ff55;
+  border-radius: 24px;
+  background: radial-gradient(circle at 7% 18%, #7c68ff2b, transparent 30%), linear-gradient(135deg, #17172a, #0b1019 70%);
+  box-shadow: inset 0 1px #ffffff12, 0 22px 60px #0005;
+}
+.discord-community-primary::after {
+  content: '';
+  position: absolute;
+  width: 240px;
+  height: 240px;
+  right: -90px;
+  bottom: -130px;
+  border-radius: 50%;
+  background: #72e7ff;
+  opacity: .06;
+  filter: blur(8px);
+  pointer-events: none;
+}
+.discord-community-mark {
+  width: 88px;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border: 1px solid #9c8bff70;
+  border-radius: 27px;
+  color: #f1efff;
+  background: linear-gradient(145deg, #7c68ff, #4938a8);
+  box-shadow: 0 20px 45px #6551e53b, inset 0 1px #ffffff42;
+  font: 800 24px/1 'Space Grotesk';
+  letter-spacing: -1px;
+}
+.discord-community-copy .card-kicker { margin: 0 0 10px; color: #aa9cff; }
+.discord-community-copy h2 { margin: 0; max-width: 680px; font: 650 clamp(25px, 3vw, 38px)/1.05 'Space Grotesk'; letter-spacing: -1.1px; }
+.discord-community-copy > p { max-width: 72ch; margin: 12px 0 0; color: #99a5b6; font-size: 11px; line-height: 1.65; }
+.discord-community-actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 18px; }
+.discord-community-actions button { min-height: 42px; padding: 0 16px; border: 1px solid #4a5263; border-radius: 12px; color: #edf0f7; background: #141924; font-size: 10px; font-weight: 800; cursor: pointer; transition: transform .18s ease, border-color .18s ease, background .18s ease; }
+.discord-community-actions button:hover { transform: translateY(-1px); border-color: #8f7dff; }
+.discord-community-actions .primary { color: #fff; border-color: #8f7dff; background: linear-gradient(135deg, #7964ff, #5541c5); box-shadow: 0 12px 30px #6954e72b; }
+.discord-community-meta { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 16px; color: #6f7b8d; font-size: 8px; font-weight: 800; letter-spacing: .65px; text-transform: uppercase; }
+.discord-community-meta span::before { content: '•'; margin-right: 7px; color: #72e7ff; }
+.discord-channel-grid { display: grid; gap: 10px; }
+.discord-channel-card { width: 100%; min-height: 70px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 13px; padding: 13px 14px; border: 1px solid #303a4b; border-radius: 17px; color: #e9edf5; background: linear-gradient(135deg, #111722, #0c1119); text-align: left; cursor: pointer; transition: transform .18s ease, border-color .18s ease, background .18s ease; }
+.discord-channel-card:hover, .discord-channel-card:focus-visible { transform: translateX(3px); border-color: #7967e8; background: linear-gradient(135deg, #17172a, #101620); }
+.discord-channel-icon { width: 36px; aspect-ratio: 1; display: grid; place-items: center; border: 1px solid #7766df55; border-radius: 12px; color: #b6aaff; background: #7965ff16; font-size: 14px; font-weight: 800; }
+.discord-channel-card > span:nth-child(2) { min-width: 0; display: grid; gap: 4px; }
+.discord-channel-card b { font-size: 11px; }
+.discord-channel-card small { overflow: hidden; color: #778395; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.discord-channel-card em { color: #8c7aff; font-size: 8px; font-style: normal; font-weight: 800; letter-spacing: .8px; text-transform: uppercase; }
+@media (max-width: 1060px) {
+  .discord-community-hub { grid-template-columns: 1fr; }
+  .discord-channel-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .discord-channel-card { grid-template-columns: auto minmax(0, 1fr); }
+  .discord-channel-card em { display: none; }
+}
+@media (max-width: 760px) {
+  .discord-community-primary { grid-template-columns: 1fr; padding: 23px; }
+  .discord-community-mark { width: 68px; border-radius: 21px; }
+  .discord-channel-grid { grid-template-columns: 1fr; }
+}
+
 .community-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -4394,7 +4468,11 @@ body.input-controller .catalog-game.active {
 .netplay-invite > div { grid-column: 1 / -1; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .netplay-invite small { color: #7f8998; font-size: 9px; }
 .netplay-invite textarea { min-height: 72px; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 9px; }
-#netplayCopyInvite { height: 72px; min-width: 120px; color: #bdf6d4; border-color: #70df9f4d; background: #65df9a12; }
+.netplay-share-actions { height: 72px; min-width: 154px; display: grid; grid-template-rows: 1fr 1fr; gap: 7px; }
+.netplay-share-actions button { min-width: 154px; border: 1px solid #70df9f4d; border-radius: 10px; color: #bdf6d4; background: #65df9a12; font-size: 9px; font-weight: 800; cursor: pointer; }
+.netplay-share-actions button:last-child { color: #d8d1ff; border-color: #8c78ff55; background: #7965ff15; }
+.netplay-share-actions button:hover { border-color: #9be5bc; background: #65df9a20; }
+.netplay-share-actions button:last-child:hover { border-color: #aa9cff; background: #7965ff24; }
 .netplay-invite-input small { color: #727d8d; font-weight: 400; }
 .netplay-match-note { display: flex; gap: 10px; align-items: baseline; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: #0d1016; }
 .netplay-match-note b { color: #d7dce5; font-size: 11px; }
@@ -4413,7 +4491,8 @@ body.input-controller .catalog-game.active {
   .netplay-active #netplayStop { grid-column: 2 / -1; }
   .netplay-options { grid-template-columns: 1fr; }
   .netplay-invite { grid-template-columns: 1fr; }
-  #netplayCopyInvite { height: 40px; }
+  .netplay-share-actions { height: auto; grid-template-columns: 1fr 1fr; grid-template-rows: none; }
+  .netplay-share-actions button { min-height: 40px; min-width: 0; }
 }
 
 

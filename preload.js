@@ -28,6 +28,8 @@ contextBridge.exposeInMainWorld('deck', {
   streamStop: () => ipcRenderer.invoke('stream-stop'),
   streamHostPull: () => ipcRenderer.invoke('stream-host-pull'),
   streamHostSend: (viewerId, payload) => ipcRenderer.invoke('stream-host-send', viewerId, payload),
+  remotePlayCodeEncode: (prefix, payload) => ipcRenderer.invoke('remote-play-code-encode', prefix, payload),
+  remotePlayCodeDecode: (value, acceptedPrefixes) => ipcRenderer.invoke('remote-play-code-decode', value, acceptedPrefixes),
   remotePlayStatus: () => ipcRenderer.invoke('remote-play-status'),
   remotePlayStart: (file, config) => ipcRenderer.invoke('remote-play-start', file, config || {}),
   remotePlayStop: () => ipcRenderer.invoke('remote-play-stop'),

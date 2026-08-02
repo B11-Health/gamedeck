@@ -4,6 +4,7 @@ const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
 const dgram = require('dgram');
+const zlib = require('zlib');
 const { spawn, spawnSync } = require('child_process');
 const { pathToFileURL } = require('url');
 const { path7za } = require('7zip-bin');
@@ -1529,6 +1530,35 @@ function netplayGameInfo(file) {
   }
 }
 
+function encodeRemotePlayCode(prefix, payload) {
+  const json = Buffer.from(JSON.stringify(payload));
+  const compressed = zlib.brotliCompressSync(json, {
+    params: {
+      [zlib.constants.BROTLI_PARAM_QUALITY]: 11,
+      [zlib.constants.BROTLI_PARAM_MODE]: zlib.constants.BROTLI_MODE_TEXT,
+      [zlib.constants.BROTLI_PARAM_SIZE_HINT]: json.length
+    }
+  });
+  return `${prefix}.${compressed.toString('base64url')}`;
+}
+
+function decodeRemotePlayCode(value, acceptedPrefixes = []) {
+  const text = String(value || '').trim();
+  const prefix = acceptedPrefixes.find(candidate => text.startsWith(`${candidate}.`));
+  if (!prefix) throw Error(`Expected a ${acceptedPrefixes.join(' or ')} code.`);
+  const encoded = text.slice(prefix.length + 1);
+  let payload;
+  if (prefix.endsWith('2')) {
+    const compressed = Buffer.from(encoded, 'base64url');
+    payload = JSON.parse(zlib.brotliDecompressSync(compressed).toString('utf8'));
+  } else {
+    payload = JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8'));
+  }
+  if (payload?.version !== 1) throw Error('This Remote Play code uses an unsupported version.');
+  if (payload.expiresAt && Date.now() > Number(payload.expiresAt)) throw Error('This Remote Play code has expired.');
+  return payload;
+}
+
 function remoteInputPacket(playerIndex, buttonId, state) {
   const packet = Buffer.alloc(20);
   packet.writeInt32LE(playerIndex, 0);
@@ -3001,6 +3031,8 @@ ipcMain.handle('stream-start', async (_, config = {}) => {
 ipcMain.handle('stream-stop', () => ({ ok: true, stream: streamServer.stop() }));
 ipcMain.handle('stream-host-pull', () => streamServer.hostPull());
 ipcMain.handle('stream-host-send', (_, viewerId, payload) => streamServer.hostSend(viewerId, payload));
+ipcMain.handle('remote-play-code-encode', (_, prefix, payload) => encodeRemotePlayCode(prefix, payload));
+ipcMain.handle('remote-play-code-decode', (_, value, acceptedPrefixes) => decodeRemotePlayCode(value, acceptedPrefixes));
 ipcMain.handle('remote-play-status', () => remotePlayStatus());
 ipcMain.handle('remote-play-start', async (_, file, config = {}) => {
   try {

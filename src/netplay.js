@@ -1,4 +1,5 @@
 (() => {
+  const DISCORD_REMOTE_PLAY_URL = 'https://discord.com/channels/1533539059207504093/1533539469372821555';
   const RTC_CONFIG = {
     iceServers: [
       { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
@@ -45,33 +46,30 @@
     return [...value].map(item => item.toString(16).padStart(2, '0')).join('');
   }
 
-  function base64UrlEncode(value) {
-    const bytes = new TextEncoder().encode(JSON.stringify(value));
-    let binary = '';
-    for (let offset = 0; offset < bytes.length; offset += 0x4000) {
-      binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x4000));
-    }
-    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+  async function encodeCode(prefix, payload) {
+    return window.deck.remotePlayCodeEncode(prefix, payload);
   }
 
-  function base64UrlDecode(value) {
-    const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
-    const binary = atob(normalized + '='.repeat((4 - normalized.length % 4) % 4));
-    const bytes = Uint8Array.from(binary, character => character.charCodeAt(0));
-    return JSON.parse(new TextDecoder().decode(bytes));
+  async function decodeCode(value, prefixes) {
+    return window.deck.remotePlayCodeDecode(value, Array.isArray(prefixes) ? prefixes : [prefixes]);
   }
 
-  function encodeCode(prefix, payload) {
-    return `${prefix}.${base64UrlEncode(payload)}`;
+  function discordCodeStatus(length) {
+    const remaining = 2000 - Number(length || 0);
+    return remaining >= 0
+      ? `${length.toLocaleString()} characters · fits in one Discord message`
+      : `${length.toLocaleString()} characters · ${Math.abs(remaining).toLocaleString()} over Discord's message limit`;
   }
 
-  function decodeCode(value, prefix) {
-    const text = String(value || '').trim();
-    if (!text.startsWith(`${prefix}.`)) throw Error(`Expected a ${prefix} code.`);
-    const payload = base64UrlDecode(text.slice(prefix.length + 1));
-    if (payload?.version !== 1) throw Error('This Remote Play code uses an unsupported version.');
-    if (payload.expiresAt && Date.now() > Number(payload.expiresAt)) throw Error('This Remote Play code has expired.');
-    return payload;
+  function preferRemotePlayCodecs(peer, track, sender) {
+    const transceiver = peer.getTransceivers().find(item => item.sender === sender);
+    if (!transceiver?.setCodecPreferences || !window.RTCRtpReceiver?.getCapabilities) return;
+    const codecs = RTCRtpReceiver.getCapabilities(track.kind)?.codecs || [];
+    const preferred = codecs.filter(codec => {
+      const mime = String(codec.mimeType || '').toLowerCase();
+      return track.kind === 'video' ? mime === 'video/vp8' : mime === 'audio/opus';
+    });
+    if (preferred.length) transceiver.setCodecPreferences(preferred);
   }
 
   function waitForIce(peer, timeout = 9000) {
@@ -242,7 +240,10 @@
     const token = randomToken();
     const entry = { peer, token, channel: null, name: `Player ${playerIndex + 1}`, connected: false };
     hostPeers.set(playerIndex, entry);
-    for (const track of hostCapture.getTracks()) peer.addTrack(track, hostCapture);
+    for (const track of hostCapture.getTracks()) {
+      const sender = peer.addTrack(track, hostCapture);
+      preferRemotePlayCodecs(peer, track, sender);
+    }
     setHostChannel(playerIndex, entry, peer.createDataChannel('gamedeck-controls', { ordered: true }));
     peer.onconnectionstatechange = () => {
       if (['failed', 'closed', 'disconnected'].includes(peer.connectionState)) entry.connected = false;
@@ -260,10 +261,11 @@
       playerIndex,
       title: remoteStatus.title,
       maxPlayers: remoteStatus.maxPlayers,
-      description: peer.localDescription
+      description: { type: peer.localDescription.type, sdp: peer.localDescription.sdp }
     };
-    entry.invite = encodeCode('GDREMOTE1', payload);
+    entry.invite = await encodeCode('GDREMOTE2', payload);
     $('#netplayInviteValue').value = entry.invite;
+    $('#netplayInviteMeta').textContent = discordCodeStatus(entry.invite.length);
     $('#netplayInvite').classList.remove('hidden');
     $('#netplayAnswerInput').value = '';
     toast(`Player ${playerIndex + 1} invitation ready.`, 'success');
@@ -271,7 +273,7 @@
   }
 
   async function acceptHostAnswer() {
-    const payload = decodeCode($('#netplayAnswerInput').value, 'GDREMOTEANSWER1');
+    const payload = await decodeCode($('#netplayAnswerInput').value, ['GDREMOTEANSWER2', 'GDREMOTEANSWER1']);
     if (payload.sessionId !== remoteStatus.sessionId) throw Error('This response belongs to a different Remote Play session.');
     const entry = hostPeers.get(Number(payload.playerIndex));
     if (!entry || payload.token !== entry.token) throw Error('This response does not match the active player invitation.');
@@ -403,7 +405,7 @@
   }
 
   async function createGuestResponse() {
-    const invite = decodeCode($('#netplayJoinInvite').value, 'GDREMOTE1');
+    const invite = await decodeCode($('#netplayJoinInvite').value, ['GDREMOTE2', 'GDREMOTE1']);
     stopGuest();
     guestInvite = invite;
     guestPeer = new RTCPeerConnection(RTC_CONFIG);
@@ -424,7 +426,7 @@
     const answer = await guestPeer.createAnswer();
     await guestPeer.setLocalDescription(answer);
     await waitForIce(guestPeer);
-    guestResponse = encodeCode('GDREMOTEANSWER1', {
+    guestResponse = await encodeCode('GDREMOTEANSWER2', {
       version: 1,
       createdAt: Date.now(),
       expiresAt: invite.expiresAt,
@@ -432,9 +434,10 @@
       token: invite.token,
       playerIndex: invite.playerIndex,
       name: $('#netplayNickname').value.trim() || 'Friend',
-      description: guestPeer.localDescription
+      description: { type: guestPeer.localDescription.type, sdp: guestPeer.localDescription.sdp }
     });
     $('#netplayJoinResponseValue').value = guestResponse;
+    $('#netplayResponseMeta').textContent = discordCodeStatus(guestResponse.length);
     $('#netplayJoinResponse').classList.remove('hidden');
     $('#netplayRemoteStage').classList.remove('hidden');
     $('#netplayRemoteEmpty').classList.remove('hidden');
@@ -486,10 +489,28 @@
     await window.deck.copyText(value);
     toast('Encrypted player invitation copied.', 'success');
   };
+  $('#netplayShareInvite').onclick = async () => {
+    const value = $('#netplayInviteValue').value;
+    if (!value) return;
+    const player = Number($('#netplayPlayerSlot').value || 1) + 1;
+    const title = String(remoteStatus.title || 'GameDeck Remote Play').slice(0, 80);
+    const message = `🎮 ${title} · Player ${player} invite\n${value}\nPaste into GameDeck → Play Online → Join a friend.`;
+    await window.deck.copyText(message.length <= 2000 ? message : value);
+    const opened = await window.deck.openExternal(DISCORD_REMOTE_PLAY_URL);
+    toast(opened?.ok ? 'Discord message copied. Paste it in #remote-play.' : 'Message copied. Open #remote-play when Discord is available.', opened?.ok ? 'success' : 'warning');
+  };
   $('#netplayCopyResponse').onclick = async () => {
     if (!guestResponse) return;
     await window.deck.copyText(guestResponse);
     toast('Join response copied. Send it to the host.', 'success');
+  };
+  $('#netplayShareResponse').onclick = async () => {
+    if (!guestResponse) return;
+    const title = String(guestInvite?.title || 'GameDeck Remote Play').slice(0, 80);
+    const message = `✅ ${title} · join response\n${guestResponse}\nHost: paste this into the response field and connect the player.`;
+    await window.deck.copyText(message.length <= 2000 ? message : guestResponse);
+    const opened = await window.deck.openExternal(DISCORD_REMOTE_PLAY_URL);
+    toast(opened?.ok ? 'Response copied. Paste it in #remote-play.' : 'Response copied. Open #remote-play when Discord is available.', opened?.ok ? 'success' : 'warning');
   };
 
   document.addEventListener('keydown', event => {

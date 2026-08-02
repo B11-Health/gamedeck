@@ -4,6 +4,12 @@ All notable GameDeck releases are documented here.
 
 ## [Unreleased]
 
+- Added a first-class Discord community hub with direct channel routing for Remote Play, announcements, support, and showcases.
+- Added Discord-safe Remote Play share actions that copy a paste-ready invite or response and open the correct community channel.
+
+- Added the verified GameDeck Discord community, permanent invite, launch announcements, Remote Play coordination, support, and showcase channels.
+- Published the public GameDeck 1.2 tutorial and linked it from the app header, README, and community surface.
+- Added and refreshed the full GameDeck 1.2 end-to-end validation report.
 - Changed release artifacts into complete one-click packages that include verified RetroArch, the compatible core archive, and the extraction helper for offline first-run setup.
 - Added persistent transfer state with automatic restart recovery, saved partial progress, visible Pause/Resume/retry controls, and backend cleanup for dismissed jobs.
 - Added native confirmation and safe move-to-Trash/Recycle-Bin removal for installed games, including favorites, recent history, and arcade-audit cleanup.

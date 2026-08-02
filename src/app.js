@@ -2,6 +2,14 @@ const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
 
 const GAME_SORTS = new Set(['title', 'recent', 'system', 'size']);
+const DISCORD_COMMUNITY = Object.freeze({
+  invite: 'https://discord.gg/eS7d4VqTT',
+  general: 'https://discord.com/channels/1533539059207504093/1533539060361203774',
+  announcements: 'https://discord.com/channels/1533539059207504093/1533539409323102281',
+  remotePlay: 'https://discord.com/channels/1533539059207504093/1533539469372821555',
+  support: 'https://discord.com/channels/1533539059207504093/1533539475836108943',
+  showcase: 'https://discord.com/channels/1533539059207504093/1533539481141907589'
+});
 
 function readPreference(key, fallback) {
   try {
@@ -2476,6 +2484,7 @@ $('#setupPrimary').onclick = async event => {
 $('#setupCheck').onclick = () => runReadyCheck();
 $('#surpriseMe').onclick = () => surpriseMe();
 $('#sidebarToggle').onclick = toggleSidebar;
+$('#tutorialOpen').onclick = () => window.deck.openExternal('https://youtu.be/vY-fFVu2ClM');
 const headerMenuToggle = $('#headerMenuToggle');
 const headerMenu = $('#headerMenu');
 function closeHeaderMenu() {
@@ -2651,6 +2660,17 @@ $('#transferDismissFinished').onclick = async () => {
 };
 
 $('#openGithub').onclick = () => openCommunityLink('https://github.com/B11-Health/gamedeck');
+$('#openDiscord').onclick = () => openCommunityLink(DISCORD_COMMUNITY.invite);
+$('#openDiscordPlayers').onclick = () => openCommunityLink(DISCORD_COMMUNITY.remotePlay);
+$('#openDiscordAnnouncements').onclick = () => openCommunityLink(DISCORD_COMMUNITY.announcements);
+$('#openDiscordSupport').onclick = () => openCommunityLink(DISCORD_COMMUNITY.support);
+$('#openDiscordShowcase').onclick = () => openCommunityLink(DISCORD_COMMUNITY.showcase);
+$('#copyDiscordInvite').onclick = async () => {
+  await window.deck.copyText(DISCORD_COMMUNITY.invite);
+  $('#copyDiscordInvite').textContent = 'Invite copied';
+  toast('GameDeck community invite copied');
+  setTimeout(() => { if ($('#copyDiscordInvite')) $('#copyDiscordInvite').textContent = 'Copy community invite'; }, 1800);
+};
 $('#openContributing').onclick = () => openCommunityLink('https://github.com/B11-Health/gamedeck/blob/main/CONTRIBUTING.md');
 $('#openArcadeGuide').onclick = () => openCommunityLink('https://github.com/B11-Health/gamedeck/blob/main/docs/ARCADE.md');
 $('#openArcadeFeedback').onclick = () => openCommunityLink('https://github.com/B11-Health/gamedeck/issues/new/choose');

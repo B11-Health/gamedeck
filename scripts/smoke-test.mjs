@@ -49,6 +49,7 @@ for (const id of [
   'headerInfoBar',
   'headerMenuToggle',
   'headerMenu',
+  'tutorialOpen',
   'streamToggle',
   'streamStudio',
   'streamSource',
@@ -117,6 +118,15 @@ for (const id of [
   'setupSteps',
   'surpriseMe',
   'communitySettings',
+  'openDiscord',
+  'discordCommunityHub',
+  'openDiscordPlayers',
+  'copyDiscordInvite',
+  'openDiscordAnnouncements',
+  'openDiscordSupport',
+  'openDiscordShowcase',
+  'netplayShareInvite',
+  'netplayShareResponse',
   'gameSort',
   'resultCount',
   'emptyTitle',
@@ -133,7 +143,7 @@ for (const id of [
   if (matches.length !== 1) fail(`expected one #${id}, found ${matches.length}`);
 }
 
-for (const channel of ['settings', 'save-settings', 'sponsors', 'donations', 'open-external', 'arcade-audit', 'refresh-game-details', 'choose-game-artwork', 'inspect-settings', 'stream-status', 'stream-sources', 'stream-start', 'stream-stop', 'stream-host-pull', 'stream-host-send', 'remote-play-status', 'remote-play-start', 'remote-play-stop', 'remote-play-input', 'netplay-status', 'netplay-game-info', 'netplay-relays', 'netplay-host', 'netplay-join', 'netplay-stop']) {
+for (const channel of ['settings', 'save-settings', 'sponsors', 'donations', 'open-external', 'arcade-audit', 'refresh-game-details', 'choose-game-artwork', 'inspect-settings', 'stream-status', 'stream-sources', 'stream-start', 'stream-stop', 'stream-host-pull', 'stream-host-send', 'remote-play-code-encode', 'remote-play-code-decode', 'remote-play-status', 'remote-play-start', 'remote-play-stop', 'remote-play-input', 'netplay-status', 'netplay-game-info', 'netplay-relays', 'netplay-host', 'netplay-join', 'netplay-stop']) {
   if (!main.includes(`'${channel}'`)) fail(`main process is missing ${channel}`);
   const preloadName = channel.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
   if (!preload.includes(preloadName)) fail(`preload bridge is missing ${preloadName}`);
@@ -142,6 +152,12 @@ for (const channel of ['settings', 'save-settings', 'sponsors', 'donations', 'op
 if (!html.includes('class="app-shell-header"') || !html.includes('class="header-info-bar"')) fail('two-tier operational header is missing');
 if (!html.includes('id="headerMenu"') || !html.includes('id="headerMenuToggle"')) fail('secondary header controls must live in an overflow menu');
 if (!renderer.includes('function toggleHeaderMenu') || !renderer.includes('function closeHeaderMenu')) fail('header overflow accessibility behavior is missing');
+if (!renderer.includes('https://discord.gg/eS7d4VqTT') || !html.includes('id="openDiscord"')) fail('official Discord community link is missing');
+if (!renderer.includes('DISCORD_COMMUNITY') || !renderer.includes('1533539469372821555')) fail('Discord channel routing is missing');
+if (!netplayRenderer.includes('DISCORD_REMOTE_PLAY_URL') || !netplayRenderer.includes('message.length <= 2000')) fail('Discord-safe Remote Play sharing is missing');
+if (!html.includes('class="discord-community-hub"') || !styles.includes('.discord-channel-card')) fail('Discord community hub UI is missing');
+
+if (!renderer.includes('https://youtu.be/vY-fFVu2ClM')) fail('published GameDeck tutorial link is missing');
 if (renderer.includes("'Cinematic'")) fail('retired Cinematic header language must not return');
 if (!main.includes('configuredEmulator') || !main.includes("launchMode: 'mame'") || !main.includes("'-nowindow'")) fail('standalone MAME routing is missing');
 if (!main.includes("'.bs'")) fail('Satellaview .bs ROM support is missing');
@@ -208,9 +224,10 @@ if (!pkg.build?.files?.includes('stream-server.js') || !pkg.build?.files?.includ
 if (!pkg.build?.files?.includes('netplay-manager.js')) fail('release packages must include GameDeck multiplayer services');
 if (!String(pkg.scripts?.check || '').includes('netplay-manager.js') || !String(pkg.scripts?.check || '').includes('src/netplay.js')) fail('multiplayer syntax checks are missing');
 if (!main.includes('startRemotePlay') || !main.includes('remoteInputPacket') || !main.includes('network_remote_enable_user_p')) fail('native RetroPad Remote Play host routing is missing');
-if (!preload.includes('remotePlayStart') || !preload.includes('remotePlayInput') || !preload.includes('onRemotePlay')) fail('secure Remote Play preload bridge is missing');
+if (!preload.includes('remotePlayCodeEncode') || !preload.includes('remotePlayCodeDecode') || !preload.includes('remotePlayStart') || !preload.includes('remotePlayInput') || !preload.includes('onRemotePlay')) fail('secure Remote Play preload bridge is missing');
 if (!streamingRenderer.includes('GameDeckLive') || !streamingRenderer.includes('startForRemote')) fail('Remote Play must reuse the native GameDeck Live capture pipeline');
-if (!netplayRenderer.includes('GDREMOTE1') || !netplayRenderer.includes('GDREMOTEANSWER1') || !netplayRenderer.includes('RTCPeerConnection')) fail('encrypted peer-to-peer Remote Play invitation flow is missing');
+if (!netplayRenderer.includes('GDREMOTE2') || !netplayRenderer.includes('GDREMOTEANSWER2') || !netplayRenderer.includes('RTCPeerConnection')) fail('compressed encrypted peer-to-peer Remote Play invitation flow is missing');
+if (!main.includes('brotliCompressSync') || !main.includes('brotliDecompressSync')) fail('Discord-sized Brotli Remote Play codes are missing');
 if (!netplayRenderer.includes('remotePlayInput') || !netplayRenderer.includes('navigator.getGamepads')) fail('remote gamepad forwarding is missing');
 if (!html.includes('Only the host needs the game') || !html.includes('NO ROM TRANSFER') || !html.includes('NATIVE RETROPAD INPUT')) fail('Remote Play ownership and privacy guidance are missing');
 if (Object.keys(pkg.dependencies || {}).some(name => /(^|[-_])(obs|webrtc|websocket|ws)([-_]|$)/i.test(name))) fail('GameDeck Live must not add OBS, WebRTC, or WebSocket runtime dependencies');
@@ -238,6 +255,8 @@ for (const asset of [
   'docs/ARCADE.md',
   'docs/COMMUNITY_LAUNCH.md',
   'docs/REMOTE_PLAY.md',
+  'docs/E2E_REPORT_1.2.0.md',
+  'docs/e2e-results/GameDeck-1.2.0-2026-08-02.json',
   'docs/images/gamedeck-ready-check.png',
   'docs/images/gamedeck-startup.png',
   'build/icon.ico',

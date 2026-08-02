@@ -6,6 +6,8 @@
 
 <p align="center"><strong>Your legally owned game library, presented like the main event.</strong></p>
 
+<p align="center"><a href="https://youtu.be/vY-fFVu2ClM"><strong>Watch the GameDeck 1.2 tutorial</strong></a> · <a href="docs/E2E_REPORT_1.2.0.md">Read the full end-to-end report</a></p>
+
 <p align="center">
   <a href="https://github.com/B11-Health/gamedeck/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/B11-Health/gamedeck/actions/workflows/ci.yml/badge.svg"></a>
   <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-72e7ff"></a>
@@ -140,6 +142,9 @@ Environment overrides are also supported: `GAMEDECK_LIBRARY`, `GAMEDECK_RGSX_ROO
 
 ## Community
 
+- Join the official [GameDeck Discord community](https://discord.gg/eS7d4VqTT) for Remote Play sessions, support, announcements, and showcases.
+- GameDeck links directly to `#remote-play`, `#support`, `#announcements`, and `#showcase` from the Community screen. See the [Discord community playbook](docs/DISCORD_COMMUNITY.md).
+- Remote Play can prepare a Discord-safe, paste-ready invite or response and open `#remote-play` without exposing ROMs, firmware, or save files.
 - Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
 - Check the [roadmap](ROADMAP.md) and [open issues](https://github.com/B11-Health/gamedeck/issues).
 - Use the [arcade community launch kit](docs/COMMUNITY_LAUNCH.md) for evidence, screenshots, channel rules, and outreach sequencing.

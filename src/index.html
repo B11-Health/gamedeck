@@ -33,6 +33,7 @@
           <button class="header-menu-item setup-button" id="setupToggle" type="button" role="menuitem" aria-pressed="false"><span class="menu-item-icon"><span class="setup-pulse" aria-hidden="true"></span></span><span><b>Setup</b><small>Engines, firmware, and paths</small></span><span class="menu-item-chevron" aria-hidden="true">›</span></button>
           <button class="header-menu-item activity-button" id="consoleToggle" type="button" role="menuitem"><span class="menu-item-icon" aria-hidden="true">◎</span><span><b>Status center</b><small>Transfers, repairs, and issues</small></span><span id="activityCount" class="activity-count hidden">0</span></button>
           <button class="header-menu-item" id="rescan" type="button" role="menuitem"><span class="menu-item-icon refresh-icon" aria-hidden="true">↻</span><span><b id="rescanLabel">Refresh library</b><small>Find newly added games</small></span><span class="menu-item-chevron" aria-hidden="true">›</span></button>
+          <button class="header-menu-item" id="tutorialOpen" type="button" role="menuitem"><span class="menu-item-icon" aria-hidden="true">▶</span><span><b>Watch tutorial</b><small>Setup, streaming, and Remote Play in 1:41</small></span><span class="menu-item-chevron" aria-hidden="true">›</span></button>
         </div>
       </div>
     </div>
@@ -290,6 +291,7 @@
             <p>GameDeck is a local-first launcher for legally owned game libraries. Help us ship cleaner setup, broader emulator support, and the best couch-first experience on every desktop.</p>
             <div class="community-actions">
               <button class="primary" id="openGithub">View on GitHub</button>
+              <button id="openDiscord">Join Discord</button>
               <button id="openContributing">Start contributing</button>
             </div>
             <div class="community-badges">
@@ -299,6 +301,27 @@
           <div class="community-brand" aria-hidden="true">
             <img src="../assets/branding/gamedeck-mark-source.png" alt="">
             <span>BUILD · PLAY · SHARE</span>
+          </div>
+        </section>
+
+        <section class="discord-community-hub" id="discordCommunityHub" aria-labelledby="discordCommunityTitle">
+          <article class="discord-community-primary">
+            <div class="discord-community-mark" aria-hidden="true">GD</div>
+            <div class="discord-community-copy">
+              <div class="card-kicker">LIVE PLAYER COMMUNITY</div>
+              <h2 id="discordCommunityTitle">Find a player. Fix a setup. Shape the next release.</h2>
+              <p>Jump directly into the channel you need. GameDeck keeps Remote Play invitations private and gives the community one clear home for support, announcements, and showcases.</p>
+              <div class="discord-community-actions">
+                <button class="primary" id="openDiscordPlayers" type="button">Find Remote Play partners</button>
+                <button id="copyDiscordInvite" type="button">Copy community invite</button>
+              </div>
+              <div class="discord-community-meta"><span>Permanent invite</span><span>5 focused channels</span><span>Open-source community</span></div>
+            </div>
+          </article>
+          <div class="discord-channel-grid" aria-label="GameDeck Discord channels">
+            <button class="discord-channel-card" id="openDiscordAnnouncements" type="button"><span class="discord-channel-icon" aria-hidden="true">↗</span><span><b>Announcements</b><small>Releases, tutorials, and project milestones</small></span><em>Open</em></button>
+            <button class="discord-channel-card" id="openDiscordSupport" type="button"><span class="discord-channel-icon" aria-hidden="true">?</span><span><b>Support</b><small>Setup help, diagnostics, and compatibility</small></span><em>Open</em></button>
+            <button class="discord-channel-card" id="openDiscordShowcase" type="button"><span class="discord-channel-icon" aria-hidden="true">◆</span><span><b>Showcase</b><small>Share libraries, rooms, and controller setups</small></span><em>Open</em></button>
           </div>
         </section>
 
@@ -462,22 +485,22 @@
               <button id="netplayCreateInvite" type="button">Create fresh invite</button>
             </div>
             <div class="netplay-invite hidden" id="netplayInvite">
-              <div><span>ENCRYPTED PLAYER INVITE</span><small>Send this code to your friend in Discord.</small></div>
+              <div><span>ENCRYPTED PLAYER INVITE</span><small id="netplayInviteMeta" aria-live="polite">Send this code to your friend in Discord.</small></div>
               <textarea id="netplayInviteValue" readonly aria-label="Remote Play invitation"></textarea>
-              <button id="netplayCopyInvite" type="button">Copy invite</button>
+              <div class="netplay-share-actions"><button id="netplayCopyInvite" type="button">Copy invite</button><button id="netplayShareInvite" type="button">Share in #remote-play</button></div>
             </div>
-            <label class="netplay-invite-input"><span>Friend's response code</span><textarea id="netplayAnswerInput" placeholder="Paste the GDREMOTEANSWER1 response from your friend"></textarea><small>The response completes the direct encrypted connection.</small></label>
+            <label class="netplay-invite-input"><span>Friend's response code</span><textarea id="netplayAnswerInput" placeholder="Paste the GDREMOTEANSWER2 response from your friend"></textarea><small>The response completes the direct encrypted connection.</small></label>
             <button class="netplay-primary" id="netplayAcceptAnswer" type="button"><span aria-hidden="true">✓</span><b>Connect this player</b></button>
           </div>
         </section>
         <section class="netplay-panel hidden" id="netplayJoinPanel" role="tabpanel">
-          <label class="netplay-invite-input"><span>Host's GameDeck invitation</span><textarea id="netplayJoinInvite" placeholder="Paste the GDREMOTE1 invitation here"></textarea><small>The invitation contains a short-lived WebRTC offer. Your game library is not accessed.</small></label>
+          <label class="netplay-invite-input"><span>Host's GameDeck invitation</span><textarea id="netplayJoinInvite" placeholder="Paste the GDREMOTE2 invitation here"></textarea><small>The invitation contains a short-lived WebRTC offer. Your game library is not accessed.</small></label>
           <label><span>Player name</span><input id="netplayNickname" maxlength="28" placeholder="Friend"></label>
           <button class="netplay-primary" id="netplayJoin" type="button"><span aria-hidden="true">→</span><b>Create join response</b></button>
           <div class="netplay-invite hidden" id="netplayJoinResponse">
-            <div><span>RESPONSE FOR THE HOST</span><small>Send this code back in Discord, then wait for the host to connect you.</small></div>
+            <div><span>RESPONSE FOR THE HOST</span><small id="netplayResponseMeta" aria-live="polite">Send this code back in Discord, then wait for the host to connect you.</small></div>
             <textarea id="netplayJoinResponseValue" readonly aria-label="Remote Play response"></textarea>
-            <button id="netplayCopyResponse" type="button">Copy response</button>
+            <div class="netplay-share-actions"><button id="netplayCopyResponse" type="button">Copy response</button><button id="netplayShareResponse" type="button">Return via #remote-play</button></div>
           </div>
           <div class="netplay-remote-stage hidden" id="netplayRemoteStage">
             <video id="netplayRemoteVideo" autoplay playsinline></video>
