@@ -171,6 +171,7 @@ if (!siteHtml.includes('GameDeck Live') || !siteHtml.includes('Remote Play Toget
 if (!siteApp.includes('api.github.com/repos/') || !siteApp.includes('releases/latest')) fail('public growth site must resolve current release assets dynamically');
 if (/sendBeacon|\/events/.test(siteApp)) fail('public growth site must not add behavioral click telemetry');
 if (!siteStyles.includes('.remote') || !siteStyles.includes('@media(max-width:760px)')) fail('public growth site responsive product sections are missing');
+if (!siteHtml.includes('ndETcPuCOyE') || !siteHtml.includes('dOEuy8g8Bmw') || !siteStyles.includes('.shorts-section') || !siteStyles.includes('.short-card')) fail('public Shorts discovery gallery is missing');
 
 if (!renderer.includes('https://youtu.be/vY-fFVu2ClM')) fail('published GameDeck tutorial link is missing');
 if (renderer.includes("'Cinematic'")) fail('retired Cinematic header language must not return');

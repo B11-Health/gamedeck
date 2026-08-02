@@ -4,6 +4,8 @@ All notable GameDeck releases are documented here.
 
 ## [Unreleased]
 
+- Added a responsive public Shorts gallery and a scheduled local-first discovery clip for the GameDeck 1.2 launch campaign.
+
 - Added a parallel, parameterized vertical-video campaign renderer with distinct folders and local-first growth angles.
 
 - Added a premium in-app share surface with feedback-first Reddit copy, short-form captions, tutorial routing, and GitHub discovery.
