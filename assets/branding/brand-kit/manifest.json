@@ -1,0 +1,76 @@
+{
+  "brand": "GameDeck",
+  "tagline": "One library. Every era.",
+  "palette": {
+    "midnight": "#050914",
+    "deepNavy": "#091126",
+    "graphite": "#151B2A",
+    "cyan": "#58D6FF",
+    "cyanBright": "#72E7FF",
+    "violet": "#9B8CFF",
+    "ice": "#EAF3FF",
+    "slate": "#A6B1C2"
+  },
+  "assets": [
+    {
+      "file": "gamedeck-avatar-1024.jpg",
+      "bytes": 93627
+    },
+    {
+      "file": "gamedeck-avatar-256.jpg",
+      "bytes": 10487
+    },
+    {
+      "file": "gamedeck-avatar-400.jpg",
+      "bytes": 20501
+    },
+    {
+      "file": "gamedeck-avatar-512.jpg",
+      "bytes": 29965
+    },
+    {
+      "file": "gamedeck-discord-banner.jpg",
+      "bytes": 94055
+    },
+    {
+      "file": "gamedeck-github-social-preview.jpg",
+      "bytes": 140998
+    },
+    {
+      "file": "gamedeck-linkedin-cover.jpg",
+      "bytes": 45799
+    },
+    {
+      "file": "gamedeck-mark-monochrome-dark.png",
+      "bytes": 137657
+    },
+    {
+      "file": "gamedeck-mark-monochrome-white.png",
+      "bytes": 134384
+    },
+    {
+      "file": "gamedeck-open-graph.jpg",
+      "bytes": 129491
+    },
+    {
+      "file": "gamedeck-splash-1920x1080.jpg",
+      "bytes": 314233
+    },
+    {
+      "file": "gamedeck-wordmark-dark.png",
+      "bytes": 98152
+    },
+    {
+      "file": "gamedeck-wordmark-light.png",
+      "bytes": 98580
+    },
+    {
+      "file": "gamedeck-x-header.jpg",
+      "bytes": 126445
+    },
+    {
+      "file": "gamedeck-youtube-banner.jpg",
+      "bytes": 434766
+    }
+  ]
+}
