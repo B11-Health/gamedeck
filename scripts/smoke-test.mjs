@@ -188,10 +188,10 @@ if (!html.includes('class="discord-community-hub"') || !styles.includes('.discor
 if (!html.includes('class="community-share"') || !renderer.includes('GAMEDECK_SHARE_COPY') || !styles.includes('.community-share-actions')) fail('community share loop is missing');
 if (!renderer.includes('Feedback-first Reddit launch copied') || !renderer.includes('#GameDeck #OpenSource')) fail('platform-ready share copy is missing');
 if (!pkg.build?.mac?.x64ArchFiles?.includes('node_modules/7zip-bin')) fail('macOS universal 7zip merge rule is missing');
-if (!siteHtml.includes('GameDeck Live') || !siteHtml.includes('Remote Play Together') || !siteHtml.includes('data-platform="windows"')) fail('public growth site is missing GameDeck 1.2 conversion paths');
+if (!siteHtml.includes('GameDeck Live') || !siteHtml.includes('Couch Co-op') || !siteHtml.includes('Remote Play Together') || !siteHtml.includes('Synchronized Netplay') || !siteHtml.includes('docs/MULTIPLAYER.md') || !siteHtml.includes('data-platform="windows"')) fail('public growth site is missing GameDeck 1.2 conversion paths');
 if (!siteApp.includes('api.github.com/repos/') || !siteApp.includes('releases/latest')) fail('public growth site must resolve current release assets dynamically');
 if (/sendBeacon|\/events/.test(siteApp)) fail('public growth site must not add behavioral click telemetry');
-if (!siteStyles.includes('.remote') || !siteStyles.includes('@media(max-width:760px)')) fail('public growth site responsive product sections are missing');
+if (!siteStyles.includes('.multiplayer') || !siteStyles.includes('.mode-card') || !siteStyles.includes('@media(max-width:760px)')) fail('public growth site responsive product sections are missing');
 if (!siteHtml.includes('ndETcPuCOyE') || !siteHtml.includes('dOEuy8g8Bmw') || !siteStyles.includes('.shorts-section') || !siteStyles.includes('.short-card')) fail('public Shorts discovery gallery is missing');
 if (!siteHtml.includes('PLCbffYifS8R8') || !siteHtml.includes('PLG-ejeCsa-AI')) fail('public YouTube playlist funnel is missing');
 if (e2eResult.releaseCommit !== '250bbd7bc3b929fe49205ee6c0695654426f49b2' || e2eResult.results?.windowsArtifacts?.setup?.sha256 !== '6677c63e871915d1dc001866d36255e126963bb3cc057be0c9c847af28ad0654' || !e2eReportText.includes('GameDeck-1.2.0-mac-universal.dmg')) fail('official v1.2.0 evidence is stale');

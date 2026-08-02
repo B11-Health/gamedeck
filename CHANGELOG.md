@@ -4,6 +4,8 @@ All notable GameDeck releases are documented here.
 
 ## [Unreleased]
 
+- Reframed the public website around the three-mode multiplayer command center: Couch Co-op, Remote Play Together, and Synchronized Netplay.
+
 - Rebuilt multiplayer as one controller-first command center for Couch Co-op, encrypted Remote Play Together, and relay-backed Synchronized Netplay.
 - Added local SHA-256 game/core match IDs, cached verification, relay-region selection, exact-match join rejection, and polished live session status.
 - Validated the complete synchronized host flow with Metal Slug 3 and FinalBurn Neo, including New York relay publication and `GDPLAY1` invitation copying.
