@@ -4,50 +4,90 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: file:; connect-src 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: file:; connect-src 'self' http:; media-src 'self' blob:">
   <title>GameDeck</title>
   <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+<body class="density-compact">
+  <a class="skip-link" href="#mainContent">Skip to game library</a>
   <div class="grain" aria-hidden="true"></div>
 
-  <header class="app-header">
-    <div class="brand"><span class="brand-mark"><img src="../assets/branding/gamedeck-mark-source.png" alt=""></span><span>GAMEDECK</span></div>
-    <nav aria-label="Main navigation">
-      <button class="nav active" data-view="home">Library</button>
-      <button class="nav" data-view="discover">Discover</button>
-      <button class="nav" data-view="favorites">Favorites</button>
-      <button class="nav" data-view="recent">Recent</button>
-      <button class="nav" data-view="community">Community</button>
-    </nav>
-    <div class="head-actions">
+  <header class="app-shell-header">
+    <div class="app-header">
+      <div class="header-brand-group">
+        <button class="header-button compact rail-button" id="sidebarToggle" type="button" aria-pressed="true" title="Collapse systems rail (Ctrl+B)" aria-label="Toggle systems rail"><span aria-hidden="true">☰</span></button>
+        <div class="brand"><span class="brand-mark"><img src="../assets/branding/gamedeck-mark-source.png" alt=""></span><span>GAMEDECK</span></div>
+      </div>
+      <nav class="primary-nav" aria-label="Main navigation">
+        <button class="nav active" data-view="home">Library</button>
+        <button class="nav" data-view="discover">Discover</button>
+        <button class="nav" data-view="favorites">Favorites</button>
+        <button class="nav" data-view="recent">Recent</button>
+        <button class="nav" data-view="community">Community</button>
+      </nav>
+      <div class="head-actions">
+        <button class="header-button netplay-button" id="netplayToggle" type="button" aria-pressed="false" title="Host or join multiplayer"><span class="netplay-glyph" aria-hidden="true">⚔</span><span class="button-label" id="netplayButtonLabel">Play Online</span><small id="headerPlayerCount">0</small></button>
+        <button class="header-button live-button" id="streamToggle" type="button" aria-pressed="false" title="Open GameDeck Live"><span class="live-pulse" aria-hidden="true"></span><span class="button-label" id="streamButtonLabel">Go Live</span><small id="headerViewerCount">0</small></button>
+        <button class="header-button compact overflow-button" id="headerMenuToggle" type="button" aria-expanded="false" aria-controls="headerMenu" title="More GameDeck controls" aria-label="More GameDeck controls"><span aria-hidden="true">•••</span></button>
+        <div class="header-menu hidden" id="headerMenu" role="menu" aria-label="GameDeck controls">
+          <button class="header-menu-item setup-button" id="setupToggle" type="button" role="menuitem" aria-pressed="false"><span class="menu-item-icon"><span class="setup-pulse" aria-hidden="true"></span></span><span><b>Setup</b><small>Engines, firmware, and paths</small></span><span class="menu-item-chevron" aria-hidden="true">›</span></button>
+          <button class="header-menu-item activity-button" id="consoleToggle" type="button" role="menuitem"><span class="menu-item-icon" aria-hidden="true">◎</span><span><b>Status center</b><small>Transfers, repairs, and issues</small></span><span id="activityCount" class="activity-count hidden">0</span></button>
+          <button class="header-menu-item" id="rescan" type="button" role="menuitem"><span class="menu-item-icon refresh-icon" aria-hidden="true">↻</span><span><b id="rescanLabel">Refresh library</b><small>Find newly added games</small></span><span class="menu-item-chevron" aria-hidden="true">›</span></button>
+          <button class="header-menu-item" id="tutorialOpen" type="button" role="menuitem"><span class="menu-item-icon" aria-hidden="true">▶</span><span><b>Watch tutorial</b><small>Setup, streaming, and Remote Play in 1:41</small></span><span class="menu-item-chevron" aria-hidden="true">›</span></button>
+        </div>
+      </div>
+    </div>
+    <div class="header-info-bar" id="headerInfoBar" aria-label="GameDeck status">
+      <div class="header-ops" id="headerOps" aria-label="GameDeck operational status">
+        <button class="op-chip" id="headerLibraryInfo" type="button" title="Show the full library"><span>Library</span><b id="headerGameInfo">0 games</b></button>
+        <button class="op-chip" id="headerEngineInfo" type="button" title="Open setup status"><i class="op-dot"></i><span>Engines</span><b id="headerEngineInfoText">Checking</b></button>
+        <button class="op-chip" id="headerTransferInfo" type="button" title="Show transfer activity"><span>Transfers</span><b id="headerTransferInfoText">Idle</b></button>
+      </div>
+      <span class="info-separator" aria-hidden="true"></span>
       <span class="controller-pill" id="controllerStatus">No controller</span>
-      <button class="header-button activity-button" id="consoleToggle" title="Open activity console">Activity <span id="activityCount" class="activity-count hidden">0</span></button>
-      <button class="header-button compact" id="rescan" title="Rescan library">Refresh</button>
+      <span class="header-trust"><i aria-hidden="true"></i><span>Local-first</span><b>Your games stay yours</b></span>
     </div>
   </header>
 
   <main>
-    <aside>
+    <aside id="systemsRail" aria-label="Game systems">
       <div class="eyebrow">YOUR SYSTEMS</div>
       <div id="systems" class="system-list"></div>
       <div class="aside-foot">
         <div><span class="status-dot"></span><b id="readyCount">0</b> emulators ready</div>
-        <button id="folder">Open RGSX library</button>
+        <button id="folder">Open game folder</button>
       </div>
     </aside>
 
-    <section class="content">
-      <section class="loading-stage" id="appLoading" aria-live="polite" aria-label="Loading GameDeck">
-        <div class="loading-orbit" aria-hidden="true"><span><img src="../assets/branding/gamedeck-mark-source.png" alt=""></span></div>
-        <div class="loading-copy">
-          <div class="eyebrow">PREPARING YOUR DECK</div>
-          <h2 id="loadingTitle">Starting GameDeck</h2>
-          <p id="loadingMessage">Checking your library and emulator setup.</p>
-          <div class="loading-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="8" id="loadingTrack">
-            <span id="loadingBar" style="width:8%"></span>
+    <section class="content" id="mainContent" tabindex="-1">
+      <section class="loading-stage" id="appLoading" aria-live="polite" aria-label="Preparing GameDeck">
+        <div class="loading-ambient" aria-hidden="true"><span></span><span></span><span></span></div>
+        <div class="boot-panel">
+          <div class="boot-visual" aria-hidden="true">
+            <div class="boot-mark"><img src="../assets/branding/gamedeck-mark-source.png" alt=""></div>
+            <div class="boot-cards">
+              <span style="--i:0"><i>PLAY</i></span>
+              <span style="--i:1"><i>DISCOVER</i></span>
+              <span style="--i:2"><i>REPEAT</i></span>
+            </div>
+            <small>YOUR LIBRARY · ONE MOVE AWAY</small>
           </div>
-          <small id="loadingPercent">8%</small>
+          <div class="loading-copy">
+            <div class="loading-kicker"><span>GAMEDECK STARTUP</span><b id="loadingPhase">STEP 1 OF 4</b></div>
+            <h2 id="loadingTitle">Starting GameDeck</h2>
+            <p id="loadingMessage">Checking your library and emulator setup.</p>
+            <div class="loading-steps" aria-label="Startup progress">
+              <div class="loading-step active" id="loadingStepLibrary"><i></i><span><b>Game engines</b><small>Included and verified</small></span></div>
+              <div class="loading-step" id="loadingStepLaunchers"><i></i><span><b>Library</b><small>Finding your games</small></span></div>
+              <div class="loading-step" id="loadingStepArtwork"><i></i><span><b>Artwork</b><small>Building the shelves</small></span></div>
+              <div class="loading-step" id="loadingStepControls"><i></i><span><b>Controls</b><small>Preparing couch mode</small></span></div>
+            </div>
+            <div class="loading-progress-row">
+              <div class="loading-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="8" id="loadingTrack"><span id="loadingBar" style="width:8%"></span></div>
+              <small id="loadingPercent">8%</small>
+            </div>
+            <div class="loading-foot"><span>LOCAL-FIRST</span><span>NO ACCOUNT REQUIRED</span><span>YOUR GAMES STAY YOURS</span></div>
+          </div>
         </div>
       </section>
 
@@ -56,6 +96,10 @@
           <div class="eyebrow" id="context">ALL SYSTEMS</div>
           <h1 id="headline">Your games.<br><em>One move away.</em></h1>
           <p id="subhead">Pick a title and GameDeck chooses the right emulator automatically.</p>
+          <div class="hero-actions" id="heroActions">
+            <button class="primary" id="heroResume" type="button"><span aria-hidden="true">▶</span><b id="heroResumeLabel">Surprise me</b></button>
+            <button id="heroDiscover" type="button">Browse Discover</button>
+          </div>
         </div>
         <div class="stats" aria-label="Library stats">
           <div><strong id="gameCount">0</strong><span>GAMES</span></div>
@@ -63,50 +107,144 @@
         </div>
       </div>
 
+      <section class="setup-coach hidden" id="setupCoach" aria-labelledby="setupCoachTitle">
+        <div class="setup-coach-copy">
+          <div class="setup-score" aria-hidden="true"><strong id="setupScore">0%</strong><span>READY</span></div>
+          <div>
+            <div class="eyebrow">GAMEDECK READY CHECK</div>
+            <h2 id="setupCoachTitle">Your easiest route to play.</h2>
+            <p id="setupCoachMessage">Everything needed to run supported systems is included. Add games you own and GameDeck handles the rest.</p>
+          </div>
+        </div>
+        <div class="setup-steps" id="setupSteps" aria-live="polite"></div>
+        <div class="setup-coach-actions">
+          <button class="primary" id="setupPrimary" type="button">Finish setup</button>
+          <button id="setupCheck" type="button">Run ready check</button>
+          <button class="quiet" id="setupDismiss" type="button">Hide</button>
+        </div>
+      </section>
+
+      <section class="arcade-deck hidden" id="arcadeDeck" aria-labelledby="arcadeDeckTitle">
+        <div class="arcade-command">
+          <div class="arcade-command-head">
+            <div>
+              <div class="eyebrow">ARCADE COMMAND CENTER</div>
+              <h2 id="arcadeDeckTitle">Cabinet-ready. Guesswork gone.</h2>
+              <p id="arcadeHealthState">Checking archive integrity, emulator routing, and artwork matches.</p>
+            </div>
+            <button id="arcadeAuditButton" type="button">Scan ROM-set health</button>
+          </div>
+          <div class="arcade-metrics" aria-live="polite">
+            <div><strong id="arcadeTotal">0</strong><span>SETS FOUND</span></div>
+            <div class="good"><strong id="arcadeVerified">0</strong><span>PREFLIGHT OK</span></div>
+            <div class="warn"><strong id="arcadeAttention">0</strong><span>NEED ATTENTION</span></div>
+            <div><strong id="arcadeArtwork">0%</strong><span>ARTWORK</span></div>
+          </div>
+          <div class="arcade-audit-progress hidden" id="arcadeAuditProgress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <span><i id="arcadeAuditBar"></i></span><small id="arcadeAuditCopy">Preparing archive scan…</small>
+          </div>
+          <div class="arcade-filters" role="group" aria-label="Filter arcade library by health">
+            <button class="active" type="button" data-arcade-filter="all" aria-pressed="true">All sets</button>
+            <button type="button" data-arcade-filter="verified" aria-pressed="false">Preflight clear</button>
+            <button type="button" data-arcade-filter="attention" aria-pressed="false">Needs attention</button>
+          </div>
+        </div>
+        <aside class="arcade-controller" aria-label="Xbox arcade controls">
+          <div class="arcade-controller-head">
+            <div><span class="controller-orbit" aria-hidden="true"></span><div><small>XINPUT COUCH MODE</small><b id="arcadeControllerState">Waiting for controller</b></div></div>
+            <span id="arcadeControllerCount">0 PADS</span>
+          </div>
+          <p id="arcadeControllerDetail">Connect an Xbox controller, then use either the D-pad or left stick.</p>
+          <div class="arcade-mapping">
+            <span><kbd>VIEW</kbd> Coin</span><span><kbd>MENU</kbd> Start</span>
+            <span><kbd>A</kbd> 1</span><span><kbd>B</kbd> 2</span><span><kbd>X</kbd> 3</span><span><kbd>Y</kbd> 4</span>
+            <span><kbd>LB</kbd> 5</span><span><kbd>RB</kbd> 6</span>
+          </div>
+        </aside>
+      </section>
+
       <section class="spotlight hidden" id="spotlight" aria-label="Selected game">
         <div class="feature-backdrop" aria-hidden="true"><img id="spotlightBackdrop" alt=""></div>
         <div class="spotlight-art" id="spotlightArt"></div>
         <div class="spotlight-copy">
           <div class="eyebrow" id="spotlightSystem">SELECTED GAME</div>
           <h2 id="spotlightTitle">Pick a game</h2>
-          <div class="feature-facts" id="spotlightFacts"></div>
+          <div class="feature-detail-head"><div class="feature-facts" id="spotlightFacts"></div><span class="feature-source" id="spotlightSource">LOCAL DETAILS</span></div>
           <p class="feature-description" id="spotlightDescription">Use a controller, keyboard, or mouse to focus a title.</p>
           <p class="feature-status" id="spotlightMeta">Ready when you are.</p>
         </div>
         <div class="spotlight-actions">
-          <button class="primary" id="spotlightPlay">Play now</button>
-          <button id="spotlightFav">Save</button>
+          <div class="spotlight-primary-actions">
+            <button class="primary" id="spotlightPlay">Play now</button>
+            <button class="online" id="spotlightOnline">Play online</button>
+            <button id="spotlightFav">Save</button>
+          </div>
+          <div class="spotlight-utility-actions" aria-label="Game details tools">
+            <button id="spotlightArtwork" title="Choose a local cover image"><span aria-hidden="true">▧</span><b>Artwork</b></button>
+            <button id="spotlightDetails" title="Retry the metadata lookup"><span aria-hidden="true">↻</span><b>Details</b></button>
+            <button class="danger" id="spotlightDelete" title="Move this game to Trash"><span aria-hidden="true">⌫</span><b>Remove</b></button>
+          </div>
         </div>
       </section>
 
-      <div class="control-legend" aria-label="Controller help">
-        <span><kbd>A</kbd> Select / Play</span>
-        <span><kbd>B</kbd> Back</span>
-        <span><kbd>Y</kbd> Setup</span>
-        <span><kbd>D-PAD</kbd> Move</span>
-        <span><kbd>START</kbd> Change view</span>
+      <div class="control-legend" id="controlLegend" data-mode="pointer" aria-label="Input help" aria-live="polite">
+        <span><kbd>CLICK</kbd> Preview</span>
+        <span><kbd>DOUBLE</kbd> Play</span>
+        <span><kbd>☆</kbd> Favorite</span>
+        <span><kbd>SCROLL</kbd> Browse</span>
+        <span><kbd>/</kbd> Search</span>
       </div>
 
-      <div class="toolbar">
-        <label class="search">
-          <span aria-hidden="true">/</span>
-          <input id="search" placeholder="Search your collection" autocomplete="off">
-          <kbd>/</kbd>
-        </label>
+      <div class="toolbar" id="libraryToolbar">
+        <div class="toolbar-cluster">
+          <label class="search">
+            <span class="search-icon" aria-hidden="true">/</span>
+            <span class="sr-only">Search games</span>
+            <input id="search" placeholder="Search your collection" autocomplete="off" aria-keyshortcuts="/">
+            <button class="search-clear hidden" id="searchClear" type="button" aria-label="Clear search" title="Clear search">×</button>
+            <kbd>/</kbd>
+          </label>
+          <div class="library-tools" id="libraryTools">
+            <button class="surprise-button" id="surpriseMe" type="button" title="Choose a random playable game"><span aria-hidden="true">✦</span> Surprise me</button>
+            <label class="sort-control quality-filter"><span>Show</span><select id="artworkFilter" aria-label="Filter library by artwork"><option value="all">All games</option><option value="missing-art">Missing artwork</option></select></label><span class="result-count" id="resultCount" aria-live="polite">0 games</span>
+            <label class="sort-control">
+              <span>Sort</span>
+              <select id="gameSort" aria-label="Sort games">
+                <option value="title">Title A–Z</option>
+                <option value="recent">Recently played</option>
+                <option value="system">Console</option>
+                <option value="size">File size</option>
+              </select>
+            </label>
+          </div>
+          <div class="discover-tools hidden" id="discoverTools">
+            <span class="result-count" id="catalogResultCount" aria-live="polite">0 titles</span>
+            <label class="sort-control catalog-filter-control">
+              <span>Show</span>
+              <select id="catalogFilter" aria-label="Filter catalog titles">
+                <option value="all">All titles</option>
+                <option value="available">Available</option>
+                <option value="downloaded">Downloaded</option>
+                <option value="installed">In library</option>
+              </select>
+            </label>
+          </div>
+        </div>
         <span class="toolbar-context" id="toolbarContext">READY TO PLAY</span>
       </div>
 
-      <section id="empty" class="empty hidden">
+      <section id="empty" class="empty hidden" aria-live="polite">
         <div class="empty-art"><span>+</span></div>
-        <h2>Your deck is ready</h2>
-        <p>Choose Discover to fetch a title through RGSX, or add an owned game to the RGSX ROM folder.</p>
+        <div class="empty-kicker" id="emptyKicker">START YOUR COLLECTION</div>
+        <h2 id="emptyTitle">Your deck is ready</h2>
+        <p id="emptyMessage">Add games you legally own to your GameDeck folder, or use the optional Discover provider when connected.</p>
         <div class="empty-actions">
-          <button class="primary" id="emptyDiscover">Browse RGSX</button>
-          <button id="emptyFolder">Open game folder</button>
+          <button class="primary" id="emptyPrimary" data-action="discover">Browse Discover</button>
+          <button id="emptySecondary" data-action="folder">Open game folder</button>
         </div>
       </section>
 
-      <div id="games" class="game-grid"></div>
+      <div id="games" class="game-grid" role="list" aria-label="Game library"></div>
 
       <section id="discover" class="discover hidden">
         <div class="discover-label">
@@ -121,7 +259,7 @@
           <div class="catalog-feature-copy">
             <div class="eyebrow" id="catalogFeatureSystem">RGSX TITLE</div>
             <h2 id="catalogFeatureTitle">Select a game</h2>
-            <div class="feature-facts" id="catalogFeatureFacts"></div>
+            <div class="feature-detail-head"><div class="feature-facts" id="catalogFeatureFacts"></div><span class="feature-source" id="catalogFeatureSource">CATALOG DETAILS</span></div>
             <p class="feature-description" id="catalogFeatureDescription">Browse the catalog, then choose a title for the full details.</p>
             <p class="feature-status" id="catalogFeatureMeta">Downloads are handled by RGSX.</p>
           </div>
@@ -138,7 +276,7 @@
           </div>
           <span id="catalogCount"></span>
         </div>
-        <div id="catalogGames" class="catalog-grid"></div>
+        <div id="catalogGames" class="catalog-grid" role="list" aria-label="Discover titles"></div>
         <div id="catalogPager" class="catalog-pager hidden">
           <span id="catalogProgress">0 of 0 titles shown</span>
           <button id="catalogMore" type="button">Show next 300</button>
@@ -153,6 +291,7 @@
             <p>GameDeck is a local-first launcher for legally owned game libraries. Help us ship cleaner setup, broader emulator support, and the best couch-first experience on every desktop.</p>
             <div class="community-actions">
               <button class="primary" id="openGithub">View on GitHub</button>
+              <button id="openDiscord">Join Discord</button>
               <button id="openContributing">Start contributing</button>
             </div>
             <div class="community-badges">
@@ -162,6 +301,78 @@
           <div class="community-brand" aria-hidden="true">
             <img src="../assets/branding/gamedeck-mark-source.png" alt="">
             <span>BUILD · PLAY · SHARE</span>
+          </div>
+        </section>
+
+        <section class="discord-community-hub" id="discordCommunityHub" aria-labelledby="discordCommunityTitle">
+          <article class="discord-community-primary">
+            <div class="discord-community-mark" aria-hidden="true">GD</div>
+            <div class="discord-community-copy">
+              <div class="card-kicker">LIVE PLAYER COMMUNITY</div>
+              <h2 id="discordCommunityTitle">Find a player. Fix a setup. Shape the next release.</h2>
+              <p>Jump directly into the channel you need. GameDeck keeps Remote Play invitations private and gives the community one clear home for support, announcements, and showcases.</p>
+              <div class="discord-community-actions">
+                <button class="primary" id="openDiscordPlayers" type="button">Find Remote Play partners</button>
+                <button id="copyDiscordInvite" type="button">Copy community invite</button>
+              </div>
+              <div class="discord-community-meta"><span>Permanent invite</span><span>5 focused channels</span><span>Open-source community</span></div>
+            </div>
+          </article>
+          <div class="discord-channel-grid" aria-label="GameDeck Discord channels">
+            <button class="discord-channel-card" id="openDiscordAnnouncements" type="button"><span class="discord-channel-icon" aria-hidden="true">↗</span><span><b>Announcements</b><small>Releases, tutorials, and project milestones</small></span><em>Open</em></button>
+            <button class="discord-channel-card" id="openDiscordSupport" type="button"><span class="discord-channel-icon" aria-hidden="true">?</span><span><b>Support</b><small>Setup help, diagnostics, and compatibility</small></span><em>Open</em></button>
+            <button class="discord-channel-card" id="openDiscordShowcase" type="button"><span class="discord-channel-icon" aria-hidden="true">◆</span><span><b>Showcase</b><small>Share libraries, rooms, and controller setups</small></span><em>Open</em></button>
+          </div>
+        </section>
+
+        <section class="community-share" id="shareGameDeck" aria-labelledby="shareGameDeckTitle">
+          <div class="community-share-copy">
+            <div class="card-kicker">INVITE THE NEXT PLAYER</div>
+            <h2 id="shareGameDeckTitle">One thoughtful share beats a hundred ads.</h2>
+            <p>Use a platform-ready launch note, send the short tutorial, or point a friend to the source. No tracking links, manufactured urgency, or spam.</p>
+          </div>
+          <div class="community-share-actions" aria-label="Share GameDeck">
+            <button class="primary" id="copyRedditLaunch" type="button"><b>Copy Reddit launch</b><small>Story-first, feedback-ready</small></button>
+            <button id="copyShortCaption" type="button"><b>Copy short caption</b><small>TikTok, Shorts, Reels</small></button>
+            <button id="openTutorial" type="button"><b>Watch the tutorial</b><small>100-second walkthrough</small></button>
+            <button id="openGithubStar" type="button"><b>Open GitHub</b><small>Star, fork, or contribute</small></button>
+          </div>
+        </section>
+
+        <article class="community-release" aria-labelledby="arcadeReleaseTitle">
+          <div class="release-copy">
+            <div class="card-kicker">ARCADE READINESS PREVIEW</div>
+            <h2 id="arcadeReleaseTitle">MAME and FBNeo, without the mystery.</h2>
+            <p>GameDeck now identifies arcade sets by their real names, checks archives before launch, routes current MAME sets to standalone MAME, and gives FinalBurn Neo its own Xbox-ready launch profile.</p>
+            <div class="release-actions">
+              <button class="primary" id="openArcadeGuide">Read the arcade guide</button>
+              <button id="openArcadeFeedback">Share arcade feedback</button>
+            </div>
+          </div>
+          <div class="release-proof" aria-label="Arcade release highlights">
+            <span><b>01</b><small>Preflight archive health</small></span>
+            <span><b>02</b><small>Full MAME title metadata</small></span>
+            <span><b>03</b><small>XInput couch controls</small></span>
+            <span><b>04</b><small>Local-first artwork matching</small></span>
+          </div>
+        </article>
+
+        <section class="support-rally" aria-labelledby="supportRallyTitle">
+          <div class="support-rally-copy">
+            <div class="card-kicker">KEEP GAMEDECK INDEPENDENT</div>
+            <h2 id="supportRallyTitle">Help us ship the game room everyone deserves.</h2>
+            <p>Funding goes directly toward code signing, release infrastructure, accessibility, emulator compatibility, documentation, and the unglamorous QA work that makes setup feel effortless.</p>
+            <div class="support-rally-actions">
+              <button class="primary" id="copyDonationAddress">Copy donation address</button>
+              <button id="sponsorPrimary">Become a founding sponsor</button>
+              <button id="supportTransparency">See funding transparency</button>
+            </div>
+          </div>
+          <div class="support-rally-proof" aria-label="What support funds">
+            <span><b>01</b><small>Signed releases</small></span>
+            <span><b>02</b><small>Cross-platform QA</small></span>
+            <span><b>03</b><small>Accessibility</small></span>
+            <span><b>04</b><small>Emulator upkeep</small></span>
           </div>
         </section>
 
@@ -183,7 +394,7 @@
           </article>
         </div>
 
-        <section class="settings-card">
+        <section class="settings-card" id="communitySettings">
           <div class="settings-heading">
             <div>
               <div class="card-kicker">THIS DEVICE</div>
@@ -193,18 +404,24 @@
             <div class="runtime-badge" id="runtimeBadge">Detecting platform…</div>
           </div>
 
+          <div class="settings-readiness" id="settingsReadiness" aria-live="polite">
+            <span class="settings-readiness-icon" id="settingsReadinessIcon" aria-hidden="true">·</span>
+            <span><b id="settingsReadinessTitle">Checking this device</b><small id="settingsReadinessMessage">Validating library and emulator paths.</small></span>
+          </div>
+
           <div class="settings-grid">
-            <label class="setting-field"><span>Game library</span><div><input id="settingLibrary" autocomplete="off"><button type="button" data-browse="libraryRoot">Browse</button></div></label>
-            <label class="setting-field"><span>RGSX root <small>optional outside Windows</small></span><div><input id="settingRgsx" autocomplete="off"><button type="button" data-browse="rgsxRoot">Browse</button></div></label>
-            <label class="setting-field"><span>RetroArch executable</span><div><input id="settingRetroArch" autocomplete="off"><button type="button" data-browse="retroArchPath">Browse</button></div></label>
-            <label class="setting-field"><span>RetroArch cores</span><div><input id="settingCores" autocomplete="off"><button type="button" data-browse="retroArchCores">Browse</button></div></label>
-            <label class="setting-field"><span>RetroArch system / BIOS</span><div><input id="settingSystem" autocomplete="off"><button type="button" data-browse="retroArchSystem">Browse</button></div></label>
+            <label class="setting-field"><span>Game library</span><div><input id="settingLibrary" autocomplete="off"><button type="button" data-browse="libraryRoot">Browse</button></div><small class="setting-state" id="settingLibraryState">Checking path…</small></label>
+            <label class="setting-field"><span>Discover provider <small>optional on every platform</small></span><div><input id="settingRgsx" autocomplete="off"><button type="button" data-browse="rgsxRoot">Browse</button></div><small class="setting-state" id="settingRgsxState">Checking path…</small></label>
+            <label class="setting-field"><span>RetroArch executable</span><div><input id="settingRetroArch" autocomplete="off"><button type="button" data-browse="retroArchPath">Browse</button></div><small class="setting-state" id="settingRetroArchState">Checking path…</small></label>
+            <label class="setting-field"><span>RetroArch cores</span><div><input id="settingCores" autocomplete="off"><button type="button" data-browse="retroArchCores">Browse</button></div><small class="setting-state" id="settingCoresState">Checking path…</small></label>
+            <label class="setting-field"><span>RetroArch system / BIOS</span><div><input id="settingSystem" autocomplete="off"><button type="button" data-browse="retroArchSystem">Browse</button></div><small class="setting-state" id="settingSystemState">Checking path…</small></label>
+            <label class="setting-field"><span>Standalone MAME <small>recommended for current sets</small></span><div><input id="settingMame" autocomplete="off"><button type="button" data-browse="mamePath">Browse</button></div><small class="setting-state" id="settingMameState">Checking path…</small></label>
             <label class="setting-toggle"><input type="checkbox" id="settingSponsors"><span><b>Show community sponsor placements</b><small>Static creative only; GameDeck does not build advertising profiles.</small></span></label>
           </div>
           <div class="settings-actions">
             <span id="settingsStatus">Changes to paths apply after restart.</span>
             <button id="restartApp" class="hidden">Restart now</button>
-            <button id="saveSettings" class="primary">Save settings</button>
+            <button id="saveSettings" class="primary" disabled>Save settings</button>
           </div>
         </section>
 
@@ -216,30 +433,141 @@
     </section>
   </main>
 
-  <aside class="debug-console hidden" id="debugConsole" aria-label="Activity console">
+  <section class="stream-studio hidden" id="streamStudio" aria-labelledby="streamStudioTitle" aria-modal="true" role="dialog">
+    <div class="stream-backdrop" data-stream-close></div>
+    <div class="stream-window">
+      <div class="stream-head">
+        <div><span class="stream-kicker">GAMEDECK LIVE</span><h2 id="streamStudioTitle">Stream directly to your devices</h2><p>No account, cloud relay, or streaming dependency. Gameplay stays on your local network.</p></div>
+        <button id="streamClose" type="button" aria-label="Close GameDeck Live">×</button>
+      </div>
+      <div class="stream-layout">
+        <div class="stream-preview-shell">
+          <video id="streamPreview" autoplay muted playsinline></video>
+          <div class="stream-preview-empty" id="streamPreviewEmpty"><span>LIVE</span><b>Preview appears here</b><small>Choose a source, then start GameDeck Live.</small></div>
+          <div class="stream-live-badge hidden" id="streamLiveBadge"><i></i> LIVE <b id="streamElapsed">00:00</b></div>
+        </div>
+        <div class="stream-controls">
+          <label><span>Capture source</span><select id="streamSource"><option value="">Finding screens and game windows…</option></select></label>
+          <div class="stream-control-grid">
+            <label><span>Quality</span><select id="streamQuality"><option value="1080p">1080p · 60 fps</option><option value="720p">720p · 60 fps</option><option value="balanced">720p · 30 fps</option></select></label>
+            <label class="stream-toggle-field"><input id="streamAudio" type="checkbox" checked><span><b>System audio</b><small>Include game sound</small></span></label>
+          </div>
+          <button class="stream-primary" id="streamStart" type="button"><span aria-hidden="true">●</span><b>Start GameDeck Live</b></button>
+          <button class="stream-stop hidden" id="streamStop" type="button">Stop stream</button>
+        </div>
+      </div>
+      <div class="stream-pairing hidden" id="streamPairing">
+        <div class="pair-code"><span>PAIRING CODE</span><b id="streamPairCode">000000</b><small>Rotates every time you go live</small></div>
+        <div class="pair-link"><span>OPEN ON ANDROID OR IPHONE</span><b id="streamPairUrl">Waiting for local address…</b><div><button id="streamCopyUrl" type="button">Copy link</button><button id="streamOpenReceiver" type="button">Open receiver</button></div></div>
+        <div class="viewer-status"><span>CONNECTED VIEWERS</span><b id="streamViewerCount">0</b><small id="streamViewerNames">Waiting for a device</small></div>
+      </div>
+      <div class="stream-foot"><span>WEBRTC</span><span>DIRECT LAN</span><span>ROTATING CODE</span><span>NO GAMEDECK CLOUD</span></div>
+    </div>
+  </section>
+
+  <section class="netplay-studio hidden" id="netplayStudio" aria-labelledby="netplayStudioTitle" aria-modal="true" role="dialog">
+    <div class="netplay-backdrop" data-netplay-close></div>
+    <div class="netplay-window">
+      <div class="netplay-head">
+        <div><span class="netplay-kicker">GAMEDECK REMOTE PLAY TOGETHER</span><h2 id="netplayStudioTitle">Turn local multiplayer into online multiplayer</h2><p>The host runs the game. Friends receive encrypted video and join as native RetroArch controllers—no ROM transfer or matching game install required.</p></div>
+        <button id="netplayClose" type="button" aria-label="Close multiplayer">×</button>
+      </div>
+      <div class="netplay-active hidden" id="netplayActive">
+        <span class="netplay-active-dot" aria-hidden="true"></span>
+        <div><small id="netplayActiveRole">REMOTE PLAY STATUS</small><b id="netplayActiveTitle">Preparing multiplayer</b><span id="netplayActiveMessage">Launching the game and encrypted stream…</span></div>
+        <div class="netplay-player-count"><b id="netplayPlayerCount">1</b><span>PLAYERS</span></div>
+        <button id="netplayStop" type="button">End session</button>
+      </div>
+      <div class="netplay-tabs" role="tablist" aria-label="Multiplayer mode">
+        <button class="active" id="netplayHostTab" type="button" role="tab" aria-selected="true" data-netplay-tab="host">Host from this PC</button>
+        <button id="netplayJoinTab" type="button" role="tab" aria-selected="false" data-netplay-tab="join">Join a friend</button>
+      </div>
+      <div class="netplay-panels">
+        <section class="netplay-panel" id="netplayHostPanel" role="tabpanel">
+          <div class="netplay-game-card" id="netplayGameCard">
+            <span class="netplay-game-icon" aria-hidden="true">P1</span>
+            <div><small>HOST GAME</small><b id="netplayGameTitle">Select a game from your library</b><span id="netplayGameMeta">SF2, Contra, Smash TV, and other local multiplayer games can be hosted.</span></div>
+          </div>
+          <div class="netplay-options">
+            <label><span>Total player slots</span><select id="netplayMaxPlayers"><option value="2">2 players</option><option value="3">3 players</option><option value="4">4 players</option></select></label>
+            <label><span>Stream quality</span><select id="netplayQuality"><option value="720p">720p · 60 fps</option><option value="1080p">1080p · 60 fps</option><option value="balanced">720p · 30 fps</option></select></label>
+          </div>
+          <button class="netplay-primary" id="netplayHost" type="button"><span aria-hidden="true">＋</span><b>Start Remote Play Together</b></button>
+          <div class="netplay-host-tools hidden" id="netplayHostTools">
+            <div class="netplay-options">
+              <label><span>Invite controller slot</span><select id="netplayPlayerSlot"><option value="1">Player 2</option><option value="2">Player 3</option><option value="3">Player 4</option></select></label>
+              <button id="netplayCreateInvite" type="button">Create fresh invite</button>
+            </div>
+            <div class="netplay-invite hidden" id="netplayInvite">
+              <div><span>ENCRYPTED PLAYER INVITE</span><small id="netplayInviteMeta" aria-live="polite">Send this code to your friend in Discord.</small></div>
+              <textarea id="netplayInviteValue" readonly aria-label="Remote Play invitation"></textarea>
+              <div class="netplay-share-actions"><button id="netplayCopyInvite" type="button">Copy invite</button><button id="netplayShareInvite" type="button">Share in #remote-play</button></div>
+            </div>
+            <label class="netplay-invite-input"><span>Friend's response code</span><textarea id="netplayAnswerInput" placeholder="Paste the GDREMOTEANSWER2 response from your friend"></textarea><small>The response completes the direct encrypted connection.</small></label>
+            <button class="netplay-primary" id="netplayAcceptAnswer" type="button"><span aria-hidden="true">✓</span><b>Connect this player</b></button>
+          </div>
+        </section>
+        <section class="netplay-panel hidden" id="netplayJoinPanel" role="tabpanel">
+          <label class="netplay-invite-input"><span>Host's GameDeck invitation</span><textarea id="netplayJoinInvite" placeholder="Paste the GDREMOTE2 invitation here"></textarea><small>The invitation contains a short-lived WebRTC offer. Your game library is not accessed.</small></label>
+          <label><span>Player name</span><input id="netplayNickname" maxlength="28" placeholder="Friend"></label>
+          <button class="netplay-primary" id="netplayJoin" type="button"><span aria-hidden="true">→</span><b>Create join response</b></button>
+          <div class="netplay-invite hidden" id="netplayJoinResponse">
+            <div><span>RESPONSE FOR THE HOST</span><small id="netplayResponseMeta" aria-live="polite">Send this code back in Discord, then wait for the host to connect you.</small></div>
+            <textarea id="netplayJoinResponseValue" readonly aria-label="Remote Play response"></textarea>
+            <div class="netplay-share-actions"><button id="netplayCopyResponse" type="button">Copy response</button><button id="netplayShareResponse" type="button">Return via #remote-play</button></div>
+          </div>
+          <div class="netplay-remote-stage hidden" id="netplayRemoteStage">
+            <video id="netplayRemoteVideo" autoplay playsinline></video>
+            <div class="netplay-remote-empty" id="netplayRemoteEmpty"><span>P2</span><b>Waiting for the host</b><small>Keep this window focused and connect a controller.</small></div>
+            <div class="netplay-latency" id="netplayLatency">DIRECT · CONNECTING</div>
+          </div>
+          <div class="netplay-controller-guide"><b>Controller ready</b><span>Xbox/PlayStation gamepads work through the browser Gamepad API. Keyboard: arrows + Z/X/A/S + Enter/Shift.</span></div>
+          <div class="netplay-match-note"><b>Only the host needs the game.</b><span>Game video and controller input travel through an encrypted peer-to-peer WebRTC connection. Public-IP metadata may be visible to the invited friend.</span></div>
+        </section>
+      </div>
+      <div class="netplay-foot"><span>WEBRTC ENCRYPTED</span><span>NATIVE RETROPAD INPUT</span><span>NO ROM TRANSFER</span><span>DISCORD-FRIENDLY INVITES</span></div>
+    </div>
+  </section>
+
+  <aside class="debug-console hidden" id="debugConsole" aria-label="GameDeck status center">
     <div class="debug-head">
-      <div><span>GAMEDECK</span><b>Activity console</b></div>
+      <div><span>SYSTEM STATUS</span><b>Status center</b></div>
       <div>
-        <button id="consoleClear">Clear</button>
+        <button id="consoleCopy">Copy report</button>
+        <button id="consoleClear">Clear history</button>
         <button id="consoleClose">Close</button>
       </div>
     </div>
     <div class="debug-health" id="debugHealth"></div>
-    <pre id="debugOutput">Waiting for activity...</pre>
+    <div class="status-toolbar">
+      <div class="status-summary"><b id="statusSummaryTitle">Everything looks quiet</b><span id="statusSummaryMessage">No recent issues or transfers.</span></div>
+      <div class="status-filters" role="group" aria-label="Filter status events">
+        <button class="active" type="button" data-activity-filter="all" aria-pressed="true">All <span id="statusAllCount">0</span></button>
+        <button type="button" data-activity-filter="issues" aria-pressed="false">Issues <span id="statusIssueCount">0</span></button>
+        <button type="button" data-activity-filter="success" aria-pressed="false">Success <span id="statusSuccessCount">0</span></button>
+      </div>
+    </div>
+    <div id="debugOutput" class="activity-list" role="log" aria-live="polite"><div class="activity-empty">Waiting for activity…</div></div>
   </aside>
 
   <section class="transfer-dock hidden" id="transferDock" aria-label="Download activity" aria-live="polite">
     <button class="transfer-summary" id="transferSummary" type="button" aria-expanded="false" aria-controls="transferPanel">
-      <span class="transfer-glyph" aria-hidden="true">↓</span>
-      <span class="transfer-copy"><small id="transferKicker">DOWNLOADING</small><b id="transferTitle">Preparing transfer</b><span id="transferDetail">Connecting to RGSX…</span></span>
+      <span class="transfer-glyph" id="transferGlyph" aria-hidden="true">↓</span>
+      <span class="transfer-copy"><small id="transferKicker">DOWNLOADING</small><b id="transferTitle">Preparing transfer</b><span id="transferDetail">Preparing transfer…</span></span>
       <span class="transfer-meter" aria-hidden="true"><span id="transferBar"></span></span>
       <strong id="transferPercent">0%</strong>
       <span class="transfer-chevron" aria-hidden="true">⌃</span>
     </button>
     <div class="transfer-panel hidden" id="transferPanel"></div>
+    <div class="transfer-actions hidden" id="transferActions">
+      <button id="transferOpenLibrary" type="button">Open library</button>
+      <button id="transferDismissFinished" type="button">Dismiss finished</button>
+    </div>
   </section>
 
-  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"><span class="toast-icon" aria-hidden="true">i</span><b class="toast-message"></b></div>
   <script src="app.js"></script>
+  <script src="streaming.js"></script>
+  <script src="netplay.js"></script>
 </body>
 </html>

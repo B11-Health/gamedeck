@@ -26,6 +26,12 @@ config/donations.local.json
 
 # Local launch convenience
 Launch GameDeck.cmd
+build/runtime-cache/
 
 # Generated social-video frame cache
 marketing/youtube/capture/
+
+# Local QA and emergency backups
+main.js.gamedeck-*-backup-*
+tmp-*.log
+

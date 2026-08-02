@@ -1,6 +1,6 @@
 {
   "name": "gamedeck",
-  "version": "1.0.1",
+  "version": "1.2.0",
   "description": "A cinematic, local-first launcher for legally owned game libraries on Windows, macOS, and Linux.",
   "main": "main.js",
   "author": {
@@ -23,18 +23,20 @@
   },
   "scripts": {
     "start": "electron .",
-    "check": "node --check main.js && node --check preload.js && node --check src/app.js && node scripts/smoke-test.mjs",
+    "check": "node --check main.js && node --check preload.js && node --check stream-server.js && node --check netplay-manager.js && node --check src/app.js && node --check src/streaming.js && node --check src/netplay.js && node --check mobile/web/app.js && node --check mobile/web/sw.js && node scripts/smoke-test.mjs",
     "test": "npm run check",
-    "pack": "electron-builder --dir",
-    "dist": "electron-builder --publish never",
-    "dist:win": "electron-builder --win --x64 --publish never",
-    "dist:mac": "electron-builder --mac --universal --publish never",
-    "dist:linux": "electron-builder --linux --x64 --publish never",
+    "pack": "npm run runtime:cache && electron-builder --dir",
+    "dist": "npm run runtime:cache && electron-builder --publish never",
+    "dist:win": "npm run runtime:cache -- --platform=win32-x64 && electron-builder --win --x64 --publish never",
+    "dist:mac": "npm run runtime:cache -- --platform=darwin-universal && electron-builder --mac --universal --publish never",
+    "dist:linux": "npm run runtime:cache -- --platform=linux-x64 && electron-builder --linux --x64 --publish never",
     "wallet:create": "node scripts/create-donation-wallet.mjs",
+    "runtime:cache": "node scripts/prepare-runtime-cache.mjs",
     "video:youtube": "node scripts/generate-youtube-video.cjs",
     "video:capture-motion": "node scripts/capture-social-trailer.cjs",
     "video:render-motion": "node scripts/render-social-launch.cjs",
-    "video:motion": "npm run video:capture-motion && npm run video:render-motion"
+    "video:motion": "npm run video:capture-motion && npm run video:render-motion",
+    "video:short": "node scripts/generate-social-short.cjs"
   },
   "devDependencies": {
     "electron": "^43.2.0",
@@ -54,6 +56,9 @@
     "files": [
       "main.js",
       "preload.js",
+      "runtime-manager.js",
+      "stream-server.js",
+      "netplay-manager.js",
       "src/**/*",
       "assets/**/*",
       "config/**/*",
@@ -61,7 +66,8 @@
       "LICENSE",
       "!**/*.map",
       "!screenshots/**/*",
-      "!backups/**/*"
+      "!backups/**/*",
+      "mobile/web/**/*"
     ],
     "win": {
       "icon": "build/icon.ico",
@@ -82,11 +88,13 @@
     },
     "nsis": {
       "artifactName": "${productName}-Setup-${version}-${arch}.${ext}",
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
+      "oneClick": true,
+      "allowToChangeInstallationDirectory": false,
+      "createDesktopShortcut": "always",
       "createStartMenuShortcut": true,
-      "shortcutName": "GameDeck"
+      "shortcutName": "GameDeck",
+      "runAfterFinish": true,
+      "perMachine": false
     },
     "portable": {
       "artifactName": "${productName}-Portable-${version}-${arch}.${ext}"
@@ -107,7 +115,11 @@
             "universal"
           ]
         }
-      ]
+      ],
+      "extendInfo": {
+        "NSAudioCaptureUsageDescription": "GameDeck can include game audio when you start a local GameDeck Live stream.",
+        "NSLocalNetworkUsageDescription": "GameDeck shares gameplay directly with your paired devices on the local network."
+      }
     },
     "linux": {
       "icon": "build/icons",
@@ -136,6 +148,21 @@
       "owner": "B11-Health",
       "repo": "gamedeck",
       "releaseType": "release"
-    }
+    },
+    "asarUnpack": [
+      "node_modules/7zip-bin/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "build/runtime-cache",
+        "to": "runtime-cache",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ]
+  },
+  "dependencies": {
+    "7zip-bin": "^5.2.0"
   }
 }

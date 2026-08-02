@@ -1,0 +1,196 @@
+{
+  "schemaVersion": 1,
+  "reportDate": "2026-08-02",
+  "appVersion": "1.2.0",
+  "branch": "agent/uiux-shelf-first",
+  "baseCommit": "77d0f3971e88f1c1294ace6353a25c97b771443d",
+  "environment": {
+    "os": "Windows 11 10.0.26200",
+    "arch": "x64",
+    "cpu": "AMD Ryzen AI 5 340 w/ Radeon 840M",
+    "memoryGiB": 15.3,
+    "node": "22.19.0",
+    "electron": "43.2.0"
+  },
+  "results": {
+    "smokeSuite": {
+      "status": "pass"
+    },
+    "library": {
+      "status": "pass",
+      "games": 221,
+      "systemsReady": 22,
+      "systemsTotal": 22,
+      "controller": "Xbox Wireless Controller"
+    },
+    "responsiveHeader": {
+      "status": "pass",
+      "widths": [
+        1500,
+        1280,
+        1120,
+        980
+      ],
+      "overlap": false,
+      "horizontalOverflow": false
+    },
+    "navigation": {
+      "status": "pass",
+      "views": [
+        "home",
+        "discover",
+        "favorites",
+        "recent",
+        "community"
+      ],
+      "streetFighterSearchResults": 9
+    },
+    "remotePlay": {
+      "status": "pass",
+      "game": "Street Fighter II: The World Warrior (World 910522)",
+      "core": "FinalBurn Neo",
+      "offerPrefix": "GDREMOTE2",
+      "offerLength": 1733,
+      "offerDiscordMargin": 267,
+      "answerPrefix": "GDREMOTEANSWER2",
+      "answerLength": 1320,
+      "answerDiscordMargin": 680,
+      "guestVideo": {
+        "readyState": 4,
+        "width": 1152,
+        "height": 720
+      },
+      "hostPlayerCount": 2,
+      "guestPlayerCount": 2,
+      "inputTransitions": 18,
+      "lastInputPlayer": 2,
+      "hostErrors": 0,
+      "guestErrors": 0
+    },
+    "streaming": {
+      "status": "pass",
+      "protocol": "GameDeck WebRTC LAN",
+      "audio": true,
+      "profile": "balanced"
+    },
+    "mobileSources": {
+      "status": "pass",
+      "pwa": true,
+      "androidSource": true,
+      "iosSource": true,
+      "signedStoreBinaries": false
+    },
+    "discordRegistration": {
+      "status": "pass",
+      "displayName": "GameDeck",
+      "username": "gamedeckhq",
+      "credentialTarget": "GameDeck-Discord",
+      "authenticatedFriendsScreen": true,
+      "emailVerification": "verified",
+      "serverCreation": "success",
+      "projectMailbox": "verified_address_omitted",
+      "ageEligibility": "confirmed_birth_date_not_stored"
+    },
+    "codeSigning": {
+      "status": "not_configured",
+      "windowsAuthenticode": false
+    },
+    "youtubeTutorial": {
+      "status": "pass",
+      "url": "https://youtu.be/vY-fFVu2ClM",
+      "publishedDate": "2026-08-02",
+      "durationSeconds": 100.661,
+      "width": 1280,
+      "height": 720,
+      "videoCodec": "VP9",
+      "audioCodec": "Opus",
+      "checks": "no_issues"
+    },
+    "socialDistribution": {
+      "status": "pass_limited",
+      "youtube": "published",
+      "discord": "community_live_tutorial_announced",
+      "x": "not_authenticated",
+      "linkedin": "not_authenticated"
+    },
+    "windowsArtifacts": {
+      "status": "pass",
+      "sourceCommit": "77d0f3971e88f1c1294ace6353a25c97b771443d",
+      "setup": {
+        "name": "GameDeck-Setup-1.2.0-x64.exe",
+        "bytes": 539668485,
+        "sha256": "9b51fdf69cd2ade4bb49ae9bf6eb01e6755451f2449a33462c8771021025214a",
+        "fileVersion": "1.2.0",
+        "productVersion": "1.2.0",
+        "authenticode": "NotSigned"
+      },
+      "portable": {
+        "name": "GameDeck-Portable-1.2.0-x64.exe",
+        "bytes": 529574852,
+        "sha256": "7719cecef4221dab879b5aa4f57fe2048fcb8a3fb21fc66901f0ad14d0ce36f1",
+        "fileVersion": "1.2.0",
+        "productVersion": "1.2.0",
+        "authenticode": "NotSigned"
+      }
+    },
+    "packagedFirstRun": {
+      "status": "pass",
+      "runtimeBundled": true,
+      "runtimeReady": true,
+      "progress": 100,
+      "phase": "ready",
+      "retroArchVersion": "1.22.2",
+      "controller": "Xbox Wireless Controller",
+      "activityErrors": 0,
+      "responsiveWidths": [
+        1500,
+        1280,
+        1120,
+        980
+      ],
+      "headerOverlap": false,
+      "horizontalOverflow": false,
+      "tutorialAction": true,
+      "rendererErrors": 0
+    },
+    "discordIntegration": {
+      "status": "pass",
+      "communityHub": true,
+      "permanentInvite": "https://discord.gg/eS7d4VqTT",
+      "directChannels": {
+        "announcements": "1533539409323102281",
+        "remotePlay": "1533539469372821555",
+        "support": "1533539475836108943",
+        "showcase": "1533539481141907589"
+      },
+      "remotePlayPasteReadySharing": true,
+      "discordMessageLimit": 2000,
+      "responsiveWidths": [
+        1500,
+        1120,
+        980
+      ],
+      "horizontalOverflow": false,
+      "cardOverlap": false
+    }
+  },
+  "discord": {
+    "account": "gamedeckhq",
+    "emailVerified": true,
+    "credentialTarget": "GameDeck-Discord",
+    "serverName": "GameDeck Community",
+    "guildId": "1533539059207504093",
+    "invite": "https://discord.gg/eS7d4VqTT",
+    "channels": [
+      "general",
+      "announcements",
+      "remote-play",
+      "support",
+      "showcase"
+    ],
+    "tutorialAnnouncementPublished": true
+  },
+  "social": {
+    "discord": "https://discord.gg/eS7d4VqTT"
+  }
+}

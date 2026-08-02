@@ -1,0 +1,219 @@
+{
+  "schemaVersion": 1,
+  "runtimeVersion": "2026.08.01",
+  "retroArchVersion": "1.22.2",
+  "allowedHosts": [
+    "buildbot.libretro.com"
+  ],
+  "licenses": [
+    {
+      "name": "RetroArch",
+      "license": "GPL-3.0-or-later",
+      "source": "https://github.com/libretro/RetroArch"
+    }
+  ],
+  "platforms": {
+    "win32-x64": {
+      "components": [
+        {
+          "id": "retroarch",
+          "label": "RetroArch",
+          "type": "archive",
+          "url": "https://buildbot.libretro.com/stable/1.22.2/windows/x86_64/RetroArch.7z",
+          "destination": "retroarch",
+          "expected": [
+            "retroarch/RetroArch-Win64/retroarch.exe"
+          ],
+          "sha256": "b2139b1d0f9d4526dc6b5ce23cbb3efdc766096fa6f2c3df016818b486ac6372"
+        },
+        {
+          "id": "cores",
+          "label": "Game engines",
+          "type": "archive",
+          "url": "https://buildbot.libretro.com/stable/1.22.2/windows/x86_64/RetroArch_cores.7z",
+          "destination": "retroarch",
+          "expected": [
+            "retroarch/RetroArch-Win64/cores/snes9x_libretro.dll",
+            "retroarch/RetroArch-Win64/cores/mesen_libretro.dll",
+            "retroarch/RetroArch-Win64/cores/mupen64plus_next_libretro.dll",
+            "retroarch/RetroArch-Win64/cores/sameboy_libretro.dll",
+            "retroarch/RetroArch-Win64/cores/mgba_libretro.dll",
+            "retroarch/RetroArch-Win64/cores/melondsds_libretro.dll",
+            "retroarch/RetroArch-Win64/cores/genesis_plus_gx_libretro.dll",
+            "retroarch/RetroArch-Win64/cores/mednafen_pce_fast_libretro.dll",
+            "retroarch/RetroArch-Win64/cores/mednafen_saturn_libretro.dll",
+            "retroarch/RetroArch-Win64/cores/flycast_libretro.dll",
+            "retroarch/RetroArch-Win64/cores/stella_libretro.dll",
+            "retroarch/RetroArch-Win64/cores/fbneo_libretro.dll",
+            "retroarch/RetroArch-Win64/cores/mame_libretro.dll",
+            "retroarch/RetroArch-Win64/cores/pcsx_rearmed_libretro.dll",
+            "retroarch/RetroArch-Win64/cores/play_libretro.dll",
+            "retroarch/RetroArch-Win64/cores/ppsspp_libretro.dll",
+            "retroarch/RetroArch-Win64/cores/dolphin_libretro.dll"
+          ],
+          "sha256": "86b871e11b9b4772ac644b40a38f2c8e9449da1f355eae7da08aa061148547b0"
+        }
+      ]
+    },
+    "linux-x64": {
+      "components": [
+        {
+          "id": "retroarch",
+          "label": "RetroArch",
+          "type": "archive",
+          "url": "https://buildbot.libretro.com/stable/1.22.2/linux/x86_64/RetroArch.7z",
+          "destination": "retroarch",
+          "expected": [
+            "retroarch/retroarch"
+          ]
+        },
+        {
+          "id": "cores",
+          "label": "Game engines",
+          "type": "archive",
+          "url": "https://buildbot.libretro.com/stable/1.22.2/linux/x86_64/RetroArch_cores.7z",
+          "destination": "retroarch",
+          "expected": [
+            "retroarch/cores/snes9x_libretro.so",
+            "retroarch/cores/mesen_libretro.so",
+            "retroarch/cores/mupen64plus_next_libretro.so",
+            "retroarch/cores/sameboy_libretro.so",
+            "retroarch/cores/mgba_libretro.so",
+            "retroarch/cores/melondsds_libretro.so",
+            "retroarch/cores/genesis_plus_gx_libretro.so",
+            "retroarch/cores/mednafen_pce_fast_libretro.so",
+            "retroarch/cores/mednafen_saturn_libretro.so",
+            "retroarch/cores/flycast_libretro.so",
+            "retroarch/cores/stella_libretro.so",
+            "retroarch/cores/fbneo_libretro.so",
+            "retroarch/cores/mame_libretro.so",
+            "retroarch/cores/pcsx_rearmed_libretro.so",
+            "retroarch/cores/play_libretro.so",
+            "retroarch/cores/ppsspp_libretro.so",
+            "retroarch/cores/dolphin_libretro.so"
+          ]
+        }
+      ]
+    },
+    "darwin-x64": {
+      "components": [
+        {
+          "id": "retroarch",
+          "label": "RetroArch",
+          "type": "dmg",
+          "url": "https://buildbot.libretro.com/stable/1.22.2/apple/osx/universal/RetroArch_Metal.dmg",
+          "destination": "RetroArch.app",
+          "appName": "RetroArch.app",
+          "expected": [
+            "RetroArch.app/Contents/MacOS/RetroArch"
+          ]
+        },
+        {
+          "id": "cores",
+          "label": "Game engines",
+          "type": "core-set",
+          "baseUrl": "https://buildbot.libretro.com/nightly/apple/osx/x86_64/latest",
+          "destination": "RetroArch.app/Contents/Resources/cores",
+          "files": [
+            "snes9x_libretro.dylib.zip",
+            "mesen_libretro.dylib.zip",
+            "mupen64plus_next_libretro.dylib.zip",
+            "sameboy_libretro.dylib.zip",
+            "mgba_libretro.dylib.zip",
+            "melondsds_libretro.dylib.zip",
+            "genesis_plus_gx_libretro.dylib.zip",
+            "mednafen_pce_fast_libretro.dylib.zip",
+            "mednafen_saturn_libretro.dylib.zip",
+            "flycast_libretro.dylib.zip",
+            "stella_libretro.dylib.zip",
+            "fbneo_libretro.dylib.zip",
+            "mame_libretro.dylib.zip",
+            "pcsx_rearmed_libretro.dylib.zip",
+            "play_libretro.dylib.zip",
+            "ppsspp_libretro.dylib.zip",
+            "dolphin_libretro.dylib.zip"
+          ],
+          "expected": [
+            "RetroArch.app/Contents/Resources/cores/snes9x_libretro.dylib",
+            "RetroArch.app/Contents/Resources/cores/mesen_libretro.dylib",
+            "RetroArch.app/Contents/Resources/cores/mupen64plus_next_libretro.dylib",
+            "RetroArch.app/Contents/Resources/cores/sameboy_libretro.dylib",
+            "RetroArch.app/Contents/Resources/cores/mgba_libretro.dylib",
+            "RetroArch.app/Contents/Resources/cores/melondsds_libretro.dylib",
+            "RetroArch.app/Contents/Resources/cores/genesis_plus_gx_libretro.dylib",
+            "RetroArch.app/Contents/Resources/cores/mednafen_pce_fast_libretro.dylib",
+            "RetroArch.app/Contents/Resources/cores/mednafen_saturn_libretro.dylib",
+            "RetroArch.app/Contents/Resources/cores/flycast_libretro.dylib",
+            "RetroArch.app/Contents/Resources/cores/stella_libretro.dylib",
+            "RetroArch.app/Contents/Resources/cores/fbneo_libretro.dylib",
+            "RetroArch.app/Contents/Resources/cores/mame_libretro.dylib",
+            "RetroArch.app/Contents/Resources/cores/pcsx_rearmed_libretro.dylib",
+            "RetroArch.app/Contents/Resources/cores/play_libretro.dylib",
+            "RetroArch.app/Contents/Resources/cores/ppsspp_libretro.dylib",
+            "RetroArch.app/Contents/Resources/cores/dolphin_libretro.dylib"
+          ]
+        }
+      ]
+    },
+    "darwin-arm64": {
+      "components": [
+        {
+          "id": "retroarch",
+          "label": "RetroArch",
+          "type": "dmg",
+          "url": "https://buildbot.libretro.com/stable/1.22.2/apple/osx/universal/RetroArch_Metal.dmg",
+          "destination": "RetroArch.app",
+          "appName": "RetroArch.app",
+          "expected": [
+            "RetroArch.app/Contents/MacOS/RetroArch"
+          ]
+        },
+        {
+          "id": "cores",
+          "label": "Game engines",
+          "type": "core-set",
+          "baseUrl": "https://buildbot.libretro.com/nightly/apple/osx/arm64/latest",
+          "destination": "RetroArch.app/Contents/Resources/cores",
+          "files": [
+            "snes9x_libretro.dylib.zip",
+            "mesen_libretro.dylib.zip",
+            "mupen64plus_next_libretro.dylib.zip",
+            "sameboy_libretro.dylib.zip",
+            "mgba_libretro.dylib.zip",
+            "melondsds_libretro.dylib.zip",
+            "genesis_plus_gx_libretro.dylib.zip",
+            "mednafen_pce_fast_libretro.dylib.zip",
+            "mednafen_saturn_libretro.dylib.zip",
+            "flycast_libretro.dylib.zip",
+            "stella_libretro.dylib.zip",
+            "fbneo_libretro.dylib.zip",
+            "mame_libretro.dylib.zip",
+            "pcsx_rearmed_libretro.dylib.zip",
+            "play_libretro.dylib.zip",
+            "ppsspp_libretro.dylib.zip",
+            "dolphin_libretro.dylib.zip"
+          ],
+          "expected": [
+            "RetroArch.app/Contents/Resources/cores/snes9x_libretro.dylib",
+            "RetroArch.app/Contents/Resources/cores/mesen_libretro.dylib",
+            "RetroArch.app/Contents/Resources/cores/mupen64plus_next_libretro.dylib",
+            "RetroArch.app/Contents/Resources/cores/sameboy_libretro.dylib",
+            "RetroArch.app/Contents/Resources/cores/mgba_libretro.dylib",
+            "RetroArch.app/Contents/Resources/cores/melondsds_libretro.dylib",
+            "RetroArch.app/Contents/Resources/cores/genesis_plus_gx_libretro.dylib",
+            "RetroArch.app/Contents/Resources/cores/mednafen_pce_fast_libretro.dylib",
+            "RetroArch.app/Contents/Resources/cores/mednafen_saturn_libretro.dylib",
+            "RetroArch.app/Contents/Resources/cores/flycast_libretro.dylib",
+            "RetroArch.app/Contents/Resources/cores/stella_libretro.dylib",
+            "RetroArch.app/Contents/Resources/cores/fbneo_libretro.dylib",
+            "RetroArch.app/Contents/Resources/cores/mame_libretro.dylib",
+            "RetroArch.app/Contents/Resources/cores/pcsx_rearmed_libretro.dylib",
+            "RetroArch.app/Contents/Resources/cores/play_libretro.dylib",
+            "RetroArch.app/Contents/Resources/cores/ppsspp_libretro.dylib",
+            "RetroArch.app/Contents/Resources/cores/dolphin_libretro.dylib"
+          ]
+        }
+      ]
+    }
+  }
+}

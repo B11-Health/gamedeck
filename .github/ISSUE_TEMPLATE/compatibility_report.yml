@@ -1,0 +1,62 @@
+name: Compatibility report
+description: Report a reproducible game, emulator, controller, artwork, or Remote Play compatibility issue
+title: "[Compatibility]: "
+labels: ["compatibility", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping GameDeck improve. Do not attach ROMs, BIOS files, encryption keys, account tokens, or copyrighted game assets.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Game launch
+        - Controller input
+        - Artwork or metadata
+        - GameDeck Live
+        - Remote Play Together
+        - Installer or managed runtime
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Platform
+      placeholder: Windows 11 x64, macOS 15 Apple Silicon, Ubuntu 26.04, etc.
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: Game system and emulator/core
+      placeholder: Arcade / FinalBurn Neo, Saturn / Beetle Saturn, etc.
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      placeholder: Numbered steps from a fresh app launch
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result and diagnostics
+      description: Paste the GameDeck Status Center report after removing personal paths or identifiers.
+    validations:
+      required: true
+  - type: checkboxes
+    id: legal
+    attributes:
+      label: Safety check
+      options:
+        - label: I did not attach ROMs, BIOS files, keys, credentials, or copyrighted game assets.
+          required: true
