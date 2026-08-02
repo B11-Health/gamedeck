@@ -5,7 +5,8 @@ const os = require('os');
 const crypto = require('crypto');
 const { spawn, spawnSync } = require('child_process');
 const { pathToFileURL } = require('url');
-const { createRuntimeManager, pathsFor: managedRuntimePathsFor } = require('./runtime-manager');
+const { path7za } = require('7zip-bin');
+const { createRuntimeManager, pathsFor: managedRuntimePathsFor, key: managedRuntimeKey } = require('./runtime-manager');
 
 if (process.platform === 'win32') app.setAppUserModelId('io.gamedeck.launcher');
 
@@ -14,6 +15,8 @@ const DOCUMENTS_DIR = app.getPath('documents');
 const SETTINGS_FILE = path.join(app.getPath('userData'), 'settings.json');
 const MANAGED_RUNTIME_ROOT = path.join(app.getPath('userData'), 'runtime');
 const MANAGED_RUNTIME_PATHS = managedRuntimePathsFor(MANAGED_RUNTIME_ROOT, process.platform);
+const BUNDLED_RUNTIME_ROOT = path.join(process.resourcesPath, 'runtime-cache', managedRuntimeKey());
+const BUNDLED_RUNTIME_AVAILABLE = fs.existsSync(path.join(BUNDLED_RUNTIME_ROOT, 'cache-index.json'));
 
 function firstExisting(candidates, fallback = '') {
   return candidates.filter(Boolean).find(candidate => fs.existsSync(candidate)) || fallback;
@@ -92,12 +95,14 @@ const defaultSettings = {
   libraryRoot: process.env.GAMEDECK_LIBRARY || path.join(defaultRgsxRoot, 'roms'),
   rgsxRoot: defaultRgsxRoot,
   emulationRoot: process.env.GAMEDECK_EMULATION_ROOT || path.join(HOME_DIR, 'Games', 'Emulation'),
-  retroArchPath: detectedRetroArch,
-  retroArchCores: detectedCoreDir,
+  retroArchPath: BUNDLED_RUNTIME_AVAILABLE ? MANAGED_RUNTIME_PATHS.retroArch : (detectedRetroArch || MANAGED_RUNTIME_PATHS.retroArch),
+  retroArchCores: BUNDLED_RUNTIME_AVAILABLE ? MANAGED_RUNTIME_PATHS.cores : (detectedCoreDir || MANAGED_RUNTIME_PATHS.cores),
   mamePath: detectedMame,
-  retroArchSystem: process.env.GAMEDECK_RETROARCH_SYSTEM || (detectedRetroArch
-    ? path.join(path.dirname(detectedRetroArch), 'system')
-    : path.join(HOME_DIR, '.config', 'retroarch', 'system')),
+  retroArchSystem: process.env.GAMEDECK_RETROARCH_SYSTEM || (BUNDLED_RUNTIME_AVAILABLE
+    ? MANAGED_RUNTIME_PATHS.system
+    : detectedRetroArch
+      ? path.join(path.dirname(detectedRetroArch), 'system')
+      : MANAGED_RUNTIME_PATHS.system),
   sponsorsEnabled: true,
   sponsorManifestUrl: 'https://raw.githubusercontent.com/B11-Health/gamedeck/main/sponsors.json'
 };
@@ -130,7 +135,9 @@ const RGSX_PYTHON = firstExisting([
   findOnPath(process.platform === 'win32' ? ['python.exe', 'python'] : ['python3', 'python'])
 ]);
 const RGSX_CLI = path.join(RGSX_APP, 'rgsx_cli.py');
+const bundledSevenZip = String(path7za).replace(`${path.sep}app.asar${path.sep}`, `${path.sep}app.asar.unpacked${path.sep}`);
 const SEVEN_ZIP = firstExisting([
+  bundledSevenZip,
   path.join(RGSX_APP, 'assets', 'progs', '7z.exe'),
   path.join(RGSX_APP, 'assets', 'progs', '7zz'),
   findOnPath(process.platform === 'win32' ? ['7z.exe', '7zz.exe'] : ['7zz', '7z'])
@@ -140,6 +147,7 @@ const RGSX_FIRMWARE_PACK = firstExisting([
   path.join(RGSX_ROOT, 'bios.zip')
 ], path.join(RGSX_ROOT, 'Retrobat V8.0.0.zip'));
 const STORE = path.join(app.getPath('userData'), 'library.json');
+const DOWNLOADS_FILE = path.join(app.getPath('userData'), 'downloads.json');
 const ART_CACHE = path.join(app.getPath('userData'), 'artwork');
 const DETAILS_CACHE = path.join(app.getPath('userData'), 'details');
 const ARCADE_AUDIT_FILE = path.join(app.getPath('userData'), 'arcade-audit.json');
@@ -284,6 +292,7 @@ let appIsQuitting = false;
 let mainWindow = null;
 let activity = [];
 const downloads = new Map();
+const downloadProcesses = new Map();
 const pendingLaunches = new Map();
 const mameLaunchVerificationCache = new Map();
 const artworkRequests = new Map();
@@ -323,6 +332,39 @@ function readJson(file, fallback) {
     return fallback;
   }
 }
+
+function restorePersistedDownloads() {
+  const rows = readJson(DOWNLOADS_FILE, []);
+  if (!Array.isArray(rows)) return;
+  for (const saved of rows.slice(-60)) {
+    if (!saved?.id) continue;
+    const job = { ...saved };
+    delete job.pauseRequested;
+    if (job.status === 'running') {
+      job.status = 'paused';
+      job.stage = 'Paused';
+      job.resumable = true;
+      job.message = 'Transfer was interrupted. Resume to continue from the saved progress.';
+      job.updatedAt = Date.now();
+    }
+    downloads.set(job.id, job);
+  }
+}
+
+function persistDownloads() {
+  try {
+    fs.mkdirSync(path.dirname(DOWNLOADS_FILE), { recursive: true });
+    const rows = [...downloads.values()]
+      .sort((a, b) => Number(a.startedAt || 0) - Number(b.startedAt || 0))
+      .slice(-60)
+      .map(job => ({ ...job }));
+    fs.writeFileSync(DOWNLOADS_FILE, JSON.stringify(rows, null, 2));
+  } catch (error) {
+    addActivity('info', `Transfer state could not be saved: ${error.message}`);
+  }
+}
+
+restorePersistedDownloads();
 
 function readStore() {
   return readJson(STORE, { favorites: [], recent: {} });
@@ -1081,13 +1123,16 @@ runtimeManager = createRuntimeManager({
   root: MANAGED_RUNTIME_ROOT,
   manifestPath: path.join(__dirname, 'config', 'runtime-manifest.json'),
   appVersion: app.getVersion(),
+  bundledCacheRoot: BUNDLED_RUNTIME_ROOT,
   onUpdate: emitRuntime,
   onLog: addActivity
 });
 
 function emitDownload(job) {
-  if (!job || !mainWindow || mainWindow.isDestroyed()) return;
-  mainWindow.webContents.send('download-update', { ...job });
+  if (!job?.id) return;
+  downloads.set(job.id, job);
+  persistDownloads();
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('download-update', { ...job });
 }
 
 function emitLaunch(update) {
@@ -1551,7 +1596,7 @@ function queueRgsxDownload(source, folder, title, fileName, options = {}) {
   if (!available) return { ok: false, error: 'The selected game is not present in the current RGSX catalog.' };
 
   const installed = installedCatalogFile(installedFiles(folder), fileName);
-  if (installed && !options.force) {
+  if (installed && !options.force && !options.resumeFrom) {
     return {
       ok: true,
       downloaded: false,
@@ -1563,9 +1608,11 @@ function queueRgsxDownload(source, folder, title, fileName, options = {}) {
   const active = [...downloads.values()].find(job => job.source === source && job.fileName === fileName && job.status === 'running');
   if (active) return { ok: true, queued: true, taskId: active.id };
 
-  const id = `rgsx-${Date.now()}`;
+  const resume = options.resumeFrom?.id ? options.resumeFrom : null;
+  const id = resume?.id || `rgsx-${Date.now()}`;
   const system = systemForFolder(folder);
   const job = {
+    ...(resume || {}),
     id,
     source,
     folder,
@@ -1574,15 +1621,16 @@ function queueRgsxDownload(source, folder, title, fileName, options = {}) {
     title,
     fileName,
     status: 'running',
-    stage: 'Preparing',
-    message: 'RGSX is preparing the transfer.',
-    startedAt: Date.now(),
+    stage: resume ? 'Resuming' : 'Preparing',
+    message: resume ? 'Resuming from saved progress.' : 'RGSX is preparing the transfer.',
+    startedAt: resume?.startedAt || Date.now(),
     updatedAt: Date.now(),
-    progress: 0,
+    progress: Number(resume?.progress || 0),
     speed: '',
-    downloadedBytes: 0,
-    totalBytes: 0,
-    repair: Boolean(options.repair)
+    downloadedBytes: Number(resume?.downloadedBytes || 0),
+    totalBytes: Number(resume?.totalBytes || 0),
+    repair: Boolean(options.repair || resume?.repair),
+    resumable: true
   };
   downloads.set(id, job);
   addActivity('info', `RGSX started: ${title}`, id);
@@ -1600,6 +1648,7 @@ function queueRgsxDownload(source, folder, title, fileName, options = {}) {
     },
     stdio: ['ignore', 'pipe', 'pipe']
   });
+  downloadProcesses.set(id, child);
 
   const consume = (level, chunk) => {
     for (const line of String(chunk).split(/[\r\n]+/)) {
@@ -1610,6 +1659,7 @@ function queueRgsxDownload(source, folder, title, fileName, options = {}) {
   child.stdout.on('data', chunk => consume('info', chunk));
   child.stderr.on('data', chunk => consume('error', chunk));
   child.on('error', error => {
+    downloadProcesses.delete(id);
     job.status = 'error';
     job.stage = 'Failed';
     job.error = error.message;
@@ -1619,6 +1669,17 @@ function queueRgsxDownload(source, folder, title, fileName, options = {}) {
     addActivity('error', `RGSX failed to start: ${error.message}`, id);
   });
   child.on('close', code => {
+    downloadProcesses.delete(id);
+    if (job.pauseRequested) {
+      delete job.pauseRequested;
+      job.status = 'paused';
+      job.stage = 'Paused';
+      job.resumable = true;
+      job.message = 'Paused. Resume whenever you are ready.';
+      job.updatedAt = Date.now();
+      emitDownload(job);
+      return;
+    }
     job.status = code === 0 ? 'complete' : 'error';
     job.stage = code === 0 ? (job.dependency || job.repair ? 'Launching' : 'Ready to play') : 'Failed';
     job.finishedAt = Date.now();
@@ -1634,7 +1695,7 @@ function queueRgsxDownload(source, folder, title, fileName, options = {}) {
   return { ok: true, queued: true, taskId: id };
 }
 
-function prepareGameArchive(file) {
+function prepareGameArchive(file, options = {}) {
   let safeFile;
   try {
     safeFile = safeLibraryFile(file);
@@ -1655,8 +1716,10 @@ function prepareGameArchive(file) {
   const active = [...downloads.values()].find(job => job.archiveFile === safeFile && job.status === 'running');
   if (active) return Promise.resolve({ ok: true, queued: true, taskId: active.id });
 
-  const id = `install-${Date.now()}`;
+  const resume = options.resumeFrom?.id ? options.resumeFrom : null;
+  const id = resume?.id || `install-${Date.now()}`;
   const job = {
+    ...(resume || {}),
     id,
     source: 'Local archive',
     folder: path.basename(path.dirname(safeFile)),
@@ -1666,15 +1729,16 @@ function prepareGameArchive(file) {
     fileName: path.basename(safeFile),
     archiveFile: safeFile,
     status: 'running',
-    stage: 'Installing',
-    message: 'Unpacking the downloaded game. The original archive will be kept.',
-    startedAt: Date.now(),
+    stage: resume ? 'Resuming' : 'Installing',
+    message: resume ? 'Resuming game preparation.' : 'Unpacking the downloaded game. The original archive will be kept.',
+    startedAt: resume?.startedAt || Date.now(),
     updatedAt: Date.now(),
-    progress: 0,
+    progress: Number(resume?.progress || 0),
     speed: '',
     downloadedBytes: 0,
     totalBytes: fs.statSync(safeFile).size,
-    localInstall: true
+    localInstall: true,
+    resumable: true
   };
   downloads.set(id, job);
   addActivity('info', `Preparing downloaded game: ${job.title}`, id);
@@ -1692,6 +1756,7 @@ function prepareGameArchive(file) {
       windowsHide: true,
       stdio: ['ignore', 'pipe', 'pipe']
     });
+    downloadProcesses.set(id, child);
     const consume = (level, chunk) => {
       for (const line of String(chunk).split(/[\r\n]+/)) {
         updateDownloadFromLine(job, line);
@@ -1701,6 +1766,7 @@ function prepareGameArchive(file) {
     child.stdout.on('data', chunk => consume('info', chunk));
     child.stderr.on('data', chunk => consume('info', chunk));
     child.on('error', error => {
+      downloadProcesses.delete(id);
       job.status = 'error';
       job.stage = 'Failed';
       job.error = error.message;
@@ -1711,6 +1777,17 @@ function prepareGameArchive(file) {
       finish({ ok: false, error: error.message, taskId: id });
     });
     child.on('close', code => {
+      downloadProcesses.delete(id);
+      if (job.pauseRequested) {
+        delete job.pauseRequested;
+        job.status = 'paused';
+        job.stage = 'Paused';
+        job.resumable = true;
+        job.message = 'Paused. Resume whenever you are ready.';
+        job.updatedAt = Date.now();
+        emitDownload(job);
+        return;
+      }
       const prepared = walk(path.dirname(safeFile)).find(candidate => isPlayableFile(candidate, system) && fileIdentity(candidate) === fileIdentity(safeFile));
       const ok = code === 0 && Boolean(prepared);
       job.status = ok ? 'complete' : 'error';
@@ -1725,7 +1802,7 @@ function prepareGameArchive(file) {
   });
 }
 
-function queueRgsxFirmwareDownload(systemId) {
+function queueRgsxFirmwareDownload(systemId, options = {}) {
   const system = systems.find(item => item.id === systemId);
   if (!system) return { ok: false, error: 'Unknown console configuration.' };
   if (systemBiosReady(system) || restoreFirmwareFromExistingPack(system)) return { ok: true, ready: true };
@@ -1744,8 +1821,10 @@ function queueRgsxFirmwareDownload(systemId) {
   const active = [...downloads.values()].find(job => job.source === biosPlatform.platform_name && job.fileName === fileName && job.status === 'running');
   if (active) return { ok: true, queued: true, taskId: active.id };
 
-  const id = `rgsx-bios-${Date.now()}`;
+  const resume = options.resumeFrom?.id ? options.resumeFrom : null;
+  const id = resume?.id || `rgsx-bios-${Date.now()}`;
   const job = {
+    ...(resume || {}),
     id,
     source: biosPlatform.platform_name,
     folder: biosPlatform.folder,
@@ -1754,15 +1833,16 @@ function queueRgsxFirmwareDownload(systemId) {
     title: `${system.name} firmware`,
     fileName,
     status: 'running',
-    stage: 'Preparing',
-    message: `Preparing ${system.name} firmware.`,
-    startedAt: Date.now(),
+    stage: resume ? 'Resuming' : 'Preparing',
+    message: resume ? `Resuming ${system.name} firmware.` : `Preparing ${system.name} firmware.`,
+    startedAt: resume?.startedAt || Date.now(),
     updatedAt: Date.now(),
-    progress: 0,
+    progress: Number(resume?.progress || 0),
     speed: '',
-    downloadedBytes: 0,
-    totalBytes: 0,
-    firmware: true
+    downloadedBytes: Number(resume?.downloadedBytes || 0),
+    totalBytes: Number(resume?.totalBytes || 0),
+    firmware: true,
+    resumable: true
   };
   downloads.set(id, job);
   addActivity('info', `RGSX started: ${system.name} BIOS`, id);
@@ -1780,6 +1860,7 @@ function queueRgsxFirmwareDownload(systemId) {
     },
     stdio: ['ignore', 'pipe', 'pipe']
   });
+  downloadProcesses.set(id, child);
 
   const consume = (level, chunk) => {
     for (const line of String(chunk).split(/[\r\n]+/)) {
@@ -1790,6 +1871,7 @@ function queueRgsxFirmwareDownload(systemId) {
   child.stdout.on('data', chunk => consume('info', chunk));
   child.stderr.on('data', chunk => consume('error', chunk));
   child.on('error', error => {
+    downloadProcesses.delete(id);
     job.status = 'error';
     job.stage = 'Failed';
     job.error = error.message;
@@ -1799,6 +1881,17 @@ function queueRgsxFirmwareDownload(systemId) {
     addActivity('error', `RGSX failed to start: ${error.message}`, id);
   });
   child.on('close', code => {
+    downloadProcesses.delete(id);
+    if (job.pauseRequested) {
+      delete job.pauseRequested;
+      job.status = 'paused';
+      job.stage = 'Paused';
+      job.resumable = true;
+      job.message = 'Paused. Resume whenever you are ready.';
+      job.updatedAt = Date.now();
+      emitDownload(job);
+      return;
+    }
     job.status = code === 0 ? 'complete' : 'error';
     job.stage = code === 0 ? 'Ready to use' : 'Failed';
     job.finishedAt = Date.now();
@@ -1810,6 +1903,70 @@ function queueRgsxFirmwareDownload(systemId) {
   });
 
   return { ok: true, queued: true, taskId: id };
+}
+
+function pauseDownload(id) {
+  const job = downloads.get(String(id || ''));
+  if (!job) return { ok: false, error: 'Transfer was not found.' };
+  if (job.status !== 'running') return { ok: true, job };
+  job.pauseRequested = true;
+  job.stage = 'Pausing';
+  job.message = 'Saving progress…';
+  job.updatedAt = Date.now();
+  emitDownload(job);
+  const child = downloadProcesses.get(job.id);
+  if (child) child.kill();
+  else {
+    delete job.pauseRequested;
+    job.status = 'paused';
+    job.stage = 'Paused';
+    job.message = 'Paused. Resume whenever you are ready.';
+    emitDownload(job);
+  }
+  return { ok: true, job };
+}
+
+function retryDownload(id) {
+  const job = downloads.get(String(id || ''));
+  if (!job) return Promise.resolve({ ok: false, error: 'Transfer was not found.' });
+  if (job.status === 'running') return Promise.resolve({ ok: true, queued: true, taskId: job.id });
+  delete job.error;
+  delete job.finishedAt;
+  delete job.pauseRequested;
+  if (job.localInstall && job.archiveFile) return prepareGameArchive(job.archiveFile, { resumeFrom: job });
+  if (job.firmware && job.systemId) return Promise.resolve(queueRgsxFirmwareDownload(job.systemId, { resumeFrom: job }));
+  if (job.source && job.folder && job.fileName) {
+    return Promise.resolve(queueRgsxDownload(job.source, job.folder, job.title, job.fileName, {
+      force: Boolean(job.repair),
+      repair: Boolean(job.repair),
+      resumeFrom: job
+    }));
+  }
+  return Promise.resolve({ ok: false, error: 'This transfer cannot be resumed automatically.' });
+}
+
+function dismissDownload(id) {
+  const key = String(id || '');
+  const job = downloads.get(key);
+  if (!job) return { ok: true };
+  if (job.status === 'running') return { ok: false, error: 'Pause the transfer before dismissing it.' };
+  downloads.delete(key);
+  persistDownloads();
+  return { ok: true };
+}
+
+function pauseActiveDownloads() {
+  for (const job of downloads.values()) {
+    if (job.status !== 'running') continue;
+    job.pauseRequested = true;
+    job.status = 'paused';
+    job.stage = 'Paused';
+    job.resumable = true;
+    job.message = 'GameDeck closed. Resume to continue from saved progress.';
+    job.updatedAt = Date.now();
+    try { downloadProcesses.get(job.id)?.kill(); } catch {}
+  }
+  persistDownloads();
 }
 
 function thumbnailNameCandidates(title) {
@@ -2190,6 +2347,35 @@ async function chooseGameArtwork(file) {
   return { ok: true, url: toFileUrl(target), title };
 }
 
+async function deleteGame(file) {
+  const safeFile = safeLibraryFile(file);
+  const system = detectSystem(safeFile);
+  const title = system && isArcadeSystem(system) ? arcadeDisplayTitle(rawGameName(safeFile)) : cleanName(safeFile);
+  const result = await dialog.showMessageBox(mainWindow, {
+    type: 'warning',
+    title: 'Remove game from GameDeck',
+    message: `Move ${title} to the Trash?`,
+    detail: `The game file will leave your library and move to the operating system Trash or Recycle Bin. You may be able to restore it from there.\n\n${safeFile}`,
+    buttons: ['Move to Trash', 'Cancel'],
+    defaultId: 1,
+    cancelId: 1,
+    noLink: true
+  });
+  if (result.response !== 0) return { ok: true, canceled: true };
+
+  await shell.trashItem(safeFile);
+  const store = readStore();
+  store.favorites = store.favorites.filter(item => item !== safeFile);
+  delete store.recent[safeFile];
+  writeStore(store);
+  if (arcadeAuditCache.entries?.[safeFile]) {
+    delete arcadeAuditCache.entries[safeFile];
+    saveArcadeAuditCache();
+  }
+  addActivity('success', `${title} moved to Trash.`);
+  return { ok: true, canceled: false, title, file: safeFile };
+}
+
 async function refreshGameDetails(title, systemId, context = {}) {
   const detailTitle = metadataLookupTitle(title, context);
   const cacheFile = cachedDetailsPath(detailTitle, systemId);
@@ -2438,10 +2624,14 @@ ipcMain.handle('catalog-systems', () => getCatalogSystems());
 ipcMain.handle('catalog-games', (_, source) => getCatalogGames(source));
 ipcMain.handle('import-owned', (_, source, folder, title, fileName) => queueRgsxDownload(source, folder, title, fileName));
 ipcMain.handle('prepare-game', (_, file) => prepareGameArchive(file));
+ipcMain.handle('retry-download', (_, id) => retryDownload(id));
+ipcMain.handle('pause-download', (_, id) => pauseDownload(id));
+ipcMain.handle('dismiss-download', (_, id) => dismissDownload(id));
 ipcMain.handle('artwork', (_, title, systemId, folder) => fetchArtwork(title, systemId, folder));
 ipcMain.handle('game-details', (_, title, systemId, context) => fetchGameDetails(title, systemId, context));
 ipcMain.handle('refresh-game-details', (_, title, systemId, context) => refreshGameDetails(title, systemId, context));
 ipcMain.handle('choose-game-artwork', (_, file) => chooseGameArtwork(file));
+ipcMain.handle('delete-game', (_, file) => deleteGame(file).catch(error => ({ ok: false, error: error.message })));
 ipcMain.handle('diagnostics', (_, includeLibrary) => diagnostics(includeLibrary !== false));
 ipcMain.handle('runtime-status', () => managedRuntimeStatus());
 ipcMain.handle('ensure-runtime', (_, force) => ensureManagedRuntime({ force: Boolean(force) }));
@@ -2482,9 +2672,11 @@ ipcMain.handle('clear-activity', () => {
 
 app.on('before-quit', () => {
   appIsQuitting = true;
+  pauseActiveDownloads();
 });
 
 app.whenReady().then(() => {
+  fs.mkdirSync(LIBRARY, { recursive: true });
   primeFirmwareFolders();
   ensureRetroArchArcadeControllerConfig();
   createWindow();

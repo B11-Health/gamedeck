@@ -37,7 +37,7 @@
       <div id="systems" class="system-list"></div>
       <div class="aside-foot">
         <div><span class="status-dot"></span><b id="readyCount">0</b> emulators ready</div>
-        <button id="folder">Open RGSX library</button>
+        <button id="folder">Open game folder</button>
       </div>
     </aside>
 
@@ -59,8 +59,8 @@
             <h2 id="loadingTitle">Starting GameDeck</h2>
             <p id="loadingMessage">Checking your library and emulator setup.</p>
             <div class="loading-steps" aria-label="Startup progress">
-              <div class="loading-step active" id="loadingStepLibrary"><i></i><span><b>Library</b><small>Finding your games</small></span></div>
-              <div class="loading-step" id="loadingStepLaunchers"><i></i><span><b>Launchers</b><small>Checking play routes</small></span></div>
+              <div class="loading-step active" id="loadingStepLibrary"><i></i><span><b>Game engines</b><small>Included and verified</small></span></div>
+              <div class="loading-step" id="loadingStepLaunchers"><i></i><span><b>Library</b><small>Finding your games</small></span></div>
               <div class="loading-step" id="loadingStepArtwork"><i></i><span><b>Artwork</b><small>Building the shelves</small></span></div>
               <div class="loading-step" id="loadingStepControls"><i></i><span><b>Controls</b><small>Preparing couch mode</small></span></div>
             </div>
@@ -95,7 +95,7 @@
           <div>
             <div class="eyebrow">GAMEDECK READY CHECK</div>
             <h2 id="setupCoachTitle">Your easiest route to play.</h2>
-            <p id="setupCoachMessage">Checking your library, launchers, artwork, and controls.</p>
+            <p id="setupCoachMessage">Everything needed to run supported systems is included. Add games you own and GameDeck handles the rest.</p>
           </div>
         </div>
         <div class="setup-steps" id="setupSteps" aria-live="polite"></div>
@@ -163,6 +163,7 @@
           <div class="spotlight-utility-actions" aria-label="Game details tools">
             <button id="spotlightArtwork" title="Choose a local cover image"><span aria-hidden="true">▧</span><b>Artwork</b></button>
             <button id="spotlightDetails" title="Retry the metadata lookup"><span aria-hidden="true">↻</span><b>Details</b></button>
+            <button class="danger" id="spotlightDelete" title="Move this game to Trash"><span aria-hidden="true">⌫</span><b>Remove</b></button>
           </div>
         </div>
       </section>
@@ -217,9 +218,9 @@
         <div class="empty-art"><span>+</span></div>
         <div class="empty-kicker" id="emptyKicker">START YOUR COLLECTION</div>
         <h2 id="emptyTitle">Your deck is ready</h2>
-        <p id="emptyMessage">Choose Discover to fetch a title through RGSX, or add an owned game to the RGSX ROM folder.</p>
+        <p id="emptyMessage">Add games you legally own to your GameDeck folder, or use the optional Discover provider when connected.</p>
         <div class="empty-actions">
-          <button class="primary" id="emptyPrimary" data-action="discover">Browse RGSX</button>
+          <button class="primary" id="emptyPrimary" data-action="discover">Browse Discover</button>
           <button id="emptySecondary" data-action="folder">Open game folder</button>
         </div>
       </section>
@@ -355,7 +356,7 @@
 
           <div class="settings-grid">
             <label class="setting-field"><span>Game library</span><div><input id="settingLibrary" autocomplete="off"><button type="button" data-browse="libraryRoot">Browse</button></div><small class="setting-state" id="settingLibraryState">Checking path…</small></label>
-            <label class="setting-field"><span>RGSX root <small>optional outside Windows</small></span><div><input id="settingRgsx" autocomplete="off"><button type="button" data-browse="rgsxRoot">Browse</button></div><small class="setting-state" id="settingRgsxState">Checking path…</small></label>
+            <label class="setting-field"><span>Discover provider <small>optional on every platform</small></span><div><input id="settingRgsx" autocomplete="off"><button type="button" data-browse="rgsxRoot">Browse</button></div><small class="setting-state" id="settingRgsxState">Checking path…</small></label>
             <label class="setting-field"><span>RetroArch executable</span><div><input id="settingRetroArch" autocomplete="off"><button type="button" data-browse="retroArchPath">Browse</button></div><small class="setting-state" id="settingRetroArchState">Checking path…</small></label>
             <label class="setting-field"><span>RetroArch cores</span><div><input id="settingCores" autocomplete="off"><button type="button" data-browse="retroArchCores">Browse</button></div><small class="setting-state" id="settingCoresState">Checking path…</small></label>
             <label class="setting-field"><span>RetroArch system / BIOS</span><div><input id="settingSystem" autocomplete="off"><button type="button" data-browse="retroArchSystem">Browse</button></div><small class="setting-state" id="settingSystemState">Checking path…</small></label>
@@ -401,7 +402,7 @@
   <section class="transfer-dock hidden" id="transferDock" aria-label="Download activity" aria-live="polite">
     <button class="transfer-summary" id="transferSummary" type="button" aria-expanded="false" aria-controls="transferPanel">
       <span class="transfer-glyph" id="transferGlyph" aria-hidden="true">↓</span>
-      <span class="transfer-copy"><small id="transferKicker">DOWNLOADING</small><b id="transferTitle">Preparing transfer</b><span id="transferDetail">Connecting to RGSX…</span></span>
+      <span class="transfer-copy"><small id="transferKicker">DOWNLOADING</small><b id="transferTitle">Preparing transfer</b><span id="transferDetail">Preparing transfer…</span></span>
       <span class="transfer-meter" aria-hidden="true"><span id="transferBar"></span></span>
       <strong id="transferPercent">0%</strong>
       <span class="transfer-chevron" aria-hidden="true">⌃</span>

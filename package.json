@@ -25,12 +25,13 @@
     "start": "electron .",
     "check": "node --check main.js && node --check preload.js && node --check src/app.js && node scripts/smoke-test.mjs",
     "test": "npm run check",
-    "pack": "electron-builder --dir",
-    "dist": "electron-builder --publish never",
-    "dist:win": "electron-builder --win --x64 --publish never",
-    "dist:mac": "electron-builder --mac --universal --publish never",
-    "dist:linux": "electron-builder --linux --x64 --publish never",
-    "wallet:create": "node scripts/create-donation-wallet.mjs"
+    "pack": "npm run runtime:cache && electron-builder --dir",
+    "dist": "npm run runtime:cache && electron-builder --publish never",
+    "dist:win": "npm run runtime:cache -- --platform=win32-x64 && electron-builder --win --x64 --publish never",
+    "dist:mac": "npm run runtime:cache -- --platform=darwin-universal && electron-builder --mac --universal --publish never",
+    "dist:linux": "npm run runtime:cache -- --platform=linux-x64 && electron-builder --linux --x64 --publish never",
+    "wallet:create": "node scripts/create-donation-wallet.mjs",
+    "runtime:cache": "node scripts/prepare-runtime-cache.mjs"
   },
   "devDependencies": {
     "electron": "^43.2.0",
@@ -78,11 +79,13 @@
     },
     "nsis": {
       "artifactName": "${productName}-Setup-${version}-${arch}.${ext}",
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
+      "oneClick": true,
+      "allowToChangeInstallationDirectory": false,
+      "createDesktopShortcut": "always",
       "createStartMenuShortcut": true,
-      "shortcutName": "GameDeck"
+      "shortcutName": "GameDeck",
+      "runAfterFinish": true,
+      "perMachine": false
     },
     "portable": {
       "artifactName": "${productName}-Portable-${version}-${arch}.${ext}"
@@ -135,6 +138,15 @@
     },
     "asarUnpack": [
       "node_modules/7zip-bin/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "build/runtime-cache",
+        "to": "runtime-cache",
+        "filter": [
+          "**/*"
+        ]
+      }
     ]
   },
   "dependencies": {

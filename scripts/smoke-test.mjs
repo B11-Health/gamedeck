@@ -9,7 +9,7 @@ const fail = message => {
   process.exitCode = 1;
 };
 
-const [main, preload, renderer, html, styles, pkgText, donations, runtimeManager, runtimeManifest] = await Promise.all([
+const [main, preload, renderer, html, styles, pkgText, donations, runtimeManager, runtimeManifest, runtimeCacheBuilder] = await Promise.all([
   read('main.js'),
   read('preload.js'),
   read('src/app.js'),
@@ -18,7 +18,8 @@ const [main, preload, renderer, html, styles, pkgText, donations, runtimeManager
   read('package.json'),
   read('config/donations.json'),
   read('runtime-manager.js'),
-  read('config/runtime-manifest.json')
+  read('config/runtime-manifest.json'),
+  read('scripts/prepare-runtime-cache.mjs')
 ]);
 const pkg = JSON.parse(pkgText);
 const donationConfig = JSON.parse(donations);
@@ -31,6 +32,7 @@ for (const id of [
   'sponsorCard',
   'donationMethods',
   'settingLibrary',
+  'spotlightDelete',
   'mainContent',
   'sidebarToggle',
   'densityToggle',
@@ -140,6 +142,18 @@ if (!renderer.includes('dataset.captureReady') || !main.includes('rendererReady'
 if (!preload.includes('includeLibrary = false')) fail('startup diagnostics must avoid a duplicate library scan');
 if (!main.includes('environmentOverrides') || !main.includes('GAMEDECK_LIBRARY')) fail('explicit environment overrides must take precedence over saved settings');
 if (!pkg.build?.win || !pkg.build?.mac || !pkg.build?.linux) fail('package metadata must configure Windows, macOS, and Linux');
+if (pkg.build?.nsis?.oneClick !== true || pkg.build?.nsis?.runAfterFinish !== true) fail('Windows must ship as a one-click installer that launches GameDeck');
+if (!pkg.build?.extraResources?.some(item => item?.to === 'runtime-cache')) fail('release packages must include the verified runtime cache');
+if (!String(pkg.scripts?.['dist:win'] || '').includes('runtime:cache') || !String(pkg.scripts?.['dist:mac'] || '').includes('runtime:cache') || !String(pkg.scripts?.['dist:linux'] || '').includes('runtime:cache')) fail('all platform release builds must prepare their complete runtime');
+if (!runtimeCacheBuilder.includes('cache-index.json') || !runtimeCacheBuilder.includes('darwin-universal') || !runtimeCacheBuilder.includes('.part')) fail('cross-platform resumable runtime cache builder is missing');
+if (!runtimeManager.includes('bundledCacheRoot') || !runtimeManager.includes("phase: 'retrying'") || !runtimeManager.includes('.part')) fail('managed runtime must prefer bundled assets and resume interrupted transfers');
+if (!main.includes('BUNDLED_RUNTIME_AVAILABLE') || !main.includes('MANAGED_RUNTIME_PATHS.retroArch')) fail('clean installs must target the managed runtime before extraction');
+if (!main.includes('DOWNLOADS_FILE') || !main.includes('restorePersistedDownloads') || !main.includes('retryDownload') || !main.includes('pauseActiveDownloads')) fail('game transfer resume persistence is missing');
+if (!main.includes('shell.trashItem') || !main.includes("'delete-game'")) fail('safe operating-system Trash removal is missing');
+if (!main.includes('bundledSevenZip') || !String(pkg.build?.asarUnpack || []).includes('node_modules/7zip-bin/**/*')) fail('bundled archive extraction dependency is missing');
+if (!preload.includes('retryDownload') || !preload.includes('pauseDownload') || !preload.includes('deleteGame')) fail('resume and delete actions are missing from the secure preload bridge');
+if (!renderer.includes('handleTransferControl') || !renderer.includes('deleteFocusedGame') || !renderer.includes('Finish one-click setup')) fail('one-click setup, resume controls, or game removal UI is missing');
+if (!html.includes('id="spotlightDelete"') || !html.includes('Included and verified')) fail('visible safe removal or included-runtime first-run copy is missing');
 if (!Array.isArray(donationConfig.methods)) fail('donation methods must be an array');
 if (donationConfig.enabled && donationConfig.methods.length === 0) fail('enabled donations require at least one public method');
 

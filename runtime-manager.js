@@ -69,6 +69,8 @@ function createRuntimeManager(options) {
   const paths = pathsFor(root, platform);
   const stateFile = path.join(root, 'runtime-state.json');
   const cache = path.join(root, 'downloads');
+  const bundledRoot = options.bundledCacheRoot ? path.resolve(options.bundledCacheRoot) : '';
+  const bundledIndex = readJson(path.join(bundledRoot, 'cache-index.json'), { assets: {} });
   const state = readJson(stateFile, { assets: {} });
   const allowedHosts = new Set(manifest.allowedHosts || []);
   let task = null;
@@ -93,6 +95,7 @@ function createRuntimeManager(options) {
     const isReady = Boolean(spec && required.length && required.every(component => component.ready));
     return {
       supported: Boolean(spec),
+      bundled: Boolean(bundledRoot && fs.existsSync(path.join(bundledRoot, 'cache-index.json'))),
       platformKey,
       ready: isReady,
       installing: Boolean(task),
@@ -111,7 +114,21 @@ function createRuntimeManager(options) {
     if (url.protocol !== 'https:' || !allowedHosts.has(url.hostname)) throw new Error(`Unapproved runtime source: ${url.hostname}`);
     return url;
   }
-  async function download(urlValue, target, component, base, span) {
+  const sleep = ms => new Promise(resolveSleep => setTimeout(resolveSleep, ms));
+  function bundledAsset(componentId, fileName) {
+    if (!bundledRoot) return '';
+    const candidate = path.join(bundledRoot, componentId, fileName);
+    return fs.existsSync(candidate) ? candidate : '';
+  }
+  function copyBundled(component, fileName, target) {
+    const source = bundledAsset(component.id.split(':')[0], fileName);
+    if (!source) return false;
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.copyFileSync(source, target);
+    emit({ phase: 'installing', component: component.id, message: `Preparing included ${component.label}…`, source: 'bundled' });
+    return true;
+  }
+  async function downloadOnce(urlValue, target, component, base, span, attempt) {
     const url = validateUrl(urlValue);
     fs.mkdirSync(path.dirname(target), { recursive: true });
     const part = `${target}.part`;
@@ -132,31 +149,56 @@ function createRuntimeManager(options) {
     const file = fs.createWriteStream(part, { flags: existing ? 'a' : 'w' });
     const reader = response.body.getReader();
     let received = existing;
+    let freshBytes = 0;
     const started = Date.now();
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      received += value.byteLength;
-      if (received > 1024 ** 3) throw new Error('Runtime package exceeds safety limit.');
-      if (!file.write(Buffer.from(value))) await new Promise(resolveDrain => file.once('drain', resolveDrain));
-      const ratio = total ? received / total : 0;
-      emit({
-        phase: 'downloading',
-        component: component.id,
-        progress: Math.min(98, base + ratio * span),
-        downloadedBytes: received,
-        totalBytes: total,
-        speedBytes: Math.round(received / Math.max(.25, (Date.now() - started) / 1000)),
-        message: `Downloading ${component.label}…`
-      });
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        received += value.byteLength;
+        freshBytes += value.byteLength;
+        if (received > 1024 ** 3) throw new Error('Runtime package exceeds safety limit.');
+        if (!file.write(Buffer.from(value))) await new Promise(resolveDrain => file.once('drain', resolveDrain));
+        const ratio = total ? received / total : 0;
+        emit({
+          phase: 'downloading',
+          component: component.id,
+          progress: Math.min(98, base + ratio * span),
+          downloadedBytes: received,
+          totalBytes: total,
+          speedBytes: Math.round(freshBytes / Math.max(.25, (Date.now() - started) / 1000)),
+          attempt,
+          message: existing ? `Resuming ${component.label}…` : `Downloading ${component.label}…`
+        });
+      }
+      await new Promise((resolveEnd, rejectEnd) => file.end(error => error ? rejectEnd(error) : resolveEnd()));
+      fs.renameSync(part, target);
+    } catch (error) {
+      file.destroy();
+      throw error;
     }
-    await new Promise((resolveEnd, rejectEnd) => file.end(error => error ? rejectEnd(error) : resolveEnd()));
-    fs.renameSync(part, target);
+  }
+  async function download(urlValue, target, component, base, span) {
+    let lastError = null;
+    for (let attempt = 1; attempt <= 4; attempt += 1) {
+      try {
+        await downloadOnce(urlValue, target, component, base, span, attempt);
+        return;
+      } catch (error) {
+        lastError = error;
+        if (attempt >= 4) break;
+        const delay = Math.min(12000, 1200 * (2 ** (attempt - 1)));
+        emit({ phase: 'retrying', component: component.id, attempt, message: `Connection interrupted. Resuming ${component.label} automatically…` });
+        await sleep(delay);
+      }
+    }
+    throw lastError || new Error(`Could not download ${component.label}.`);
   }
   async function verify(asset, component) {
     emit({ phase: 'verifying', component: component.id, message: `Verifying ${component.label}…` });
     const digest = await sha256(asset);
-    const expected = String(component.sha256 || '').toLowerCase();
+    const included = bundledIndex.assets?.[component.url]?.sha256 || '';
+    const expected = String(component.sha256 || included || '').toLowerCase();
     const pinned = state.assets?.[component.url]?.sha256 || '';
     if (expected && digest !== expected) throw new Error(`${component.label} failed SHA-256 verification.`);
     if (!expected && pinned && digest !== pinned) throw new Error(`${component.label} changed unexpectedly; update GameDeck before retrying.`);
@@ -168,7 +210,7 @@ function createRuntimeManager(options) {
     fs.mkdirSync(destination, { recursive: true });
     emit({ phase: 'installing', component: component.id, message: `Installing ${component.label}…` });
     let seven = String(path7za).replace(`${path.sep}app.asar${path.sep}`, `${path.sep}app.asar.unpacked${path.sep}`);
-    if (!fs.existsSync(seven)) seven = pat7za;
+    if (!fs.existsSync(seven)) throw new Error('The bundled extraction helper is missing.');
     await run(seven, ['x', '-y', asset, `-o${destination}`], root);
   }
   async function installDmg(asset, component) {
@@ -198,14 +240,18 @@ function createRuntimeManager(options) {
         const url = `${component.baseUrl.replace(/\/$/, '')}/${name}`;
         const pseudo = { ...component, id: `${component.id}:${name}`, label: name, url };
         const asset = path.join(cache, `${platformKey}-${name}`);
-        if (!fs.existsSync(asset)) await download(url, asset, pseudo, base + i / component.files.length * span, span / component.files.length * .7);
+        if (!fs.existsSync(asset) && !copyBundled(pseudo, name, asset)) {
+          await download(url, asset, pseudo, base + i / component.files.length * span, span / component.files.length * .7);
+        }
         await verify(asset, pseudo);
         await extract(asset, resolve(component.destination), pseudo);
       }
     } else {
       const name = path.basename(new URL(component.url).pathname);
       const asset = path.join(cache, `${platformKey}-${component.id}-${name}`);
-      if (!fs.existsSync(asset)) await download(component.url, asset, component, base, span * .7);
+      if (!fs.existsSync(asset) && !copyBundled(component, name, asset)) {
+        await download(component.url, asset, component, base, span * .7);
+      }
       await verify(asset, component);
       if (component.type === 'dmg') await installDmg(asset, component);
       else await extract(asset, resolve(component.destination), component);
@@ -249,9 +295,13 @@ function createRuntimeManager(options) {
     task = perform(force).catch(error => {
       options.onLog?.('error', `Managed runtime setup failed: ${error.message}`);
       return emit({ phase: 'error', ready: false, error: error.message, message: error.message });
-    }).finally(() => { task = null; });
+    }).finally(() => {
+      task = null;
+      current = { ...current, installing: false, at: Date.now() };
+      options.onUpdate?.(current);
+    });
     return task;
   }
-  return { key: platformKey, root, paths, carInstall: Boolean(spec), status, ensure };
+  return { key: platformKey, root, paths, canInstall: Boolean(spec), status, ensure };
 }
 module.exports = { createRuntimeManager, pathsFor, key };

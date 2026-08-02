@@ -3881,3 +3881,75 @@ body.input-controller .catalog-game.active {
 .art-status.generated { color: #bff7ff; border-color: #72e7ff42; background: #071721d9; box-shadow: 0 0 18px #72e7ff12; }
 .game.missing-art .cover-art img { opacity: .92; filter: saturate(.92) contrast(1.02); }
 .game.missing-art:hover .cover-art img, .game.missing-art.active .cover-art img { opacity: 1; }
+
+
+/* Managed setup, resumable transfers, and safe removal */
+.spotlight-utility-actions button.danger {
+  color: #d99a9a;
+  border-color: #ef777733;
+  background: #2a1014a8;
+}
+.spotlight-utility-actions button.danger span { color: #ff8f8f; }
+.spotlight-utility-actions button.danger:hover {
+  color: #ffe3e3;
+  border-color: #ff8f8f70;
+  background: #3a151b;
+}
+
+.transfer-dock.paused { border-color: #f0b75f55; }
+.transfer-dock.paused .transfer-glyph {
+  color: #f0b75f;
+  border-color: #f0b75f45;
+  background: #f0b75f12;
+}
+.transfer-dock.paused .transfer-copy small { color: #f0b75f; }
+.transfer-item {
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+}
+.transfer-item.paused { background: #f0b75f08; }
+.transfer-item.paused .transfer-item-copy > div > span { color: #f0b75f; }
+.transfer-item-end {
+  min-width: 72px;
+  display: grid;
+  justify-items: end;
+  gap: 7px;
+}
+.transfer-item-end > strong {
+  color: #b9c6d6;
+  font: 800 7px 'Space Grotesk';
+  letter-spacing: .06em;
+}
+.transfer-item.complete .transfer-item-end > strong { color: #69e8a0; }
+.transfer-item.error .transfer-item-end > strong,
+.transfer-item.paused .transfer-item-end > strong { color: #f0b75f; }
+.transfer-item-controls { display: flex; justify-content: flex-end; gap: 5px; }
+.transfer-control {
+  min-height: 27px;
+  padding: 0 8px;
+  border: 1px solid #39475b;
+  border-radius: 8px;
+  color: #aeb9c8;
+  background: #111923;
+  font: 800 7px 'Space Grotesk';
+  cursor: pointer;
+}
+.transfer-control:hover { color: #f3f8fd; border-color: #64768f; }
+.transfer-control.primary {
+  color: #0a1115;
+  border-color: #bfff4f;
+  background: #bfff4f;
+  box-shadow: 0 0 16px #bfff4f25;
+}
+.transfer-control.quiet { color: #7f8da0; background: transparent; }
+
+.setup-coach-actions button:disabled {
+  opacity: .62;
+  cursor: progress;
+}
+
+@media (max-width: 620px) {
+  .transfer-item { grid-template-columns: 38px minmax(0, 1fr); }
+  .transfer-item-end { grid-column: 2; width: 100%; grid-template-columns: auto 1fr; align-items: center; justify-items: start; }
+  .transfer-item-controls { justify-self: end; }
+  .spotlight-utility-actions { flex-wrap: wrap; }
+}

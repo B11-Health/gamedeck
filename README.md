@@ -25,7 +25,7 @@ GameDeck does **not** include ROMs, BIOS files, encryption keys, or commercial g
 - Preview-on-click cards with deliberate Play, Enter/A, or double-click activation
 - Input-aware help that adapts instantly to pointer, keyboard, or controller use
 - Live device-path health with clear required, optional, unsaved, and restart states
-- RetroArch core discovery plus standalone DuckStation, PCSX2, PPSSPP, Dolphin, and Cemu routing
+- One-click installers with a bundled, verified RetroArch runtime and compatible core set; no separate emulator installer for supported systems
 - Validated multi-disc Saturn `.m3u` playlists that reject missing disc members before launch
 - Dedicated MAME and FinalBurn Neo catalog handling with pre-launch ROM-set health checks
 - One-click launch doctor that resolves shared BIOS/parent files, validates the best available arcade route, and resumes launch automatically
@@ -49,18 +49,18 @@ GameDeck does **not** include ROMs, BIOS files, encryption keys, or commercial g
 - Shelf-first compact mode plus an optional large-format Cinematic view
 - Sticky library controls, precise keyboard focus, artwork-quality filtering, and visible readiness states
 - Explicit clear-search affordance and immediate refresh/scanning feedback
-- Hierarchical selected-game actions with one-click cover replacement and metadata refresh
+- Hierarchical selected-game actions with Play, favorite, cover replacement, metadata refresh, and safe move-to-Trash removal
 - Collapsible systems rail and persistent title, recency, console, or size sorting
-- Visible download, verification, extraction, speed, and ETA states
+- Persistent resumable transfers with saved progress, Pause, Resume, retry, verification, extraction, speed, and ETA states
 - Actionable transfer completion, issue routing, and dismissible finished items
 - Structured Status Center with issue filters, grouped events, and copyable diagnostics
-- RGSX integration when its optional local runtime is available
+- Optional RGSX Discover integration when its local provider is available; core library play does not depend on RGSX
 - Privacy-respecting community sponsor placements with a user opt-out
 - Public donation addresses only; wallet secrets are never part of the app
 
 ## Startup without the fake wait
 
-GameDeck no longer hides startup behind a spinning logo. The boot panel advances through four concrete stages—library, launchers, artwork, and controls—then gets out of the way. Progress remains readable, local-first, and honest even when a large collection takes longer to scan.
+GameDeck no longer hides startup behind a spinning logo. The boot panel advances through four concrete stages—game engines, library, artwork, and controls—then gets out of the way. Progress remains readable, local-first, and honest even when a large collection takes longer to scan.
 
 ![GameDeck startup sequence](docs/images/gamedeck-startup.png)
 
@@ -68,7 +68,7 @@ GameDeck no longer hides startup behind a spinning logo. The boot panel advances
 
 GameDeck explains exactly what is ready and what still needs attention. The in-app ready check scans the library, compatible launchers, artwork coverage, and controller support, then offers a direct path to the relevant setup screen. Press **X** on a standard controller or choose **Surprise me** to jump to a random playable game.
 
-Selected games also expose **Change art** and **Refresh details** actions, so a mismatched cover or sparse description can be corrected without touching cache folders or configuration files.
+Selected games expose **Artwork**, **Details**, and **Remove** actions. Remove uses the operating system Trash or Recycle Bin rather than permanently deleting the game immediately.
 
 ![GameDeck ready check](docs/images/gamedeck-ready-check.png)
 
@@ -82,16 +82,18 @@ Download the appropriate artifact from [Releases](https://github.com/B11-Health/
 
 Early unsigned builds may trigger operating-system warnings. Production signing and Apple notarization are tracked in the [release guide](docs/CROSS_PLATFORM.md).
 
-### First-run game engines
+### One install, complete runtime
 
-On a clean supported desktop, GameDeck now installs its own managed RetroArch runtime and compatible core bundle from the official Libretro build service. Downloads use HTTPS allowlisting, resumable partial files, SHA-256 verification/pinning, and GameDeck-owned system, save, and state directories. A launch that discovers a missing engine starts setup and automatically retries the selected game when installation finishes.
+Release packages carry the verified RetroArch application, compatible core bundle, and archive-extraction helper inside the GameDeck installer. On first launch, GameDeck installs these included components into its own private runtime directory without requiring a second installer or a network connection. If a development or reduced package does not carry the cache, GameDeck falls back to approved HTTPS sources with resumable partial files, automatic retry, and SHA-256 verification.
 
-GameDeck never bundles commercial games or copyrighted console firmware. BIOS-dependent systems still guide the user to import firmware they legally own. Standalone emulators remain preferred when already installed, with managed RetroArch fallbacks for supported systems. Wii U remains dependent on a separately installed compatible emulator.
+Game downloads and preparation jobs persist across restarts. Interrupted transfers return as **Paused** with their saved progress and can be resumed from the transfer dock. Selected games can be moved safely to the operating system Trash or Recycle Bin from the spotlight.
+
+GameDeck never bundles commercial games or copyrighted console firmware. BIOS-dependent systems guide the user to import firmware they legally own. RGSX is an optional Discover and managed-repair provider, not a dependency for normal library playback. Standalone emulators remain preferred when already configured, while the included RetroArch routes cover supported systems. Wii U still requires a separately installed compatible emulator.
 
 
 ## Development
 
-Requirements: Node.js 20 or newer, npm, and at least one supported emulator.
+Requirements: Node.js 20 or newer and npm. GameDeck can provision its managed runtime during development, or use an existing supported emulator.
 
 ```bash
 git clone https://github.com/B11-Health/gamedeck.git
@@ -104,13 +106,13 @@ Useful commands:
 
 ```bash
 npm test          # syntax, DOM contract, portability, and asset smoke checks
-npm run pack      # unpacked app for the current OS
+npm run pack      # cache the full current-OS runtime, then build the unpacked app
 npm run dist:win  # Windows installer + portable build
 npm run dist:mac  # universal macOS DMG + ZIP (run on macOS)
 npm run dist:linux
 ```
 
-GameDeck checks common emulator and library locations automatically. Open **Community → This device** to override the library, RGSX, RetroArch executable, cores, or system/BIOS paths. Path changes apply after restart.
+GameDeck uses its bundled managed runtime by default in release packages and also checks common emulator and library locations. Open **Community → This device** only to override the game library, optional Discover provider, RetroArch executable, cores, or system/BIOS paths. Path changes apply after restart.
 
 ### Arcade libraries
 

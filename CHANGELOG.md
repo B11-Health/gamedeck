@@ -4,6 +4,12 @@ All notable GameDeck releases are documented here.
 
 ## [Unreleased]
 
+- Changed release artifacts into complete one-click packages that include verified RetroArch, the compatible core archive, and the extraction helper for offline first-run setup.
+- Added persistent transfer state with automatic restart recovery, saved partial progress, visible Pause/Resume/retry controls, and backend cleanup for dismissed jobs.
+- Added native confirmation and safe move-to-Trash/Recycle-Bin removal for installed games, including favorites, recent history, and arcade-audit cleanup.
+- Reworked the setup coach around included engines, owned games, play routes, firmware boundaries, controls, and artwork; RGSX is now presented as an optional Discover provider.
+- Added cross-platform release-time runtime cache generation for Windows, Linux, Intel macOS, and Apple Silicon macOS.
+
 - Added a managed first-run runtime that installs RetroArch and compatible cores on Windows, macOS, and Linux.
 - Added resumable official-source downloads, SHA-256 verification/pinning, GameDeck-owned save/system paths, progress events, and automatic launch retry.
 - Added RetroArch fallback routes for PlayStation, PlayStation 2, PSP, GameCube, and Wii when standalone emulators are unavailable.

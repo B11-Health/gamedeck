@@ -184,7 +184,7 @@ function fallbackDescription(title, systemName, installed, edition = '') {
   const release = edition ? ` This ${edition.replace(/\s*\/\s*/g, ', ')} edition is shown with its original catalog details.` : '';
   return installed
     ? `${title} is installed in your ${systemName} collection and ready to play.${release} GameDeck will open it with the emulator already configured for this system.`
-    : `${title} is available for ${systemName}.${release} Add it through RGSX and GameDeck will place it in your library, match the artwork, and route it to the right emulator.`;
+    : `${title} is available for ${systemName}.${release} Add it through Discover and GameDeck will place it in your library, match the artwork, and choose the right play route.`;
 }
 
 function cardDescription(game, system) {
@@ -312,7 +312,7 @@ function queueGameDetails(title, systemId, context, apply) {
 
 function downloadForGame(game) {
   const identity = fileTaskIdentity(game?.fileName);
-  return state.downloads.find(download => fileTaskIdentity(download.fileName) === identity && download.status === 'running');
+  return state.downloads.find(download => fileTaskIdentity(download.fileName) === identity && ['running', 'paused'].includes(download.status));
 }
 
 function transferGame(download) {
@@ -339,16 +339,43 @@ function openTransferResult(download) {
   window.deck.openLibrary();
 }
 
+async function handleTransferControl(action, id) {
+  const download = state.downloads.find(item => item.id === id);
+  if (!download) return;
+  try {
+    if (action === 'pause') {
+      const result = await window.deck.pauseDownload(id);
+      if (!result?.ok) throw Error(result?.error || 'Transfer could not be paused.');
+      toast('Download paused. Progress is saved.');
+    } else if (action === 'resume') {
+      const result = await window.deck.retryDownload(id);
+      if (!result?.ok) throw Error(result?.error || 'Transfer could not be resumed.');
+      state.transferExpanded = true;
+      toast('Resuming from saved progress…', 'progress');
+    } else if (action === 'dismiss') {
+      const result = await window.deck.dismissDownload(id);
+      if (!result?.ok) throw Error(result?.error || 'Transfer could not be dismissed.');
+      state.downloads = state.downloads.filter(item => item.id !== id);
+      state.dismissedDownloads.delete(id);
+      renderDownloads();
+    }
+  } catch (error) {
+    toast(error.message || 'Transfer action failed.', 'warning');
+  }
+}
+
 function renderDownloads() {
   const now = Date.now();
   const downloads = state.downloads
     .filter(download => {
       if (download.status !== 'running' && state.dismissedDownloads.has(download.id)) return false;
-      return download.status === 'running' || now - Number(download.finishedAt || now) < (download.status === 'error' ? 60000 : 14000);
+      if (['running', 'paused', 'error'].includes(download.status)) return true;
+      return now - Number(download.finishedAt || now) < 14000;
     })
     .sort((a, b) => Number(b.startedAt || 0) - Number(a.startedAt || 0));
   const running = downloads.filter(download => download.status === 'running');
-  const finished = downloads.filter(download => download.status !== 'running');
+  const paused = downloads.filter(download => download.status === 'paused');
+  const finished = downloads.filter(download => ['complete', 'error'].includes(download.status));
   const dock = $('#transferDock');
   updateStatusBadge();
   if (!downloads.length) {
@@ -357,7 +384,7 @@ function renderDownloads() {
     return;
   }
 
-  const primary = running[0] || downloads[0];
+  const primary = running[0] || paused[0] || downloads[0];
   const average = running.length
     ? Math.round(running.reduce((sum, download) => sum + Number(download.progress || 0), 0) / running.length)
     : Math.round(Number(primary.progress || 0));
@@ -365,27 +392,31 @@ function renderDownloads() {
   const speed = primary.speed || '';
   const eta = etaLabel(primary);
   const transferred = primary.totalBytes ? `${transferSize(primary.downloadedBytes)} of ${transferSize(primary.totalBytes)}` : '';
-  const runningDetail = [transferred, speed, eta].filter(Boolean).join(' · ') || primary.message || 'RGSX is preparing the transfer.';
+  const runningDetail = [transferred, speed, eta].filter(Boolean).join(' · ') || primary.message || 'Preparing transfer.';
   const detail = primary.status === 'complete'
-    ? primary.message || 'Added to your library and ready for its final setup check.'
-    : primary.status === 'error'
-      ? primary.error || primary.message || 'Open Issues for the exact transfer detail.'
-      : runningDetail;
+    ? primary.message || 'Added to your library and ready to play.'
+    : primary.status === 'paused'
+      ? primary.message || 'Progress is saved. Resume whenever you are ready.'
+      : primary.status === 'error'
+        ? primary.error || primary.message || 'Resume to retry from saved progress.'
+        : runningDetail;
 
-  const dockState = primary.status === 'error' ? 'error' : running.length ? 'running' : 'complete';
-  dock.classList.remove('running', 'complete', 'error');
+  const dockState = primary.status === 'error' ? 'error' : primary.status === 'paused' ? 'paused' : running.length ? 'running' : 'complete';
+  dock.classList.remove('running', 'complete', 'error', 'paused');
   dock.classList.add(dockState);
-  $('#transferGlyph').textContent = dockState === 'complete' ? '✓' : dockState === 'error' ? '!' : '↓';
+  $('#transferGlyph').textContent = dockState === 'complete' ? '✓' : dockState === 'error' ? '!' : dockState === 'paused' ? 'Ⅱ' : '↓';
   $('#transferKicker').textContent = running.length > 1
     ? `${running.length} ACTIVE DOWNLOADS`
     : primary.status === 'complete'
       ? 'READY FOR YOUR LIBRARY'
-      : primary.status === 'error'
-        ? 'TRANSFER NEEDS ATTENTION'
-        : String(primary.stage || 'DOWNLOADING').toUpperCase();
-  $('#transferTitle').textContent = running.length > 1 ? `${running.length} games are joining your deck` : primary.title;
+      : primary.status === 'paused'
+        ? 'DOWNLOAD PAUSED'
+        : primary.status === 'error'
+          ? 'DOWNLOAD CAN RESUME'
+          : String(primary.stage || 'DOWNLOADING').toUpperCase();
+  $('#transferTitle').textContent = running.length > 1 ? `${running.length} downloads are active` : primary.title;
   $('#transferDetail').textContent = detail;
-  $('#transferPercent').textContent = primary.status === 'error' ? '!' : primary.status === 'complete' ? 'READY' : `${progress}%`;
+  $('#transferPercent').textContent = primary.status === 'error' ? 'RETRY' : primary.status === 'paused' ? 'RESUME' : primary.status === 'complete' ? 'READY' : `${progress}%`;
   $('#transferBar').style.width = `${primary.status === 'complete' ? 100 : progress}%`;
   $('.transfer-meter').classList.toggle('indeterminate', primary.status === 'running' && progress === 0);
   $('#transferSummary').setAttribute('aria-expanded', String(state.transferExpanded));
@@ -398,15 +429,26 @@ function renderDownloads() {
     const art = game?.art || assetFallback(download.title, '#263347', '#10141c', download.systemName || 'TRANSFER');
     const itemProgress = Math.min(100, Math.max(0, Number(download.progress || 0)));
     const itemDetail = [download.systemName, download.speed, etaLabel(download)].filter(Boolean).join(' · ') || download.error || download.message || '';
-    const stage = download.status === 'complete' ? 'Ready' : download.status === 'error' ? 'Needs attention' : download.stage || 'Downloading';
-    const value = download.status === 'error' ? 'FIX' : download.status === 'complete' ? 'READY' : `${Math.round(itemProgress)}%`;
-    const actionable = download.status === 'complete' || download.status === 'error';
-    return `<article class="transfer-item ${escapeHtml(download.status)} ${actionable ? 'actionable' : ''}" data-download-id="${escapeHtml(download.id)}" ${actionable ? 'tabindex="0" role="button"' : ''}><img src="${escapeHtml(art)}" alt=""><div class="transfer-item-copy"><div><b title="${escapeHtml(download.title)}">${escapeHtml(download.title)}</b><span>${escapeHtml(stage)}</span></div><small>${escapeHtml(itemDetail)}</small><div class="transfer-item-track ${download.status === 'running' && itemProgress === 0 ? 'indeterminate' : ''}"><span style="width:${download.status === 'complete' ? 100 : itemProgress}%"></span></div></div><strong>${value}</strong></article>`;
+    const stage = download.status === 'complete' ? 'Ready' : download.status === 'paused' ? 'Paused · progress saved' : download.status === 'error' ? 'Ready to retry' : download.stage || 'Downloading';
+    const value = download.status === 'error' ? 'RETRY' : download.status === 'paused' ? 'PAUSED' : download.status === 'complete' ? 'READY' : `${Math.round(itemProgress)}%`;
+    const controls = [
+      download.status === 'running' ? `<button class="transfer-control" data-transfer-action="pause" data-download-id="${escapeHtml(download.id)}">Pause</button>` : '',
+      ['paused', 'error'].includes(download.status) && download.resumable ? `<button class="transfer-control primary" data-transfer-action="resume" data-download-id="${escapeHtml(download.id)}">Resume</button>` : '',
+      ['complete', 'error'].includes(download.status) ? `<button class="transfer-control quiet" data-transfer-action="dismiss" data-download-id="${escapeHtml(download.id)}">Dismiss</button>` : ''
+    ].filter(Boolean).join('');
+    const actionable = download.status === 'complete';
+    return `<article class="transfer-item ${escapeHtml(download.status)} ${actionable ? 'actionable' : ''}" data-download-id="${escapeHtml(download.id)}" ${actionable ? 'tabindex="0" role="button"' : ''}><img src="${escapeHtml(art)}" alt=""><div class="transfer-item-copy"><div><b title="${escapeHtml(download.title)}">${escapeHtml(download.title)}</b><span>${escapeHtml(stage)}</span></div><small>${escapeHtml(itemDetail)}</small><div class="transfer-item-track ${download.status === 'running' && itemProgress === 0 ? 'indeterminate' : ''}"><span style="width:${download.status === 'complete' ? 100 : itemProgress}%"></span></div></div><div class="transfer-item-end"><strong>${value}</strong><div class="transfer-item-controls">${controls}</div></div></article>`;
   }).join('');
   $('#transferPanel').classList.toggle('hidden', !state.transferExpanded);
   $('#transferActions').classList.toggle('hidden', !state.transferExpanded || finished.length === 0);
   $('#transferDismissFinished').textContent = finished.length === 1 ? 'Dismiss finished' : `Dismiss ${finished.length} finished`;
 
+  document.querySelectorAll('.transfer-control').forEach(button => {
+    button.onclick = event => {
+      event.stopPropagation();
+      handleTransferControl(button.dataset.transferAction, button.dataset.downloadId);
+    };
+  });
   document.querySelectorAll('.transfer-item.actionable').forEach(item => {
     const activate = () => openTransferResult(downloads.find(download => download.id === item.dataset.downloadId));
     item.onclick = activate;
@@ -419,7 +461,9 @@ function renderDownloads() {
   });
 
   clearTimeout(transferHideTimer);
-  if (!running.length) transferHideTimer = setTimeout(renderDownloads, primary.status === 'error' ? 61000 : 15000);
+  if (!running.length && !paused.length && !downloads.some(download => download.status === 'error')) {
+    transferHideTimer = setTimeout(renderDownloads, 15000);
+  }
 }
 
 function assetFallback(text, colorA = '#1b2233', colorB = '#0f131a', label = 'GAMEDECK') {
@@ -918,6 +962,29 @@ async function chooseFocusedArtwork() {
   }
 }
 
+async function deleteFocusedGame() {
+  const game = focusedGame();
+  if (!game) return;
+  const button = $('#spotlightDelete');
+  const label = button.querySelector('b');
+  button.disabled = true;
+  label.textContent = 'Removing…';
+  try {
+    const result = await window.deck.deleteGame(game.file);
+    if (result?.canceled) return;
+    if (!result?.ok) throw Error(result?.error || 'The game could not be removed.');
+    artworkEnrichmentTried.delete(game.id);
+    state.focusedGameId = null;
+    await loadLibrary(true);
+    toast(`${result.title || game.title} moved to Trash`, 'success');
+  } catch (error) {
+    toast(error.message || 'The game could not be removed.', 'warning');
+  } finally {
+    button.disabled = false;
+    label.textContent = 'Remove';
+  }
+}
+
 async function refreshFocusedDetails() {
   const game = focusedGame();
   if (!game) return;
@@ -984,7 +1051,7 @@ function renderEmptyState(games) {
   const selected = systemById(state.selectedSystem);
   let kicker = 'START YOUR COLLECTION';
   let title = 'Your deck is ready';
-  let message = 'Browse RGSX or add a legally owned game to your configured library folder.';
+  let message = 'Add games you legally own to your GameDeck folder, or browse the optional Discover catalog.';
   let primary = ['Browse Discover', 'discover'];
   let secondary = ['Open game folder', 'folder'];
 
@@ -1009,7 +1076,7 @@ function renderEmptyState(games) {
   } else if (selected) {
     kicker = selected.name.toUpperCase();
     title = `No ${selected.name} games installed`;
-    message = 'Browse the RGSX catalog for this console or add a legally owned title to its game folder.';
+    message = 'Add a legally owned title to this console folder, or browse Discover when a provider is connected.';
   }
 
   $('#emptyKicker').textContent = kicker;
@@ -1644,37 +1711,70 @@ function setActiveView(view) {
 
 function setupReadiness() {
   const diagnostics = state.diagnostics || {};
+  const runtime = state.runtime || diagnostics.managedRuntime || {};
   const games = state.library.games || [];
   const systems = state.library.systems || [];
   const installedSystems = systems.filter(system => Number(system.installedCount || system.count || 0) > 0);
   const readyInstalled = installedSystems.filter(system => system.ready);
   const readySystems = systems.filter(system => system.ready);
+  const firmwareIssues = installedSystems.filter(system => String(system.issue || '').toLowerCase().includes('firmware'));
   const artworkCount = games.filter(game => Boolean(game.art)).length;
   const artworkCoverage = games.length ? Math.round((artworkCount / games.length) * 1000) / 10 : 0;
   const generatedArtworkCount = Math.max(0, games.length - artworkCount);
   const pads = navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean) : [];
   const controllerReady = pads.length > 0 || state.controllerHints.length > 0;
+  const runtimeReady = Boolean(runtime.ready || (!runtime.supported && diagnostics.retroarch));
   const libraryReady = games.length > 0;
   const launcherReady = games.length ? readyInstalled.length > 0 : readySystems.length > 0;
   const artworkReady = games.length > 0;
   const steps = [
     {
+      id: 'runtime',
+      label: 'Game engines',
+      ready: runtimeReady,
+      detail: runtimeReady
+        ? `Included runtime ready${runtime.retroArchVersion ? ` · RetroArch ${runtime.retroArchVersion}` : ''}`
+        : runtime.installing
+          ? `${runtime.message || 'Installing included game engines'} ${Math.round(Number(runtime.progress || 0))}%`
+          : runtime.supported
+            ? 'Included with GameDeck. Finish setup once—no separate emulator installation.'
+            : diagnostics.retroarch
+              ? 'Compatible local RetroArch installation detected.'
+              : 'No managed runtime is available for this device.'
+    },
+    {
       id: 'library',
-      label: 'Game library',
+      label: 'Your games',
       ready: libraryReady,
       detail: libraryReady
         ? `${games.length.toLocaleString()} title${games.length === 1 ? '' : 's'} found and organized.`
         : diagnostics.libraryExists
-          ? 'Library folder is ready. Add owned games or browse Discover.'
-          : 'Choose a library folder to begin.'
+          ? 'Game folder is ready. Add games you legally own.'
+          : 'GameDeck will create and manage a local game folder.'
     },
     {
       id: 'launchers',
-      label: 'Launchers',
-      ready: launcherReady,
-      detail: launcherReady
-        ? `${games.length ? readyInstalled.length : readySystems.length} emulator route${(games.length ? readyInstalled.length : readySystems.length) === 1 ? '' : 's'} ready.`
-        : 'No launcher is ready for the installed collection yet.'
+      label: 'One-click play routes',
+      ready: runtimeReady && launcherReady,
+      detail: runtimeReady && launcherReady
+        ? `${games.length ? readyInstalled.length : readySystems.length} compatible system route${(games.length ? readyInstalled.length : readySystems.length) === 1 ? '' : 's'} ready.`
+        : runtimeReady
+          ? 'Routes appear automatically as supported games are added.'
+          : 'Game routes will activate after the included engines are installed.'
+    },
+    {
+      id: 'firmware',
+      label: 'Console firmware',
+      ready: firmwareIssues.length === 0,
+      detail: firmwareIssues.length
+        ? `${firmwareIssues.length} installed system${firmwareIssues.length === 1 ? '' : 's'} need firmware you legally own. GameDeck will show the exact files.`
+        : 'No missing firmware is blocking the installed collection.'
+    },
+    {
+      id: 'controls',
+      label: 'Controls',
+      ready: true,
+      detail: controllerReady ? 'Controller detected and couch mode is ready.' : 'Keyboard and mouse are ready; connect a controller anytime.'
     },
     {
       id: 'artwork',
@@ -1682,25 +1782,22 @@ function setupReadiness() {
       ready: artworkReady,
       detail: games.length
         ? generatedArtworkCount
-          ? `${Number.isInteger(artworkCoverage) ? artworkCoverage.toFixed(0) : artworkCoverage.toFixed(1)}% source matched · ${generatedArtworkCount.toLocaleString()} original GameDeck poster${generatedArtworkCount === 1 ? '' : 's'}.`
+          ? `${Number.isInteger(artworkCoverage) ? artworkCoverage.toFixed(0) : artworkCoverage.toFixed(1)}% source matched · remaining titles use GameDeck artwork.`
           : '100% matched · every title has source artwork.'
-        : 'Artwork matching starts as soon as games are found.'
-    },
-    {
-      id: 'controls',
-      label: 'Controls',
-      ready: true,
-      detail: controllerReady ? 'Controller detected and couch mode is ready.' : 'Keyboard and mouse are ready; connect a controller anytime.'
+        : 'Artwork matching starts automatically when games are added.'
     }
   ];
   return {
     steps,
     score: Math.round((steps.filter(step => step.ready).length / steps.length) * 100),
+    runtimeReady,
+    runtimeInstalling: Boolean(runtime.installing),
     libraryReady,
     launcherReady,
+    firmwareIssues,
     artworkCoverage,
     generatedArtworkCount,
-    coreReady: libraryReady && launcherReady
+    coreReady: runtimeReady && libraryReady && launcherReady && firmwareIssues.length === 0
   };
 }
 
@@ -1718,24 +1815,39 @@ function renderSetupCoach() {
   if (!visible) return;
 
   $('#setupScore').textContent = `${readiness.score}%`;
-  $('#setupCoachTitle').textContent = readiness.coreReady ? 'Your deck is ready to play.' : 'Your easiest route to play.';
-  $('#setupCoachMessage').textContent = !readiness.libraryReady
-    ? 'Add legally owned games or browse Discover. GameDeck will organize the rest.'
-    : !readiness.launcherReady
-      ? 'Your games are here. Connect one compatible emulator to unlock one-click play.'
-      : readiness.artworkCoverage < 80
-        ? 'Launching is ready. Artwork will continue filling in quietly as you browse.'
-        : readiness.generatedArtworkCount
-          ? 'Every title has a polished poster; source matching continues quietly for the final exceptions.'
-          : 'Library, launchers, artwork, and controls are lined up for couch play.';
+  $('#setupCoachTitle').textContent = readiness.coreReady ? 'Your deck is ready to play.' : readiness.runtimeInstalling ? 'Installing everything GameDeck needs.' : 'One install. Then just play.';
+  $('#setupCoachMessage').textContent = readiness.runtimeInstalling
+    ? 'GameDeck is installing its included engines and will continue automatically.'
+    : !readiness.runtimeReady
+      ? 'The full emulator stack is included. Finish setup once—there are no separate emulator installers.'
+      : !readiness.libraryReady
+        ? 'The engines are ready. Add games you legally own to your GameDeck folder.'
+        : readiness.firmwareIssues.length
+          ? 'Most games are ready. A few consoles require firmware that must come from hardware or files you legally own.'
+          : !readiness.launcherReady
+            ? 'GameDeck is matching the installed collection to compatible play routes.'
+            : readiness.artworkCoverage < 80
+              ? 'Launching is ready. Artwork will continue filling in quietly.'
+              : 'Engines, games, play routes, and controls are lined up.';
   $('#setupSteps').innerHTML = readiness.steps.map(step => `
     <div class="setup-step ${step.ready ? 'ready' : 'pending'}">
       <span class="setup-step-icon" aria-hidden="true">${step.ready ? '✓' : '·'}</span>
       <span><b>${escapeHtml(step.label)}</b><small>${escapeHtml(step.detail)}</small></span>
     </div>`).join('');
   const primary = $('#setupPrimary');
-  primary.textContent = !readiness.libraryReady ? 'Browse Discover' : !readiness.launcherReady ? 'Open launcher setup' : 'Review settings';
-  primary.dataset.action = !readiness.libraryReady ? 'discover' : 'settings';
+  if (!readiness.runtimeReady) {
+    primary.textContent = readiness.runtimeInstalling ? 'Installing…' : 'Finish one-click setup';
+    primary.dataset.action = 'install';
+    primary.disabled = readiness.runtimeInstalling;
+  } else if (!readiness.libraryReady) {
+    primary.textContent = 'Open game folder';
+    primary.dataset.action = 'folder';
+    primary.disabled = false;
+  } else {
+    primary.textContent = readiness.coreReady ? 'Review settings' : 'Review what needs attention';
+    primary.dataset.action = 'settings';
+    primary.disabled = false;
+  }
 }
 
 function surpriseMe() {
@@ -1765,6 +1877,8 @@ async function runReadyCheck() {
   button.textContent = 'Checking…';
   setLoading(true, 'Running the ready check', 'Scanning games, launchers, artwork, and controller support.', 34);
   try {
+    const runtime = state.runtime || state.diagnostics?.managedRuntime || await window.deck.runtimeStatus();
+    if (runtime?.supported && !runtime.ready) state.runtime = await window.deck.ensureRuntime(false);
     state.library = await window.deck.rescan();
     await refreshDiagnostics();
     render();
@@ -2255,7 +2369,7 @@ function diagnosticReport() {
     `Version: ${diagnostics.settings?.version || state.settings?.version || 'development'}`,
     `Platform: ${diagnostics.platform || state.settings?.platform || 'desktop'} ${diagnostics.arch || state.settings?.arch || ''}`.trim(),
     `Library: ${diagnostics.library || state.settings?.libraryRoot || 'not configured'}`,
-    `RGSX: ${diagnostics.rgsxRuntime ? 'ready' : 'missing'}`,
+    `Discover provider: ${diagnostics.rgsxRuntime ? 'connected' : 'optional / not connected'}`,
     `RetroArch: ${diagnostics.retroarch ? 'ready' : 'missing'}`,
     `MAME: ${diagnostics.mame ? 'ready' : 'missing'}`,
     '',
@@ -2273,7 +2387,7 @@ async function refreshDiagnostics(includeLibrary = false) {
   state.controllerHints = diagnostics.controllers || [];
   state.activities = diagnostics.activity || [];
   state.downloads = diagnostics.downloads || [];
-  $('#debugHealth').innerHTML = `<span class="${diagnostics.rgsxRuntime ? 'ok' : 'bad'}">RGSX ${diagnostics.rgsxRuntime ? 'READY' : 'MISSING'}</span><span class="${diagnostics.retroarch ? 'ok' : 'bad'}">RETROARCH ${diagnostics.retroarch ? 'READY' : 'MISSING'}</span><span class="${diagnostics.mame ? 'ok' : 'bad'}">MAME ${diagnostics.mame ? 'READY' : 'MISSING'}</span><span>${state.arcadeAudit?.verified || diagnostics.arcade?.verified || 0}/${state.arcadeAudit?.total || diagnostics.arcade?.total || 0} ARCADE VERIFIED</span><span>${diagnostics.systems.filter(system => system.ready).length} EMULATORS</span><span>${diagnostics.downloads.filter(download => download.status === 'running').length} ACTIVE</span>`;
+  $('#debugHealth').innerHTML = `<span class="${diagnostics.rgsxRuntime ? 'ok' : ''}">DISCOVER ${diagnostics.rgsxRuntime ? 'CONNECTED' : 'OPTIONAL'}</span><span class="${diagnostics.retroarch ? 'ok' : 'bad'}">RETROARCH ${diagnostics.retroarch ? 'READY' : 'MISSING'}</span><span class="${diagnostics.mame ? 'ok' : 'bad'}">MAME ${diagnostics.mame ? 'READY' : 'MISSING'}</span><span>${state.arcadeAudit?.verified || diagnostics.arcade?.verified || 0}/${state.arcadeAudit?.total || diagnostics.arcade?.total || 0} ARCADE VERIFIED</span><span>${diagnostics.systems.filter(system => system.ready).length} EMULATORS</span><span>${diagnostics.downloads.filter(download => download.status === 'running').length} ACTIVE</span>`;
   renderActivity();
   renderDownloads();
 }
@@ -2346,9 +2460,27 @@ $('#setupDismiss').onclick = () => {
   writePreference('setup-coach', 'dismissed');
   renderSetupCoach();
 };
-$('#setupPrimary').onclick = event => {
-  if (event.currentTarget.dataset.action === 'discover') changeView('discover');
-  else openSetupSettings();
+$('#setupPrimary').onclick = async event => {
+  const action = event.currentTarget.dataset.action;
+  if (action === 'install') {
+    event.currentTarget.disabled = true;
+    setLoading(true, 'Finishing one-click setup', 'Installing the complete GameDeck runtime from the included verified packages.', 12);
+    const result = await window.deck.ensureRuntime(false);
+    state.runtime = result;
+    await refreshDiagnostics();
+    render();
+    if (result?.ready) toast('GameDeck setup complete', 'success');
+    else {
+      state.setupCoachOpen = true;
+      toast(result?.message || 'Setup needs attention.', 'warning');
+    }
+    return;
+  }
+  if (action === 'folder') {
+    await window.deck.openLibrary();
+    return;
+  }
+  openSetupSettings();
 };
 $('#setupCheck').onclick = () => runReadyCheck();
 $('#surpriseMe').onclick = () => surpriseMe();
@@ -2466,6 +2598,7 @@ $('#spotlightFav').onclick = () => {
 };
 $('#spotlightArtwork').onclick = () => chooseFocusedArtwork();
 $('#spotlightDetails').onclick = () => refreshFocusedDetails();
+$('#spotlightDelete').onclick = () => deleteFocusedGame();
 $('#catalogFeatureAction').onclick = () => catalogAction(focusedCatalogGame() || currentCatalogGames()[0]);
 $('#catalogSetup').onclick = () => setupFocusedSystem();
 $('#catalogMore').onclick = () => showMoreCatalog(true);
@@ -2491,9 +2624,12 @@ $('#transferSummary').onclick = () => {
   renderDownloads();
 };
 $('#transferOpenLibrary').onclick = () => window.deck.openLibrary();
-$('#transferDismissFinished').onclick = () => {
-  state.downloads.filter(download => download.status !== 'running').forEach(download => state.dismissedDownloads.add(download.id));
-  if (!state.downloads.some(download => download.status === 'running')) state.transferExpanded = false;
+$('#transferDismissFinished').onclick = async () => {
+  const finished = state.downloads.filter(download => ['complete', 'error'].includes(download.status));
+  await Promise.all(finished.map(download => window.deck.dismissDownload(download.id)));
+  const ids = new Set(finished.map(download => download.id));
+  state.downloads = state.downloads.filter(download => !ids.has(download.id));
+  if (!state.downloads.some(download => ['running', 'paused'].includes(download.status))) state.transferExpanded = false;
   renderDownloads();
   toast('Finished transfers dismissed');
 };
@@ -2617,7 +2753,7 @@ window.deck.onArcadeAudit(progress => {
 });
 window.deck.onRuntime(update => {
   state.runtime = update;
-  if (update.phase === 'downloading' || update.phase === 'verifying' || update.phase === 'installing' || update.phase === 'preparing') {
+  if (['downloading', 'retrying', 'verifying', 'installing', 'preparing'].includes(update.phase)) {
     const progress = Math.max(8, Math.min(92, Number(update.progress || 0)));
     setLoading(true, 'Preparing game engines', update.message || 'Installing the components GameDeck needs.', progress);
   } else if (update.phase === 'ready') {
@@ -2688,8 +2824,8 @@ async function init() {
   setLoading(true, 'Opening your deck', 'Checking local launchers and active transfers.', 10);
   await refreshDiagnostics();
   state.runtime = state.diagnostics?.managedRuntime || await window.deck.runtimeStatus();
-  if (!state.diagnostics?.retroarch && state.runtime?.supported) {
-    setLoading(true, 'Preparing game engines', 'Installing RetroArch and compatible game engines for this device.', 14);
+  if (state.runtime?.supported && !state.runtime.ready && (state.runtime.bundled || !state.diagnostics?.retroarch)) {
+    setLoading(true, 'Installing the complete GameDeck runtime', 'Preparing the included RetroArch engine and compatible cores. No separate installers are needed.', 14);
     const runtimeResult = await window.deck.ensureRuntime(false);
     state.runtime = runtimeResult;
     await refreshDiagnostics();

@@ -26,3 +26,4 @@ config/donations.local.json
 
 # Local launch convenience
 Launch GameDeck.cmd
+build/runtime-cache/
