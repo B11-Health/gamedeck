@@ -1,19 +1,55 @@
 {
-  "video": "GameDeck-Official-Launch.mp4",
+  "video": "GameDeck-Official-Launch-YouTube.mp4",
+  "sourceMotionCapture": "GameDeck-Motion-Capture.mp4",
+  "narrationSourceFile": "GameDeck-Launch-Narration-Gemini.wav",
+  "captions": "GameDeck-Official-Launch-YouTube.srt",
   "resolution": "1920x1080",
   "frameRate": 30,
-  "durationSeconds": 64,
+  "durationSeconds": 70.6,
+  "videoCodec": "H.264 High Profile",
+  "videoBitrateKbps": 1206,
+  "audioCodec": "AAC-LC 48 kHz stereo",
+  "audioBitrateKbps": 258,
+  "sha256": "00190a6042f145efd7128a507d684f6e9ed0271c0c8bb4dfd2daccbee964394d",
   "narrationModel": "gemini-3.1-flash-tts-preview",
   "narrationVoice": "Sulafat",
-  "narrationSource": "Gemini API via authenticated Google AI Studio key",
+  "narrationSource": "Gemini API",
   "music": "Quiet Focus.mp3",
   "musicSource": "Suno v4.5-all",
-  "musicRights": "Created on Suno Free Plan; non-commercial preview use only",
+  "musicRights": "Non-commercial preview; created while the Suno account showed the Free Plan",
   "mix": {
-    "integratedLoudness": "-14.0 LUFS",
-    "truePeak": "-2.3 dBTP",
-    "sidechainDucking": true,
-    "audioCodec": "AAC 256 kb/s stereo"
+    "integratedLoudness": "-14.1 LUFS",
+    "loudnessRange": "3.1 LU",
+    "truePeak": "-1.0 dBFS",
+    "sidechainDucking": true
   },
-  "generatedAt": "2026-08-01T18:51:51.527Z"
+  "capture": {
+    "liveGameDeckUi": true,
+    "games": 221,
+    "systems": 16,
+    "segments": [
+      "Library",
+      "Nintendo 64",
+      "Surprise Me",
+      "Discover",
+      "Search",
+      "Favorites",
+      "Recent",
+      "Community"
+    ]
+  },
+  "youtube": {
+    "channelName": "GameDeck",
+    "handle": "@PlayGameDeck",
+    "channelUrl": "https://www.youtube.com/@PlayGameDeck",
+    "channelId": "UCCEqWVian29zzVYSPviChmA",
+    "videoId": "0nCHy9WsEpQ",
+    "videoUrl": "https://youtu.be/0nCHy9WsEpQ",
+    "title": "GameDeck Official Launch Trailer — Your Games. One Move Away.",
+    "visibility": "public",
+    "videoLanguage": "English (United States)",
+    "automaticCaptionsPublished": true,
+    "customThumbnailRequiresPhoneVerification": true
+  },
+  "generatedAt": "2026-08-02T03:56:50.900Z"
 }

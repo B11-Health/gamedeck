@@ -1,53 +1,89 @@
 # GameDeck YouTube launch kit
 
-## Channel identity
+## Live channel
 
-- Channel name: GameDeck
-- Preferred handle: @GameDeckApp, then @PlayGameDeck
-- Description: GameDeck is the cinematic, local-first launcher for legally owned game libraries on Windows, macOS, and Linux. Open source. Controller first. Your games, presented like the main event.
+- Channel: [GameDeck](https://www.youtube.com/@PlayGameDeck)
+- Handle: [@PlayGameDeck](https://www.youtube.com/@PlayGameDeck)
+- Channel ID: `UCCEqWVian29zzVYSPviChmA`
+- Official motion trailer: [GameDeck Official Launch Trailer — Your Games. One Move Away.](https://youtu.be/0nCHy9WsEpQ)
+- Video ID: `0nCHy9WsEpQ`
+- Visibility: Public
+- Published: August 1, 2026
 
-## Launch video
+The public page was verified after publication through YouTube's player metadata and oEmbed response.
 
-- Master: [marketing/youtube/GameDeck-Official-Launch.mp4](../marketing/youtube/GameDeck-Official-Launch.mp4)
-- Captions: [marketing/youtube/GameDeck-Official-Launch.srt](../marketing/youtube/GameDeck-Official-Launch.srt)
-- Title: GameDeck - Your Game Library, Presented Like the Main Event
-- Description: Meet GameDeck, the open-source, controller-first desktop launcher for legally owned game libraries. Scan local games, check emulator readiness, browse a cinematic catalog, save favorites, revisit recent titles, and launch across Windows, macOS, and Linux.
-- Repository: https://github.com/B11-Health/gamedeck
-- Tags: gamedeck, game launcher, emulation frontend, retro gaming, open source, electron app, local first
+## Current motion master
 
-## Current master specifications
+- Master: [GameDeck-Official-Launch-YouTube.mp4](../marketing/youtube/GameDeck-Official-Launch-YouTube.mp4)
+- Motion source: [GameDeck-Motion-Capture.mp4](../marketing/youtube/GameDeck-Motion-Capture.mp4)
+- Narration source: [GameDeck-Launch-Narration-Gemini.wav](../marketing/youtube/GameDeck-Launch-Narration-Gemini.wav)
+- Captions source: [GameDeck-Official-Launch-YouTube.srt](../marketing/youtube/GameDeck-Official-Launch-YouTube.srt)
+- Runtime: 70.6 seconds
+- Resolution: 1920×1080
+- Frame rate: 30 fps
+- Video: H.264 High Profile, approximately 1,206 kb/s
+- Audio: AAC-LC, 48 kHz stereo, approximately 258 kb/s
+- Integrated loudness: -14.1 LUFS
+- Loudness range: 3.1 LU
+- True peak: -1.0 dBFS
+- SHA-256: `00190a6042f145efd7128a507d684f6e9ed0271c0c8bb4dfd2daccbee964394d`
 
-- 1920x1080, 30 fps, H.264 High Profile
-- 64 seconds
+The trailer uses real GameDeck UI motion captured from a populated library showing 221 games across 16 installed systems. It covers Library, system browsing, Surprise Me, Discover, search, Favorites, Recent, and Community.
+
+## Narration and music
+
 - Gemini model: `gemini-3.1-flash-tts-preview`
 - Voice: Sulafat
-- Background: `Quiet Focus.mp3`
-- Stereo AAC at 256 kb/s
-- Integrated loudness: -14.0 LUFS
-- True peak: -2.3 dBTP
-- Sidechain ducking keeps the music beneath narration
+- Music: `Quiet Focus.mp3`
+- Mix: sidechain ducking beneath narration, normalized for YouTube delivery
 
-The narration transcript, direction prompt, and production manifest are stored beside the video.
+The exact narration and direction prompt are stored beside the master as `NARRATION-SOCIAL.txt` and `TTS-SOCIAL-PROMPT.txt`.
+
+## Captions and thumbnail status
+
+- Video language is set to English (United States).
+- YouTube automatic English captions are published.
+- The production SRT is included in the repository for exact-timing replacement or additional platforms.
+- A custom thumbnail is included in the channel kit. YouTube requires one-time phone verification before custom thumbnails can be applied on this channel, so the current public upload uses a YouTube-selected frame.
+
+## Channel assets
+
+The reusable brand package lives in [marketing/youtube/channel](../marketing/youtube/channel):
+
+- YouTube avatar
+- YouTube banner
+- Video watermark
+- Launch thumbnail
+- End card
+- Stream-starting screen
+- On-screen feature overlays
 
 ## Rebuild workflow
 
-Start GameDeck with remote debugging enabled, then run the production command from the repository root:
+Start GameDeck with remote debugging enabled. From the repository root:
+
+```powershell
+npm run video:capture-motion
+$env:GAMEDECK_NARRATION = "marketing/youtube/GameDeck-Launch-Narration-Gemini.wav"
+$env:GAMEDECK_MUSIC = "$HOME\Downloads\Quiet Focus.mp3"
+npm run video:render-motion
+```
+
+`GAMEDECK_NARRATION` and `GAMEDECK_MUSIC` are optional when the default narration file and newest `Quiet Focus*.mp3` in Downloads are available.
+
+To regenerate a Gemini narration and the original cinematic master, set `GEMINI_API_KEY` securely and run:
 
 ```powershell
 $env:GEMINI_API_KEY = '<AI Studio key>'
-$env:GAMEDECK_MUSIC = "$HOME\Downloads\Quiet Focus.mp3"
 npm run video:youtube
 ```
 
-The script requires Gemini TTS and intentionally has no Windows SAPI production fallback. It reads the API key only from the environment and never writes it to disk or Git. When `GAMEDECK_MUSIC` is omitted, it uses the newest `Quiet Focus*.mp3` in the current user's Downloads folder.
+No production script contains an API key.
 
 ## Music rights
 
-The current `Quiet Focus` file was created while the Suno account showed the Free Plan. Suno states that free-plan songs are limited to personal, non-commercial use and cannot be monetized. This master is therefore a non-commercial preview. Before monetizing the YouTube channel, replace the track with properly licensed music or regenerate it while subscribed to a plan that grants commercial rights.
-
-- https://help.suno.com/en/articles/9601601
-- https://help.suno.com/en/articles/2410177
+The current `Quiet Focus` file was created while the Suno account showed the Free Plan. It is treated as a non-commercial preview track. Replace it with properly licensed music before monetizing the video or channel.
 
 ## Security
 
-Never commit API credentials. Set them through the environment or a secret manager, and rotate credentials that have been disclosed in plaintext.
+Never commit API credentials. Use environment variables or a secret manager, and rotate any credential disclosed in plaintext.

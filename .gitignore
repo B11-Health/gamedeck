@@ -26,3 +26,6 @@ config/donations.local.json
 
 # Local launch convenience
 Launch GameDeck.cmd
+
+# Generated social-video frame cache
+marketing/youtube/capture/

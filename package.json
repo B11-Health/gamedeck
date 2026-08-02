@@ -31,7 +31,10 @@
     "dist:mac": "electron-builder --mac --universal --publish never",
     "dist:linux": "electron-builder --linux --x64 --publish never",
     "wallet:create": "node scripts/create-donation-wallet.mjs",
-    "video:youtube": "node scripts/generate-youtube-video.cjs"
+    "video:youtube": "node scripts/generate-youtube-video.cjs",
+    "video:capture-motion": "node scripts/capture-social-trailer.cjs",
+    "video:render-motion": "node scripts/render-social-launch.cjs",
+    "video:motion": "npm run video:capture-motion && npm run video:render-motion"
   },
   "devDependencies": {
     "electron": "^43.2.0",
@@ -63,8 +66,18 @@
     "win": {
       "icon": "build/icon.ico",
       "target": [
-        { "target": "nsis", "arch": ["x64"] },
-        { "target": "portable", "arch": ["x64"] }
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
       ]
     },
     "nsis": {
@@ -82,8 +95,18 @@
       "icon": "build/icon.icns",
       "category": "public.app-category.games",
       "target": [
-        { "target": "dmg", "arch": ["universal"] },
-        { "target": "zip", "arch": ["universal"] }
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "universal"
+          ]
+        }
       ]
     },
     "linux": {
@@ -93,8 +116,18 @@
       "syncDesktopName": true,
       "synopsis": "Local-first game library launcher",
       "target": [
-        { "target": "AppImage", "arch": ["x64"] },
-        { "target": "deb", "arch": ["x64"] }
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        }
       ]
     },
     "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",

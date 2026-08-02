@@ -77,4 +77,6 @@ GameDeck is not affiliated with Nintendo, Sony, Microsoft, Sega, Valve, RetroArc
 
 ## Video and channel launch
 
-The current 1080p launch master is available at [marketing/youtube/GameDeck-Official-Launch.mp4](marketing/youtube/GameDeck-Official-Launch.mp4), with a companion subtitle file. Channel copy, upload metadata, audio specifications, licensing notes, and the reproducible Gemini TTS capture/render workflow are documented in [docs/YOUTUBE_LAUNCH.md](docs/YOUTUBE_LAUNCH.md).
+Watch the public [GameDeck official motion launch trailer](https://youtu.be/0nCHy9WsEpQ) and follow [@PlayGameDeck on YouTube](https://www.youtube.com/@PlayGameDeck).
+
+The validated 1080p motion master is available at [marketing/youtube/GameDeck-Official-Launch-YouTube.mp4](marketing/youtube/GameDeck-Official-Launch-YouTube.mp4), with source motion capture, Gemini narration, captions, channel artwork, and reproducible capture/render scripts. Full production details and licensing notes are in [docs/YOUTUBE_LAUNCH.md](docs/YOUTUBE_LAUNCH.md).
