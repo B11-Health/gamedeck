@@ -9,7 +9,7 @@ GameDeck should grow through proof, community participation, and visible product
 - YouTube channel: https://www.youtube.com/@PlayGameDeck
 - Start Here playlist: https://www.youtube.com/playlist?list=PLG-ejeCsa-AI
 - Shorts playlist: https://www.youtube.com/playlist?list=PLCbffYifS8R8
-- Public Shorts: https://youtube.com/shorts/ndETcPuCOyE and https://youtube.com/shorts/dOEuy8g8Bmw
+- Public Shorts: https://youtube.com/shorts/ndETcPuCOyE, https://youtube.com/shorts/dOEuy8g8Bmw, and https://youtube.com/shorts/-jxqMc0z2yg
 - Scheduled Short: https://youtube.com/shorts/ZZ-hHyyj5Lw — August 3, 2026 at 12:00 PM Eastern
 - YouTube branding: GameDeck banner and avatar are public; the video watermark is configured for the entire video.
 - Discord distribution: the v1.2 release is in #announcements and the Shorts campaign is in #showcase.

@@ -32,3 +32,11 @@ https://github.com/B11-Health/gamedeck
 GameDeck is an Electron desktop app for Windows, macOS, and Linux that scans local game files, routes them to configured emulators, and presents the collection as a controller-first library. The new build adds a bundled runtime for supported systems, local WebRTC streaming, and Remote Play Together without transferring game files. I would appreciate technical feedback on the architecture, release packaging, and WebRTC pairing flow.
 
 https://github.com/B11-Health/gamedeck
+
+## Multiplayer Short
+
+Three ways to play together in GameDeck: couch multiplayer, synchronized netplay, and encrypted Remote Play Together where only the host needs the game.
+
+https://youtube.com/shorts/-jxqMc0z2yg
+
+#GameDeck #RemotePlay #Multiplayer #OpenSource #RetroGaming
