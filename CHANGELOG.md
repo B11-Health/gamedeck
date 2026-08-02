@@ -7,6 +7,9 @@ All notable GameDeck releases are documented here.
 - Rebuilt multiplayer as one controller-first command center for Couch Co-op, encrypted Remote Play Together, and relay-backed Synchronized Netplay.
 - Added local SHA-256 game/core match IDs, cached verification, relay-region selection, exact-match join rejection, and polished live session status.
 - Validated the complete synchronized host flow with Metal Slug 3 and FinalBurn Neo, including New York relay publication and `GDPLAY1` invitation copying.
+- Corrected the E2E report to match the official cross-platform v1.2.0 release artifacts and verified YouTube channel funnel.
+- Routed the in-app share panel to the public GameDeck Shorts playlist.
+
 
 - Created dedicated Start Here and Shorts playlists and connected the public site and README to dedicated YouTube playlists.
 - Added a responsive public Shorts gallery and a scheduled local-first discovery clip for the GameDeck 1.2 launch campaign.

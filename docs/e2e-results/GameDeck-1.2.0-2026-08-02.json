@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "reportDate": "2026-08-02",
   "appVersion": "1.2.0",
-  "branch": "agent/uiux-shelf-first",
+  "branch": "main",
   "baseCommit": "77d0f3971e88f1c1294ace6353a25c97b771443d",
   "environment": {
     "os": "Windows 11 10.0.26200",
@@ -93,7 +93,10 @@
     },
     "codeSigning": {
       "status": "not_configured",
-      "windowsAuthenticode": false
+      "windowsAuthenticode": false,
+      "macosCodeSigned": false,
+      "macosNotarized": false,
+      "linuxPackageSigned": false
     },
     "youtubeTutorial": {
       "status": "pass",
@@ -108,26 +111,28 @@
     },
     "socialDistribution": {
       "status": "pass_limited",
-      "youtube": "published",
-      "discord": "community_live_tutorial_announced",
+      "youtube": "channel_branded_two_shorts_live_one_scheduled",
+      "discord": "release_and_shorts_showcase_published",
+      "reddit": "not_authenticated_humanity_gate",
+      "tiktok": "manual_age_gate_pending",
       "x": "not_authenticated",
       "linkedin": "not_authenticated"
     },
     "windowsArtifacts": {
       "status": "pass",
-      "sourceCommit": "77d0f3971e88f1c1294ace6353a25c97b771443d",
+      "sourceCommit": "250bbd7bc3b929fe49205ee6c0695654426f49b2",
       "setup": {
         "name": "GameDeck-Setup-1.2.0-x64.exe",
-        "bytes": 539668485,
-        "sha256": "9b51fdf69cd2ade4bb49ae9bf6eb01e6755451f2449a33462c8771021025214a",
+        "bytes": 539670662,
+        "sha256": "6677c63e871915d1dc001866d36255e126963bb3cc057be0c9c847af28ad0654",
         "fileVersion": "1.2.0",
         "productVersion": "1.2.0",
         "authenticode": "NotSigned"
       },
       "portable": {
         "name": "GameDeck-Portable-1.2.0-x64.exe",
-        "bytes": 529574852,
-        "sha256": "7719cecef4221dab879b5aa4f57fe2048fcb8a3fb21fc66901f0ad14d0ce36f1",
+        "bytes": 539462459,
+        "sha256": "eaeb1336db3bf643621c843d4fcfde4e379868422e161bea72cff92c029de634",
         "fileVersion": "1.2.0",
         "productVersion": "1.2.0",
         "authenticode": "NotSigned"
@@ -172,6 +177,84 @@
       ],
       "horizontalOverflow": false,
       "cardOverlap": false
+    },
+    "macosArtifacts": {
+      "status": "pass",
+      "sourceCommit": "250bbd7bc3b929fe49205ee6c0695654426f49b2",
+      "signed": false,
+      "notarized": false,
+      "dmg": {
+        "name": "GameDeck-1.2.0-mac-universal.dmg",
+        "bytes": 988036017,
+        "sha256": "c005bb0ee33697e7619d931b3ff7783ec65eabc38f061998823c2b348744e3a3"
+      },
+      "zip": {
+        "name": "GameDeck-1.2.0-mac-universal.zip",
+        "bytes": 986791905,
+        "sha256": "5d54c3139c7cb8ea0e3da9d6703862ecd458a35d868daf2ee3f2537efa672aaf"
+      }
+    },
+    "linuxArtifacts": {
+      "status": "pass",
+      "sourceCommit": "250bbd7bc3b929fe49205ee6c0695654426f49b2",
+      "signed": false,
+      "appImage": {
+        "name": "GameDeck-1.2.0-linux-x86_64.AppImage",
+        "bytes": 590297612,
+        "sha256": "01f4cef6f9c1bbab907adc9425e927439a0c1b532d23735fbe9c6bfb05029cb5"
+      },
+      "deb": {
+        "name": "GameDeck-1.2.0-linux-amd64.deb",
+        "bytes": 561237536,
+        "sha256": "1a960af1d164037e256b7a0aef2d93f1c09856cb5628ba43f2bb32bf154eefcd"
+      }
+    },
+    "releaseArtifacts": {
+      "status": "pass",
+      "url": "https://github.com/B11-Health/gamedeck/releases/tag/v1.2.0",
+      "publishedAt": "2026-08-02T19:23:55Z",
+      "sourceCommit": "250bbd7bc3b929fe49205ee6c0695654426f49b2",
+      "checksumManifests": [
+        "SHA256SUMS-windows-x64.txt",
+        "SHA256SUMS-macos-universal.txt",
+        "SHA256SUMS-linux-x64.txt"
+      ]
+    },
+    "youtubeChannel": {
+      "status": "pass",
+      "channel": "https://www.youtube.com/@PlayGameDeck",
+      "branding": {
+        "banner": "public",
+        "avatar": "public",
+        "watermark": "entire_video"
+      },
+      "profileLinks": [
+        "https://b11-health.github.io/gamedeck/",
+        "https://github.com/B11-Health/gamedeck",
+        "https://discord.gg/eS7d4VqTT"
+      ],
+      "homeTab": true,
+      "startHerePlaylist": "https://www.youtube.com/playlist?list=PLG-ejeCsa-AI",
+      "shortsPlaylist": "https://www.youtube.com/playlist?list=PLCbffYifS8R8",
+      "publicShorts": [
+        "https://youtube.com/shorts/ndETcPuCOyE",
+        "https://youtube.com/shorts/dOEuy8g8Bmw"
+      ],
+      "scheduledShort": {
+        "url": "https://youtube.com/shorts/ZZ-hHyyj5Lw",
+        "publishAt": "2026-08-03T12:00:00-04:00"
+      },
+      "checks": "no_issues",
+      "oneTimeVerification": "pending_for_external_links_and_related_video"
+    },
+    "growthSurface": {
+      "status": "pass",
+      "publicSite": "https://b11-health.github.io/gamedeck/",
+      "behavioralClickTelemetry": false,
+      "shortsGallery": true,
+      "inAppSharePanel": true,
+      "inAppShortsPlaylistRoute": true,
+      "githubDiscussion": "https://github.com/B11-Health/gamedeck/discussions/7"
     }
   },
   "discord": {
@@ -188,9 +271,18 @@
       "support",
       "showcase"
     ],
-    "tutorialAnnouncementPublished": true
+    "tutorialAnnouncementPublished": true,
+    "releaseAnnouncementPublished": true,
+    "shortsShowcasePublished": true
   },
   "social": {
-    "discord": "https://discord.gg/eS7d4VqTT"
-  }
+    "website": "https://b11-health.github.io/gamedeck/",
+    "discord": "https://discord.gg/eS7d4VqTT",
+    "youtubeChannel": "https://www.youtube.com/@PlayGameDeck",
+    "youtubeStartHere": "https://www.youtube.com/playlist?list=PLG-ejeCsa-AI",
+    "youtubeShorts": "https://www.youtube.com/playlist?list=PLCbffYifS8R8",
+    "youtubeTutorial": "https://youtu.be/vY-fFVu2ClM"
+  },
+  "validationCommit": "77d0f3971e88f1c1294ace6353a25c97b771443d",
+  "releaseCommit": "250bbd7bc3b929fe49205ee6c0695654426f49b2"
 }

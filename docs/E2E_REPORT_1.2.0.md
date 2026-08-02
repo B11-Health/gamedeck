@@ -1,8 +1,9 @@
 # GameDeck 1.2.0 End-to-End Validation Report
 
 **Report date:** August 2, 2026
-**Branch:** `agent/uiux-shelf-first`
-**Source commit packaged and tested:** `77d0f3971e88f1c1294ace6353a25c97b771443d`
+**Current branch:** `main`
+**Runtime validation commit:** `77d0f3971e88f1c1294ace6353a25c97b771443d`
+**Official v1.2.0 release commit:** `250bbd7bc3b929fe49205ee6c0695654426f49b2`
 **Primary platform:** Windows 11 x64 (`10.0.26200`)
 **Test hardware:** AMD Ryzen AI 5 340 with Radeon 840M, 15.3 GiB RAM
 **Runtime:** Node.js 22.19.0, Electron 43.2.0, GameDeck 1.2.0
@@ -34,12 +35,12 @@ The highest-impact issue found during this pass was that the original WebRTC off
 | Guest input | PASS | 18 input transitions received; latest input attributed to Player 2 |
 | Renderer/activity health | PASS | No errors reported by either isolated client |
 | Mobile receiver source contracts | PASS | PWA, Android WebView, and iOS SwiftUI/WKWebView sources included and smoke-checked |
-| Windows installer and portable targets | PASS | Final 1.2.0 NSIS and portable artifacts built from `77d0f39`; hashes and sizes recorded below |
+| Official cross-platform release | PASS | Windows installer/portable, universal macOS DMG/ZIP, and Linux AppImage/DEB published from `250bbd7`; SHA-256 digests recorded below |
 | Production code signing | NOT CONFIGURED | Windows artifacts are unsigned and may trigger SmartScreen |
 | Direct WebRTC on restrictive NAT | CONDITIONAL | Direct STUN path works; symmetric/corporate NAT may require a future TURN relay |
 | Discord account and community | PASS | `gamedeckhq` is email-verified; the **GameDeck Community** server, permanent invite, and starter channels are live |
-| YouTube tutorial | PASS | Public 1:41 tutorial published at `https://youtu.be/vY-fFVu2ClM`; checks completed with no issues |
-| Social distribution | PASS / LIMITED | YouTube tutorial published publicly and announced in the verified GameDeck Discord community; X and LinkedIn remained unauthenticated, so no identities or posts were fabricated |
+| YouTube channel and launch funnel | PASS | Branded `@PlayGameDeck` channel; tutorial, trailer, two public Shorts, one scheduled Short, Start Here playlist, Shorts playlist, public banner/avatar, and entire-video watermark verified |
+| Social distribution | PASS / LIMITED | Release and Shorts posts published in verified Discord channels; Reddit remains unauthenticated, TikTok requires manual age-gate completion, and X/LinkedIn remain unauthenticated |
 | Android/iOS store binaries | PLATFORM BUILD REQUIRED | Source-complete clients exist; signed store artifacts require Android/macOS signing environments |
 
 ## Detailed validation
@@ -48,14 +49,18 @@ The highest-impact issue found during this pass was that the original WebRTC off
 
 The release workflow packages the verified RetroArch application, the compatible Libretro core bundle, and the archive helper. The final build from commit `77d0f39` was launched with a new isolated profile. Its embedded runtime installed into the profile-owned GameDeck directory and reached `ready`, `100%`, with no activity errors. The packaged UI then passed the 1500, 1280, 1120, and 980 px header checks, exposed the published tutorial action, returned keyboard focus after Escape, and reported zero renderer errors.
 
-Final Windows artifacts:
+Official v1.2.0 release artifacts published from `250bbd7bc3b929fe49205ee6c0695654426f49b2`:
 
 | Artifact | Bytes | SHA-256 |
 |---|---:|---|
-| `GameDeck-Setup-1.2.0-x64.exe` | 539,668,485 | `9b51fdf69cd2ade4bb49ae9bf6eb01e6755451f2449a33462c8771021025214a` |
-| `GameDeck-Portable-1.2.0-x64.exe` | 529,574,852 | `7719cecef4221dab879b5aa4f57fe2048fcb8a3fb21fc66901f0ad14d0ce36f1` |
+| `GameDeck-Setup-1.2.0-x64.exe` | 539,670,662 | `6677c63e871915d1dc001866d36255e126963bb3cc057be0c9c847af28ad0654` |
+| `GameDeck-Portable-1.2.0-x64.exe` | 539,462,459 | `eaeb1336db3bf643621c843d4fcfde4e379868422e161bea72cff92c029de634` |
+| `GameDeck-1.2.0-mac-universal.dmg` | 988,036,017 | `c005bb0ee33697e7619d931b3ff7783ec65eabc38f061998823c2b348744e3a3` |
+| `GameDeck-1.2.0-mac-universal.zip` | 986,791,905 | `5d54c3139c7cb8ea0e3da9d6703862ecd458a35d868daf2ee3f2537efa672aaf` |
+| `GameDeck-1.2.0-linux-x86_64.AppImage` | 590,297,612 | `01f4cef6f9c1bbab907adc9425e927439a0c1b532d23735fbe9c6bfb05029cb5` |
+| `GameDeck-1.2.0-linux-amd64.deb` | 561,237,536 | `1a960af1d164037e256b7a0aef2d93f1c09856cb5628ba43f2bb32bf154eefcd` |
 
-Both executables report Product Version and File Version `1.2.0`. Windows Authenticode reports `NotSigned`; SmartScreen warnings remain possible until production signing is configured.
+Per-platform checksum manifests are attached to the GitHub release. Windows Authenticode, Apple code signing/notarization, and Linux package signing are not configured; operating-system warnings remain possible.
 
 GameDeck does not bundle commercial games or copyrighted console firmware. BIOS-dependent systems continue to guide the user toward firmware they legally own.
 
@@ -142,13 +147,24 @@ The app now includes a first-class Discord community hub with direct routing to 
 
 The community hub was validated in the real Electron renderer at 1500, 1120, and 980 px. All actions remained visible, cards did not overlap, and neither the document nor body produced horizontal overflow.
 
-### 8. Tutorial and publication
+### 8. Tutorial, Shorts, and publication
 
-A 100.66-second, 1280×720 VP9/Opus tutorial was produced from real GameDeck UI states and the validated SF2 Remote Play session. It includes narration, a custom 1280×720 thumbnail, chapters, the GitHub repository link, and ownership/privacy guidance. YouTube reported **Checks complete. No issues found**, and the video was published publicly on August 2, 2026:
+A 100.66-second, 1280×720 VP9/Opus tutorial was produced from real GameDeck UI states and the validated SF2 Remote Play session. It includes narration, a custom 1280×720 thumbnail, chapters, repository links, and ownership/privacy guidance. YouTube reported **Checks complete. No issues found**.
 
-- `https://youtu.be/vY-fFVu2ClM`
+Verified YouTube surfaces:
 
-The GameDeck app header and README link directly to the tutorial. X and LinkedIn share composers were opened, but both services required login; no unapproved identity or new social account was created.
+- Channel: `https://www.youtube.com/@PlayGameDeck`
+- Tutorial: `https://youtu.be/vY-fFVu2ClM`
+- Launch trailer: `https://youtu.be/0nCHy9WsEpQ`
+- Public Short — one beautiful library: `https://youtube.com/shorts/ndETcPuCOyE`
+- Public Short — better than folders: `https://youtube.com/shorts/dOEuy8g8Bmw`
+- Scheduled Short — setup should explain itself: `https://youtube.com/shorts/ZZ-hHyyj5Lw`, August 3, 2026 at 12:00 PM Eastern
+- Start Here playlist: `https://www.youtube.com/playlist?list=PLG-ejeCsa-AI`
+- Shorts playlist: `https://www.youtube.com/playlist?list=PLCbffYifS8R8`
+
+The channel profile has a public GameDeck banner and avatar, canonical website/GitHub/Discord links, an enabled Home tab, public Videos/Shorts/Playlists shelves, and a watermark configured for the entire video. Every video description links internally to both playlists. YouTube one-time channel verification remains required before external description links and related-video controls become clickable.
+
+The public GameDeck site embeds both live Shorts and links to the playlists without behavioral click telemetry. Reddit remained unauthenticated behind a humanity challenge. TikTok Google sign-in reached the official age gate, which requires manual owner completion; no automation bypass or fabricated post was used. X and LinkedIn remained unauthenticated.
 
 ### 9. Security and privacy checks
 
@@ -159,22 +175,23 @@ The GameDeck app header and README link directly to the tutorial. X and LinkedIn
 - RetroArch input forwarding is localhost-only after the WebRTC channel reaches the host.
 - Commercial games and firmware are not bundled.
 - Removed games use the operating system Trash or Recycle Bin after confirmation.
-- Windows production signing remains an explicit release requirement.
+- Production signing and notarization remain explicit release requirements for desktop artifacts.
 
-## Known limitations and follow-up
-### Growth and share surface validation
+## Growth and distribution validation
 
-The Community screen now includes an opt-in share panel with feedback-first Reddit copy, short-form caption copy, tutorial routing, and GitHub routing. It was checked in the real Electron renderer at wide and minimum desktop widths with no horizontal overflow, hidden actions, or card collisions.
+The Community screen now includes an opt-in share panel with feedback-first Reddit copy, short-form caption copy, 30-second-tour playlist routing, and GitHub routing. It was checked in the real Electron renderer at wide and minimum desktop widths with no horizontal overflow, hidden actions, or card collisions.
 
 The repeatable short-form renderer produced a 30.00-second H.264/AAC master at 1080×1920, 30 fps, square pixels, with burned-in product messaging, an SRT caption file, and platform-ready caption copy. Generated media is stored under ignored `dist/social/` rather than committed to Git.
 
+## Known limitations and follow-up
 
 1. Configure a production Windows code-signing certificate and Apple notarization identity.
 2. Add a GameDeck-managed TURN fallback for restrictive NAT environments.
 3. Build and sign Android and iOS artifacts on their native toolchains.
 4. Continue Discord moderation setup, roles, rules, and onboarding as membership grows.
-5. Authenticate the intended X and LinkedIn identities before publishing there.
-6. Continue clean-VM installer coverage in CI for each desktop operating system.
+5. Complete Reddit authentication, the TikTok age gate, and YouTube one-time channel verification through the owner-controlled interfaces before using those gated features.
+6. Authenticate the intended X and LinkedIn identities before publishing there.
+7. Continue clean-VM installer coverage in CI for each desktop operating system.
 
 ## Reproduction commands
 
@@ -182,6 +199,8 @@ The repeatable short-form renderer produced a 30.00-second H.264/AAC master at 1
 npm test
 npm run pack
 npm run dist:win
+npm run video:short
+npm run video:campaign
 ```
 
 The Remote Play test uses two isolated Electron profiles and the installed SF2 test title. The formal report intentionally excludes passwords, full session codes, and persistent authentication tokens.

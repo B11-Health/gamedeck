@@ -2,6 +2,21 @@
 
 GameDeck should grow through proof, community participation, and visible product quality—not spam or manufactured engagement.
 
+## Verified launch state — August 2, 2026
+
+- Public website: https://b11-health.github.io/gamedeck/
+- Official v1.2.0 release: https://github.com/B11-Health/gamedeck/releases/tag/v1.2.0
+- YouTube channel: https://www.youtube.com/@PlayGameDeck
+- Start Here playlist: https://www.youtube.com/playlist?list=PLG-ejeCsa-AI
+- Shorts playlist: https://www.youtube.com/playlist?list=PLCbffYifS8R8
+- Public Shorts: https://youtube.com/shorts/ndETcPuCOyE and https://youtube.com/shorts/dOEuy8g8Bmw
+- Scheduled Short: https://youtube.com/shorts/ZZ-hHyyj5Lw — August 3, 2026 at 12:00 PM Eastern
+- YouTube branding: GameDeck banner and avatar are public; the video watermark is configured for the entire video.
+- Discord distribution: the v1.2 release is in #announcements and the Shorts campaign is in #showcase.
+- GitHub discussion: https://github.com/B11-Health/gamedeck/discussions/7
+
+Current blockers are explicit: Reddit remains unauthenticated behind a humanity challenge; TikTok requires manual completion of its age gate; YouTube requires one-time channel verification before external description links and related-video controls become clickable. Do not bypass these gates or invent completed posts.
+
 ## The growth loop
 
 1. A player sees a native 15–30 second clip showing the interface immediately.
@@ -32,7 +47,7 @@ Use native video or a gallery, disclose the builder relationship, read the curre
 
 ### YouTube
 
-Use the 100-second tutorial as the conversion asset and the 30-second vertical cut as discovery. Pin a comment asking which product area should improve first. Turn common questions into short follow-up videos rather than repeating promotional comments on unrelated channels.
+Use the Start Here playlist as the long-form conversion path and the Shorts playlist as discovery. Each video description should link to both internal playlists. Pin a feedback question only when the authenticated comments composer is available; never claim a comment was posted when YouTube exposes a signed-out or partial comments state. Turn common questions into follow-up videos rather than repeating promotional comments on unrelated channels.
 
 ### TikTok and Reels
 

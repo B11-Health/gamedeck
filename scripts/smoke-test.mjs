@@ -35,6 +35,11 @@ const [main, preload, renderer, html, styles, pkgText, donations, runtimeManager
 const pkg = JSON.parse(pkgText);
 const donationConfig = JSON.parse(donations);
 const managedRuntimeManifest = JSON.parse(runtimeManifest);
+const [e2eReportText, e2eResultText] = await Promise.all([
+  read('docs/E2E_REPORT_1.2.0.md'),
+  read('docs/e2e-results/GameDeck-1.2.0-2026-08-02.json')
+]);
+const e2eResult = JSON.parse(e2eResultText);
 
 for (const id of [
   'games',
@@ -147,7 +152,7 @@ for (const id of [
   'shareGameDeck',
   'copyRedditLaunch',
   'copyShortCaption',
-  'openTutorial',
+  'openShortsPlaylist',
   'openGithubStar',
   'netplayShareInvite',
   'netplayShareResponse',
@@ -189,8 +194,11 @@ if (/sendBeacon|\/events/.test(siteApp)) fail('public growth site must not add b
 if (!siteStyles.includes('.remote') || !siteStyles.includes('@media(max-width:760px)')) fail('public growth site responsive product sections are missing');
 if (!siteHtml.includes('ndETcPuCOyE') || !siteHtml.includes('dOEuy8g8Bmw') || !siteStyles.includes('.shorts-section') || !siteStyles.includes('.short-card')) fail('public Shorts discovery gallery is missing');
 if (!siteHtml.includes('PLCbffYifS8R8') || !siteHtml.includes('PLG-ejeCsa-AI')) fail('public YouTube playlist funnel is missing');
+if (e2eResult.releaseCommit !== '250bbd7bc3b929fe49205ee6c0695654426f49b2' || e2eResult.results?.windowsArtifacts?.setup?.sha256 !== '6677c63e871915d1dc001866d36255e126963bb3cc057be0c9c847af28ad0654' || !e2eReportText.includes('GameDeck-1.2.0-mac-universal.dmg')) fail('official v1.2.0 evidence is stale');
+if (e2eResult.results?.youtubeChannel?.branding?.watermark !== 'entire_video' || !e2eResult.results?.youtubeChannel?.publicShorts?.includes('https://youtube.com/shorts/dOEuy8g8Bmw')) fail('verified YouTube channel evidence is stale');
 
 if (!renderer.includes('https://youtu.be/vY-fFVu2ClM')) fail('published GameDeck tutorial link is missing');
+if (!renderer.includes('PLCbffYifS8R8') || !renderer.includes('PLG-ejeCsa-AI') || !renderer.includes('openShortsPlaylist')) fail('in-app YouTube playlist funnel is missing');
 if (renderer.includes("'Cinematic'")) fail('retired Cinematic header language must not return');
 if (!main.includes('configuredEmulator') || !main.includes("launchMode: 'mame'") || !main.includes("'-nowindow'")) fail('standalone MAME routing is missing');
 if (!main.includes("'.bs'")) fail('Satellaview .bs ROM support is missing');
