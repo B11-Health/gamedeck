@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://b11-health.github.io/gamedeck/sitemap.xml

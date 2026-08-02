@@ -7,6 +7,12 @@
 <p align="center"><strong>Your legally owned game library, presented like the main event.</strong></p>
 
 <p align="center">
+  <a href="https://b11-health.github.io/gamedeck/"><strong>Download GameDeck</strong></a> ·
+  <a href="https://youtu.be/0nCHy9WsEpQ">Watch the trailer</a> ·
+  <a href="https://github.com/B11-Health/gamedeck/discussions">Join the community</a>
+</p>
+
+<p align="center">
   <a href="https://github.com/B11-Health/gamedeck/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/B11-Health/gamedeck/actions/workflows/ci.yml/badge.svg"></a>
   <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-72e7ff"></a>
   <img alt="Windows, macOS, Linux" src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-9b8cff">
