@@ -119,7 +119,8 @@
       "extendInfo": {
         "NSAudioCaptureUsageDescription": "GameDeck can include game audio when you start a local GameDeck Live stream.",
         "NSLocalNetworkUsageDescription": "GameDeck shares gameplay directly with your paired devices on the local network."
-      }
+      },
+      "x64ArchFiles": "Contents/Resources/app.asar.unpacked/node_modules/7zip-bin/**"
     },
     "linux": {
       "icon": "build/icons",

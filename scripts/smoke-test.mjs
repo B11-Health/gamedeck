@@ -163,6 +163,7 @@ if (!netplayRenderer.includes('DISCORD_REMOTE_PLAY_URL') || !netplayRenderer.inc
 if (!html.includes('class="discord-community-hub"') || !styles.includes('.discord-channel-card')) fail('Discord community hub UI is missing');
 if (!html.includes('class="community-share"') || !renderer.includes('GAMEDECK_SHARE_COPY') || !styles.includes('.community-share-actions')) fail('community share loop is missing');
 if (!renderer.includes('Feedback-first Reddit launch copied') || !renderer.includes('#GameDeck #OpenSource')) fail('platform-ready share copy is missing');
+if (!pkg.build?.mac?.x64ArchFiles?.includes('node_modules/7zip-bin')) fail('macOS universal 7zip merge rule is missing');
 
 if (!renderer.includes('https://youtu.be/vY-fFVu2ClM')) fail('published GameDeck tutorial link is missing');
 if (renderer.includes("'Cinematic'")) fail('retired Cinematic header language must not return');
