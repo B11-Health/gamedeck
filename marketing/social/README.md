@@ -26,3 +26,8 @@ This produces two additional native-video angles in `dist/social/`: **Your colle
 - Never buy votes, comments, followers, reviews, or fake testimonials.
 - Do not post the same copy into many communities at once.
 - Use the permanent GitHub, tutorial, and Discord links; avoid opaque tracking links.
+
+## Published playlists
+
+- **GameDeck — Start Here:** https://www.youtube.com/playlist?list=PLG-ejeCsa-AI
+- **GameDeck Shorts:** https://www.youtube.com/playlist?list=PLCbffYifS8R8

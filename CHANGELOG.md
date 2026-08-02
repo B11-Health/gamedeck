@@ -4,6 +4,8 @@ All notable GameDeck releases are documented here.
 
 ## [Unreleased]
 
+- Created dedicated Start Here and Shorts playlists and connected the public site and README to dedicated YouTube playlists.
+
 - Added a responsive public Shorts gallery and a scheduled local-first discovery clip for the GameDeck 1.2 launch campaign.
 
 - Added a parallel, parameterized vertical-video campaign renderer with distinct folders and local-first growth angles.
