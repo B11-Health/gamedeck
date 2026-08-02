@@ -9,17 +9,20 @@ const fail = message => {
   process.exitCode = 1;
 };
 
-const [main, preload, renderer, html, styles, pkgText, donations] = await Promise.all([
+const [main, preload, renderer, html, styles, pkgText, donations, runtimeManager, runtimeManifest] = await Promise.all([
   read('main.js'),
   read('preload.js'),
   read('src/app.js'),
   read('src/index.html'),
   read('src/styles.css'),
   read('package.json'),
-  read('config/donations.json')
+  read('config/donations.json'),
+  read('runtime-manager.js'),
+  read('config/runtime-manifest.json')
 ]);
 const pkg = JSON.parse(pkgText);
 const donationConfig = JSON.parse(donations);
+const managedRuntimeManifest = JSON.parse(runtimeManifest);
 
 for (const id of [
   'games',
@@ -102,6 +105,13 @@ if (!main.includes("'.bs'")) fail('Satellaview .bs ROM support is missing');
 if (!main.includes('catalogFileIdentities') || !main.includes('installedCatalogFile')) fail('catalog path identity matching is missing');
 if (!main.includes('inspectArcadeArchive') || !renderer.includes('renderArcadeDeck')) fail('arcade health diagnostics are missing');
 if (!preload.includes('onArcadeAudit')) fail('arcade audit progress bridge is missing');
+if (!main.includes('createRuntimeManager') || !main.includes('queueManagedRuntimeLaunch')) fail('managed runtime launch recovery is missing');
+if (!preload.includes('ensureRuntime') || !preload.includes('onRuntime')) fail('managed runtime preload bridge is missing');
+if (!renderer.includes('Preparing game engines') || !renderer.includes('window.deck.ensureRuntime')) fail('first-run runtime setup UI is missing');
+if (!runtimeManager.includes('AbortSignal.timeout') || !runtimeManager.includes('content-range') || !runtimeManager.includes('SHA-256')) fail('managed runtime download safety or resume support is missing');
+if (!managedRuntimeManifest.platforms?.['win32-x64'] || !managedRuntimeManifest.platforms?.['linux-x64'] || !managedRuntimeManifest.platforms?.['darwin-arm64']) fail('runtime manifest is missing a supported desktop platform');
+if (!pkg.build?.files?.includes('runtime-manager.js') || !pkg.build?.asarUnpack?.some(value => value.includes('7zip-bin'))) fail('managed runtime packaging configuration is missing');
+
 
 if (/C:\\\\Users\\\\[^'"\s]+/i.test(main)) fail('main.js contains a personal Windows user path');
 if (!renderer.includes("'community'")) fail('renderer view cycle is missing Community');

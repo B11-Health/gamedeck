@@ -4,6 +4,10 @@ All notable GameDeck releases are documented here.
 
 ## [Unreleased]
 
+- Added a managed first-run runtime that installs RetroArch and compatible cores on Windows, macOS, and Linux.
+- Added resumable official-source downloads, SHA-256 verification/pinning, GameDeck-owned save/system paths, progress events, and automatic launch retry.
+- Added RetroArch fallback routes for PlayStation, PlayStation 2, PSP, GameCube, and Wii when standalone emulators are unavailable.
+
 - Added a one-click launch doctor that installs missing shared arcade dependencies, validates available routes, and automatically resumes the original launch.
 
 - Added managed repair-on-play for damaged arcade archives with an exact RGSX source, including re-audit and automatic relaunch.

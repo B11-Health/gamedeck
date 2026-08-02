@@ -5,12 +5,15 @@ const os = require('os');
 const crypto = require('crypto');
 const { spawn, spawnSync } = require('child_process');
 const { pathToFileURL } = require('url');
+const { createRuntimeManager, pathsFor: managedRuntimePathsFor } = require('./runtime-manager');
 
 if (process.platform === 'win32') app.setAppUserModelId('io.gamedeck.launcher');
 
 const HOME_DIR = os.homedir();
 const DOCUMENTS_DIR = app.getPath('documents');
 const SETTINGS_FILE = path.join(app.getPath('userData'), 'settings.json');
+const MANAGED_RUNTIME_ROOT = path.join(app.getPath('userData'), 'runtime');
+const MANAGED_RUNTIME_PATHS = managedRuntimePathsFor(MANAGED_RUNTIME_ROOT, process.platform);
 
 function firstExisting(candidates, fallback = '') {
   return candidates.filter(Boolean).find(candidate => fs.existsSync(candidate)) || fallback;
@@ -261,11 +264,11 @@ const systems = [
   { id: 'atari2600', name: 'Atari 2600', short: 'ATARI', color: '#f59e0b', folders: ['atari2600'], exts: ['.a26', '.bin', '.zip'], core: coreFile('stella_libretro'), icon: 'A' },
   { id: 'arcade', name: 'FinalBurn Neo', short: 'FBNEO', color: '#ec4899', folders: ['fbneo', 'neogeo'], exts: ['.zip', '.7z'], core: coreFile('fbneo_libretro'), icon: 'FB' },
   { id: 'mame', name: 'MAME', short: 'MAME', color: '#f43f8f', folders: ['mame', 'arcade'], exts: ['.zip', '.7z'], core: coreFile('mame_libretro'), exe: emulatorPaths.mame, preferExe: true, launchMode: 'mame', icon: 'M' },
-  { id: 'ps1', name: 'PlayStation', short: 'PS1', color: '#94a3b8', folders: ['psx', 'ps1'], exts: ['.cue', '.chd', '.pbp'], exe: emulatorPaths.duckstation, args: ['-batch', '-fullscreen'], biosPattern: /^scph[a-z0-9_-]*\.(?:bin|rom)$/i, biosHint: 'a BIOS file named like scph1001.bin or scph5500.rom', biosDirs: [path.join(localAppData, 'DuckStation', 'bios'), path.join(applicationSupport, 'DuckStation', 'bios'), path.join(HOME_DIR, '.local', 'share', 'duckstation', 'bios'), path.join(RGSX_ROOT, 'roms', 'bios')], icon: 'PS' },
-  { id: 'ps2', name: 'PlayStation 2', short: 'PS2', color: '#3b82f6', folders: ['ps2'], exts: ['.iso', '.chd'], exe: emulatorPaths.pcsx2, args: ['-fullscreen', '-batch', '--'], biosPattern: /^scph[a-z0-9_-]*\.(?:bin|rom)$/i, biosHint: 'a BIOS file named like scph39001.bin or scph70012.rom', biosDirs: [path.join(DOCUMENTS_DIR, 'PCSX2', 'bios'), path.join(applicationSupport, 'PCSX2', 'bios'), path.join(HOME_DIR, '.config', 'PCSX2', 'bios'), path.join(HOME_DIR, '.local', 'share', 'PCSX2', 'bios'), path.join(RGSX_ROOT, 'roms', 'bios')], icon: 'P2' },
-  { id: 'psp', name: 'PlayStation Portable', short: 'PSP', color: '#06b6d4', folders: ['psp'], exts: ['.iso', '.cso', '.pbp'], exe: emulatorPaths.ppsspp, icon: 'PP' },
-  { id: 'gamecube', name: 'Nintendo GameCube', short: 'GAMECUBE', color: '#7c3aed', folders: ['gamecube'], exts: ['.iso', '.gcm', '.rvz'], exe: emulatorPaths.dolphin, args: ['-b', '-e'], icon: 'GC' },
-  { id: 'wii', name: 'Nintendo Wii', short: 'WII', color: '#0ea5e9', folders: ['wii'], exts: ['.wbfs', '.rvz'], exe: emulatorPaths.dolphin, args: ['-b', '-e'], icon: 'W' },
+  { id: 'ps1', name: 'PlayStation', short: 'PS1', color: '#94a3b8', folders: ['psx', 'ps1'], exts: ['.cue', '.chd', '.pbp'], core: coreFile('pcsx_rearmed_libretro'), exe: emulatorPaths.duckstation, preferExe: true, args: ['-batch', '-fullscreen'], biosPattern: /^scph[a-z0-9_-]*\.(?:bin|rom)$/i, biosHint: 'a BIOS file named like scph1001.bin or scph5500.rom', biosDirs: [path.join(localAppData, 'DuckStation', 'bios'), path.join(applicationSupport, 'DuckStation', 'bios'), path.join(HOME_DIR, '.local', 'share', 'duckstation', 'bios'), path.join(RGSX_ROOT, 'roms', 'bios')], icon: 'PS' },
+  { id: 'ps2', name: 'PlayStation 2', short: 'PS2', color: '#3b82f6', folders: ['ps2'], exts: ['.iso', '.chd'], core: coreFile('play_libretro'), exe: emulatorPaths.pcsx2, preferExe: true, args: ['-fullscreen', '-batch', '--'], biosPattern: /^scph[a-z0-9_-]*\.(?:bin|rom)$/i, biosHint: 'a BIOS file named like scph39001.bin or scph70012.rom', biosDirs: [path.join(DOCUMENTS_DIR, 'PCSX2', 'bios'), path.join(applicationSupport, 'PCSX2', 'bios'), path.join(HOME_DIR, '.config', 'PCSX2', 'bios'), path.join(HOME_DIR, '.local', 'share', 'PCSX2', 'bios'), path.join(RGSX_ROOT, 'roms', 'bios')], icon: 'P2' },
+  { id: 'psp', name: 'PlayStation Portable', short: 'PSP', color: '#06b6d4', folders: ['psp'], exts: ['.iso', '.cso', '.pbp'], core: coreFile('ppsspp_libretro'), exe: emulatorPaths.ppsspp, preferExe: true, icon: 'PP' },
+  { id: 'gamecube', name: 'Nintendo GameCube', short: 'GAMECUBE', color: '#7c3aed', folders: ['gamecube'], exts: ['.iso', '.gcm', '.rvz'], core: coreFile('dolphin_libretro'), exe: emulatorPaths.dolphin, preferExe: true, args: ['-b', '-e'], icon: 'GC' },
+  { id: 'wii', name: 'Nintendo Wii', short: 'WII', color: '#0ea5e9', folders: ['wii'], exts: ['.wbfs', '.rvz'], core: coreFile('dolphin_libretro'), exe: emulatorPaths.dolphin, preferExe: true, args: ['-b', '-e'], icon: 'W' },
   { id: 'wiiu', name: 'Nintendo Wii U', short: 'WII U', color: '#00a2e8', folders: ['wiiu'], exts: ['.wud', '.wux', '.rpx'], exe: emulatorPaths.cemu, args: ['-f', '-g'], icon: 'WU' }
 ];
 
@@ -298,6 +301,18 @@ let arcadeAuditTask = null;
 let controllerHintsCache = null;
 const mameMetadataCache = new Map();
 const firmwareInventoryCache = new Map();
+let runtimeManager = null;
+function emitRuntime(update) {
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('runtime-update', update);
+}
+function managedRuntimeStatus() {
+  return runtimeManager ? runtimeManager.status() : { supported: false, ready: false, installing: false, phase: 'idle', progress: 0, message: 'Runtime manager is starting.' };
+}
+function ensureManagedRuntime(options = {}) {
+  if (!runtimeManager) return Promise.resolve(managedRuntimeStatus());
+  return runtimeManager.ensure(options);
+}
+
 const arcadeAuditCache = readJson(ARCADE_AUDIT_FILE, { version: 1, entries: {}, updatedAt: 0 });
 if (!arcadeAuditCache.entries || typeof arcadeAuditCache.entries !== 'object') arcadeAuditCache.entries = {};
 
@@ -1062,6 +1077,14 @@ function addActivity(level, message, taskId = null) {
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('activity', entry);
 }
 
+runtimeManager = createRuntimeManager({
+  root: MANAGED_RUNTIME_ROOT,
+  manifestPath: path.join(__dirname, 'config', 'runtime-manifest.json'),
+  appVersion: app.getVersion(),
+  onUpdate: emitRuntime,
+  onLog: addActivity
+});
+
 function emitDownload(job) {
   if (!job || !mainWindow || mainWindow.isDestroyed()) return;
   mainWindow.webContents.send('download-update', { ...job });
@@ -1300,6 +1323,24 @@ function selectLaunchEmulator(system, game) {
   return preferred;
 }
 
+function queueManagedRuntimeLaunch(file, system) {
+  const snapshot = managedRuntimeStatus();
+  if (!runtimeManager?.canInstall) return null;
+  const taskId = 'runtime-' + Date.now() + '-' + Math.random().toString(16).slice(2);
+  const message = 'Installing GameDeck game engines for ' + system.name + '. The game will open automatically.';
+  registerPendingLaunch(taskId, file, message);
+  addActivity('info', message, taskId);
+  ensureManagedRuntime().then(result => {
+    if (result?.ready) {
+      addActivity('success', 'GameDeck game engines installed.', taskId);
+      completePendingLaunch(taskId, true);
+    } else {
+      completePendingLaunch(taskId, false, result?.error || result?.message || 'Game engine installation failed.');
+    }
+  }).catch(error => completePendingLaunch(taskId, false, error.message));
+  return { queued: true, taskId, message, runtime: snapshot };
+}
+
 function launchGame(file, options = {}) {
   const safeFile = safeLibraryFile(file);
   const system = detectSystem(safeFile);
@@ -1341,7 +1382,8 @@ function launchGame(file, options = {}) {
   let args;
   if (emulator.kind === 'libretro') {
     const controllerConfig = isArcadeSystem(system) ? ensureRetroArchArcadeControllerConfig() : '';
-    args = ['-f', ...(controllerConfig ? ['--appendconfig=' + controllerConfig] : []), '-L', emulator.corePath, safeFile];
+    const managedConfig = emulator.executable === MANAGED_RUNTIME_PATHS.retroArch && fs.existsSync(MANAGED_RUNTIME_PATHS.config) ? ['--config', MANAGED_RUNTIME_PATHS.config] : [];
+    args = ['-f', ...managedConfig, ...(controllerConfig ? ['--appendconfig=' + controllerConfig] : []), '-L', emulator.corePath, safeFile];
   } else if (emulator.kind === 'mame') {
     args = [game.shortName, '-rompath', mameRomSearchPath(safeFile), '-joystick', ...(process.platform === 'win32' ? ['-joystickprovider', 'winhybrid'] : []), '-skip_gameinfo', '-noconfirm_quit', '-nowindow'];
   } else {
@@ -2281,6 +2323,7 @@ function diagnostics(includeLibrary = true) {
     artworkCoverage: library.games.length ? Math.round((artworkCount / library.games.length) * 1000) / 10 : 0,
     rgsxData: RGSX_DATA,
     rgsxRuntime: fs.existsSync(RGSX_PYTHON),
+    managedRuntime: managedRuntimeStatus(),
     retroarch: fs.existsSync(RA),
     mame: Boolean(MAME && fs.existsSync(MAME)),
     archiveInspector: Boolean(SEVEN_ZIP && fs.existsSync(SEVEN_ZIP)),
@@ -2400,6 +2443,8 @@ ipcMain.handle('game-details', (_, title, systemId, context) => fetchGameDetails
 ipcMain.handle('refresh-game-details', (_, title, systemId, context) => refreshGameDetails(title, systemId, context));
 ipcMain.handle('choose-game-artwork', (_, file) => chooseGameArtwork(file));
 ipcMain.handle('diagnostics', (_, includeLibrary) => diagnostics(includeLibrary !== false));
+ipcMain.handle('runtime-status', () => managedRuntimeStatus());
+ipcMain.handle('ensure-runtime', (_, force) => ensureManagedRuntime({ force: Boolean(force) }));
 ipcMain.handle('arcade-audit', (_, force) => auditArcadeLibrary(Boolean(force)));
 ipcMain.handle('settings', () => publicSettings());
 ipcMain.handle('inspect-settings', (_, changes) => inspectSettings(changes || {}));

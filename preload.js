@@ -16,6 +16,8 @@ contextBridge.exposeInMainWorld('deck', {
   refreshGameDetails: (title, systemId, context) => ipcRenderer.invoke('refresh-game-details', title, systemId, context),
   chooseGameArtwork: file => ipcRenderer.invoke('choose-game-artwork', file),
   diagnostics: (includeLibrary = false) => ipcRenderer.invoke('diagnostics', includeLibrary),
+  runtimeStatus: () => ipcRenderer.invoke('runtime-status'),
+  ensureRuntime: force => ipcRenderer.invoke('ensure-runtime', Boolean(force)),
   arcadeAudit: force => ipcRenderer.invoke('arcade-audit', Boolean(force)),
   settings: () => ipcRenderer.invoke('settings'),
   inspectSettings: changes => ipcRenderer.invoke('inspect-settings', changes),
@@ -27,6 +29,11 @@ contextBridge.exposeInMainWorld('deck', {
   openExternal: target => ipcRenderer.invoke('open-external', target),
   restartApp: () => ipcRenderer.invoke('restart-app'),
   clearActivity: () => ipcRenderer.invoke('clear-activity'),
+  onRuntime: callback => {
+    const listener = (_, update) => callback(update);
+    ipcRenderer.on('runtime-update', listener);
+    return () => ipcRenderer.removeListener('runtime-update', listener);
+  },
   onLaunch: callback => {
     const listener = (_, update) => callback(update);
     ipcRenderer.on('launch-update', listener);

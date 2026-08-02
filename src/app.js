@@ -2615,6 +2615,20 @@ window.deck.onArcadeAudit(progress => {
   if (progress.items) applyArcadeAudit(progress);
   renderArcadeDeck();
 });
+window.deck.onRuntime(update => {
+  state.runtime = update;
+  if (update.phase === 'downloading' || update.phase === 'verifying' || update.phase === 'installing' || update.phase === 'preparing') {
+    const progress = Math.max(8, Math.min(92, Number(update.progress || 0)));
+    setLoading(true, 'Preparing game engines', update.message || 'Installing the components GameDeck needs.', progress);
+  } else if (update.phase === 'ready') {
+    setLoading(false);
+    toast(update.message || 'Game engines are ready.', 'success');
+  } else if (update.phase === 'error') {
+    setLoading(false);
+    toast(update.message || 'Game engine setup failed.', 'warning');
+  }
+});
+
 window.deck.onLaunch(update => {
   const game = state.library.games.find(item => item.file === update.file);
   if (update.status === 'repairing') {
@@ -2673,6 +2687,14 @@ async function init() {
   $('#gameSort').value = state.sort;
   setLoading(true, 'Opening your deck', 'Checking local launchers and active transfers.', 10);
   await refreshDiagnostics();
+  state.runtime = state.diagnostics?.managedRuntime || await window.deck.runtimeStatus();
+  if (!state.diagnostics?.retroarch && state.runtime?.supported) {
+    setLoading(true, 'Preparing game engines', 'Installing RetroArch and compatible game engines for this device.', 14);
+    const runtimeResult = await window.deck.ensureRuntime(false);
+    state.runtime = runtimeResult;
+    await refreshDiagnostics();
+    if (!runtimeResult?.ready) toast(runtimeResult?.message || 'Game engines need attention.', 'warning');
+  }
   setLoading(true, 'Reading your library', 'Organizing installed games, favorites, and recent plays.', 38);
   await loadLibrary(true);
   setLoading(true, 'Building the shelves', 'Preparing cover art, descriptions, and console groups.', 72);

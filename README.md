@@ -82,6 +82,13 @@ Download the appropriate artifact from [Releases](https://github.com/B11-Health/
 
 Early unsigned builds may trigger operating-system warnings. Production signing and Apple notarization are tracked in the [release guide](docs/CROSS_PLATFORM.md).
 
+### First-run game engines
+
+On a clean supported desktop, GameDeck now installs its own managed RetroArch runtime and compatible core bundle from the official Libretro build service. Downloads use HTTPS allowlisting, resumable partial files, SHA-256 verification/pinning, and GameDeck-owned system, save, and state directories. A launch that discovers a missing engine starts setup and automatically retries the selected game when installation finishes.
+
+GameDeck never bundles commercial games or copyrighted console firmware. BIOS-dependent systems still guide the user to import firmware they legally own. Standalone emulators remain preferred when already installed, with managed RetroArch fallbacks for supported systems. Wii U remains dependent on a separately installed compatible emulator.
+
+
 ## Development
 
 Requirements: Node.js 20 or newer, npm, and at least one supported emulator.

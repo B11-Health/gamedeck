@@ -49,6 +49,7 @@
     "files": [
       "main.js",
       "preload.js",
+      "runtime-manager.js",
       "src/**/*",
       "assets/**/*",
       "config/**/*",
@@ -61,8 +62,18 @@
     "win": {
       "icon": "build/icon.ico",
       "target": [
-        { "target": "nsis", "arch": ["x64"] },
-        { "target": "portable", "arch": ["x64"] }
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
       ]
     },
     "nsis": {
@@ -80,8 +91,18 @@
       "icon": "build/icon.icns",
       "category": "public.app-category.games",
       "target": [
-        { "target": "dmg", "arch": ["universal"] },
-        { "target": "zip", "arch": ["universal"] }
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "universal"
+          ]
+        }
       ]
     },
     "linux": {
@@ -91,8 +112,18 @@
       "syncDesktopName": true,
       "synopsis": "Local-first game library launcher",
       "target": [
-        { "target": "AppImage", "arch": ["x64"] },
-        { "target": "deb", "arch": ["x64"] }
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        }
       ]
     },
     "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
@@ -101,6 +132,12 @@
       "owner": "B11-Health",
       "repo": "gamedeck",
       "releaseType": "release"
-    }
+    },
+    "asarUnpack": [
+      "node_modules/7zip-bin/**/*"
+    ]
+  },
+  "dependencies": {
+    "7zip-bin": "^5.2.0"
   }
 }
