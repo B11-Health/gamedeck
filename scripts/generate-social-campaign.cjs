@@ -19,6 +19,18 @@ const campaigns = [
     copy: 'Your game collection deserves better than folders. GameDeck turns the games you legally own into one cinematic, controller-first library across Windows, macOS, and Linux. No ROMs included.'
   },
   {
+    slug: 'Play-Together', start: '20',
+    headline: 'THREE WAYS TO PLAY TOGETHER.',
+    messages: [
+      'COUCH PLAY ON ONE SCREEN.',
+      'SYNCHRONIZED NETPLAY FOR MATCHING SETUPS.',
+      'REMOTE PLAY: ONLY THE HOST NEEDS THE GAME.',
+      'ENCRYPTED INPUT. NATIVE PLAYER SLOTS.',
+      'PLAY TOGETHER WITH GAMEDECK 1.2'
+    ],
+    copy: 'Three ways to play together: couch multiplayer, synchronized netplay, and encrypted Remote Play Together where only the host needs the game. GameDeck is open source and built for legally owned collections.'
+  },
+  {
     slug: 'Local-First', start: '34',
     headline: 'SETUP SHOULD EXPLAIN ITSELF.',
     messages: [
