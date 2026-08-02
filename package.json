@@ -35,8 +35,8 @@
     "video:youtube": "node scripts/generate-youtube-video.cjs",
     "video:capture-motion": "node scripts/capture-social-trailer.cjs",
     "video:render-motion": "node scripts/render-social-launch.cjs",
-    "video:motion": "npm run video:capture-motion && npm run video:render-motion"
-
+    "video:motion": "npm run video:capture-motion && npm run video:render-motion",
+    "video:short": "node scripts/generate-social-short.cjs"
   },
   "devDependencies": {
     "electron": "^43.2.0",
@@ -120,7 +120,6 @@
         "NSAudioCaptureUsageDescription": "GameDeck can include game audio when you start a local GameDeck Live stream.",
         "NSLocalNetworkUsageDescription": "GameDeck shares gameplay directly with your paired devices on the local network."
       }
-
     },
     "linux": {
       "icon": "build/icons",

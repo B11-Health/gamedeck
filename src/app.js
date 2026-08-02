@@ -2,6 +2,14 @@ const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
 
 const GAME_SORTS = new Set(['title', 'recent', 'system', 'size']);
+const GAMEDECK_LINKS = Object.freeze({
+  github: 'https://github.com/B11-Health/gamedeck',
+  tutorial: 'https://youtu.be/vY-fFVu2ClM'
+});
+const GAMEDECK_SHARE_COPY = Object.freeze({
+  reddit: `I built GameDeck because my legally owned game library had become a maze of launchers, emulator folders, and inconsistent controller setup. It is an open-source, local-first desktop app that turns the collection into one controller-friendly library and now includes GameDeck Live plus encrypted Remote Play Together.\n\nI would value blunt feedback on setup clarity, controller navigation, and the Remote Play flow—not just stars.\n\nSource: ${GAMEDECK_LINKS.github}\n100-second walkthrough: ${GAMEDECK_LINKS.tutorial}`,
+  short: `One install. One beautiful game library. GameDeck is open source, local first, controller friendly, and now supports encrypted Remote Play Together. No ROMs included.\n\n${GAMEDECK_LINKS.github}\n\n#GameDeck #OpenSource #RetroGaming #PCGaming #RemotePlay`
+});
 const DISCORD_COMMUNITY = Object.freeze({
   invite: 'https://discord.gg/eS7d4VqTT',
   general: 'https://discord.com/channels/1533539059207504093/1533539060361203774',
@@ -2659,7 +2667,7 @@ $('#transferDismissFinished').onclick = async () => {
   toast('Finished transfers dismissed');
 };
 
-$('#openGithub').onclick = () => openCommunityLink('https://github.com/B11-Health/gamedeck');
+$('#openGithub').onclick = () => openCommunityLink(GAMEDECK_LINKS.github);
 $('#openDiscord').onclick = () => openCommunityLink(DISCORD_COMMUNITY.invite);
 $('#openDiscordPlayers').onclick = () => openCommunityLink(DISCORD_COMMUNITY.remotePlay);
 $('#openDiscordAnnouncements').onclick = () => openCommunityLink(DISCORD_COMMUNITY.announcements);
@@ -2671,6 +2679,24 @@ $('#copyDiscordInvite').onclick = async () => {
   toast('GameDeck community invite copied');
   setTimeout(() => { if ($('#copyDiscordInvite')) $('#copyDiscordInvite').textContent = 'Copy community invite'; }, 1800);
 };
+async function copyShareText(button, value, successLabel, toastLabel) {
+  await window.deck.copyText(value);
+  const label = button.querySelector('b');
+  const original = label?.textContent || button.textContent;
+  if (label) label.textContent = successLabel;
+  else button.textContent = successLabel;
+  toast(toastLabel);
+  setTimeout(() => {
+    if (!button.isConnected) return;
+    const currentLabel = button.querySelector('b');
+    if (currentLabel) currentLabel.textContent = original;
+    else button.textContent = original;
+  }, 1800);
+}
+$('#copyRedditLaunch').onclick = () => copyShareText($('#copyRedditLaunch'), GAMEDECK_SHARE_COPY.reddit, 'Reddit post copied', 'Feedback-first Reddit launch copied');
+$('#copyShortCaption').onclick = () => copyShareText($('#copyShortCaption'), GAMEDECK_SHARE_COPY.short, 'Caption copied', 'Short-form caption copied');
+$('#openTutorial').onclick = () => openCommunityLink(GAMEDECK_LINKS.tutorial);
+$('#openGithubStar').onclick = () => openCommunityLink(GAMEDECK_LINKS.github);
 $('#openContributing').onclick = () => openCommunityLink('https://github.com/B11-Health/gamedeck/blob/main/CONTRIBUTING.md');
 $('#openArcadeGuide').onclick = () => openCommunityLink('https://github.com/B11-Health/gamedeck/blob/main/docs/ARCADE.md');
 $('#openArcadeFeedback').onclick = () => openCommunityLink('https://github.com/B11-Health/gamedeck/issues/new/choose');

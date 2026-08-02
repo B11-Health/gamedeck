@@ -4875,3 +4875,27 @@ body.input-controller .catalog-game.active {
 .netplay-controller-guide b { color: #9ce7bb; font-size: 11px; white-space: nowrap; }
 .netplay-controller-guide span { color: #7e8999; font-size: 10px; line-height: 1.45; }
 .netplay-invite-input textarea { min-height: 86px; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 9px; }
+
+.community-share {
+  display: grid;
+  grid-template-columns: minmax(280px, .82fr) minmax(0, 1.18fr);
+  align-items: center;
+  gap: 24px;
+  padding: 26px 28px;
+  border: 1px solid #72e7ff35;
+  border-radius: 22px;
+  background: radial-gradient(circle at 8% 50%, #72e7ff15, transparent 36%), linear-gradient(135deg, #101923, #0a1018 72%);
+  box-shadow: inset 0 1px #ffffff0d, 0 18px 50px #0004;
+}
+.community-share-copy .card-kicker { margin: 0 0 9px; color: #72e7ff; }
+.community-share-copy h2 { margin: 0; font: 650 clamp(23px, 2.5vw, 34px)/1.08 'Space Grotesk'; letter-spacing: -.9px; }
+.community-share-copy p { max-width: 62ch; margin: 11px 0 0; color: #909dae; font-size: 10px; line-height: 1.62; }
+.community-share-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.community-share-actions button { min-width: 0; min-height: 68px; display: grid; align-content: center; gap: 5px; padding: 12px 15px; border: 1px solid #344255; border-radius: 15px; color: #edf4ff; background: #111925; text-align: left; cursor: pointer; transition: transform .18s ease, border-color .18s ease, background .18s ease; }
+.community-share-actions button:hover { transform: translateY(-1px); border-color: #72e7ff75; background: #152131; }
+.community-share-actions button.primary { color: #071016; border-color: #72e7ff; background: linear-gradient(135deg, #72e7ff, #9b8cff); }
+.community-share-actions button b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; }
+.community-share-actions button small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #7f8b9c; font-size: 8px; }
+.community-share-actions button.primary small { color: #182334; }
+@media (max-width: 980px) { .community-share { grid-template-columns: 1fr; } }
+@media (max-width: 620px) { .community-share-actions { grid-template-columns: 1fr; } }

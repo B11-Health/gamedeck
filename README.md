@@ -143,6 +143,7 @@ Environment overrides are also supported: `GAMEDECK_LIBRARY`, `GAMEDECK_RGSX_ROO
 ## Community
 
 - Join the official [GameDeck Discord community](https://discord.gg/eS7d4VqTT) for Remote Play sessions, support, announcements, and showcases.
+- Use the [growth playbook](docs/GROWTH_PLAYBOOK.md) and [platform-ready social kit](marketing/social/README.md) for respectful, evidence-led community outreach.
 - GameDeck links directly to `#remote-play`, `#support`, `#announcements`, and `#showcase` from the Community screen. See the [Discord community playbook](docs/DISCORD_COMMUNITY.md).
 - Remote Play can prepare a Discord-safe, paste-ready invite or response and open `#remote-play` without exposing ROMs, firmware, or save files.
 - Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.

@@ -162,6 +162,12 @@ The GameDeck app header and README link directly to the tutorial. X and LinkedIn
 - Windows production signing remains an explicit release requirement.
 
 ## Known limitations and follow-up
+### Growth and share surface validation
+
+The Community screen now includes an opt-in share panel with feedback-first Reddit copy, short-form caption copy, tutorial routing, and GitHub routing. It was checked in the real Electron renderer at wide and minimum desktop widths with no horizontal overflow, hidden actions, or card collisions.
+
+The repeatable short-form renderer produced a 30.00-second H.264/AAC master at 1080×1920, 30 fps, square pixels, with burned-in product messaging, an SRT caption file, and platform-ready caption copy. Generated media is stored under ignored `dist/social/` rather than committed to Git.
+
 
 1. Configure a production Windows code-signing certificate and Apple notarization identity.
 2. Add a GameDeck-managed TURN fallback for restrictive NAT environments.

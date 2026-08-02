@@ -125,6 +125,11 @@ for (const id of [
   'openDiscordAnnouncements',
   'openDiscordSupport',
   'openDiscordShowcase',
+  'shareGameDeck',
+  'copyRedditLaunch',
+  'copyShortCaption',
+  'openTutorial',
+  'openGithubStar',
   'netplayShareInvite',
   'netplayShareResponse',
   'gameSort',
@@ -156,6 +161,8 @@ if (!renderer.includes('https://discord.gg/eS7d4VqTT') || !html.includes('id="op
 if (!renderer.includes('DISCORD_COMMUNITY') || !renderer.includes('1533539469372821555')) fail('Discord channel routing is missing');
 if (!netplayRenderer.includes('DISCORD_REMOTE_PLAY_URL') || !netplayRenderer.includes('message.length <= 2000')) fail('Discord-safe Remote Play sharing is missing');
 if (!html.includes('class="discord-community-hub"') || !styles.includes('.discord-channel-card')) fail('Discord community hub UI is missing');
+if (!html.includes('class="community-share"') || !renderer.includes('GAMEDECK_SHARE_COPY') || !styles.includes('.community-share-actions')) fail('community share loop is missing');
+if (!renderer.includes('Feedback-first Reddit launch copied') || !renderer.includes('#GameDeck #OpenSource')) fail('platform-ready share copy is missing');
 
 if (!renderer.includes('https://youtu.be/vY-fFVu2ClM')) fail('published GameDeck tutorial link is missing');
 if (renderer.includes("'Cinematic'")) fail('retired Cinematic header language must not return');
