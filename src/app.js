@@ -67,7 +67,7 @@ const state = {
   transferExpanded: false,
   catalogLimit: 120,
   sort: GAME_SORTS.has(savedSort) ? savedSort : 'title',
-  density: readPreference('density', 'compact') === 'cinematic' ? 'cinematic' : 'compact',
+  density: 'compact',
   sidebarCollapsed: readPreference('sidebar', 'expanded') === 'collapsed'
 };
 
@@ -116,21 +116,11 @@ function applyLayoutPreferences(announce = false) {
   const compact = state.density === 'compact';
   document.body.classList.toggle('density-compact', compact);
   document.body.classList.toggle('sidebar-collapsed', state.sidebarCollapsed);
-  $('#densityLabel').textContent = 'Cinematic';
-  $('#densityToggle').setAttribute('aria-pressed', String(!compact));
-  $('#densityToggle').setAttribute('aria-label', compact ? 'Enable cinematic view' : 'Disable cinematic view');
-  $('#densityToggle').title = `${compact ? 'Enable' : 'Disable'} cinematic view (Ctrl+Shift+D)`;
   $('#sidebarToggle').setAttribute('aria-pressed', String(!state.sidebarCollapsed));
   $('#sidebarToggle').setAttribute('aria-label', state.sidebarCollapsed ? 'Expand systems rail' : 'Collapse systems rail');
   $('#sidebarToggle').title = `${state.sidebarCollapsed ? 'Expand' : 'Collapse'} systems rail (Ctrl+B)`;
-  if (announce) toast(`${compact ? 'Compact' : 'Cinematic'} view · systems ${state.sidebarCollapsed ? 'collapsed' : 'expanded'}`);
+  if (announce) toast(`${compact ? 'Compact' : 'Comfortable'} layout · systems ${state.sidebarCollapsed ? 'collapsed' : 'expanded'}`);
   requestAnimationFrame(observeVisibleArtwork);
-}
-
-function toggleDensity() {
-  state.density = state.density === 'compact' ? 'cinematic' : 'compact';
-  writePreference('density', state.density);
-  applyLayoutPreferences(true);
 }
 
 function toggleSidebar() {
@@ -1924,6 +1914,7 @@ function renderHeroActions(selected) {
 
 function render() {
   renderSystems();
+  window.renderHeaderOps?.();
   setActiveView(state.view);
   const discover = state.view === 'discover';
   const community = state.view === 'community';
@@ -2485,7 +2476,37 @@ $('#setupPrimary').onclick = async event => {
 $('#setupCheck').onclick = () => runReadyCheck();
 $('#surpriseMe').onclick = () => surpriseMe();
 $('#sidebarToggle').onclick = toggleSidebar;
-$('#densityToggle').onclick = toggleDensity;
+const headerMenuToggle = $('#headerMenuToggle');
+const headerMenu = $('#headerMenu');
+function closeHeaderMenu() {
+  if (!headerMenu || !headerMenuToggle) return;
+  headerMenu.classList.add('hidden');
+  headerMenuToggle.setAttribute('aria-expanded', 'false');
+}
+function toggleHeaderMenu() {
+  if (!headerMenu || !headerMenuToggle) return;
+  const opening = headerMenu.classList.contains('hidden');
+  headerMenu.classList.toggle('hidden', !opening);
+  headerMenuToggle.setAttribute('aria-expanded', String(opening));
+  if (opening) headerMenu.querySelector('button')?.focus({ preventScroll: true });
+}
+headerMenuToggle.onclick = event => {
+  event.stopPropagation();
+  toggleHeaderMenu();
+};
+headerMenu.addEventListener('click', event => {
+  if (event.target.closest('button')) closeHeaderMenu();
+});
+document.addEventListener('pointerdown', event => {
+  if (!headerMenu.classList.contains('hidden') && !event.target.closest('.head-actions')) closeHeaderMenu();
+}, true);
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && !headerMenu.classList.contains('hidden')) {
+    closeHeaderMenu();
+    headerMenuToggle.focus({ preventScroll: true });
+  }
+});
+
 $('#artworkFilter').value = state.artworkFilter;
 $('#artworkFilter').onchange = event => {
   state.artworkFilter = event.target.value === 'missing-art' ? 'missing-art' : 'all';
@@ -2528,11 +2549,6 @@ document.onkeydown = event => {
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'b') {
     event.preventDefault();
     toggleSidebar();
-    return;
-  }
-  if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'd') {
-    event.preventDefault();
-    toggleDensity();
     return;
   }
   if (event.key === '/' && document.activeElement !== $('#search')) {

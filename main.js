@@ -1,18 +1,22 @@
-const { app, BrowserWindow, ipcMain, shell, screen, dialog, clipboard } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, screen, dialog, clipboard, desktopCapturer, session } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
+const dgram = require('dgram');
 const { spawn, spawnSync } = require('child_process');
 const { pathToFileURL } = require('url');
 const { path7za } = require('7zip-bin');
 const { createRuntimeManager, pathsFor: managedRuntimePathsFor, key: managedRuntimeKey } = require('./runtime-manager');
+const { createStreamServer } = require('./stream-server');
+const { createNetplayManager } = require('./netplay-manager');
 
 if (process.platform === 'win32') app.setAppUserModelId('io.gamedeck.launcher');
 
 const HOME_DIR = os.homedir();
 const DOCUMENTS_DIR = app.getPath('documents');
 const SETTINGS_FILE = path.join(app.getPath('userData'), 'settings.json');
+const NETPLAY_ROOT = path.join(app.getPath('userData'), 'netplay');
 const MANAGED_RUNTIME_ROOT = path.join(app.getPath('userData'), 'runtime');
 const MANAGED_RUNTIME_PATHS = managedRuntimePathsFor(MANAGED_RUNTIME_ROOT, process.platform);
 const BUNDLED_RUNTIME_ROOT = path.join(process.resourcesPath, 'runtime-cache', managedRuntimeKey());
@@ -311,6 +315,68 @@ let controllerHintsCache = null;
 const mameMetadataCache = new Map();
 const firmwareInventoryCache = new Map();
 let runtimeManager = null;
+let streamCaptureSourceId = '';
+let streamCaptureAudio = true;
+let streamServer = null;
+let netplayManager = null;
+let remotePlayProcess = null;
+let remotePlaySession = null;
+let remoteInputSocket = null;
+let remoteInputTimer = null;
+const remoteInputQueues = new Map();
+function emitRemotePlay(update) {
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('remote-play-update', update);
+}
+function remotePlayStatus() {
+  return remotePlaySession
+    ? { ...remotePlaySession, active: Boolean(remotePlaySession.active), pid: remotePlayProcess?.pid || 0 }
+    : { active: false, phase: 'idle', title: '', playerCount: 1, maxPlayers: 0, message: 'Ready for Remote Play Together.' };
+}
+function emitNetplay(update) {
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('netplay-update', update);
+}
+function gameDeckNetplayStatus() {
+  return netplayManager ? netplayManager.status() : { active: false, phase: 'idle', message: 'Multiplayer is starting.' };
+}
+function emitStream(update) {
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('stream-update', update);
+}
+function gameDeckStreamStatus() {
+  return streamServer ? streamServer.status() : { active: false, viewerCount: 0, viewers: [], urls: [], primaryUrl: '', localOnly: true };
+}
+async function gameDeckStreamSources() {
+  const sources = await desktopCapturer.getSources({
+    types: ['window', 'screen'],
+    thumbnailSize: { width: 320, height: 180 },
+    fetchWindowIcons: true
+  });
+  return sources
+    .filter(source => !/^GameDeck$/i.test(source.name))
+    .map(source => ({
+      id: source.id,
+      name: source.name,
+      type: source.id.startsWith('screen:') ? 'screen' : 'window',
+      displayId: source.display_id || '',
+      thumbnail: source.thumbnail && !source.thumbnail.isEmpty() ? source.thumbnail.toDataURL() : '',
+      icon: source.appIcon && !source.appIcon.isEmpty() ? source.appIcon.toDataURL() : ''
+    }))
+    .sort((a, b) => Number(a.type === 'screen') - Number(b.type === 'screen') || a.name.localeCompare(b.name));
+}
+function configureGameDeckCapture() {
+  session.defaultSession.setDisplayMediaRequestHandler(async (_request, callback) => {
+    try {
+      const sources = await desktopCapturer.getSources({ types: ['window', 'screen'], thumbnailSize: { width: 0, height: 0 } });
+      const selected = sources.find(source => source.id === streamCaptureSourceId)
+        || sources.find(source => source.id.startsWith('screen:'))
+        || sources[0];
+      if (!selected) return callback({});
+      callback(streamCaptureAudio ? { video: selected, audio: 'loopback' } : { video: selected });
+    } catch (error) {
+      addActivity('error', 'GameDeck Live capture failed: ' + error.message);
+      callback({});
+    }
+  }, { useSystemPicker: false });
+}
 function emitRuntime(update) {
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('runtime-update', update);
 }
@@ -1127,6 +1193,17 @@ runtimeManager = createRuntimeManager({
   onUpdate: emitRuntime,
   onLog: addActivity
 });
+streamServer = createStreamServer({
+  mobileRoot: path.join(__dirname, 'mobile', 'web'),
+  onUpdate: emitStream,
+  onLog: addActivity
+});
+netplayManager = createNetplayManager({
+  root: NETPLAY_ROOT,
+  appVersion: app.getVersion(),
+  onUpdate: emitNetplay,
+  onLog: addActivity
+});
 
 function emitDownload(job) {
   if (!job?.id) return;
@@ -1368,6 +1445,269 @@ function selectLaunchEmulator(system, game) {
   return preferred;
 }
 
+const NETPLAY_SYSTEMS = new Set(['arcade', 'mame', 'nes', 'snes', 'genesis', 'mastersystem', 'gamegear', 'pce', 'atari2600', 'gb', 'gba']);
+
+function netplayPlayerCapacity(system, shortName) {
+  if (isArcadeSystem(system)) {
+    const metadata = mameGameMetadata(shortName);
+    const players = Number(metadata?.players || 0);
+    if (players > 1) return Math.min(16, players);
+    if (/^(gauntlet|tmnt|simpsons|xmen|captaven|sunsetr|dungeons|ddtod|ddsom)/i.test(shortName)) return 4;
+  }
+  return 2;
+}
+
+async function netplaySpecForFile(file) {
+  const safeFile = safeLibraryFile(file);
+  const system = detectSystem(safeFile);
+  if (!system || !isPlayableFile(safeFile, system)) throw Error('Could not identify this game system.');
+  if (!NETPLAY_SYSTEMS.has(system.id)) throw Error(`${system.name} is not yet in GameDeck's verified netplay set.`);
+  if (!system.core) throw Error(`${system.name} does not have a compatible Libretro netplay engine.`);
+
+  let corePath = path.join(CORES, system.core);
+  if ((!fs.existsSync(RA) || !fs.existsSync(corePath)) && runtimeManager?.canInstall) {
+    const installed = await ensureManagedRuntime();
+    if (!installed?.ready) throw Error(installed?.message || 'GameDeck could not prepare the multiplayer engine.');
+    corePath = path.join(CORES, system.core);
+  }
+  if (!fs.existsSync(RA)) throw Error('RetroArch is required for synchronized multiplayer.');
+  if (!fs.existsSync(corePath)) throw Error(`${system.name} multiplayer core is not installed.`);
+  if (!systemBiosReady(system)) throw Error(systemFirmwareIssue(system));
+
+  const dependencyResult = resolveLaunchDependencies(safeFile, system);
+  if (dependencyResult?.queued) throw Error('GameDeck is still preparing this game. Start multiplayer when the transfer finishes.');
+  if (!dependencyResult?.ok) throw Error(dependencyResult?.error || 'Required game files could not be prepared.');
+
+  const game = { file: safeFile, system: system.id, shortName: rawGameName(safeFile) };
+  if (isArcadeSystem(system)) {
+    const audit = inspectArcadeArchiveSync(game);
+    if (audit.status === 'damaged' || audit.status === 'incomplete') {
+      throw Error(audit.message || 'This arcade archive must be repaired before multiplayer.');
+    }
+  }
+
+  const controllerConfig = isArcadeSystem(system) ? ensureRetroArchArcadeControllerConfig() : '';
+  const managedConfig = RA === MANAGED_RUNTIME_PATHS.retroArch && fs.existsSync(MANAGED_RUNTIME_PATHS.config)
+    ? ['--config', MANAGED_RUNTIME_PATHS.config]
+    : [];
+  const displayName = isArcadeSystem(system) ? arcadeDisplayTitle(game.shortName) : cleanName(safeFile);
+  const stat = fs.statSync(safeFile);
+  return {
+    executable: RA,
+    baseArgs: ['-f', ...managedConfig],
+    appendConfigs: controllerConfig ? [controllerConfig] : [],
+    corePath,
+    coreLabel: system.id === 'arcade' ? 'FinalBurn Neo' : system.name,
+    contentFile: safeFile,
+    fileSize: stat.size,
+    title: displayName,
+    systemId: system.id,
+    maxPlayers: netplayPlayerCapacity(system, game.shortName),
+    shortName: game.shortName
+  };
+}
+
+function netplayGameInfo(file) {
+  try {
+    const safeFile = safeLibraryFile(file);
+    const system = detectSystem(safeFile);
+    if (!system || !isPlayableFile(safeFile, system)) throw Error('Could not identify this game system.');
+    const shortName = rawGameName(safeFile);
+    const supported = NETPLAY_SYSTEMS.has(system.id) && Boolean(system.core);
+    return {
+      ok: true,
+      supported,
+      title: isArcadeSystem(system) ? arcadeDisplayTitle(shortName) : cleanName(safeFile),
+      systemId: system.id,
+      systemName: system.name,
+      maxPlayers: supported ? netplayPlayerCapacity(system, shortName) : 0,
+      coreFile: system.core || '',
+      issue: supported ? '' : `${system.name} is not yet in GameDeck's verified netplay set.`
+    };
+  } catch (error) {
+    return { ok: false, supported: false, error: error.message, issue: error.message, maxPlayers: 0 };
+  }
+}
+
+function remoteInputPacket(playerIndex, buttonId, state) {
+  const packet = Buffer.alloc(20);
+  packet.writeInt32LE(playerIndex, 0);
+  packet.writeInt32LE(1, 4); // RETRO_DEVICE_JOYPAD
+  packet.writeInt32LE(0, 8);
+  packet.writeInt32LE(buttonId, 12);
+  packet.writeUInt16LE(state ? 1 : 0, 16);
+  return packet;
+}
+
+function ensureRemoteInputPump() {
+  if (remoteInputTimer) return;
+  if (!remoteInputSocket) remoteInputSocket = dgram.createSocket('udp4');
+  remoteInputTimer = setInterval(() => {
+    if (!remotePlaySession?.active) return;
+    for (const [playerIndex, queue] of remoteInputQueues) {
+      const event = queue.shift();
+      if (!event) continue;
+      const packet = remoteInputPacket(playerIndex, event.id, event.state);
+      remoteInputSocket.send(packet, remotePlaySession.basePort + playerIndex, '127.0.0.1');
+    }
+  }, 17);
+  remoteInputTimer.unref?.();
+}
+
+function queueRemotePlayInput(payload = {}) {
+  if (!remotePlaySession?.active || payload.sessionId !== remotePlaySession.sessionId) return false;
+  const playerIndex = Number(payload.playerIndex);
+  if (!Number.isInteger(playerIndex) || playerIndex < 1 || playerIndex >= remotePlaySession.maxPlayers) return false;
+  const events = Array.isArray(payload.events) ? payload.events.slice(0, 32) : [];
+  if (!events.length) return false;
+  const queue = remoteInputQueues.get(playerIndex) || [];
+  let accepted = 0;
+  for (const event of events) {
+    const id = Number(event?.id);
+    if (!Number.isInteger(id) || id < 0 || id > 15) continue;
+    queue.push({ id, state: event.state ? 1 : 0 });
+    accepted += 1;
+  }
+  if (!accepted) return false;
+  if (queue.length > 180) queue.splice(0, queue.length - 180);
+  remoteInputQueues.set(playerIndex, queue);
+  remotePlaySession.inputEventCount = Number(remotePlaySession.inputEventCount || 0) + accepted;
+  remotePlaySession.lastInputAt = Date.now();
+  remotePlaySession.lastInputPlayer = playerIndex + 1;
+  emitRemotePlay(remotePlaySession);
+  ensureRemoteInputPump();
+  return true;
+}
+
+function stopRemotePlay(reason = 'Remote Play Together ended.') {
+  if (remotePlayProcess?.pid) {
+    try {
+      if (process.platform === 'win32') spawnSync('taskkill.exe', ['/PID', String(remotePlayProcess.pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' });
+      else process.kill(-remotePlayProcess.pid, 'SIGTERM');
+    } catch {
+      try { process.kill(remotePlayProcess.pid); } catch {}
+    }
+  }
+  remotePlayProcess = null;
+  remoteInputQueues.clear();
+  if (remoteInputTimer) clearInterval(remoteInputTimer);
+  remoteInputTimer = null;
+  if (remoteInputSocket) {
+    try { remoteInputSocket.close(); } catch {}
+    remoteInputSocket = null;
+  }
+  const previous = remotePlaySession;
+  remotePlaySession = null;
+  const status = { active: false, phase: 'idle', title: previous?.title || '', playerCount: 1, maxPlayers: 0, message: reason };
+  emitRemotePlay(status);
+  return status;
+}
+
+async function startRemotePlay(file, config = {}) {
+  stopRemotePlay('Starting a new Remote Play Together session.');
+  netplayManager?.stop('Switching to Remote Play Together.');
+  const spec = await netplaySpecForFile(file);
+  const maxPlayers = Math.max(2, Math.min(spec.maxPlayers || 2, Number(config.maxPlayers || spec.maxPlayers || 2)));
+  const basePort = 55400;
+  const id = `remote-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
+  const sessionId = crypto.randomBytes(18).toString('base64url');
+  fs.mkdirSync(NETPLAY_ROOT, { recursive: true });
+  const configFile = path.join(NETPLAY_ROOT, `${id}.cfg`);
+  const lines = [
+    'network_remote_enable = "true"',
+    `network_remote_base_port = "${basePort}"`,
+    `input_max_users = "${maxPlayers}"`,
+    'network_remote_enable_user_p1 = "false"'
+  ];
+  for (let player = 2; player <= maxPlayers; player += 1) lines.push(`network_remote_enable_user_p${player} = "true"`);
+  fs.writeFileSync(configFile, `${lines.join('\n')}\n`);
+  const appendConfig = [...(spec.appendConfigs || []), configFile].filter(Boolean).join('|');
+  const logFile = path.join(NETPLAY_ROOT, `${id}.log`);
+  const args = [
+    '--verbose',
+    `--log-file=${logFile}`,
+    ...spec.baseArgs,
+    ...(appendConfig ? [`--appendconfig=${appendConfig}`] : []),
+    '-L',
+    spec.corePath,
+    spec.contentFile
+  ];
+  remotePlayProcess = spawn(spec.executable, args, {
+    cwd: path.dirname(spec.executable),
+    detached: true,
+    windowsHide: false,
+    stdio: 'ignore'
+  });
+  remotePlaySession = {
+    active: true,
+    phase: 'launching',
+    id,
+    sessionId,
+    title: spec.title,
+    systemId: spec.systemId,
+    maxPlayers,
+    playerCount: 1,
+    inputEventCount: 0,
+    lastInputAt: 0,
+    lastInputPlayer: 0,
+    basePort,
+    contentFile: spec.contentFile,
+    coreFile: path.basename(spec.corePath),
+    startedAt: Date.now(),
+    logFile,
+    message: `Opening ${spec.title} for Remote Play Together…`
+  };
+  remotePlayProcess.once('error', error => {
+    addActivity('error', `Remote Play Together failed: ${error.message}`);
+    if (remotePlaySession?.id === id) {
+      remotePlaySession = { ...remotePlaySession, active: false, phase: 'error', error: error.message, message: error.message };
+      emitRemotePlay(remotePlaySession);
+    }
+  });
+  remotePlayProcess.once('exit', code => {
+    if (remotePlaySession?.id !== id) return;
+    const message = code === 0 ? 'Remote Play game closed.' : `Remote Play game exited with code ${code}.`;
+    remotePlayProcess = null;
+    remotePlaySession = null;
+    emitRemotePlay({ active: false, phase: 'idle', title: spec.title, playerCount: 1, maxPlayers: 0, message });
+  });
+  remotePlayProcess.unref();
+  const store = readStore();
+  store.recent[spec.contentFile] = Date.now();
+  writeStore(store);
+  setTimeout(() => {
+    if (remotePlaySession?.id === id && remotePlaySession.active) {
+      remotePlaySession = { ...remotePlaySession, phase: 'ready', message: 'Game is running. Create an encrypted player invitation.' };
+      emitRemotePlay(remotePlaySession);
+    }
+  }, 1800);
+  emitRemotePlay(remotePlaySession);
+  addActivity('success', `Remote Play Together started for ${spec.title}.`);
+  return remotePlayStatus();
+}
+
+async function findNetplayGame(inviteValue, preferredFile = '') {
+  const invite = netplayManager.decodeInvite(inviteValue);
+  if (preferredFile) {
+    try {
+      const preferred = safeLibraryFile(preferredFile);
+      const system = detectSystem(preferred);
+      if (system?.id === invite.systemId && fs.statSync(preferred).size === Number(invite.fileSize || 0)) {
+        return preferred;
+      }
+    } catch {}
+  }
+  const library = getLibrary().games.filter(game => game.system === invite.systemId);
+  const exactName = library.filter(game => path.basename(game.file).toLowerCase() === String(invite.fileName || '').toLowerCase());
+  const sameSize = library.filter(game => Number(game.size || 0) === Number(invite.fileSize || 0));
+  const candidates = [...new Map([...exactName, ...sameSize].map(game => [game.file, game])).values()];
+  for (const game of candidates) {
+    const digest = await netplayManager.fileSha256(game.file);
+    if (digest.toLowerCase() === String(invite.contentSha256 || '').toLowerCase()) return game.file;
+  }
+  throw Error(`GameDeck could not find the exact ${invite.title || invite.fileName || 'game'} revision required by this invite.`);
+}
+
 function queueManagedRuntimeLaunch(file, system) {
   const snapshot = managedRuntimeStatus();
   if (!runtimeManager?.canInstall) return null;
@@ -1390,6 +1730,7 @@ function launchGame(file, options = {}) {
   const safeFile = safeLibraryFile(file);
   const system = detectSystem(safeFile);
   if (!system || !isPlayableFile(safeFile, system)) throw Error('Could not identify this game system.');
+  if (netplayManager?.status().active && !options.netplay) netplayManager.stop('Opening a local game.');
   const setupIssue = systemSetupIssue(system);
   if (setupIssue) {
     if (String(setupIssue).toLowerCase().includes('firmware')) {
@@ -2510,6 +2851,9 @@ function diagnostics(includeLibrary = true) {
     rgsxData: RGSX_DATA,
     rgsxRuntime: fs.existsSync(RGSX_PYTHON),
     managedRuntime: managedRuntimeStatus(),
+    streaming: gameDeckStreamStatus(),
+    remotePlay: remotePlayStatus(),
+    multiplayer: gameDeckNetplayStatus(),
     retroarch: fs.existsSync(RA),
     mame: Boolean(MAME && fs.existsSync(MAME)),
     archiveInspector: Boolean(SEVEN_ZIP && fs.existsSync(SEVEN_ZIP)),
@@ -2635,6 +2979,77 @@ ipcMain.handle('delete-game', (_, file) => deleteGame(file).catch(error => ({ ok
 ipcMain.handle('diagnostics', (_, includeLibrary) => diagnostics(includeLibrary !== false));
 ipcMain.handle('runtime-status', () => managedRuntimeStatus());
 ipcMain.handle('ensure-runtime', (_, force) => ensureManagedRuntime({ force: Boolean(force) }));
+ipcMain.handle('stream-status', () => gameDeckStreamStatus());
+ipcMain.handle('stream-sources', () => gameDeckStreamSources().catch(error => ({ error: error.message, sources: [] })));
+ipcMain.handle('stream-start', async (_, config = {}) => {
+  const sources = await gameDeckStreamSources();
+  const selected = sources.find(source => source.id === config.sourceId)
+    || sources.find(source => source.type === 'screen')
+    || sources[0];
+  if (!selected) return { ok: false, error: 'No screen or game window is available to stream.' };
+  streamCaptureSourceId = selected.id;
+  streamCaptureAudio = config.audio !== false;
+  const stream = await streamServer.start({
+    port: Number(config.port || 41783),
+    title: config.title || 'GameDeck Live',
+    sourceName: selected.name,
+    quality: config.quality || '1080p',
+    audio: streamCaptureAudio
+  });
+  return { ok: true, source: selected, stream };
+});
+ipcMain.handle('stream-stop', () => ({ ok: true, stream: streamServer.stop() }));
+ipcMain.handle('stream-host-pull', () => streamServer.hostPull());
+ipcMain.handle('stream-host-send', (_, viewerId, payload) => streamServer.hostSend(viewerId, payload));
+ipcMain.handle('remote-play-status', () => remotePlayStatus());
+ipcMain.handle('remote-play-start', async (_, file, config = {}) => {
+  try {
+    return { ok: true, status: await startRemotePlay(file, config) };
+  } catch (error) {
+    addActivity('error', `Remote Play Together could not start: ${error.message}`);
+    return { ok: false, error: error.message, status: remotePlayStatus() };
+  }
+});
+ipcMain.handle('remote-play-stop', () => ({ ok: true, status: stopRemotePlay() }));
+ipcMain.on('remote-play-input', (_, payload) => { queueRemotePlayInput(payload || {}); });
+ipcMain.handle('netplay-status', () => gameDeckNetplayStatus());
+ipcMain.handle('netplay-game-info', (_, file) => netplayGameInfo(file));
+ipcMain.handle('netplay-relays', () => netplayManager?.relays() || []);
+ipcMain.handle('netplay-host', async (_, file, config = {}) => {
+  try {
+    const spec = await netplaySpecForFile(file);
+    const status = await netplayManager.host({
+      ...spec,
+      relayId: config.relayId || 'nyc',
+      maxPlayers: Math.max(2, Math.min(spec.maxPlayers, Number(config.maxPlayers || spec.maxPlayers)))
+    });
+    const store = readStore();
+    store.recent[spec.contentFile] = Date.now();
+    writeStore(store);
+    return { ok: true, status };
+  } catch (error) {
+    addActivity('error', `Multiplayer host failed: ${error.message}`);
+    return { ok: false, error: error.message, status: gameDeckNetplayStatus() };
+  }
+});
+ipcMain.handle('netplay-join', async (_, invite, preferredFile = '', config = {}) => {
+  try {
+    const file = await findNetplayGame(invite, preferredFile);
+    const spec = await netplaySpecForFile(file);
+    const status = await netplayManager.join(invite, {
+      ...spec,
+      nickname: config.nickname || ''
+    });
+    const store = readStore();
+    store.recent[spec.contentFile] = Date.now();
+    writeStore(store);
+    return { ok: true, file, status };
+  } catch (error) {
+    addActivity('error', `Multiplayer join failed: ${error.message}`);
+    return { ok: false, error: error.message, status: gameDeckNetplayStatus() };
+  }
+});
+ipcMain.handle('netplay-stop', () => ({ ok: true, status: netplayManager?.stop() || gameDeckNetplayStatus() }));
 ipcMain.handle('arcade-audit', (_, force) => auditArcadeLibrary(Boolean(force)));
 ipcMain.handle('settings', () => publicSettings());
 ipcMain.handle('inspect-settings', (_, changes) => inspectSettings(changes || {}));
@@ -2673,9 +3088,13 @@ ipcMain.handle('clear-activity', () => {
 app.on('before-quit', () => {
   appIsQuitting = true;
   pauseActiveDownloads();
+  stopRemotePlay('GameDeck closed.');
+  netplayManager?.stop('GameDeck closed.');
+  streamServer?.close().catch(() => {});
 });
 
 app.whenReady().then(() => {
+  configureGameDeckCapture();
   fs.mkdirSync(LIBRARY, { recursive: true });
   primeFirmwareFolders();
   ensureRetroArchArcadeControllerConfig();

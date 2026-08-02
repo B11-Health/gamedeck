@@ -22,6 +22,22 @@ contextBridge.exposeInMainWorld('deck', {
   diagnostics: (includeLibrary = false) => ipcRenderer.invoke('diagnostics', includeLibrary),
   runtimeStatus: () => ipcRenderer.invoke('runtime-status'),
   ensureRuntime: force => ipcRenderer.invoke('ensure-runtime', Boolean(force)),
+  streamStatus: () => ipcRenderer.invoke('stream-status'),
+  streamSources: () => ipcRenderer.invoke('stream-sources'),
+  streamStart: config => ipcRenderer.invoke('stream-start', config || {}),
+  streamStop: () => ipcRenderer.invoke('stream-stop'),
+  streamHostPull: () => ipcRenderer.invoke('stream-host-pull'),
+  streamHostSend: (viewerId, payload) => ipcRenderer.invoke('stream-host-send', viewerId, payload),
+  remotePlayStatus: () => ipcRenderer.invoke('remote-play-status'),
+  remotePlayStart: (file, config) => ipcRenderer.invoke('remote-play-start', file, config || {}),
+  remotePlayStop: () => ipcRenderer.invoke('remote-play-stop'),
+  remotePlayInput: payload => ipcRenderer.send('remote-play-input', payload || {}),
+  netplayStatus: () => ipcRenderer.invoke('netplay-status'),
+  netplayGameInfo: file => ipcRenderer.invoke('netplay-game-info', file),
+  netplayRelays: () => ipcRenderer.invoke('netplay-relays'),
+  netplayHost: (file, config) => ipcRenderer.invoke('netplay-host', file, config || {}),
+  netplayJoin: (invite, preferredFile, config) => ipcRenderer.invoke('netplay-join', invite, preferredFile || '', config || {}),
+  netplayStop: () => ipcRenderer.invoke('netplay-stop'),
   arcadeAudit: force => ipcRenderer.invoke('arcade-audit', Boolean(force)),
   settings: () => ipcRenderer.invoke('settings'),
   inspectSettings: changes => ipcRenderer.invoke('inspect-settings', changes),
@@ -37,6 +53,21 @@ contextBridge.exposeInMainWorld('deck', {
     const listener = (_, update) => callback(update);
     ipcRenderer.on('runtime-update', listener);
     return () => ipcRenderer.removeListener('runtime-update', listener);
+  },
+  onStream: callback => {
+    const listener = (_, update) => callback(update);
+    ipcRenderer.on('stream-update', listener);
+    return () => ipcRenderer.removeListener('stream-update', listener);
+  },
+  onRemotePlay: callback => {
+    const listener = (_, update) => callback(update);
+    ipcRenderer.on('remote-play-update', listener);
+    return () => ipcRenderer.removeListener('remote-play-update', listener);
+  },
+  onNetplay: callback => {
+    const listener = (_, update) => callback(update);
+    ipcRenderer.on('netplay-update', listener);
+    return () => ipcRenderer.removeListener('netplay-update', listener);
   },
   onLaunch: callback => {
     const listener = (_, update) => callback(update);

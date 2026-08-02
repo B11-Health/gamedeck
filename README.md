@@ -24,7 +24,10 @@ GameDeck does **not** include ROMs, BIOS files, encryption keys, or commercial g
 - Controller, keyboard, and mouse navigation
 - Preview-on-click cards with deliberate Play, Enter/A, or double-click activation
 - Input-aware help that adapts instantly to pointer, keyboard, or controller use
+- A two-tier responsive header that separates navigation, live actions, and operational status without crowding
 - Live device-path health with clear required, optional, unsaved, and restart states
+- Native GameDeck Live screen/game capture with dependency-free Chromium WebRTC and local mobile receivers
+- Remote Play Together for games such as Street Fighter II, Contra, and Smash TV: the host streams the game while friends join as native RetroArch P2–P4 controllers
 - One-click installers with a bundled, verified RetroArch runtime and compatible core set; no separate emulator installer for supported systems
 - Validated multi-disc Saturn `.m3u` playlists that reject missing disc members before launch
 - Dedicated MAME and FinalBurn Neo catalog handling with pre-launch ROM-set health checks
@@ -46,7 +49,7 @@ GameDeck does **not** include ROMs, BIOS files, encryption keys, or commercial g
 - Manual cover correction and one-click metadata refresh for titles that need a better match
 - Automatic local sidecar metadata (`Game Name.json`, `.metadata.json`, or `metadata/`) plus expanded `boxart`, `covers`, and `media` artwork discovery
 - A prominent, transparent in-app support center for direct donations and founding sponsorships
-- Shelf-first compact mode plus an optional large-format Cinematic view
+- Responsive shelf-first layouts that adapt cleanly from the minimum desktop window through large displays
 - Sticky library controls, precise keyboard focus, artwork-quality filtering, and visible readiness states
 - Explicit clear-search affordance and immediate refresh/scanning feedback
 - Hierarchical selected-game actions with Play, favorite, cover replacement, metadata refresh, and safe move-to-Trash removal
@@ -71,6 +74,14 @@ GameDeck explains exactly what is ready and what still needs attention. The in-a
 Selected games expose **Artwork**, **Details**, and **Remove** actions. Remove uses the operating system Trash or Recycle Bin rather than permanently deleting the game immediately.
 
 ![GameDeck ready check](docs/images/gamedeck-ready-check.png)
+
+## Remote Play Together
+
+Select a supported local multiplayer game and choose **Play online**. GameDeck launches the host game with RetroArch's native Remote RetroPad input enabled, starts the GameDeck Live capture pipeline, and creates a short-lived `GDREMOTE1` invitation for a selected player slot. Send that invitation through Discord or another private channel. The friend pastes it into **Join a friend**, creates a `GDREMOTEANSWER1` response, and sends the response back to the host. Once the host accepts it, encrypted WebRTC video/audio and controller input connect directly between the two computers.
+
+Only the host needs the game. GameDeck does not transfer the ROM, BIOS, save files, or game metadata to the guest. Standard browser gamepads are mapped to RetroPad buttons; keyboard fallback uses arrows, `Z`, `X`, `A`, `S`, `Enter`, and `Shift`. Each invitation expires after 20 minutes and is bound to one player slot and session token.
+
+GameDeck uses public STUN discovery for direct peer-to-peer connectivity and does not require OBS, a streaming SDK, or a GameDeck cloud account. Some highly restrictive carrier, corporate, or symmetric-NAT networks cannot establish a direct WebRTC path without TURN relay infrastructure. See [Remote Play architecture and troubleshooting](docs/REMOTE_PLAY.md).
 
 ## Install
 
@@ -122,7 +133,6 @@ The Arcade Command Center verifies ZIP/7z integrity, uses native MAME verificati
 
 - `/` focuses library or catalog search
 - `Ctrl+B` toggles the systems rail
-- `Ctrl+Shift+D` toggles Cinematic view
 - Arrow keys move between systems and games; `Enter` launches the focused title
 - <code>`</code> opens the activity console; `Escape` backs out or clears search
 

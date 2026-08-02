@@ -9,7 +9,7 @@ const fail = message => {
   process.exitCode = 1;
 };
 
-const [main, preload, renderer, html, styles, pkgText, donations, runtimeManager, runtimeManifest, runtimeCacheBuilder] = await Promise.all([
+const [main, preload, renderer, html, styles, pkgText, donations, runtimeManager, runtimeManifest, runtimeCacheBuilder, streamServer, streamingRenderer, netplayManager, netplayRenderer, mobileReceiver, androidActivity, iosContent, iosInfo] = await Promise.all([
   read('main.js'),
   read('preload.js'),
   read('src/app.js'),
@@ -19,7 +19,15 @@ const [main, preload, renderer, html, styles, pkgText, donations, runtimeManager
   read('config/donations.json'),
   read('runtime-manager.js'),
   read('config/runtime-manifest.json'),
-  read('scripts/prepare-runtime-cache.mjs')
+  read('scripts/prepare-runtime-cache.mjs'),
+  read('stream-server.js'),
+  read('src/streaming.js'),
+  read('netplay-manager.js'),
+  read('src/netplay.js'),
+  read('mobile/web/app.js'),
+  read('mobile/android/app/src/main/java/io/gamedeck/mobile/MainActivity.java'),
+  read('mobile/ios/GameDeckMobile/ContentView.swift'),
+  read('mobile/ios/GameDeckMobile/Info.plist')
 ]);
 const pkg = JSON.parse(pkgText);
 const donationConfig = JSON.parse(donations);
@@ -35,7 +43,36 @@ for (const id of [
   'spotlightDelete',
   'mainContent',
   'sidebarToggle',
-  'densityToggle',
+  'headerGameInfo',
+  'headerEngineInfoText',
+  'headerTransferInfoText',
+  'headerInfoBar',
+  'headerMenuToggle',
+  'headerMenu',
+  'streamToggle',
+  'streamStudio',
+  'streamSource',
+  'streamStart',
+  'streamStop',
+  'streamPairCode',
+  'streamViewerCount',
+  'netplayToggle',
+  'netplayStudio',
+  'netplayHost',
+  'netplayJoin',
+  'netplayInviteValue',
+  'netplayMaxPlayers',
+  'netplayQuality',
+  'netplayPlayerSlot',
+  'netplayHostTools',
+  'netplayCreateInvite',
+  'netplayAnswerInput',
+  'netplayAcceptAnswer',
+  'netplayJoinResponse',
+  'netplayJoinResponseValue',
+  'netplayRemoteVideo',
+  'netplayPlayerCount',
+  'spotlightOnline',
   'libraryToolbar',
   'transferDismissFinished',
   'transferOpenLibrary',
@@ -96,12 +133,16 @@ for (const id of [
   if (matches.length !== 1) fail(`expected one #${id}, found ${matches.length}`);
 }
 
-for (const channel of ['settings', 'save-settings', 'sponsors', 'donations', 'open-external', 'arcade-audit', 'refresh-game-details', 'choose-game-artwork', 'inspect-settings']) {
+for (const channel of ['settings', 'save-settings', 'sponsors', 'donations', 'open-external', 'arcade-audit', 'refresh-game-details', 'choose-game-artwork', 'inspect-settings', 'stream-status', 'stream-sources', 'stream-start', 'stream-stop', 'stream-host-pull', 'stream-host-send', 'remote-play-status', 'remote-play-start', 'remote-play-stop', 'remote-play-input', 'netplay-status', 'netplay-game-info', 'netplay-relays', 'netplay-host', 'netplay-join', 'netplay-stop']) {
   if (!main.includes(`'${channel}'`)) fail(`main process is missing ${channel}`);
   const preloadName = channel.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
   if (!preload.includes(preloadName)) fail(`preload bridge is missing ${preloadName}`);
 }
 
+if (!html.includes('class="app-shell-header"') || !html.includes('class="header-info-bar"')) fail('two-tier operational header is missing');
+if (!html.includes('id="headerMenu"') || !html.includes('id="headerMenuToggle"')) fail('secondary header controls must live in an overflow menu');
+if (!renderer.includes('function toggleHeaderMenu') || !renderer.includes('function closeHeaderMenu')) fail('header overflow accessibility behavior is missing');
+if (renderer.includes("'Cinematic'")) fail('retired Cinematic header language must not return');
 if (!main.includes('configuredEmulator') || !main.includes("launchMode: 'mame'") || !main.includes("'-nowindow'")) fail('standalone MAME routing is missing');
 if (!main.includes("'.bs'")) fail('Satellaview .bs ROM support is missing');
 if (!main.includes('catalogFileIdentities') || !main.includes('installedCatalogFile')) fail('catalog path identity matching is missing');
@@ -154,6 +195,25 @@ if (!main.includes('bundledSevenZip') || !String(pkg.build?.asarUnpack || []).in
 if (!preload.includes('retryDownload') || !preload.includes('pauseDownload') || !preload.includes('deleteGame')) fail('resume and delete actions are missing from the secure preload bridge');
 if (!renderer.includes('handleTransferControl') || !renderer.includes('deleteFocusedGame') || !renderer.includes('Finish one-click setup')) fail('one-click setup, resume controls, or game removal UI is missing');
 if (!html.includes('id="spotlightDelete"') || !html.includes('Included and verified')) fail('visible safe removal or included-runtime first-run copy is missing');
+if (html.includes('id="densityToggle"') || html.includes('>Cinematic<')) fail('obsolete cinematic header control must stay removed');
+if (!html.includes('id="headerOps"') || !html.includes('id="streamStudio"')) fail('operational header or GameDeck Live studio is missing');
+if (!main.includes('setDisplayMediaRequestHandler') || !main.includes('desktopCapturer.getSources') || !main.includes('createStreamServer')) fail('native Electron capture broker is missing');
+if (!streamServer.includes("require('http')") || !streamServer.includes('crypto.randomInt') || !streamServer.includes('/api/pair') || !streamServer.includes('/api/signal')) fail('dependency-free LAN signaling server is incomplete');
+if (!streamingRenderer.includes('RTCPeerConnection') || !streamingRenderer.includes('getDisplayMedia') || !streamingRenderer.includes('streamHostPull')) fail('WebRTC host renderer is incomplete');
+if (!mobileReceiver.includes('RTCPeerConnection') || !mobileReceiver.includes('/api/pair') || !mobileReceiver.includes('srcObject')) fail('mobile WebRTC receiver is incomplete');
+if (!androidActivity.includes('WebView') || !androidActivity.includes('setMediaPlaybackRequiresUserGesture(false)')) fail('native Android receiver shell is missing');
+if (!iosContent.includes('WKWebView') || !iosContent.includes('allowsInlineMediaPlayback')) fail('native iOS receiver shell is missing');
+if (!iosInfo.includes('NSLocalNetworkUsageDescription') || !iosInfo.includes('NSAllowsLocalNetworking')) fail('iOS local-network permissions are missing');
+if (!pkg.build?.files?.includes('stream-server.js') || !pkg.build?.files?.includes('mobile/web/**/*')) fail('desktop packages must include GameDeck Live server and receiver');
+if (!pkg.build?.files?.includes('netplay-manager.js')) fail('release packages must include GameDeck multiplayer services');
+if (!String(pkg.scripts?.check || '').includes('netplay-manager.js') || !String(pkg.scripts?.check || '').includes('src/netplay.js')) fail('multiplayer syntax checks are missing');
+if (!main.includes('startRemotePlay') || !main.includes('remoteInputPacket') || !main.includes('network_remote_enable_user_p')) fail('native RetroPad Remote Play host routing is missing');
+if (!preload.includes('remotePlayStart') || !preload.includes('remotePlayInput') || !preload.includes('onRemotePlay')) fail('secure Remote Play preload bridge is missing');
+if (!streamingRenderer.includes('GameDeckLive') || !streamingRenderer.includes('startForRemote')) fail('Remote Play must reuse the native GameDeck Live capture pipeline');
+if (!netplayRenderer.includes('GDREMOTE1') || !netplayRenderer.includes('GDREMOTEANSWER1') || !netplayRenderer.includes('RTCPeerConnection')) fail('encrypted peer-to-peer Remote Play invitation flow is missing');
+if (!netplayRenderer.includes('remotePlayInput') || !netplayRenderer.includes('navigator.getGamepads')) fail('remote gamepad forwarding is missing');
+if (!html.includes('Only the host needs the game') || !html.includes('NO ROM TRANSFER') || !html.includes('NATIVE RETROPAD INPUT')) fail('Remote Play ownership and privacy guidance are missing');
+if (Object.keys(pkg.dependencies || {}).some(name => /(^|[-_])(obs|webrtc|websocket|ws)([-_]|$)/i.test(name))) fail('GameDeck Live must not add OBS, WebRTC, or WebSocket runtime dependencies');
 if (!Array.isArray(donationConfig.methods)) fail('donation methods must be an array');
 if (donationConfig.enabled && donationConfig.methods.length === 0) fail('enabled donations require at least one public method');
 
@@ -177,6 +237,7 @@ for (const asset of [
   'assets/branding/gamedeck-hero.png',
   'docs/ARCADE.md',
   'docs/COMMUNITY_LAUNCH.md',
+  'docs/REMOTE_PLAY.md',
   'docs/images/gamedeck-ready-check.png',
   'docs/images/gamedeck-startup.png',
   'build/icon.ico',
