@@ -11,7 +11,12 @@ const GAMEDECK_LINKS = Object.freeze({
 });
 const GAMEDECK_SHARE_COPY = Object.freeze({
   reddit: `I built GameDeck because my legally owned game library had become a maze of launchers, emulator folders, and inconsistent controller setup. It is an open-source, local-first desktop app that turns the collection into one controller-friendly library and now includes GameDeck Live plus encrypted Remote Play Together.\n\nI would value blunt feedback on setup clarity, controller navigation, and the Remote Play flow—not just stars.\n\nSource, releases, and issue tracker: ${GAMEDECK_LINKS.github}\nStart here: ${GAMEDECK_LINKS.startHere}\n30-second tours: ${GAMEDECK_LINKS.shorts}`,
-  short: `One install. One beautiful game library. GameDeck is open source, local first, controller friendly, and now supports encrypted Remote Play Together. No ROMs included.\n\n${GAMEDECK_LINKS.site}\n\n#GameDeck #OpenSource #RetroGaming #PCGaming #RemotePlay`
+  short: `POV: your legally owned game collection finally feels like a console again. GameDeck is open source, local first, controller friendly, and supports Couch Co-op, encrypted Remote Play Together, and exact-match netplay. No ROMs included.\n\n${GAMEDECK_LINKS.site}\n\n#GameDeck #OpenSource #RetroGaming #PCGaming #RemotePlay`,
+  youtube: `GameDeck is free, open source, and built for the games you legally own. Download: ${GAMEDECK_LINKS.site}\nSource + issues: ${GAMEDECK_LINKS.github}\nFull setup and multiplayer guide: ${GAMEDECK_LINKS.startHere}\n\nWhat should I test next: first-run setup, artwork matching, Couch Co-op, Remote Play, or synchronized netplay? I read every substantive reply.`,
+  linkedin: `I am building GameDeck, a free and open-source desktop app that turns legally owned local game collections into one controller-first library. The product now combines a one-install runtime, visible setup diagnostics, artwork recovery, Couch Co-op, encrypted Remote Play Together, and exact-match synchronized netplay across Windows, macOS, and Linux.\n\nThe design goal is simple: remove launcher friction without hiding how the system works or uploading a player's library.\n\nI am looking for practical feedback from players, open-source maintainers, emulator enthusiasts, and product designers—especially on first-run setup and multiplayer clarity.\n\nTry it: ${GAMEDECK_LINKS.site}\nSource: ${GAMEDECK_LINKS.github}`,
+  facebook: `Sharing this as the builder: GameDeck is a free, open-source, controller-first home for games you legally own. It organizes a local collection, explains setup problems, and supports Couch Co-op, encrypted Remote Play Together, and synchronized netplay. No ROMs, BIOS files, keys, or commercial artwork are included.\n\nI would love a few real-world testers with different controllers and console libraries. What setup should we test next?\n\nDownload and details: ${GAMEDECK_LINKS.site}\nSource: ${GAMEDECK_LINKS.github}`,
+  creator: `Hey [NAME] — your [SPECIFIC VIDEO OR SERIES] made me think GameDeck could be useful to your audience. It is a free, open-source, controller-first launcher for legally owned local game libraries, with a one-install runtime, honest setup diagnostics, and three multiplayer paths. I can send a clean build, a 30-second clip, and direct technical support; no paid talking points or required positive coverage.\n\nPreview: ${GAMEDECK_LINKS.shorts}\nSource: ${GAMEDECK_LINKS.github}`,
+  event: `🎮 Remote Play Friday — GameDeck community session\n\nBring one legally owned local multiplayer game and a controller. Hosts can use encrypted Remote Play Together so guests do not need the game, or exact-match synchronized netplay when both players have matching files and cores.\n\nJoin the community: https://discord.gg/eS7d4VqTT\nSetup guide: ${GAMEDECK_LINKS.startHere}\n\nReply with your timezone, preferred game, and whether you can host.`
 });
 const DISCORD_COMMUNITY = Object.freeze({
   invite: 'https://discord.gg/eS7d4VqTT',
@@ -2694,6 +2699,12 @@ $('#copyDiscordInvite').onclick = async () => {
   toast('GameDeck community invite copied');
   setTimeout(() => { if ($('#copyDiscordInvite')) $('#copyDiscordInvite').textContent = 'Copy community invite'; }, 1800);
 };
+function playTonightCopy() {
+  const game = focusedGame();
+  const title = game?.title || '[GAME TITLE]';
+  return `🎮 Looking for players tonight: ${title}\n\nMode: Remote Play Together or synchronized netplay\nPlayers needed: 1–3\nTimezone: [YOUR TIMEZONE]\nStart window: [TIME]\n\nOnly the host needs the game for Remote Play. For synchronized netplay, both players need matching game and core IDs.\n\nJoin GameDeck matchmaking: ${DISCORD_COMMUNITY.remotePlay}\nDownload: ${GAMEDECK_LINKS.site}`;
+}
+
 async function copyShareText(button, value, successLabel, toastLabel) {
   await window.deck.copyText(value);
   const label = button.querySelector('b');
@@ -2710,6 +2721,12 @@ async function copyShareText(button, value, successLabel, toastLabel) {
 }
 $('#copyRedditLaunch').onclick = () => copyShareText($('#copyRedditLaunch'), GAMEDECK_SHARE_COPY.reddit, 'Reddit post copied', 'Feedback-first Reddit launch copied');
 $('#copyShortCaption').onclick = () => copyShareText($('#copyShortCaption'), GAMEDECK_SHARE_COPY.short, 'Caption copied', 'Short-form caption copied');
+$('#copyYoutubeComment').onclick = () => copyShareText($('#copyYoutubeComment'), GAMEDECK_SHARE_COPY.youtube, 'YouTube comment copied', 'Useful YouTube comment copied');
+$('#copyLinkedInLaunch').onclick = () => copyShareText($('#copyLinkedInLaunch'), GAMEDECK_SHARE_COPY.linkedin, 'LinkedIn post copied', 'LinkedIn launch post copied');
+$('#copyFacebookLaunch').onclick = () => copyShareText($('#copyFacebookLaunch'), GAMEDECK_SHARE_COPY.facebook, 'Facebook post copied', 'Facebook group post copied');
+$('#copyPlayTonight').onclick = () => copyShareText($('#copyPlayTonight'), playTonightCopy(), 'Player call copied', 'Looking-for-players post copied');
+$('#copyCreatorPitch').onclick = () => copyShareText($('#copyCreatorPitch'), GAMEDECK_SHARE_COPY.creator, 'Creator pitch copied', 'Personalized creator pitch copied');
+$('#copyCommunityEvent').onclick = () => copyShareText($('#copyCommunityEvent'), GAMEDECK_SHARE_COPY.event, 'Event post copied', 'Remote Play Friday post copied');
 $('#openShortsPlaylist').onclick = () => openCommunityLink(GAMEDECK_LINKS.shorts);
 $('#openGithubStar').onclick = () => openCommunityLink(GAMEDECK_LINKS.github);
 $('#openContributing').onclick = () => openCommunityLink('https://github.com/B11-Health/gamedeck/blob/main/CONTRIBUTING.md');

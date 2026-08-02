@@ -156,6 +156,12 @@ for (const id of [
   'shareGameDeck',
   'copyRedditLaunch',
   'copyShortCaption',
+  'copyYoutubeComment',
+  'copyLinkedInLaunch',
+  'copyFacebookLaunch',
+  'copyPlayTonight',
+  'copyCreatorPitch',
+  'copyCommunityEvent',
   'openShortsPlaylist',
   'openGithubStar',
   'netplayShareInvite',
@@ -191,6 +197,7 @@ if (!netplayRenderer.includes('DISCORD_REMOTE_PLAY_URL') || !netplayRenderer.inc
 if (!html.includes('class="discord-community-hub"') || !styles.includes('.discord-channel-card')) fail('Discord community hub UI is missing');
 if (!html.includes('class="community-share"') || !renderer.includes('GAMEDECK_SHARE_COPY') || !styles.includes('.community-share-actions')) fail('community share loop is missing');
 if (!renderer.includes('Feedback-first Reddit launch copied') || !renderer.includes('#GameDeck #OpenSource')) fail('platform-ready share copy is missing');
+if (!renderer.includes('LinkedIn launch post copied') || !renderer.includes('Facebook group post copied') || !renderer.includes('Looking-for-players post copied') || !renderer.includes('function playTonightCopy')) fail('cross-platform player acquisition copy is missing');
 if (!pkg.build?.mac?.x64ArchFiles?.includes('node_modules/7zip-bin')) fail('macOS universal 7zip merge rule is missing');
 if (!siteHtml.includes('GameDeck Live') || !siteHtml.includes('Couch Co-op') || !siteHtml.includes('Remote Play Together') || !siteHtml.includes('Synchronized Netplay') || !siteHtml.includes('docs/MULTIPLAYER.md') || !siteHtml.includes('data-platform="windows"')) fail('public growth site is missing GameDeck 1.2 conversion paths');
 if (!siteApp.includes('api.github.com/repos/') || !siteApp.includes('releases/latest')) fail('public growth site must resolve current release assets dynamically');

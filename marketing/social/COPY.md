@@ -10,7 +10,7 @@ It is an open-source, local-first desktop app that turns the collection into one
 
 I would value blunt feedback on setup clarity, controller navigation, and the Remote Play flow—not just stars.
 
-Source: https://github.com/B11-Health/gamedeck  
+Source: https://github.com/B11-Health/gamedeck
 100-second walkthrough: https://youtu.be/vY-fFVu2ClM
 
 ## YouTube pinned comment
@@ -40,3 +40,34 @@ Three ways to play together in GameDeck: couch multiplayer, synchronized netplay
 https://youtube.com/shorts/-jxqMc0z2yg
 
 #GameDeck #RemotePlay #Multiplayer #OpenSource #RetroGaming
+
+## LinkedIn — build in public
+
+We built GameDeck to make legally owned local game libraries feel like a finished product instead of a folder tree. The open-source desktop app now combines controller-first browsing, transparent setup diagnostics, Couch Co-op, encrypted Remote Play Together, and exact-match synchronized netplay across Windows, macOS, and Linux.
+
+The next milestone is not vanity metrics—it is completed first sessions. We are looking for players willing to test setup clarity, controller navigation, and multiplayer with a real library.
+
+Download: https://b11-health.github.io/gamedeck/
+Source: https://github.com/B11-Health/gamedeck
+
+## Facebook groups — player-first
+
+I built a free, open-source launcher called GameDeck for people who already maintain legally owned local game libraries. It brings the collection into one controller-friendly interface and supports local Couch Co-op, encrypted Remote Play Together, and synchronized netplay.
+
+I am looking for a few players to test a real multiplayer session and report where setup is confusing. No ROMs or firmware are included.
+
+Download: https://b11-health.github.io/gamedeck/
+Community: https://discord.gg/eS7d4VqTT
+
+## Looking for players tonight
+
+🎮 Looking for players tonight: [GAME TITLE]
+
+Mode: Remote Play Together or synchronized netplay
+Players needed: 1–3
+Timezone: [YOUR TIMEZONE]
+Start window: [TIME]
+
+Only the host needs the game for Remote Play. For synchronized netplay, both players need matching game and core IDs.
+
+Matchmaking: https://discord.com/channels/1533539059207504093/1533539469372821555
