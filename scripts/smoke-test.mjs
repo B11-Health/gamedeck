@@ -9,7 +9,7 @@ const fail = message => {
   process.exitCode = 1;
 };
 
-const [main, preload, renderer, html, styles, pkgText, donations, runtimeManager, runtimeManifest, runtimeCacheBuilder, streamServer, streamingRenderer, netplayManager, netplayRenderer, mobileReceiver, androidActivity, iosContent, iosInfo] = await Promise.all([
+const [main, preload, renderer, html, styles, pkgText, donations, runtimeManager, runtimeManifest, runtimeCacheBuilder, streamServer, streamingRenderer, netplayManager, netplayRenderer, mobileReceiver, androidActivity, iosContent, iosInfo, siteHtml, siteStyles, siteApp] = await Promise.all([
   read('main.js'),
   read('preload.js'),
   read('src/app.js'),
@@ -27,7 +27,10 @@ const [main, preload, renderer, html, styles, pkgText, donations, runtimeManager
   read('mobile/web/app.js'),
   read('mobile/android/app/src/main/java/io/gamedeck/mobile/MainActivity.java'),
   read('mobile/ios/GameDeckMobile/ContentView.swift'),
-  read('mobile/ios/GameDeckMobile/Info.plist')
+  read('mobile/ios/GameDeckMobile/Info.plist'),
+  read('site/index.html'),
+  read('site/styles.css'),
+  read('site/app.js')
 ]);
 const pkg = JSON.parse(pkgText);
 const donationConfig = JSON.parse(donations);
@@ -164,6 +167,10 @@ if (!html.includes('class="discord-community-hub"') || !styles.includes('.discor
 if (!html.includes('class="community-share"') || !renderer.includes('GAMEDECK_SHARE_COPY') || !styles.includes('.community-share-actions')) fail('community share loop is missing');
 if (!renderer.includes('Feedback-first Reddit launch copied') || !renderer.includes('#GameDeck #OpenSource')) fail('platform-ready share copy is missing');
 if (!pkg.build?.mac?.x64ArchFiles?.includes('node_modules/7zip-bin')) fail('macOS universal 7zip merge rule is missing');
+if (!siteHtml.includes('GameDeck Live') || !siteHtml.includes('Remote Play Together') || !siteHtml.includes('data-platform="windows"')) fail('public growth site is missing GameDeck 1.2 conversion paths');
+if (!siteApp.includes('api.github.com/repos/') || !siteApp.includes('releases/latest')) fail('public growth site must resolve current release assets dynamically');
+if (/sendBeacon|\/events/.test(siteApp)) fail('public growth site must not add behavioral click telemetry');
+if (!siteStyles.includes('.remote') || !siteStyles.includes('@media(max-width:760px)')) fail('public growth site responsive product sections are missing');
 
 if (!renderer.includes('https://youtu.be/vY-fFVu2ClM')) fail('published GameDeck tutorial link is missing');
 if (renderer.includes("'Cinematic'")) fail('retired Cinematic header language must not return');
