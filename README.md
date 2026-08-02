@@ -36,6 +36,7 @@ GameDeck does **not** include ROMs, BIOS files, encryption keys, or commercial g
 - Live device-path health with clear required, optional, unsaved, and restart states
 - Native GameDeck Live screen/game capture with dependency-free Chromium WebRTC and local mobile receivers
 - Remote Play Together for games such as Street Fighter II, Contra, and Smash TV: the host streams the game while friends join as native RetroArch P2–P4 controllers
+- Unified multiplayer command center with couch co-op, encrypted Remote Play, and relay-backed synchronized netplay with local ROM/core match IDs
 - One-click installers with a bundled, verified RetroArch runtime and compatible core set; no separate emulator installer for supported systems
 - Validated multi-disc Saturn `.m3u` playlists that reject missing disc members before launch
 - Dedicated MAME and FinalBurn Neo catalog handling with pre-launch ROM-set health checks
@@ -83,13 +84,17 @@ Selected games expose **Artwork**, **Details**, and **Remove** actions. Remove u
 
 ![GameDeck ready check](docs/images/gamedeck-ready-check.png)
 
-## Remote Play Together
+## Multiplayer command center
 
-Select a supported local multiplayer game and choose **Play online**. GameDeck launches the host game with RetroArch's native Remote RetroPad input enabled, starts the GameDeck Live capture pipeline, and creates a short-lived `GDREMOTE1` invitation for a selected player slot. Send that invitation through Discord or another private channel. The friend pastes it into **Join a friend**, creates a `GDREMOTEANSWER1` response, and sends the response back to the host. Once the host accepts it, encrypted WebRTC video/audio and controller input connect directly between the two computers.
+Select a game and choose **Multiplayer**, press **M**, or press **Start** on a standard controller. GameDeck presents Couch Co-op, Remote Play Together, and Synchronized Netplay as distinct choices with game, core, and controller readiness shown before launch.
+
+For Remote Play Together, select a supported local multiplayer game and choose **Remote Play**. GameDeck launches the host game with RetroArch's native Remote RetroPad input enabled, starts the GameDeck Live capture pipeline, and creates a short-lived `GDREMOTE2` invitation for a selected player slot. Send that invitation through Discord or another private channel. The friend pastes it into **Join a friend**, creates a `GDREMOTEANSWER2` response, and sends the response back to the host. Once the host accepts it, encrypted WebRTC video/audio and controller input connect directly between the two computers.
 
 Only the host needs the game. GameDeck does not transfer the ROM, BIOS, save files, or game metadata to the guest. Standard browser gamepads are mapped to RetroPad buttons; keyboard fallback uses arrows, `Z`, `X`, `A`, `S`, `Enter`, and `Shift`. Each invitation expires after 20 minutes and is bound to one player slot and session token.
 
-GameDeck uses public STUN discovery for direct peer-to-peer connectivity and does not require OBS, a streaming SDK, or a GameDeck cloud account. Some highly restrictive carrier, corporate, or symmetric-NAT networks cannot establish a direct WebRTC path without TURN relay infrastructure. See [Remote Play architecture and troubleshooting](docs/REMOTE_PLAY.md).
+GameDeck uses public STUN discovery for direct peer-to-peer connectivity and does not require OBS, a streaming SDK, or a GameDeck cloud account. Some highly restrictive carrier, corporate, or symmetric-NAT networks cannot establish a direct WebRTC path without TURN relay infrastructure. For Synchronized Netplay, both players need the same game revision and compatible core build. GameDeck calculates SHA-256 identifiers locally, verifies them before joining, and creates a temporary relay invitation without uploading game files. See the [multiplayer guide](docs/MULTIPLAYER.md).
+
+See [Remote Play architecture and troubleshooting](docs/REMOTE_PLAY.md).
 
 ## Install
 
@@ -140,6 +145,7 @@ The Arcade Command Center verifies ZIP/7z integrity, uses native MAME verificati
 ### Keyboard shortcuts
 
 - `/` focuses library or catalog search
+- `M` opens the multiplayer command center
 - `Ctrl+B` toggles the systems rail
 - Arrow keys move between systems and games; `Enter` launches the focused title
 - <code>`</code> opens the activity console; `Escape` backs out or clears search

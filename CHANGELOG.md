@@ -4,8 +4,11 @@ All notable GameDeck releases are documented here.
 
 ## [Unreleased]
 
-- Created dedicated Start Here and Shorts playlists and connected the public site and README to dedicated YouTube playlists.
+- Rebuilt multiplayer as one controller-first command center for Couch Co-op, encrypted Remote Play Together, and relay-backed Synchronized Netplay.
+- Added local SHA-256 game/core match IDs, cached verification, relay-region selection, exact-match join rejection, and polished live session status.
+- Validated the complete synchronized host flow with Metal Slug 3 and FinalBurn Neo, including New York relay publication and `GDPLAY1` invitation copying.
 
+- Created dedicated Start Here and Shorts playlists and connected the public site and README to dedicated YouTube playlists.
 - Added a responsive public Shorts gallery and a scheduled local-first discovery clip for the GameDeck 1.2 launch campaign.
 
 - Added a parallel, parameterized vertical-video campaign renderer with distinct folders and local-first growth angles.

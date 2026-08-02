@@ -9,6 +9,7 @@
 - Arcade archive health checks and version-aware MAME/FinalBurn Neo routing
 - Scoped Xbox/XInput arcade profiles with two-player defaults
 - Controller-complete Community and Settings surfaces
+- Controller-first Couch Co-op, Remote Play Together, and exact-match synchronized netplay
 - Reproducible release artifacts and checksums
 
 ## Next — the best library experience

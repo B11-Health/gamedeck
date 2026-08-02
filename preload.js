@@ -36,6 +36,7 @@ contextBridge.exposeInMainWorld('deck', {
   remotePlayInput: payload => ipcRenderer.send('remote-play-input', payload || {}),
   netplayStatus: () => ipcRenderer.invoke('netplay-status'),
   netplayGameInfo: file => ipcRenderer.invoke('netplay-game-info', file),
+  netplayMatchInfo: file => ipcRenderer.invoke('netplay-match-info', file),
   netplayRelays: () => ipcRenderer.invoke('netplay-relays'),
   netplayHost: (file, config) => ipcRenderer.invoke('netplay-host', file, config || {}),
   netplayJoin: (invite, preferredFile, config) => ipcRenderer.invoke('netplay-join', invite, preferredFile || '', config || {}),

@@ -212,7 +212,7 @@ const INPUT_LEGENDS = {
     ['ENTER', 'Play'], ['ESC', 'Back'], ['ARROWS', 'Move'], ['/', 'Search'], ['CTRL+B', 'Systems']
   ],
   controller: [
-    ['A', 'Select / play'], ['B', 'Back'], ['X', 'Surprise me'], ['Y', 'Setup'], ['D-PAD', 'Move']
+    ['A', 'Select / play'], ['B', 'Back'], ['X', 'Surprise me'], ['Y', 'Setup'], ['START', 'Multiplayer'], ['D-PAD', 'Move']
   ]
 };
 
@@ -2218,6 +2218,11 @@ function handleGamepad() {
     gamepadState.initialized = false;
     return;
   }
+  if (document.body.classList.contains('modal-open')) {
+    gamepadState.buttons = [...pad.buttons].map(button => button.pressed);
+    gamepadState.direction = gamepadDirection(pad);
+    return;
+  }
 
   if (!gamepadState.initialized || performance.now() < gamepadState.acceptAfter) {
     gamepadState.buttons = [...pad.buttons].map(button => button.pressed);
@@ -2251,7 +2256,7 @@ function handleGamepad() {
   if (actions.previous) cycleView(-1);
   if (actions.next) cycleView(1);
   if (actions.activity) openConsole($('#debugConsole').classList.contains('hidden'));
-  if (actions.start) cycleView(1);
+  if (actions.start) window.GameDeckMultiplayer?.open?.();
   gamepadState.buttons = [...pad.buttons].map(button => button.pressed);
 }
 
@@ -2563,6 +2568,12 @@ $('#searchClear').onclick = () => clearSearch({ focus: true });
 
 document.onkeydown = event => {
   setInputMode('keyboard');
+  if (document.body.classList.contains('modal-open')) return;
+  if (event.key.toLowerCase() === 'm' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) {
+    event.preventDefault();
+    window.GameDeckMultiplayer?.open?.();
+    return;
+  }
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'b') {
     event.preventDefault();
     toggleSidebar();

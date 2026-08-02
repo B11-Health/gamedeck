@@ -1491,7 +1491,8 @@ async function netplaySpecForFile(file) {
   const managedConfig = RA === MANAGED_RUNTIME_PATHS.retroArch && fs.existsSync(MANAGED_RUNTIME_PATHS.config)
     ? ['--config', MANAGED_RUNTIME_PATHS.config]
     : [];
-  const displayName = isArcadeSystem(system) ? arcadeDisplayTitle(game.shortName) : cleanName(safeFile);
+  const rawDisplayName = isArcadeSystem(system) ? arcadeDisplayTitle(game.shortName) : cleanName(safeFile);
+  const displayName = rawDisplayName.replace(/\s*\((?:NGM|NGH)-[^)]+\)$/i, '');
   const stat = fs.statSync(safeFile);
   return {
     executable: RA,
@@ -1524,6 +1525,33 @@ function netplayGameInfo(file) {
       maxPlayers: supported ? netplayPlayerCapacity(system, shortName) : 0,
       coreFile: system.core || '',
       issue: supported ? '' : `${system.name} is not yet in GameDeck's verified netplay set.`
+    };
+  } catch (error) {
+    return { ok: false, supported: false, error: error.message, issue: error.message, maxPlayers: 0 };
+  }
+}
+
+async function netplayMatchInfo(file) {
+  try {
+    const spec = await netplaySpecForFile(file);
+    const [contentSha256, coreSha256] = await Promise.all([
+      netplayManager.fileSha256(spec.contentFile),
+      netplayManager.fileSha256(spec.corePath)
+    ]);
+    const compact = value => String(value).slice(0, 12).toUpperCase().match(/.{1,4}/g).join('-');
+    return {
+      ok: true,
+      supported: true,
+      title: spec.title,
+      systemId: spec.systemId,
+      systemName: spec.coreLabel,
+      coreFile: path.basename(spec.corePath),
+      coreLabel: spec.coreLabel,
+      maxPlayers: spec.maxPlayers,
+      matchId: compact(contentSha256),
+      coreMatchId: compact(coreSha256),
+      contentSha256,
+      coreSha256
     };
   } catch (error) {
     return { ok: false, supported: false, error: error.message, issue: error.message, maxPlayers: 0 };
@@ -3046,6 +3074,7 @@ ipcMain.handle('remote-play-stop', () => ({ ok: true, status: stopRemotePlay() }
 ipcMain.on('remote-play-input', (_, payload) => { queueRemotePlayInput(payload || {}); });
 ipcMain.handle('netplay-status', () => gameDeckNetplayStatus());
 ipcMain.handle('netplay-game-info', (_, file) => netplayGameInfo(file));
+ipcMain.handle('netplay-match-info', (_, file) => netplayMatchInfo(file));
 ipcMain.handle('netplay-relays', () => netplayManager?.relays() || []);
 ipcMain.handle('netplay-host', async (_, file, config = {}) => {
   try {

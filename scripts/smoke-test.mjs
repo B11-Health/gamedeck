@@ -62,6 +62,22 @@ for (const id of [
   'streamViewerCount',
   'netplayToggle',
   'netplayStudio',
+  'multiplayerReadiness',
+  'netplayGameArt',
+  'multiplayerMatchId',
+  'multiplayerCouchPanel',
+  'multiplayerControllers',
+  'multiplayerCouchLaunch',
+  'multiplayerRemotePanel',
+  'multiplayerSyncPanel',
+  'syncHost',
+  'syncJoin',
+  'syncRelay',
+  'syncMaxPlayers',
+  'syncInviteValue',
+  'syncJoinInvite',
+  'syncNickname',
+  'syncProgress',
   'netplayHost',
   'netplayJoin',
   'netplayInviteValue',
@@ -151,7 +167,7 @@ for (const id of [
   if (matches.length !== 1) fail(`expected one #${id}, found ${matches.length}`);
 }
 
-for (const channel of ['settings', 'save-settings', 'sponsors', 'donations', 'open-external', 'arcade-audit', 'refresh-game-details', 'choose-game-artwork', 'inspect-settings', 'stream-status', 'stream-sources', 'stream-start', 'stream-stop', 'stream-host-pull', 'stream-host-send', 'remote-play-code-encode', 'remote-play-code-decode', 'remote-play-status', 'remote-play-start', 'remote-play-stop', 'remote-play-input', 'netplay-status', 'netplay-game-info', 'netplay-relays', 'netplay-host', 'netplay-join', 'netplay-stop']) {
+for (const channel of ['settings', 'save-settings', 'sponsors', 'donations', 'open-external', 'arcade-audit', 'refresh-game-details', 'choose-game-artwork', 'inspect-settings', 'stream-status', 'stream-sources', 'stream-start', 'stream-stop', 'stream-host-pull', 'stream-host-send', 'remote-play-code-encode', 'remote-play-code-decode', 'remote-play-status', 'remote-play-start', 'remote-play-stop', 'remote-play-input', 'netplay-status', 'netplay-game-info', 'netplay-match-info', 'netplay-relays', 'netplay-host', 'netplay-join', 'netplay-stop']) {
   if (!main.includes(`'${channel}'`)) fail(`main process is missing ${channel}`);
   const preloadName = channel.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
   if (!preload.includes(preloadName)) fail(`preload bridge is missing ${preloadName}`);
@@ -244,6 +260,10 @@ if (!main.includes('startRemotePlay') || !main.includes('remoteInputPacket') || 
 if (!preload.includes('remotePlayCodeEncode') || !preload.includes('remotePlayCodeDecode') || !preload.includes('remotePlayStart') || !preload.includes('remotePlayInput') || !preload.includes('onRemotePlay')) fail('secure Remote Play preload bridge is missing');
 if (!streamingRenderer.includes('GameDeckLive') || !streamingRenderer.includes('startForRemote')) fail('Remote Play must reuse the native GameDeck Live capture pipeline');
 if (!netplayRenderer.includes('GDREMOTE2') || !netplayRenderer.includes('GDREMOTEANSWER2') || !netplayRenderer.includes('RTCPeerConnection')) fail('compressed encrypted peer-to-peer Remote Play invitation flow is missing');
+if (!html.includes('data-play-style="couch"') || !html.includes('data-play-style="remote"') || !html.includes('data-play-style="sync"')) fail('three-mode multiplayer command center is missing');
+if (!netplayRenderer.includes('startSyncHost') || !netplayRenderer.includes('joinSyncRoom') || !netplayRenderer.includes('launchCouchCoop')) fail('multiplayer mode launch flows are incomplete');
+if (!main.includes('netplayMatchInfo') || !main.includes('coreMatchId')) fail('local ROM/core match verification is missing');
+if (!styles.includes('.multiplayer-style-grid') || !styles.includes('.multiplayer-readiness')) fail('multiplayer command center visual system is missing');
 if (!main.includes('brotliCompressSync') || !main.includes('brotliDecompressSync')) fail('Discord-sized Brotli Remote Play codes are missing');
 if (!netplayRenderer.includes('remotePlayInput') || !netplayRenderer.includes('navigator.getGamepads')) fail('remote gamepad forwarding is missing');
 if (!html.includes('Only the host needs the game') || !html.includes('NO ROM TRANSFER') || !html.includes('NATIVE RETROPAD INPUT')) fail('Remote Play ownership and privacy guidance are missing');
@@ -272,6 +292,7 @@ for (const asset of [
   'docs/ARCADE.md',
   'docs/COMMUNITY_LAUNCH.md',
   'docs/REMOTE_PLAY.md',
+  'docs/MULTIPLAYER.md',
   'docs/E2E_REPORT_1.2.0.md',
   'docs/e2e-results/GameDeck-1.2.0-2026-08-02.json',
   'docs/images/gamedeck-ready-check.png',

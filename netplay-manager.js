@@ -6,6 +6,7 @@ const crypto = require("crypto");
 const { spawn, spawnSync } = require("child_process");
 
 const LOBBY_LIST_URL = "http://lobby.libretro.com/list";
+const digestCache = new Map();
 const RELAYS = Object.freeze({
   nyc: { id: "nyc", label: "New York", address: "us-east1.relay.retroarch.com", port: 55435 },
   madrid: { id: "madrid", label: "Madrid", address: "europe-west1.relay.retroarch.com", port: 55435 },
@@ -21,12 +22,19 @@ function configValue(value) {
 }
 
 function fileSha256(file) {
+  const stat = fs.statSync(file);
+  const key = `${path.resolve(file)}:${stat.size}:${stat.mtimeMs}`;
+  if (digestCache.has(key)) return Promise.resolve(digestCache.get(key));
   return new Promise((resolve, reject) => {
     const hash = crypto.createHash("sha256");
     const stream = fs.createReadStream(file);
     stream.on("data", chunk => hash.update(chunk));
     stream.on("error", reject);
-    stream.on("end", () => resolve(hash.digest("hex")));
+    stream.on("end", () => {
+      const digest = hash.digest("hex");
+      digestCache.set(key, digest);
+      resolve(digest);
+    });
   });
 }
 

@@ -26,7 +26,7 @@
         <button class="nav" data-view="community">Community</button>
       </nav>
       <div class="head-actions">
-        <button class="header-button netplay-button" id="netplayToggle" type="button" aria-pressed="false" title="Host or join multiplayer"><span class="netplay-glyph" aria-hidden="true">⚔</span><span class="button-label" id="netplayButtonLabel">Play Online</span><small id="headerPlayerCount">0</small></button>
+        <button class="header-button netplay-button" id="netplayToggle" type="button" aria-pressed="false" title="Host or join multiplayer"><span class="netplay-glyph" aria-hidden="true">⚔</span><span class="button-label" id="netplayButtonLabel">Multiplayer</span><small id="headerPlayerCount">0</small></button>
         <button class="header-button live-button" id="streamToggle" type="button" aria-pressed="false" title="Open GameDeck Live"><span class="live-pulse" aria-hidden="true"></span><span class="button-label" id="streamButtonLabel">Go Live</span><small id="headerViewerCount">0</small></button>
         <button class="header-button compact overflow-button" id="headerMenuToggle" type="button" aria-expanded="false" aria-controls="headerMenu" title="More GameDeck controls" aria-label="More GameDeck controls"><span aria-hidden="true">•••</span></button>
         <div class="header-menu hidden" id="headerMenu" role="menu" aria-label="GameDeck controls">
@@ -176,7 +176,7 @@
         <div class="spotlight-actions">
           <div class="spotlight-primary-actions">
             <button class="primary" id="spotlightPlay">Play now</button>
-            <button class="online" id="spotlightOnline">Play online</button>
+            <button class="online" id="spotlightOnline">Multiplayer</button>
             <button id="spotlightFav">Save</button>
           </div>
           <div class="spotlight-utility-actions" aria-label="Game details tools">
@@ -466,66 +466,119 @@
   </section>
 
   <section class="netplay-studio hidden" id="netplayStudio" aria-labelledby="netplayStudioTitle" aria-modal="true" role="dialog">
-    <div class="netplay-backdrop" data-netplay-close></div>
-    <div class="netplay-window">
+    <button class="netplay-backdrop" data-netplay-close type="button" tabindex="-1" aria-label="Close multiplayer"></button>
+    <div class="netplay-window multiplayer-command-window">
       <div class="netplay-head">
-        <div><span class="netplay-kicker">GAMEDECK REMOTE PLAY TOGETHER</span><h2 id="netplayStudioTitle">Turn local multiplayer into online multiplayer</h2><p>The host runs the game. Friends receive encrypted video and join as native RetroArch controllers—no ROM transfer or matching game install required.</p></div>
+        <div><span class="netplay-kicker">GAMEDECK MULTIPLAYER COMMAND CENTER</span><h2 id="netplayStudioTitle">Choose how everyone joins</h2><p>Couch co-op, encrypted Remote Play, and exact-match synchronized netplay live in one controller-first setup.</p></div>
         <button id="netplayClose" type="button" aria-label="Close multiplayer">×</button>
       </div>
+
+      <div class="multiplayer-readiness" id="multiplayerReadiness" aria-live="polite"></div>
+
+      <div class="multiplayer-style-grid" role="tablist" aria-label="Play style">
+        <button class="multiplayer-style" type="button" role="tab" data-play-style="couch" aria-selected="false"><span class="multiplayer-style-icon">◉◉</span><b>Couch co-op</b><small>Same PC · local controllers</small></button>
+        <button class="multiplayer-style active" type="button" role="tab" data-play-style="remote" aria-selected="true"><span class="multiplayer-style-icon">⌁</span><b>Remote Play</b><small>Only the host needs the game</small></button>
+        <button class="multiplayer-style" type="button" role="tab" data-play-style="sync" aria-selected="false"><span class="multiplayer-style-icon">⇄</span><b>Synced netplay</b><small>Matching game + core required</small></button>
+      </div>
+
+      <div class="netplay-game-card multiplayer-selected-card" id="netplayGameCard">
+        <span class="netplay-game-icon multiplayer-game-art" id="netplayGameArt" aria-hidden="true">P1</span>
+        <div><small id="netplayGameKicker">SELECTED GAME</small><b id="netplayGameTitle">Select a game from your library</b><span id="netplayGameMeta">Choose a multiplayer game from your library before opening this command center.</span></div>
+        <div class="multiplayer-match-pill" id="multiplayerMatchPill"><small>LOCAL CHECK</small><b id="multiplayerMatchId">Waiting for game</b></div>
+      </div>
+
       <div class="netplay-active hidden" id="netplayActive">
         <span class="netplay-active-dot" aria-hidden="true"></span>
-        <div><small id="netplayActiveRole">REMOTE PLAY STATUS</small><b id="netplayActiveTitle">Preparing multiplayer</b><span id="netplayActiveMessage">Launching the game and encrypted stream…</span></div>
+        <div><small id="netplayActiveRole">MULTIPLAYER STATUS</small><b id="netplayActiveTitle">Preparing multiplayer</b><span id="netplayActiveMessage">Checking the selected game and controllers…</span></div>
         <div class="netplay-player-count"><b id="netplayPlayerCount">1</b><span>PLAYERS</span></div>
         <button id="netplayStop" type="button">End session</button>
       </div>
-      <div class="netplay-tabs" role="tablist" aria-label="Multiplayer mode">
-        <button class="active" id="netplayHostTab" type="button" role="tab" aria-selected="true" data-netplay-tab="host">Host from this PC</button>
-        <button id="netplayJoinTab" type="button" role="tab" aria-selected="false" data-netplay-tab="join">Join a friend</button>
-      </div>
-      <div class="netplay-panels">
-        <section class="netplay-panel" id="netplayHostPanel" role="tabpanel">
-          <div class="netplay-game-card" id="netplayGameCard">
-            <span class="netplay-game-icon" aria-hidden="true">P1</span>
-            <div><small>HOST GAME</small><b id="netplayGameTitle">Select a game from your library</b><span id="netplayGameMeta">SF2, Contra, Smash TV, and other local multiplayer games can be hosted.</span></div>
-          </div>
-          <div class="netplay-options">
-            <label><span>Total player slots</span><select id="netplayMaxPlayers"><option value="2">2 players</option><option value="3">3 players</option><option value="4">4 players</option></select></label>
-            <label><span>Stream quality</span><select id="netplayQuality"><option value="720p">720p · 60 fps</option><option value="1080p">1080p · 60 fps</option><option value="balanced">720p · 30 fps</option></select></label>
-          </div>
-          <button class="netplay-primary" id="netplayHost" type="button"><span aria-hidden="true">＋</span><b>Start Remote Play Together</b></button>
-          <div class="netplay-host-tools hidden" id="netplayHostTools">
+
+      <section class="multiplayer-style-panel hidden" id="multiplayerCouchPanel" data-style-panel="couch">
+        <div class="couch-layout">
+          <div><span class="panel-kicker">LOCAL SESSION</span><h3>Controllers become players automatically.</h3><p>Connect player two before launch. GameDeck opens the selected title with the local controller profile already prepared.</p></div>
+          <div class="controller-check" id="multiplayerControllers"></div>
+          <button class="netplay-primary multiplayer-launch" id="multiplayerCouchLaunch" type="button"><span aria-hidden="true">▶</span><b>Launch couch co-op</b></button>
+        </div>
+      </section>
+
+      <section class="multiplayer-style-panel" id="multiplayerRemotePanel" data-style-panel="remote">
+        <div class="netplay-tabs" role="tablist" aria-label="Remote Play role">
+          <button class="active" id="netplayHostTab" type="button" role="tab" aria-selected="true" data-netplay-tab="host">Host from this PC</button>
+          <button id="netplayJoinTab" type="button" role="tab" aria-selected="false" data-netplay-tab="join">Join a friend's stream</button>
+        </div>
+        <div class="netplay-panels">
+          <section class="netplay-panel" id="netplayHostPanel" role="tabpanel">
+            <div class="multiplayer-mode-note"><b>Only the host needs the game.</b><span>Your friend receives encrypted video and joins as a native RetroArch controller.</span></div>
             <div class="netplay-options">
-              <label><span>Invite controller slot</span><select id="netplayPlayerSlot"><option value="1">Player 2</option><option value="2">Player 3</option><option value="3">Player 4</option></select></label>
-              <button id="netplayCreateInvite" type="button">Create fresh invite</button>
+              <label><span>Total player slots</span><select id="netplayMaxPlayers"><option value="2">2 players</option><option value="3">3 players</option><option value="4">4 players</option></select></label>
+              <label><span>Stream quality</span><select id="netplayQuality"><option value="720p">720p · 60 fps</option><option value="1080p">1080p · 60 fps</option><option value="balanced">720p · 30 fps</option></select></label>
             </div>
-            <div class="netplay-invite hidden" id="netplayInvite">
-              <div><span>ENCRYPTED PLAYER INVITE</span><small id="netplayInviteMeta" aria-live="polite">Send this code to your friend in Discord.</small></div>
-              <textarea id="netplayInviteValue" readonly aria-label="Remote Play invitation"></textarea>
-              <div class="netplay-share-actions"><button id="netplayCopyInvite" type="button">Copy invite</button><button id="netplayShareInvite" type="button">Share in #remote-play</button></div>
+            <button class="netplay-primary" id="netplayHost" type="button"><span aria-hidden="true">＋</span><b>Start Remote Play Together</b></button>
+            <div class="netplay-host-tools hidden" id="netplayHostTools">
+              <div class="netplay-options">
+                <label><span>Invite controller slot</span><select id="netplayPlayerSlot"><option value="1">Player 2</option><option value="2">Player 3</option><option value="3">Player 4</option></select></label>
+                <button id="netplayCreateInvite" type="button">Create fresh invite</button>
+              </div>
+              <div class="netplay-invite hidden" id="netplayInvite">
+                <div><span>ENCRYPTED PLAYER INVITE</span><small id="netplayInviteMeta" aria-live="polite">Send this code to your friend in Discord.</small></div>
+                <textarea id="netplayInviteValue" readonly aria-label="Remote Play invitation"></textarea>
+                <div class="netplay-share-actions"><button id="netplayCopyInvite" type="button">Copy invite</button><button id="netplayShareInvite" type="button">Share in #remote-play</button></div>
+              </div>
+              <label class="netplay-invite-input"><span>Friend's response code</span><textarea id="netplayAnswerInput" placeholder="Paste the GDREMOTEANSWER2 response from your friend"></textarea><small>The response completes the direct encrypted connection.</small></label>
+              <button class="netplay-primary" id="netplayAcceptAnswer" type="button"><span aria-hidden="true">✓</span><b>Connect this player</b></button>
             </div>
-            <label class="netplay-invite-input"><span>Friend's response code</span><textarea id="netplayAnswerInput" placeholder="Paste the GDREMOTEANSWER2 response from your friend"></textarea><small>The response completes the direct encrypted connection.</small></label>
-            <button class="netplay-primary" id="netplayAcceptAnswer" type="button"><span aria-hidden="true">✓</span><b>Connect this player</b></button>
-          </div>
-        </section>
-        <section class="netplay-panel hidden" id="netplayJoinPanel" role="tabpanel">
-          <label class="netplay-invite-input"><span>Host's GameDeck invitation</span><textarea id="netplayJoinInvite" placeholder="Paste the GDREMOTE2 invitation here"></textarea><small>The invitation contains a short-lived WebRTC offer. Your game library is not accessed.</small></label>
-          <label><span>Player name</span><input id="netplayNickname" maxlength="28" placeholder="Friend"></label>
-          <button class="netplay-primary" id="netplayJoin" type="button"><span aria-hidden="true">→</span><b>Create join response</b></button>
-          <div class="netplay-invite hidden" id="netplayJoinResponse">
-            <div><span>RESPONSE FOR THE HOST</span><small id="netplayResponseMeta" aria-live="polite">Send this code back in Discord, then wait for the host to connect you.</small></div>
-            <textarea id="netplayJoinResponseValue" readonly aria-label="Remote Play response"></textarea>
-            <div class="netplay-share-actions"><button id="netplayCopyResponse" type="button">Copy response</button><button id="netplayShareResponse" type="button">Return via #remote-play</button></div>
-          </div>
-          <div class="netplay-remote-stage hidden" id="netplayRemoteStage">
-            <video id="netplayRemoteVideo" autoplay playsinline></video>
-            <div class="netplay-remote-empty" id="netplayRemoteEmpty"><span>P2</span><b>Waiting for the host</b><small>Keep this window focused and connect a controller.</small></div>
-            <div class="netplay-latency" id="netplayLatency">DIRECT · CONNECTING</div>
-          </div>
-          <div class="netplay-controller-guide"><b>Controller ready</b><span>Xbox/PlayStation gamepads work through the browser Gamepad API. Keyboard: arrows + Z/X/A/S + Enter/Shift.</span></div>
-          <div class="netplay-match-note"><b>Only the host needs the game.</b><span>Game video and controller input travel through an encrypted peer-to-peer WebRTC connection. Public-IP metadata may be visible to the invited friend.</span></div>
-        </section>
-      </div>
-      <div class="netplay-foot"><span>WEBRTC ENCRYPTED</span><span>NATIVE RETROPAD INPUT</span><span>NO ROM TRANSFER</span><span>DISCORD-FRIENDLY INVITES</span></div>
+          </section>
+          <section class="netplay-panel hidden" id="netplayJoinPanel" role="tabpanel">
+            <label class="netplay-invite-input"><span>Host's GameDeck invitation</span><textarea id="netplayJoinInvite" placeholder="Paste the GDREMOTE2 invitation here"></textarea><small>The invitation contains a short-lived WebRTC offer. Your game library is not accessed.</small></label>
+            <label><span>Player name</span><input id="netplayNickname" maxlength="28" placeholder="Friend"></label>
+            <button class="netplay-primary" id="netplayJoin" type="button"><span aria-hidden="true">→</span><b>Create join response</b></button>
+            <div class="netplay-invite hidden" id="netplayJoinResponse">
+              <div><span>RESPONSE FOR THE HOST</span><small id="netplayResponseMeta" aria-live="polite">Send this code back in Discord, then wait for the host to connect you.</small></div>
+              <textarea id="netplayJoinResponseValue" readonly aria-label="Remote Play response"></textarea>
+              <div class="netplay-share-actions"><button id="netplayCopyResponse" type="button">Copy response</button><button id="netplayShareResponse" type="button">Return via #remote-play</button></div>
+            </div>
+            <div class="netplay-remote-stage hidden" id="netplayRemoteStage">
+              <video id="netplayRemoteVideo" autoplay playsinline></video>
+              <div class="netplay-remote-empty" id="netplayRemoteEmpty"><span>P2</span><b>Waiting for the host</b><small>Keep this window focused and connect a controller.</small></div>
+              <div class="netplay-latency" id="netplayLatency">DIRECT · CONNECTING</div>
+            </div>
+            <div class="netplay-controller-guide"><b>Controller ready</b><span>Xbox/PlayStation gamepads work through the browser Gamepad API. Keyboard: arrows + Z/X/A/S + Enter/Shift.</span></div>
+            <div class="netplay-match-note"><b>Only the host needs the game.</b><span>Game video and controller input travel through an encrypted peer-to-peer WebRTC connection. Public-IP metadata may be visible to the invited friend.</span></div>
+          </section>
+        </div>
+      </section>
+
+      <section class="multiplayer-style-panel hidden" id="multiplayerSyncPanel" data-style-panel="sync">
+        <div class="netplay-tabs sync-tabs" role="tablist" aria-label="Synchronized netplay role">
+          <button class="active" id="syncHostTab" type="button" role="tab" aria-selected="true" data-sync-tab="host">Host synchronized game</button>
+          <button id="syncJoinTab" type="button" role="tab" aria-selected="false" data-sync-tab="join">Join with invite</button>
+        </div>
+        <div class="netplay-panels">
+          <section class="netplay-panel" id="syncHostPanel" role="tabpanel">
+            <div class="multiplayer-mode-note sync-note"><b>Both players need an exact match.</b><span>GameDeck verifies the ROM and core locally, then creates a short relay invitation.</span></div>
+            <div class="netplay-options">
+              <label><span>Relay region</span><select id="syncRelay"><option value="nyc">New York</option></select></label>
+              <label><span>Total players</span><select id="syncMaxPlayers"><option value="2">2 players</option></select></label>
+            </div>
+            <button class="netplay-primary" id="syncHost" type="button"><span aria-hidden="true">＋</span><b>Create synchronized room</b></button>
+            <div class="sync-progress hidden" id="syncProgress"><span class="netplay-active-dot"></span><div><b id="syncProgressTitle">Publishing room…</b><small id="syncProgressMessage">RetroArch is reserving a relay session.</small></div></div>
+            <div class="netplay-invite hidden" id="syncInvite">
+              <div><span>SAME-GAME INVITE</span><small id="syncInviteMeta">Share only with a friend who owns the matching game.</small></div>
+              <textarea id="syncInviteValue" readonly aria-label="Synchronized netplay invitation"></textarea>
+              <div class="netplay-share-actions"><button id="syncCopyInvite" type="button">Copy invite</button><button id="syncShareInvite" type="button">Share in #remote-play</button></div>
+            </div>
+          </section>
+          <section class="netplay-panel hidden" id="syncJoinPanel" role="tabpanel">
+            <label class="netplay-invite-input"><span>Host's same-game invitation</span><textarea id="syncJoinInvite" placeholder="Paste the GDPLAY1 invitation here"></textarea><small>GameDeck will reject mismatched games or core builds before connecting.</small></label>
+            <label><span>Player name</span><input id="syncNickname" maxlength="28" placeholder="Player 2"></label>
+            <button class="netplay-primary" id="syncJoin" type="button"><span aria-hidden="true">→</span><b>Verify and join</b></button>
+            <div class="netplay-match-note"><b>Nothing is uploaded.</b><span>The game and core hashes are calculated locally. Only the relay invitation is shared.</span></div>
+          </section>
+        </div>
+      </section>
+
+      <div class="netplay-foot"><span>COUCH READY</span><span>WEBRTC ENCRYPTED</span><span>NATIVE RETROPAD INPUT</span><span>EXACT-MATCH NETPLAY</span><span>NO ROM TRANSFER</span><span>CONTROLLER FIRST</span></div>
     </div>
   </section>
 

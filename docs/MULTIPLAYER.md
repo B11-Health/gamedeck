@@ -1,0 +1,44 @@
+# GameDeck multiplayer
+
+GameDeck 1.2 presents local and online multiplayer in one controller-first command center. Select a game, choose **Multiplayer**, press **M**, or press **Start** on a standard controller.
+
+## Play styles
+
+### Couch co-op
+
+Connect player two before launch and choose **Launch couch co-op**. GameDeck starts the selected title with the local RetroArch controller profile. The readiness row shows whether one or more gamepads are currently visible.
+
+### Remote Play Together
+
+Only the host needs the game. The host launches the title and an encrypted WebRTC stream, then exchanges short-lived invitation and response codes with each remote player. Video travels to the guest and native RetroPad input returns to the host. GameDeck does not transfer the ROM.
+
+### Synchronized netplay
+
+Both players need the same game revision and compatible RetroArch core build. GameDeck calculates SHA-256 identifiers locally, displays compact game and core match IDs, and rejects mismatches before joining. Hosting uses the selected RetroArch relay region and creates a short `GDPLAY1` invitation.
+
+## Metal Slug 3 validation target
+
+The integrated flow is tested with a legally supplied **Metal Slug 3** Neo Geo archive and the FinalBurn Neo core. The command center should report:
+
+- the friendly title **Metal Slug 3**
+- FinalBurn Neo as the synchronized core
+- up to two players
+- local game and core match IDs
+- Couch, Remote Play, and Synced netplay as separate choices
+
+For synchronized hosting, GameDeck launches RetroArch through the relay-backed netplay manager. A friend can join only after GameDeck verifies the matching archive and core.
+
+## Privacy and networking
+
+- Hashes are calculated on the local computer. Game files are not uploaded.
+- Remote Play uses encrypted peer-to-peer WebRTC. Public-IP metadata can be visible to the invited peer.
+- Synchronized netplay uses RetroArch relay infrastructure and a temporary password inside the invitation.
+- Couch co-op never requires a network connection.
+
+## Troubleshooting
+
+- **Core needs attention:** open Community -> This device and allow GameDeck to finish preparing RetroArch and the required core.
+- **Game mismatch:** compare the compact GAME identifier on both computers and confirm the same ROM revision.
+- **Core mismatch:** update GameDeck on both computers so the same managed core build is installed.
+- **Remote player has no video:** repeat the invitation/response exchange and keep the GameDeck window open during pairing.
+- **Second local controller is missing:** connect it before launch and verify its RetroArch input port assignment.
