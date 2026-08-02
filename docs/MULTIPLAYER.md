@@ -2,6 +2,8 @@
 
 GameDeck 1.2 presents local and online multiplayer in one controller-first command center. Select a game, choose **Multiplayer**, press **M**, or press **Start** on a standard controller.
 
+The command center compares connected controllers, streaming support, and exact-match readiness to recommend the best play style. A compact lobby rail shows open and ready player slots. **Paste invite** reads the clipboard only after the user presses the button and routes recognized `GDREMOTE2`, `GDREMOTEANSWER2`, or `GDPLAY1` codes to the correct role and mode.
+
 ## Play styles
 
 ### Couch co-op
@@ -24,6 +26,8 @@ The integrated flow is tested with a legally supplied **Metal Slug 3** Neo Geo a
 - FinalBurn Neo as the synchronized core
 - up to two players
 - local game and core match IDs
+- a setup-aware recommendation and visible 1/2 player lobby
+- a no-scroll live-room state after the relay invitation is ready
 - Couch, Remote Play, and Synced netplay as separate choices
 
 For synchronized hosting, GameDeck launches RetroArch through the relay-backed netplay manager. A friend can join only after GameDeck verifies the matching archive and core.

@@ -36,7 +36,7 @@ GameDeck does **not** include ROMs, BIOS files, encryption keys, or commercial g
 - Live device-path health with clear required, optional, unsaved, and restart states
 - Native GameDeck Live screen/game capture with dependency-free Chromium WebRTC and local mobile receivers
 - Remote Play Together for games such as Street Fighter II, Contra, and Smash TV: the host streams the game while friends join as native RetroArch P2–P4 controllers
-- Unified multiplayer command center with couch co-op, encrypted Remote Play, and relay-backed synchronized netplay with local ROM/core match IDs
+- Unified multiplayer command center with couch co-op, encrypted Remote Play, relay-backed synchronized netplay, setup-aware recommendations, live player slots, and local ROM/core match IDs
 - One-click installers with a bundled, verified RetroArch runtime and compatible core set; no separate emulator installer for supported systems
 - Validated multi-disc Saturn `.m3u` playlists that reject missing disc members before launch
 - Dedicated MAME and FinalBurn Neo catalog handling with pre-launch ROM-set health checks
@@ -87,6 +87,8 @@ Selected games expose **Artwork**, **Details**, and **Remove** actions. Remove u
 ## Multiplayer command center
 
 Select a game and choose **Multiplayer**, press **M**, or press **Start** on a standard controller. GameDeck presents Couch Co-op, Remote Play Together, and Synchronized Netplay as distinct choices with game, core, and controller readiness shown before launch.
+
+The command center recommends the best route for the current setup, shows every player slot before launch, copies game/core match IDs, and can read a pasted `GDREMOTE2`, `GDREMOTEANSWER2`, or `GDPLAY1` code from the clipboard and route it to the correct join screen. Once a room is live, setup controls collapse into a focused lobby that remains fully visible at standard desktop sizes.
 
 For Remote Play Together, select a supported local multiplayer game and choose **Remote Play**. GameDeck launches the host game with RetroArch's native Remote RetroPad input enabled, starts the GameDeck Live capture pipeline, and creates a short-lived `GDREMOTE2` invitation for a selected player slot. Send that invitation through Discord or another private channel. The friend pastes it into **Join a friend**, creates a `GDREMOTEANSWER2` response, and sends the response back to the host. Once the host accepts it, encrypted WebRTC video/audio and controller input connect directly between the two computers.
 

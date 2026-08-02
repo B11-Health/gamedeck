@@ -24,6 +24,7 @@
   let currentTab = 'host';
   let syncTab = 'host';
   let currentPlayStyle = localStorage.getItem('gamedeck.multiplayer.style') || 'remote';
+  let recommendedPlayStyle = 'remote';
   let selectedInfo = null;
   let syncInfo = null;
   let syncRelays = [];
@@ -102,6 +103,110 @@
     return navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean).length : 0;
   }
 
+  function recommendationForSetup() {
+    const game = selectedGame();
+    const controllers = connectedControllerCount();
+    const remoteReady = Boolean(selectedInfo?.ok && selectedInfo.supported);
+    const syncReady = Boolean(syncInfo?.ok && syncInfo.supported);
+    if (!game) return { style: 'remote', title: 'Choose a game to build a session plan', text: 'GameDeck will compare local inputs, streaming support, and exact-match netplay.' };
+    if (controllers >= 2) return { style: 'couch', title: 'Couch co-op is ready now', text: `${controllers} controllers are connected. Launch locally with no invite or network setup.` };
+    if (syncReady) return { style: 'sync', title: 'Synced netplay is the best online route', text: 'Lowest latency and native gameplay. Your friend needs the same game and matching core ID.' };
+    if (remoteReady) return { style: 'remote', title: 'Remote Play is ready for your friend', text: 'Only this PC needs the game. Send an encrypted invite after the stream starts.' };
+    return { style: 'couch', title: 'Local play is available while online setup finishes', text: 'Connect another controller, or review the game/core readiness message above.' };
+  }
+
+  function renderRecommendation() {
+    const recommendation = recommendationForSetup();
+    recommendedPlayStyle = recommendation.style;
+    const labels = { couch: 'SAME SCREEN', remote: 'NO GUEST GAME', sync: 'LOWEST LATENCY' };
+    document.querySelectorAll('[data-play-style]').forEach(button => {
+      const recommended = button.dataset.playStyle === recommendation.style;
+      button.classList.toggle('recommended', recommended);
+      const badge = button.querySelector('[data-style-badge]');
+      if (badge) badge.textContent = recommended ? 'RECOMMENDED' : labels[button.dataset.playStyle];
+    });
+    $('#multiplayerCoachTitle').textContent = recommendation.title;
+    $('#multiplayerCoachText').textContent = recommendation.text;
+    $('#multiplayerCoachAction').dataset.style = recommendation.style;
+    $('#multiplayerCoachAction').textContent = `Use ${recommendation.style === 'couch' ? 'couch co-op' : recommendation.style === 'sync' ? 'synced netplay' : 'Remote Play'}`;
+  }
+
+  function playerRailState() {
+    const controllers = connectedControllerCount();
+    const remotePlayers = activePlayerCount();
+    const syncPlayers = Math.max(0, Number(syncStatus.playerCount || 0));
+    const maxPlayers = Math.max(2, Math.min(4, Number(
+      currentPlayStyle === 'sync' ? syncStatus.maxPlayers || syncInfo?.maxPlayers || 2
+        : currentPlayStyle === 'remote' ? remoteStatus.maxPlayers || selectedInfo?.maxPlayers || 2
+          : selectedInfo?.maxPlayers || 2
+    )));
+    const readyCount = currentPlayStyle === 'couch'
+      ? Math.max(1, controllers)
+      : currentPlayStyle === 'sync' ? (syncStatus.active ? Math.max(1, syncPlayers) : 1)
+        : remoteStatus.active || guestPeer ? Math.max(1, remotePlayers) : 1;
+    return { controllers, maxPlayers, readyCount };
+  }
+
+  function renderPlayerRail() {
+    const { controllers, maxPlayers, readyCount } = playerRailState();
+    const modeLabel = currentPlayStyle === 'couch' ? 'LOCAL PLAYERS' : currentPlayStyle === 'sync' ? 'MATCHED PLAYERS' : 'REMOTE PLAYERS';
+    const slots = Array.from({ length: maxPlayers }, (_, index) => {
+      const player = index + 1;
+      const ready = player <= readyCount;
+      let detail = 'Waiting for player';
+      if (player === 1) detail = currentPlayStyle === 'remote' && guestPeer ? 'Remote player' : 'Host ready';
+      else if (currentPlayStyle === 'couch') detail = player <= controllers ? 'Controller connected' : 'Connect controller';
+      else if (currentPlayStyle === 'sync') detail = ready ? 'Exact match connected' : 'Invite required';
+      else detail = ready ? 'Encrypted input connected' : 'Invite required';
+      return `<div class="multiplayer-player-slot ${ready ? 'ready' : 'waiting'}"><span>P${player}</span><div><b>${ready ? (player === 1 ? 'Player one' : `Player ${player}`) : `Open slot ${player}`}</b><small>${detail}</small></div><i>${ready ? 'READY' : 'WAITING'}</i></div>`;
+    }).join('');
+    $('#multiplayerPlayerRail').innerHTML = `<div class="multiplayer-player-rail-label"><span>${modeLabel}</span><b>${Math.min(readyCount, maxPlayers)}/${maxPlayers}</b></div>${slots}`;
+  }
+
+  function routeClipboardInvite(value) {
+    const invite = String(value || '').trim();
+    if (!invite) return toast('Clipboard is empty.', 'warning');
+    if (/^GDPLAY1\./i.test(invite)) {
+      currentPlayStyle = 'sync';
+      syncTab = 'join';
+      $('#syncJoinInvite').value = invite;
+      renderPlayStyles();
+      renderSyncTabs();
+      $('#syncJoinInvite').focus();
+      toast('Synchronized invite recognized. Ready to verify.', 'success');
+      return;
+    }
+    if (/^GDREMOTEANSWER[12]\./i.test(invite)) {
+      currentPlayStyle = 'remote';
+      currentTab = 'host';
+      $('#netplayAnswerInput').value = invite;
+      renderPlayStyles();
+      renderTabs();
+      $('#netplayAnswerInput').focus();
+      toast('Remote Play response recognized.', 'success');
+      return;
+    }
+    if (/^GDREMOTE[12]\./i.test(invite)) {
+      currentPlayStyle = 'remote';
+      currentTab = 'join';
+      $('#netplayJoinInvite').value = invite;
+      renderPlayStyles();
+      renderTabs();
+      $('#netplayJoinInvite').focus();
+      toast('Remote Play invite recognized. Ready to join.', 'success');
+      return;
+    }
+    toast('Clipboard does not contain a GameDeck multiplayer invite.', 'warning');
+  }
+
+  async function pasteMultiplayerInvite() {
+    try {
+      routeClipboardInvite(await window.deck.readClipboard());
+    } catch (error) {
+      toast(error.message || 'Clipboard could not be read.', 'warning');
+    }
+  }
+
   function modalOpen() {
     return !$('#netplayStudio').classList.contains('hidden');
   }
@@ -166,6 +271,8 @@
     });
     renderTabs();
     renderSyncTabs();
+    renderRecommendation();
+    renderPlayerRail();
   }
 
   function openStudio(tab = 'host', style = currentPlayStyle) {
@@ -250,6 +357,8 @@
       <div class="controller-slot ready"><span>P1</span><div><b>Player one</b><small>${controllers >= 1 ? 'Controller connected' : 'Keyboard ready'}</small></div><i>READY</i></div>
       <div class="controller-slot ${controllers >= 2 ? 'ready' : 'waiting'}"><span>P2</span><div><b>Player two</b><small>${controllers >= 2 ? 'Controller connected' : 'Connect another controller'}</small></div><i>${controllers >= 2 ? 'READY' : 'WAITING'}</i></div>`;
     $('#multiplayerMatchPill').classList.toggle('verified', coreReady);
+    renderRecommendation();
+    renderPlayerRail();
   }
 
   async function refreshSelectedGame() {
@@ -262,6 +371,7 @@
       $('#netplayGameTitle').textContent = 'Select a game from your library';
       $('#netplayGameMeta').textContent = 'Choose a multiplayer game before opening this command center.';
       $('#multiplayerMatchId').textContent = 'Waiting for game';
+      $('#multiplayerCopyMatch').disabled = true;
       art.textContent = 'P1';
       $('#netplayHost').disabled = true;
       $('#syncHost').disabled = true;
@@ -307,6 +417,7 @@
       $('#multiplayerMatchId').textContent = verified
         ? `GAME ${match.matchId} · CORE ${match.coreMatchId}`
         : match?.issue || 'Exact-match netplay unavailable';
+      $('#multiplayerCopyMatch').disabled = !verified;
       updatePlayerSlots(basic?.maxPlayers || 2);
       updateSyncPlayerSlots(match?.maxPlayers || basic?.maxPlayers || 2);
       $('#netplayHost').disabled = !supported || remoteStatus.active || syncStatus.active;
@@ -316,6 +427,7 @@
       card.classList.add('unsupported');
       $('#netplayGameMeta').textContent = error.message || 'Multiplayer compatibility check failed.';
       $('#multiplayerMatchId').textContent = 'Verification unavailable';
+      $('#multiplayerCopyMatch').disabled = true;
     }
     renderReadiness();
     renderRemotePlay();
@@ -327,6 +439,11 @@
     const syncActive = Boolean(syncStatus.active);
     const active = hostActive || guestActive || syncActive;
     const hasError = remoteStatus.phase === 'error' || syncStatus.phase === 'error';
+    const commandWindow = document.querySelector('.multiplayer-command-window');
+    commandWindow?.classList.toggle('session-active', active);
+    commandWindow?.classList.toggle('session-sync', syncActive);
+    commandWindow?.classList.toggle('session-remote', hostActive || guestActive);
+    commandWindow?.classList.toggle('session-guest', guestActive);
     const count = syncActive ? Math.max(1, Number(syncStatus.playerCount || 1)) : activePlayerCount();
     $('#netplayActive').classList.toggle('hidden', !active && !hasError);
 
@@ -788,6 +905,15 @@
     stopGuest();
     toast(error.message || 'The Remote Play invitation could not be opened.', 'warning');
   });
+  $('#multiplayerCoachAction').onclick = () => setPlayStyle($('#multiplayerCoachAction').dataset.style || recommendedPlayStyle, true);
+  $('#multiplayerPasteInvite').onclick = pasteMultiplayerInvite;
+  $('#multiplayerCopyMatch').onclick = async () => {
+    if (!syncInfo?.supported) return;
+    const game = selectedGame();
+    const value = `${multiplayerTitle(game?.title)} | GAME ${syncInfo.matchId} | CORE ${syncInfo.coreMatchId}`;
+    await window.deck.copyText(value);
+    toast('Game and core match IDs copied.', 'success');
+  };
   $('#multiplayerCouchLaunch').onclick = launchCouchCoop;
   $('#syncHost').onclick = startSyncHost;
   $('#syncJoin').onclick = joinSyncRoom;

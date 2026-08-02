@@ -3128,6 +3128,7 @@ ipcMain.handle('copy-text', (_, value) => {
   clipboard.writeText(String(value || ''));
   return true;
 });
+ipcMain.handle('read-clipboard', () => clipboard.readText());
 ipcMain.handle('open-external', (_, target) => {
   try {
     openExternal(target);

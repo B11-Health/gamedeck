@@ -49,6 +49,7 @@ contextBridge.exposeInMainWorld('deck', {
   sponsors: () => ipcRenderer.invoke('sponsors'),
   donations: () => ipcRenderer.invoke('donations'),
   copyText: value => ipcRenderer.invoke('copy-text', value),
+  readClipboard: () => ipcRenderer.invoke('read-clipboard'),
   openExternal: target => ipcRenderer.invoke('open-external', target),
   restartApp: () => ipcRenderer.invoke('restart-app'),
   clearActivity: () => ipcRenderer.invoke('clear-activity'),

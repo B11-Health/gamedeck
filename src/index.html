@@ -473,18 +473,25 @@
         <button id="netplayClose" type="button" aria-label="Close multiplayer">×</button>
       </div>
 
-      <div class="multiplayer-readiness" id="multiplayerReadiness" aria-live="polite"></div>
+      <div class="multiplayer-preflight-row">
+        <div class="multiplayer-readiness" id="multiplayerReadiness" aria-live="polite"></div>
+        <div class="multiplayer-coach" id="multiplayerCoach">
+          <div><span id="multiplayerCoachKicker">RECOMMENDED FOR THIS SETUP</span><b id="multiplayerCoachTitle">Checking controllers and game compatibility…</b><small id="multiplayerCoachText">GameDeck will suggest the fastest route once the preflight is complete.</small></div>
+          <div class="multiplayer-coach-actions"><button id="multiplayerCoachAction" type="button">Use recommendation</button><button id="multiplayerPasteInvite" type="button">Paste invite</button></div>
+        </div>
+      </div>
 
       <div class="multiplayer-style-grid" role="tablist" aria-label="Play style">
-        <button class="multiplayer-style" type="button" role="tab" data-play-style="couch" aria-selected="false"><span class="multiplayer-style-icon">◉◉</span><b>Couch co-op</b><small>Same PC · local controllers</small></button>
-        <button class="multiplayer-style active" type="button" role="tab" data-play-style="remote" aria-selected="true"><span class="multiplayer-style-icon">⌁</span><b>Remote Play</b><small>Only the host needs the game</small></button>
-        <button class="multiplayer-style" type="button" role="tab" data-play-style="sync" aria-selected="false"><span class="multiplayer-style-icon">⇄</span><b>Synced netplay</b><small>Matching game + core required</small></button>
+        <button class="multiplayer-style" type="button" role="tab" data-play-style="couch" aria-selected="false"><span class="multiplayer-style-icon">◉◉</span><span class="multiplayer-style-badge" data-style-badge="couch">SAME SCREEN</span><b>Couch co-op</b><small>Same PC · local controllers</small><em data-style-reason="couch">No network setup</em></button>
+        <button class="multiplayer-style active" type="button" role="tab" data-play-style="remote" aria-selected="true"><span class="multiplayer-style-icon">⌁</span><span class="multiplayer-style-badge" data-style-badge="remote">NO GUEST GAME</span><b>Remote Play</b><small>Only the host needs the game</small><em data-style-reason="remote">Encrypted video + input</em></button>
+        <button class="multiplayer-style" type="button" role="tab" data-play-style="sync" aria-selected="false"><span class="multiplayer-style-icon">⇄</span><span class="multiplayer-style-badge" data-style-badge="sync">LOWEST LATENCY</span><b>Synced netplay</b><small>Matching game + core required</small><em data-style-reason="sync">Native relay session</em></button>
       </div>
 
       <div class="netplay-game-card multiplayer-selected-card" id="netplayGameCard">
         <span class="netplay-game-icon multiplayer-game-art" id="netplayGameArt" aria-hidden="true">P1</span>
         <div><small id="netplayGameKicker">SELECTED GAME</small><b id="netplayGameTitle">Select a game from your library</b><span id="netplayGameMeta">Choose a multiplayer game from your library before opening this command center.</span></div>
-        <div class="multiplayer-match-pill" id="multiplayerMatchPill"><small>LOCAL CHECK</small><b id="multiplayerMatchId">Waiting for game</b></div>
+        <div class="multiplayer-player-rail" id="multiplayerPlayerRail" aria-label="Player readiness" aria-live="polite"></div>
+        <div class="multiplayer-match-pill" id="multiplayerMatchPill"><small>LOCAL CHECK</small><b id="multiplayerMatchId">Waiting for game</b><button id="multiplayerCopyMatch" type="button" disabled>Copy IDs</button></div>
       </div>
 
       <div class="netplay-active hidden" id="netplayActive">
@@ -493,6 +500,7 @@
         <div class="netplay-player-count"><b id="netplayPlayerCount">1</b><span>PLAYERS</span></div>
         <button id="netplayStop" type="button">End session</button>
       </div>
+
 
       <section class="multiplayer-style-panel hidden" id="multiplayerCouchPanel" data-style-panel="couch">
         <div class="couch-layout">
