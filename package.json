@@ -36,7 +36,8 @@
     "video:capture-motion": "node scripts/capture-social-trailer.cjs",
     "video:render-motion": "node scripts/render-social-launch.cjs",
     "video:motion": "npm run video:capture-motion && npm run video:render-motion",
-    "video:short": "node scripts/generate-social-short.cjs"
+    "video:short": "node scripts/generate-social-short.cjs",
+    "video:campaign": "node scripts/generate-social-campaign.cjs"
   },
   "devDependencies": {
     "electron": "^43.2.0",

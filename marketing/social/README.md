@@ -8,7 +8,15 @@ This directory stores source copy and production guidance. Generated videos belo
 npm run video:short
 ```
 
-The command creates a 30-second, 1080×1920 H.264/AAC video plus an SRT caption file and platform-ready caption copy. Override the source, start time, duration, or output directory with `GAMEDECK_SHORT_SOURCE`, `GAMEDECK_SHORT_START`, `GAMEDECK_SHORT_DURATION`, and `GAMEDECK_SHORT_OUTPUT_DIR`.
+The command creates a 30-second, 1080×1920 H.264/AAC video plus an SRT caption file and platform-ready caption copy. Override the source, start time, duration, output directory, slug, headline, five timed messages, or caption copy with the `GAMEDECK_SHORT_*` environment variables.
+
+## Generate the full launch campaign
+
+```bash
+npm run video:campaign
+```
+
+This produces two additional native-video angles in `dist/social/`: **Your collection deserves better than folders** and **Setup should explain itself**. Each includes a matching SRT and caption file.
 
 ## Publishing principles
 

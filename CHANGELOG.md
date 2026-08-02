@@ -4,6 +4,8 @@ All notable GameDeck releases are documented here.
 
 ## [Unreleased]
 
+- Added a parallel, parameterized vertical-video campaign renderer with distinct folders and local-first growth angles.
+
 - Added a premium in-app share surface with feedback-first Reddit copy, short-form captions, tutorial routing, and GitHub discovery.
 - Added a reproducible 30-second vertical video renderer, growth playbook, social copy kit, and compatibility issue form.
 - Hardened repository hygiene for local QA backups, temporary archive logs, and generated social-video caches.

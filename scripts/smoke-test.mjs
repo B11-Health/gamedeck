@@ -322,4 +322,7 @@ if (!catalogArtworkUpdate.includes('$(`[data-catalog-art=\"${game.id}\"]`).forEa
 if (!renderer.includes('$(`[data-catalog-art=\"${game.id}\"]`).forEach')) fail('catalog artwork updates must use the multi-selector helper');
 if (!main.includes('thumbnailTokens') || !main.includes('tokens.every')) fail('ordered token artwork matching is missing');
 
+if (pkg.scripts?.['video:campaign'] !== 'node scripts/generate-social-campaign.cjs') fail('social campaign script is missing');
+if (!renderer.includes('GAMEDECK_SHARE_COPY') || !renderer.includes('copyRedditLaunch') || !renderer.includes('copyShortCaption')) fail('in-app share loop is missing');
+
 if (!process.exitCode) console.log('GameDeck smoke test passed.');
