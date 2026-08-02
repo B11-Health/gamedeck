@@ -152,3 +152,9 @@ Environment overrides are also supported: `GAMEDECK_LIBRARY`, `GAMEDECK_RGSX_ROO
 - See [FUNDING.md](FUNDING.md) and the transparent [sponsorship policy](docs/SPONSORSHIP.md).
 
 GameDeck is not affiliated with Nintendo, Sony, Microsoft, Sega, Valve, RetroArch, or emulator projects referenced for compatibility. Product names belong to their respective owners.
+
+## Video and channel launch
+
+Watch the public [GameDeck official motion launch trailer](https://youtu.be/0nCHy9WsEpQ) and follow [@PlayGameDeck on YouTube](https://www.youtube.com/@PlayGameDeck).
+
+The validated 1080p motion master is available at [marketing/youtube/GameDeck-Official-Launch-YouTube.mp4](marketing/youtube/GameDeck-Official-Launch-YouTube.mp4), with source motion capture, Gemini narration, captions, channel artwork, and reproducible capture/render scripts. Full production details and licensing notes are in [docs/YOUTUBE_LAUNCH.md](docs/YOUTUBE_LAUNCH.md).

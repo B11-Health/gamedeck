@@ -31,12 +31,18 @@
     "dist:mac": "npm run runtime:cache -- --platform=darwin-universal && electron-builder --mac --universal --publish never",
     "dist:linux": "npm run runtime:cache -- --platform=linux-x64 && electron-builder --linux --x64 --publish never",
     "wallet:create": "node scripts/create-donation-wallet.mjs",
-    "runtime:cache": "node scripts/prepare-runtime-cache.mjs"
+    "runtime:cache": "node scripts/prepare-runtime-cache.mjs",
+    "video:youtube": "node scripts/generate-youtube-video.cjs",
+    "video:capture-motion": "node scripts/capture-social-trailer.cjs",
+    "video:render-motion": "node scripts/render-social-launch.cjs",
+    "video:motion": "npm run video:capture-motion && npm run video:render-motion"
+
   },
   "devDependencies": {
     "electron": "^43.2.0",
     "electron-builder": "26.15.3",
-    "ethers": "6.17.0"
+    "ethers": "6.17.0",
+    "ffmpeg-static": "^5.3.0"
   },
   "build": {
     "appId": "io.gamedeck.launcher",
@@ -114,6 +120,7 @@
         "NSAudioCaptureUsageDescription": "GameDeck can include game audio when you start a local GameDeck Live stream.",
         "NSLocalNetworkUsageDescription": "GameDeck shares gameplay directly with your paired devices on the local network."
       }
+
     },
     "linux": {
       "icon": "build/icons",
