@@ -24,7 +24,6 @@
   let currentTab = 'host';
   let syncTab = 'host';
   let currentPlayStyle = localStorage.getItem('gamedeck.multiplayer.style') || 'remote';
-  let recommendedPlayStyle = 'remote';
   let selectedInfo = null;
   let syncInfo = null;
   let syncRelays = [];
@@ -100,7 +99,8 @@
   }
 
   function connectedControllerCount() {
-    return navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean).length : 0;
+    const active = navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean).length : 0;
+    return Math.max(active, Number(window.GameDeckInputStatus?.effectiveControllers || 0));
   }
 
   function recommendationForSetup() {
@@ -117,7 +117,6 @@
 
   function renderRecommendation() {
     const recommendation = recommendationForSetup();
-    recommendedPlayStyle = recommendation.style;
     const labels = { couch: 'SAME SCREEN', remote: 'NO GUEST GAME', sync: 'LOWEST LATENCY' };
     document.querySelectorAll('[data-play-style]').forEach(button => {
       const recommended = button.dataset.playStyle === recommendation.style;
@@ -127,8 +126,6 @@
     });
     $('#multiplayerCoachTitle').textContent = recommendation.title;
     $('#multiplayerCoachText').textContent = recommendation.text;
-    $('#multiplayerCoachAction').dataset.style = recommendation.style;
-    $('#multiplayerCoachAction').textContent = `Use ${recommendation.style === 'couch' ? 'couch co-op' : recommendation.style === 'sync' ? 'synced netplay' : 'Remote Play'}`;
   }
 
   function playerRailState() {
@@ -136,31 +133,39 @@
     const remotePlayers = activePlayerCount();
     const syncPlayers = Math.max(0, Number(syncStatus.playerCount || 0));
     const maxPlayers = Math.max(2, Math.min(4, Number(
-      currentPlayStyle === 'sync' ? syncStatus.maxPlayers || syncInfo?.maxPlayers || 2
+      currentPlayStyle === 'sync' ? syncStatus.maxPlayers || syncInfo?.maxPlayers || selectedInfo?.maxPlayers || 2
         : currentPlayStyle === 'remote' ? remoteStatus.maxPlayers || selectedInfo?.maxPlayers || 2
           : selectedInfo?.maxPlayers || 2
     )));
     const readyCount = currentPlayStyle === 'couch'
-      ? Math.max(1, controllers)
-      : currentPlayStyle === 'sync' ? (syncStatus.active ? Math.max(1, syncPlayers) : 1)
-        : remoteStatus.active || guestPeer ? Math.max(1, remotePlayers) : 1;
-    return { controllers, maxPlayers, readyCount };
+      ? Math.max(1, Math.min(maxPlayers, controllers))
+      : currentPlayStyle === 'sync' ? (syncStatus.active ? Math.max(1, Math.min(maxPlayers, syncPlayers)) : 1)
+        : remoteStatus.active || guestPeer ? Math.max(1, Math.min(maxPlayers, remotePlayers)) : 1;
+    return { controllers, maxPlayers, displaySlots: 4, readyCount };
   }
 
   function renderPlayerRail() {
-    const { controllers, maxPlayers, readyCount } = playerRailState();
-    const modeLabel = currentPlayStyle === 'couch' ? 'LOCAL PLAYERS' : currentPlayStyle === 'sync' ? 'MATCHED PLAYERS' : 'REMOTE PLAYERS';
-    const slots = Array.from({ length: maxPlayers }, (_, index) => {
+    const { controllers, maxPlayers, displaySlots, readyCount } = playerRailState();
+    const modeLabel = currentPlayStyle === 'couch' ? 'LOCAL' : currentPlayStyle === 'sync' ? 'MATCHED' : 'REMOTE';
+    const title = multiplayerTitle(selectedGame()?.title || 'This game');
+    const slots = Array.from({ length: displaySlots }, (_, index) => {
       const player = index + 1;
-      const ready = player <= readyCount;
+      const available = player <= maxPlayers;
+      const ready = available && player <= readyCount;
       let detail = 'Waiting for player';
-      if (player === 1) detail = currentPlayStyle === 'remote' && guestPeer ? 'Remote player' : 'Host ready';
+      if (!available) detail = `${title} supports ${maxPlayers}`;
+      else if (player === 1) detail = currentPlayStyle === 'remote' && guestPeer ? 'Remote player' : 'Host ready';
       else if (currentPlayStyle === 'couch') detail = player <= controllers ? 'Controller connected' : 'Connect controller';
       else if (currentPlayStyle === 'sync') detail = ready ? 'Exact match connected' : 'Invite required';
       else detail = ready ? 'Encrypted input connected' : 'Invite required';
-      return `<div class="multiplayer-player-slot ${ready ? 'ready' : 'waiting'}"><span>P${player}</span><div><b>${ready ? (player === 1 ? 'Player one' : `Player ${player}`) : `Open slot ${player}`}</b><small>${detail}</small></div><i>${ready ? 'READY' : 'WAITING'}</i></div>`;
+      const label = !available ? `P${player} locked` : ready ? (player === 1 ? 'Player one' : `Player ${player}`) : `Open slot ${player}`;
+      const state = !available ? `${maxPlayers}P GAME` : ready ? 'READY' : 'WAITING';
+      return `<div class="multiplayer-player-slot ${!available ? 'locked' : ready ? 'ready' : 'waiting'}"><span>P${player}</span><div><b>${label}</b><small>${detail}</small></div><i>${state}</i></div>`;
     }).join('');
-    $('#multiplayerPlayerRail').innerHTML = `<div class="multiplayer-player-rail-label"><span>${modeLabel}</span><b>${Math.min(readyCount, maxPlayers)}/${maxPlayers}</b></div>${slots}`;
+    const markup = `<div class="multiplayer-player-rail-label"><span>${modeLabel}</span><b>${Math.min(readyCount, maxPlayers)}/${maxPlayers}</b><small>READY</small></div>${slots}`;
+    $('#multiplayerPlayerRail').innerHTML = markup;
+    const activeRail = $('#multiplayerActivePlayerRail');
+    if (activeRail) activeRail.innerHTML = markup;
   }
 
   function routeClipboardInvite(value) {
@@ -180,6 +185,7 @@
       currentPlayStyle = 'remote';
       currentTab = 'host';
       $('#netplayAnswerInput').value = invite;
+      renderAcceptAnswerAction();
       renderPlayStyles();
       renderTabs();
       $('#netplayAnswerInput').focus();
@@ -212,7 +218,7 @@
   }
 
   function modalFocusable() {
-    return [...$('#netplayStudio').querySelectorAll('button:not([disabled]):not(.netplay-backdrop), input:not([disabled]), textarea:not([disabled]), select:not([disabled])')]
+    return [...$('#netplayStudio').querySelectorAll('button:not([disabled]):not(.netplay-backdrop), summary, input:not([disabled]), textarea:not([disabled]), select:not([disabled])')]
       .filter(element => !element.closest('.hidden') && element.offsetParent !== null);
   }
 
@@ -336,7 +342,7 @@
   }
 
   function updateSyncPlayerSlots(maxPlayers) {
-    const total = Math.max(2, Math.min(16, Number(maxPlayers || 2)));
+    const total = Math.max(2, Math.min(4, Number(maxPlayers || 2)));
     const select = $('#syncMaxPlayers');
     select.innerHTML = Array.from({ length: total - 1 }, (_, index) => index + 2)
       .map(count => `<option value="${count}">${count} players</option>`).join('');
@@ -353,9 +359,13 @@
       { tone: controllers >= 2 ? 'ready' : 'attention', label: 'INPUT', value: controllers >= 2 ? `${controllers} controllers` : controllers === 1 ? '1 controller' : 'Keyboard only' }
     ];
     $('#multiplayerReadiness').innerHTML = cards.map(item => `<div class="readiness-chip ${item.tone}"><span aria-hidden="true"></span><small>${escapeHtml(item.label)}</small><b>${escapeHtml(item.value)}</b></div>`).join('');
-    $('#multiplayerControllers').innerHTML = `
-      <div class="controller-slot ready"><span>P1</span><div><b>Player one</b><small>${controllers >= 1 ? 'Controller connected' : 'Keyboard ready'}</small></div><i>READY</i></div>
-      <div class="controller-slot ${controllers >= 2 ? 'ready' : 'waiting'}"><span>P2</span><div><b>Player two</b><small>${controllers >= 2 ? 'Controller connected' : 'Connect another controller'}</small></div><i>${controllers >= 2 ? 'READY' : 'WAITING'}</i></div>`;
+    const couchCapacity = Math.max(2, Math.min(4, Number(selectedInfo?.maxPlayers || 2)));
+    $('#multiplayerControllers').innerHTML = Array.from({ length: couchCapacity }, (_, index) => {
+      const player = index + 1;
+      const ready = player === 1 || controllers >= player;
+      const detail = player === 1 && controllers < 1 ? 'Keyboard ready' : ready ? 'Controller connected' : 'Connect controller';
+      return `<div class="controller-slot ${ready ? 'ready' : 'waiting'}"><span>P${player}</span><div><b>Player ${player}</b><small>${detail}</small></div><i>${ready ? 'READY' : 'WAITING'}</i></div>`;
+    }).join('');
     $('#multiplayerMatchPill').classList.toggle('verified', coreReady);
     renderRecommendation();
     renderPlayerRail();
@@ -412,7 +422,7 @@
       const verified = Boolean(match?.ok && match.supported);
       card.classList.toggle('unsupported', !supported);
       $('#netplayGameMeta').textContent = supported
-        ? `${basic.systemName} · up to ${basic.maxPlayers} players · ${match?.coreLabel || basic.coreFile || 'Libretro core'}`
+        ? `${basic.systemName} · ${Math.min(4, basic.maxPlayers)}-player title · 4-slot lobby · ${match?.coreLabel || basic.coreFile || 'Libretro core'}`
         : basic?.issue || 'This game is not yet supported for multiplayer.';
       $('#multiplayerMatchId').textContent = verified
         ? `GAME ${match.matchId} · CORE ${match.coreMatchId}`
@@ -433,6 +443,13 @@
     renderRemotePlay();
   }
 
+  function renderAcceptAnswerAction() {
+    const button = $('#netplayAcceptAnswer');
+    if (!button) return;
+    const hasResponse = Boolean($('#netplayAnswerInput')?.value.trim());
+    button.classList.toggle('hidden', !remoteStatus.active || !hasResponse);
+  }
+
   function renderRemotePlay() {
     const hostActive = Boolean(remoteStatus.active);
     const guestActive = Boolean(guestPeer);
@@ -444,6 +461,7 @@
     commandWindow?.classList.toggle('session-sync', syncActive);
     commandWindow?.classList.toggle('session-remote', hostActive || guestActive);
     commandWindow?.classList.toggle('session-guest', guestActive);
+    if (commandWindow) commandWindow.scrollTop = 0;
     const count = syncActive ? Math.max(1, Number(syncStatus.playerCount || 1)) : activePlayerCount();
     $('#netplayActive').classList.toggle('hidden', !active && !hasError);
 
@@ -464,8 +482,11 @@
     }
 
     $('#netplayPlayerCount').textContent = String(count || (active ? 1 : 0));
+    const countLabel = $('#netplayPlayerCount')?.nextElementSibling;
+    if (countLabel) countLabel.textContent = Number(count || (active ? 1 : 0)) === 1 ? 'PLAYER' : 'PLAYERS';
     $('#netplayStop').classList.toggle('hidden', !active);
     $('#netplayHostTools').classList.toggle('hidden', !hostActive);
+    renderAcceptAnswerAction();
     $('#netplayHost').classList.toggle('hidden', hostActive);
     $('#netplayHost').disabled = hostActive || syncActive || !selectedInfo?.supported;
     $('#syncHost').disabled = syncBusy || hostActive || guestActive || syncActive || !syncInfo?.supported;
@@ -900,12 +921,12 @@
   });
   $('#netplayHost').onclick = startHost;
   $('#netplayCreateInvite').onclick = () => createHostInvite().catch(error => toast(error.message, 'warning'));
+  $('#netplayAnswerInput').addEventListener('input', renderAcceptAnswerAction);
   $('#netplayAcceptAnswer').onclick = () => acceptHostAnswer().catch(error => toast(error.message, 'warning'));
   $('#netplayJoin').onclick = () => createGuestResponse().catch(error => {
     stopGuest();
     toast(error.message || 'The Remote Play invitation could not be opened.', 'warning');
   });
-  $('#multiplayerCoachAction').onclick = () => setPlayStyle($('#multiplayerCoachAction').dataset.style || recommendedPlayStyle, true);
   $('#multiplayerPasteInvite').onclick = pasteMultiplayerInvite;
   $('#multiplayerCopyMatch').onclick = async () => {
     if (!syncInfo?.supported) return;

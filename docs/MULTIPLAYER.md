@@ -18,13 +18,25 @@ Only the host needs the game. The host launches the title and an encrypted WebRT
 
 Both players need the same game revision and compatible RetroArch core build. GameDeck calculates SHA-256 identifiers locally, displays compact game and core match IDs, and rejects mismatches before joining. Hosting uses the selected RetroArch relay region and creates a short `GDPLAY1` invitation.
 
+## Four-slot lobby
+
+GameDeck always shows P1 through P4 so the lobby layout remains predictable across titles. The selected game still controls the playable capacity:
+
+- Two-player games keep P1 and P2 available while P3 and P4 are visibly locked.
+- Three-player games unlock P1 through P3 and lock P4.
+- Four-player games unlock all four positions and expose 2, 3, and 4-player host options.
+
+The lobby never increases a game's native player count. It makes the limit explicit before launch or invitation sharing.
+
+The setup view keeps one primary action visible at a time. Stream quality, relay region, and total-player controls stay inside **Session options** until opened. Once a room starts, GameDeck removes the setup card, resets the dialog scroll position, and shows one live dashboard containing session status, P1–P4 readiness, the invitation, and End Session. Remote Play reveals **Connect this player** only after a response code is present.
+
 ## Metal Slug 3 validation target
 
 The integrated flow is tested with a legally supplied **Metal Slug 3** Neo Geo archive and the FinalBurn Neo core. The command center should report:
 
 - the friendly title **Metal Slug 3**
 - FinalBurn Neo as the synchronized core
-- up to two players
+- a native two-player limit with P3 and P4 visibly locked in the four-slot lobby
 - local game and core match IDs
 - a setup-aware recommendation and visible 1/2 player lobby
 - a no-scroll live-room state after the relay invitation is ready
@@ -46,3 +58,4 @@ For synchronized hosting, GameDeck launches RetroArch through the relay-backed n
 - **Core mismatch:** update GameDeck on both computers so the same managed core build is installed.
 - **Remote player has no video:** repeat the invitation/response exchange and keep the GameDeck window open during pairing.
 - **Second local controller is missing:** connect it before launch and verify its RetroArch input port assignment.
+See the [four-player multiplayer E2E report](E2E_MULTIPLAYER_4_PLAYER_2026-08-02.md) for the complete Metal Slug 3 and Shadow over Mystara validation matrix.

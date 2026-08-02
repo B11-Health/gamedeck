@@ -4,6 +4,7 @@ All notable GameDeck releases are documented here.
 
 ## [Unreleased]
 
+- Expanded multiplayer to a consistent four-slot lobby with native game-capacity locks, four-player title detection, a simplified one-action setup, a dedicated no-duplicate live-session dashboard, laptop-height tuning, and full Metal Slug 3/Shadow over Mystara E2E coverage.
 - Reframed the public website around the three-mode multiplayer command center: Couch Co-op, Remote Play Together, and Synchronized Netplay.
 
 - Rebuilt multiplayer as one controller-first command center for Couch Co-op, encrypted Remote Play Together, and relay-backed Synchronized Netplay.

@@ -98,10 +98,10 @@ for (const id of [
   'netplayRemoteVideo',
   'netplayPlayerCount',
   'spotlightOnline',
-  'multiplayerCoachAction',
   'multiplayerPasteInvite',
   'multiplayerCopyMatch',
   'multiplayerPlayerRail',
+  'multiplayerActivePlayerRail',
   'libraryToolbar',
   'transferDismissFinished',
   'transferOpenLibrary',
@@ -276,6 +276,12 @@ if (!html.includes('data-play-style="couch"') || !html.includes('data-play-style
 if (!netplayRenderer.includes('startSyncHost') || !netplayRenderer.includes('joinSyncRoom') || !netplayRenderer.includes('launchCouchCoop')) fail('multiplayer mode launch flows are incomplete');
 if (!main.includes('netplayMatchInfo') || !main.includes('coreMatchId')) fail('local ROM/core match verification is missing');
 if (!styles.includes('.multiplayer-style-grid') || !styles.includes('.multiplayer-readiness')) fail('multiplayer command center visual system is missing');
+if (!netplayRenderer.includes('displaySlots: 4') || !netplayRenderer.includes("state = !available ? `${maxPlayers}P GAME`") || !netplayRenderer.includes("class=\"multiplayer-player-slot ${!available ? 'locked'")) fail('four-slot lobby and native game-limit states are missing');
+if (!netplayRenderer.includes('4-slot lobby') || !netplayRenderer.includes('Math.min(4, Number(maxPlayers || 2))')) fail('four-player selection cap is missing');
+if (!styles.includes('.multiplayer-player-slot.locked') || !styles.includes('@media (max-height: 950px)')) fail('four-slot locked state or laptop-height layout is missing');
+if (!netplayRenderer.includes('commandWindow.scrollTop = 0') || !styles.includes('.session-active .multiplayer-selected-card') || !styles.includes('.multiplayer-active-player-rail')) fail('live multiplayer must reset scroll and replace the setup card with the active player rail');
+if (!html.includes('class="multiplayer-advanced"') || html.includes('id="multiplayerCoachAction"') || !styles.includes('.multiplayer-match-pill:hover button')) fail('simplified multiplayer action hierarchy is missing');
+if (!netplayRenderer.includes('renderAcceptAnswerAction') || !html.includes('class="netplay-primary hidden" id="netplayAcceptAnswer"')) fail('Remote Play response action must stay hidden until usable');
 if (!netplayRenderer.includes('recommendationForSetup') || !netplayRenderer.includes('renderPlayerRail') || !netplayRenderer.includes('routeClipboardInvite')) fail('guided multiplayer recommendation or invite routing is missing');
 if (!styles.includes('.multiplayer-coach') || !styles.includes('.multiplayer-player-rail') || !styles.includes('.multiplayer-style-badge')) fail('guided multiplayer lobby styling is missing');
 if (!main.includes('brotliCompressSync') || !main.includes('brotliDecompressSync')) fail('Discord-sized Brotli Remote Play codes are missing');
@@ -308,6 +314,8 @@ for (const asset of [
   'docs/REMOTE_PLAY.md',
   'docs/MULTIPLAYER.md',
   'docs/E2E_REPORT_1.2.0.md',
+  'docs/E2E_MULTIPLAYER_4_PLAYER_2026-08-02.md',
+  'docs/e2e-results/GameDeck-Multiplayer-4-Player-2026-08-02.json',
   'docs/e2e-results/GameDeck-1.2.0-2026-08-02.json',
   'docs/images/gamedeck-ready-check.png',
   'docs/images/gamedeck-startup.png',

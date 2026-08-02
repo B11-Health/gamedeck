@@ -1,0 +1,58 @@
+{
+  "date": "2026-08-02",
+  "result": "pass",
+  "assertionsPassed": 33,
+  "assertionsFailed": 0,
+  "rendererExceptions": 0,
+  "viewport": {
+    "width": 1504,
+    "height": 904
+  },
+  "targets": [
+    {
+      "title": "Metal Slug 3",
+      "nativePlayers": 2,
+      "displayedSlots": 4,
+      "lockedSlots": [
+        3,
+        4
+      ],
+      "gameMatchId": "D5B6-0499-CA84",
+      "coreMatchId": "22A0-AE11-DCE0",
+      "core": "FinalBurn Neo"
+    },
+    {
+      "title": "Dungeons & Dragons: Shadow over Mystara",
+      "nativePlayers": 4,
+      "displayedSlots": 4,
+      "lockedSlots": [],
+      "hostOptions": [
+        2,
+        3,
+        4
+      ]
+    }
+  ],
+  "synchronized": {
+    "relayRegion": "New York",
+    "phase": "ready",
+    "invitePrefix": "GDPLAY1.",
+    "inviteLength": 760,
+    "overflow": false
+  },
+  "remotePlay": {
+    "phase": "ready",
+    "captureStarted": true,
+    "inviteLength": 1718,
+    "overflow": false
+  },
+  "couchCoop": {
+    "launched": true,
+    "core": "FinalBurn Neo",
+    "controllerProfile": "GameDeck arcade"
+  },
+  "privacy": {
+    "secretsIncluded": false,
+    "absolutePathsIncluded": false
+  }
+}

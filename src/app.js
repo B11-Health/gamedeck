@@ -625,6 +625,7 @@ function setControllerStatus() {
   panel.classList.toggle('paired', paired);
   $('#arcadeControllerState').textContent = pad ? (pad.mapping === 'standard' ? 'Xbox layout ready' : 'Controller detected') : paired ? 'Xbox paired — wake to play' : 'Waiting for controller';
   const controllerCount = pad ? pads.length : paired ? state.controllerHints.length : 0;
+  window.GameDeckInputStatus = Object.freeze({ activeControllers: pads.length, pairedControllers: paired ? state.controllerHints.length : 0, effectiveControllers: controllerCount, label: pad ? 'connected' : paired ? 'paired' : 'none' });
   $('#arcadeControllerCount').textContent = `${controllerCount} ${pad ? (controllerCount === 1 ? 'PAD' : 'PADS') : paired ? 'PAIRED' : 'PADS'}`;
   $('#arcadeControllerDetail').textContent = pad
     ? `${String(pad.id || 'Controller').split('(')[0].trim().slice(0, 36)} · D-pad and left stick enabled for arcade movement.`

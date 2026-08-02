@@ -5220,3 +5220,274 @@ body.modal-open > main {
   .multiplayer-coach-actions { grid-template-columns: 1fr 1fr; }
   .multiplayer-mode-note { align-items: flex-start; flex-direction: column; gap: 4px; }
 }
+
+/* Multiplayer 4-slot lobby + simplified setup/live hierarchy */
+.multiplayer-command-window { position: relative; }
+
+.multiplayer-coach-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+.multiplayer-coach-actions button { cursor: pointer; }
+
+.multiplayer-style {
+  min-height: 78px;
+  grid-template-rows: auto auto;
+  row-gap: 2px;
+  padding: 11px 13px;
+}
+.multiplayer-style-icon { grid-row: 1 / span 2; }
+.multiplayer-style em { display: none; }
+
+.multiplayer-selected-card {
+  grid-template-columns: 54px minmax(170px, 1fr) minmax(340px, 400px) 220px;
+  padding: 10px 13px;
+}
+.netplay-game-card .multiplayer-player-rail {
+  min-width: 340px;
+  max-width: 400px;
+  gap: 4px;
+}
+.multiplayer-player-rail-label {
+  width: 42px;
+  gap: 1px;
+}
+.multiplayer-player-rail-label span { font-size: 6px; }
+.multiplayer-player-rail-label b { font-size: 12px; }
+.multiplayer-player-rail-label small {
+  color: #5e6c80;
+  font-size: 6px;
+  font-weight: 850;
+  letter-spacing: .1em;
+}
+.multiplayer-player-slot {
+  min-width: 58px;
+  flex: 1 1 58px;
+  grid-template-columns: 22px minmax(0, 1fr);
+  column-gap: 5px;
+  padding: 6px;
+  border-radius: 9px;
+}
+.multiplayer-player-slot > span {
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  font-size: 7px;
+}
+.multiplayer-player-slot b { font-size: 7px; }
+.multiplayer-player-slot small { font-size: 6px; }
+.multiplayer-player-slot i { font-size: 5px; }
+.multiplayer-player-slot.locked {
+  opacity: .58;
+  border-style: dashed;
+  border-color: #465064;
+  background: #0c1017;
+}
+.multiplayer-player-slot.locked > span,
+.multiplayer-player-slot.locked i { color: #798397; }
+
+.multiplayer-match-pill {
+  position: relative;
+  min-width: 220px;
+  padding-right: 42px;
+}
+.multiplayer-match-pill button {
+  position: absolute;
+  top: 50%;
+  right: 9px;
+  width: 27px;
+  height: 27px;
+  margin: 0;
+  padding: 0;
+  transform: translateY(-50%);
+  border-radius: 8px;
+  font-size: 13px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .16s ease;
+}
+.multiplayer-match-pill:hover button,
+.multiplayer-match-pill:focus-within button {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.multiplayer-advanced {
+  border: 1px solid #2d3848;
+  border-radius: 10px;
+  background: #0b1017;
+}
+.multiplayer-advanced summary {
+  padding: 10px 12px;
+  color: #8896aa;
+  font-size: 9px;
+  font-weight: 800;
+  cursor: pointer;
+  list-style: none;
+}
+.multiplayer-advanced summary::-webkit-details-marker { display: none; }
+.multiplayer-advanced summary::after {
+  content: '+';
+  float: right;
+  color: #66758a;
+  font-size: 13px;
+}
+.multiplayer-advanced[open] summary::after { content: '−'; }
+.multiplayer-advanced[open] summary { border-bottom: 1px solid #263141; }
+.multiplayer-advanced .netplay-options { padding: 12px; }
+
+.multiplayer-quiet-action {
+  min-width: 0 !important;
+  min-height: 0 !important;
+  padding: 3px 2px !important;
+  border: 0 !important;
+  color: #8190a5 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  font-size: 8px !important;
+  font-weight: 750 !important;
+  text-decoration: underline;
+  text-decoration-color: #526176;
+  text-underline-offset: 3px;
+}
+.multiplayer-quiet-action:hover {
+  color: #c7d3e1 !important;
+  text-decoration-color: #8fa1b7;
+}
+.netplay-share-actions {
+  min-width: 126px;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-end;
+  gap: 7px;
+}
+.netplay-share-actions .netplay-copy-primary {
+  min-width: 126px;
+  min-height: 38px;
+}
+.netplay-foot { display: none; }
+
+.multiplayer-active-player-rail { display: none; }
+.netplay-active .netplay-active-copy {
+  grid-column: 2;
+  grid-row: 1;
+}
+.netplay-active .netplay-player-count {
+  grid-column: 3;
+  grid-row: 1;
+}
+.netplay-active #netplayStop {
+  grid-column: 4;
+  grid-row: 1;
+}
+
+.multiplayer-command-window.session-active .multiplayer-preflight-row,
+.multiplayer-command-window.session-active .multiplayer-style-grid,
+.multiplayer-command-window.session-active .multiplayer-selected-card,
+.multiplayer-command-window.session-active .multiplayer-style-panel > .netplay-tabs,
+.multiplayer-command-window.session-active .multiplayer-advanced,
+.multiplayer-command-window.session-active .multiplayer-mode-note,
+.multiplayer-command-window.session-active .netplay-options,
+.multiplayer-command-window.session-active #netplayHost,
+.multiplayer-command-window.session-active #syncHost,
+.multiplayer-command-window.session-active .netplay-foot {
+  display: none;
+}
+.multiplayer-command-window.session-active .netplay-head {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 4;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.multiplayer-command-window.session-active .netplay-head > div { display: none; }
+.multiplayer-command-window.session-active .netplay-active {
+  margin-top: 18px;
+  padding-right: 58px;
+}
+.multiplayer-command-window.session-active .multiplayer-active-player-rail {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  width: 100%;
+  max-width: none;
+  display: flex;
+  margin-top: 4px;
+}
+.multiplayer-command-window.session-active .netplay-active-dot {
+  grid-column: 1;
+  grid-row: 1;
+}
+.multiplayer-command-window.session-active .multiplayer-match-pill button { display: none; }
+.multiplayer-command-window.session-active .netplay-panels { padding-top: 14px; }
+.multiplayer-command-window.session-active .netplay-invite { padding: 12px; gap: 8px; }
+.multiplayer-command-window.session-active .netplay-invite textarea {
+  min-height: 62px;
+  max-height: 62px;
+  resize: none;
+}
+.multiplayer-command-window.session-active .sync-progress { padding: 10px 12px; }
+.multiplayer-command-window.session-sync #syncHostPanel { gap: 10px; }
+
+@media (max-height: 950px) and (min-width: 901px) {
+  .multiplayer-command-window:not(.session-active) .netplay-head { padding: 12px 20px 9px; }
+  .multiplayer-command-window:not(.session-active) .netplay-head h2 {
+    margin-block: 2px 3px;
+    font-size: clamp(23px, 2.4vw, 30px);
+  }
+  .multiplayer-command-window:not(.session-active) .netplay-head p {
+    font-size: 10px;
+    line-height: 1.25;
+  }
+  .multiplayer-preflight-row { gap: 8px; margin-top: 10px; }
+  .readiness-chip { padding: 8px 10px; }
+  .multiplayer-coach { gap: 8px; padding: 8px 9px; }
+  .multiplayer-style-grid { gap: 8px; margin-block: 9px; }
+  .multiplayer-style { min-height: 70px; padding: 8px 10px; }
+  .multiplayer-style-icon { width: 34px; height: 34px; }
+  .multiplayer-selected-card { padding: 8px 12px; }
+  .multiplayer-game-art { height: 58px; }
+  .multiplayer-style-panel > .netplay-tabs { margin-top: 9px; }
+  .multiplayer-command-window .netplay-tabs { padding: 3px; }
+  .multiplayer-command-window .netplay-tabs button { height: 33px; }
+  .multiplayer-command-window .netplay-panels { padding: 12px 28px 15px; }
+  .multiplayer-command-window .netplay-panel { gap: 10px; }
+  .multiplayer-mode-note { padding: 9px 11px; }
+  .multiplayer-command-window .netplay-primary { height: 42px; }
+}
+
+@media (max-width: 900px) {
+  .multiplayer-preflight-row { grid-template-columns: 1fr; }
+  .multiplayer-readiness,
+  .multiplayer-style-grid { grid-template-columns: 1fr; }
+  .multiplayer-style { min-height: 70px; }
+  .multiplayer-selected-card {
+    grid-template-columns: 54px minmax(0, 1fr);
+    align-items: flex-start;
+  }
+  .multiplayer-player-rail,
+  .multiplayer-match-pill {
+    grid-column: 1 / -1;
+    width: 100%;
+    max-width: none;
+    margin-left: 0;
+  }
+  .multiplayer-match-pill {
+    min-width: 0;
+    text-align: left;
+  }
+  .couch-layout { grid-template-columns: 1fr; }
+  .multiplayer-launch { width: 100%; }
+  .multiplayer-command-window.session-active .netplay-active {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    padding-right: 16px;
+  }
+  .multiplayer-command-window.session-active .netplay-active #netplayStop {
+    grid-column: 2 / -1;
+    grid-row: 3;
+  }
+}
