@@ -4,10 +4,10 @@ This file is the shared source of truth for parallel GameDeck workstreams. Updat
 
 ## Active handoff
 
-**Handoff ID:** GD-20260802-06
-**Updated:** 2026-08-02 21:25 ET
+**Handoff ID:** GD-20260802-07
+**Updated:** 2026-08-02 21:32 ET
 **Repository:** `B11-Health/gamedeck`
-**Branch / HEAD:** `main` / `e495c8d`
+**Branch / HEAD:** `main` / `9865ccf`
 **Primary objective:** Acquire real GameDeck players while keeping the product, repository, branding, and release evidence pristine.
 
 ## Workstream ownership
@@ -15,7 +15,7 @@ This file is the shared source of truth for parallel GameDeck workstreams. Updat
 ### Growth and community
 
 **Scope:** Authenticated browser work only: YouTube, TikTok, Discord, GitHub community surfaces, analytics, and carefully selected external engagement.
-**Current task:** Verify the remaining YouTube Shorts descriptions after the prior delivery timeout. Confirm every public or scheduled Short uses the permanent download, tester discussion, and Discord destinations.
+**Current task:** Finish YouTube Shorts link normalization. The scheduled `RetroArch Setup Should Explain Itself` Short still displayed the retired Discord invite during the latest verification; confirm and save the permanent community link plus download and tester discussion on every public or scheduled Short.
 **Do not touch:** Repository files unless a new handoff explicitly transfers ownership.
 **Return:** Exact video IDs checked, final title/description state, save/publication status, remaining blockers, and the next bounded task for another workstream.
 
@@ -29,6 +29,8 @@ This file is the shared source of truth for parallel GameDeck workstreams. Updat
 - `2bbbe15` — fully offline desktop typography and CSP hardening
 - `8118ff1` — self-expiring Playtest Night event strip
 - `e495c8d` — bounded multiplayer invitation decoding and decompression limits
+- `a7994d3` — runtime provenance and synchronized-lobby trust-boundary documentation
+- `9865ccf` — corrected cache-builder size-limit claim and non-breaking hardening step
 - GitHub Discussion #8 corrected to the verified 10:00 PM–midnight ET event time and canonical Discord event URL
 
 **Do not touch:** Browser surfaces currently owned by Growth and community.
@@ -36,8 +38,8 @@ This file is the shared source of truth for parallel GameDeck workstreams. Updat
 ### Security and release quality
 
 **Scope:** Read-only review of IPC validation, path safety, renderer boundaries, signaling services, workflows, release packaging, and evidence accuracy.
-**Current status:** Completed the first bounded remediation in `e495c8d`: invitation length limits, strict base64url validation, and decompression output limits for synchronized and Remote Play invitation decoding. CI is being verified.
-**Current task:** Return the remaining security/release findings packet and assign one non-overlapping remediation task, if any.
+**Current status:** Completed `e495c8d`, `a7994d3`, and `9865ccf`. The runtime audit verified 37 unique unpinned upstream assets: two Linux archives, one shared macOS DMG, and 34 architecture-specific macOS core archives. The HTTP lobby trust boundary and compatibility-safe migration plan are documented.
+**Current task:** Review the Product/QA return for normal GDPLAY1 and Remote Play invitation flows, then assign one non-overlapping remediation task, if any.
 **May inspect:** `main.js`, `preload.js`, `stream-server.js`, `netplay-manager.js`, workflows, package configuration, and QA evidence.
 **Do not modify:** Public-site files, social content, or files owned by another active handoff without transferring ownership first.
 **Return:** Findings ranked by severity, exact file/line evidence, tests run, false positives ruled out, and one recommended bounded remediation task.
@@ -49,7 +51,9 @@ This file is the shared source of truth for parallel GameDeck workstreams. Updat
 - Tester discussion: https://github.com/B11-Health/gamedeck/discussions/8
 - Event time: 2026-08-02 22:00–24:00 ET
 - `8118ff1` CI: passed
-- `e495c8d` CI: in progress at this handoff update
+- `e495c8d` CI: passed
+- `a7994d3` documentation task: reviewed against the manifest and runtime code
+- `9865ccf` local `npm test` and repository audit: passed
 - `8118ff1` growth-site deployment: passed
 - `2bbbe15` CI: Linux package smoke, Ubuntu tests, macOS tests, and Windows tests passed
 - Local repository status at handoff: clean
@@ -85,6 +89,6 @@ EXPECTED RETURN:
 
 ## Expected next exchange
 
-1. Growth and community returns the completed YouTube verification packet and assigns one bounded follow-up.
-2. Security and release quality returns its findings packet without overlapping edits.
-3. Engineering and integration reviews both packets, integrates approved work, updates this file, and issues the next two non-overlapping tasks.
+1. Product/QA returns the live GDPLAY1 and Remote Play regression packet after `e495c8d`.
+2. Growth and community returns the completed YouTube verification packet and assigns one bounded follow-up.
+3. Engineering and integration reviews both packets, integrates approved work, updates this file, and issues the next non-overlapping tasks.
