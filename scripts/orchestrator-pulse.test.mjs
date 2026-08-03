@@ -46,7 +46,7 @@ const clone = () => structuredClone(original);
 {
   const text = formatPulse(buildPulse(original, new Date('2026-08-03T18:11:00.000Z')));
   assert.match(text, /GAMEDECK ORCHESTRATOR PULSE/);
-  assert.match(text, /OPS-001 active/);
+  assert.match(text, /OPS-001 (active|review)/);
   assert.match(text, /ANALYTICS-001/);
   assert.match(text, /Critical risks \(0\)/);
 }

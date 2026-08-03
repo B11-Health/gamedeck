@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "updatedAt": "2026-08-03T14:11:00-04:00",
+  "updatedAt": "2026-08-03T14:20:00-04:00",
   "northStar": "A friend can receive an invitation, pass readiness checks, and reach responsive gameplay in under ten minutes across the widest truthful set of legally owned games.",
   "productTargets": {
     "inviteToPlayableP95Minutes": 10,
@@ -105,7 +105,7 @@
       "id": "program-ops",
       "name": "Program Operations and Integration",
       "mission": "Maintain the critical path, allocate non-overlapping ownership, verify handoffs, and protect main.",
-      "status": "active",
+      "status": "review",
       "ownerRole": "General Orchestrator",
       "reviewerRole": "Independent Integration QA",
       "capabilities": [
@@ -135,7 +135,7 @@
         "exact pushed commit",
         "independent review"
       ],
-      "nextAction": "Finish OPS-001, publish the exact commit, and keep the Runtime V1.0.4 review loop visible until closure."
+      "nextAction": "Independent Integration QA reviews the exact orchestration sequence before any integration decision."
     },
     {
       "id": "multiplayer-platform",
@@ -420,7 +420,7 @@
       "id": "OPS-001",
       "title": "Operationalize the GameDeck team system",
       "priority": "P0",
-      "status": "active",
+      "status": "review",
       "ownerLane": "program-ops",
       "reviewerLane": "qa-observability",
       "approvalLanes": [
@@ -468,11 +468,16 @@
         "worktree is clean after push"
       ],
       "startedAt": "2026-08-03T13:44:00-04:00",
-      "lastEvidenceAt": "2026-08-03T14:11:00-04:00",
-      "exactEvidence": [],
+      "lastEvidenceAt": "2026-08-03T14:20:00-04:00",
+      "exactEvidence": [
+        "Implementation commit 6ba5f1825c031768b487dcd91af377d3ed0a8bd8",
+        "npm test passed: repository audit, board validation, 14 validator scenarios, 5 pulse scenarios, play-session-manager 28 tests, runtime cache limit test, smoke test",
+        "git diff --check passed",
+        "Orchestrator pulse reported 2 P0 focus items, 3 executable P1 items, 0 stale items, and 0 critical risks at 2026-08-03T14:20:01-04:00"
+      ],
       "blocker": null,
       "unblockOwner": null,
-      "nextAction": "Finish implementation and tests, push the exact commit, then hand the immutable hash to Independent Integration QA.",
+      "nextAction": "Independent Integration QA reviews commit 6ba5f1825c031768b487dcd91af377d3ed0a8bd8 plus this board-state transition, then returns APPROVE or a bounded remediation packet.",
       "rollbackPoint": "ba0ac57a4cabf29b81b74cfde7a7110fffe28e27"
     },
     {
