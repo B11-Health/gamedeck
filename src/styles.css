@@ -3446,13 +3446,18 @@ body.density-compact .catalog-grid { gap: 15px; }
 .game .play:hover { transform: scale(1.06); }
 
 .spotlight-actions {
+  width: min(300px, 100%);
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: stretch;
   gap: 9px;
   margin-left: auto;
 }
-.spotlight-primary-actions, .spotlight-utility-actions { display: flex; align-items: center; gap: 8px; }
+.spotlight-primary-actions, .spotlight-utility-actions { width: 100%; min-width: 0; display: flex; align-items: center; gap: 8px; }
+.spotlight-primary-actions button, .spotlight-utility-actions button,
+body.density-compact .spotlight-primary-actions button,
+body.density-compact .spotlight-utility-actions button { min-width: 0; flex: 1 1 0; }
 .spotlight-primary-actions button { min-height: 40px; }
 .spotlight-utility-actions button {
   min-width: 78px;

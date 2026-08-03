@@ -30,6 +30,23 @@ const MANAGED_RUNTIME_ROOT = path.join(app.getPath('userData'), 'runtime');
 const MANAGED_RUNTIME_PATHS = managedRuntimePathsFor(MANAGED_RUNTIME_ROOT, process.platform);
 const BUNDLED_RUNTIME_ROOT = path.join(process.resourcesPath, 'runtime-cache', managedRuntimeKey());
 const BUNDLED_RUNTIME_AVAILABLE = fs.existsSync(path.join(BUNDLED_RUNTIME_ROOT, 'cache-index.json'));
+const MANAGED_RUNTIME_MANIFEST = readJson(path.join(__dirname, 'config', 'runtime-manifest.json'), { platforms: {} });
+
+function managedRuntimeInstalled() {
+  const spec = MANAGED_RUNTIME_MANIFEST.platforms?.[managedRuntimeKey()];
+  const required = (spec?.components || []).filter(component => component.required !== false);
+  if (!required.length) return false;
+  return required.every(component => (component.expected || []).every(value => {
+    try {
+      return fs.statSync(path.join(MANAGED_RUNTIME_ROOT, ...String(value || '').split('/').filter(Boolean))).size > 0;
+    } catch {
+      return false;
+    }
+  }));
+}
+
+const MANAGED_RUNTIME_INSTALLED = managedRuntimeInstalled();
+const MANAGED_RUNTIME_PREFERRED = BUNDLED_RUNTIME_AVAILABLE || MANAGED_RUNTIME_INSTALLED;
 
 function firstExisting(candidates, fallback = '') {
   return candidates.filter(Boolean).find(candidate => fs.existsSync(candidate)) || fallback;
@@ -108,10 +125,10 @@ const defaultSettings = {
   libraryRoot: process.env.GAMEDECK_LIBRARY || path.join(defaultRgsxRoot, 'roms'),
   rgsxRoot: defaultRgsxRoot,
   emulationRoot: process.env.GAMEDECK_EMULATION_ROOT || path.join(HOME_DIR, 'Games', 'Emulation'),
-  retroArchPath: BUNDLED_RUNTIME_AVAILABLE ? MANAGED_RUNTIME_PATHS.retroArch : (detectedRetroArch || MANAGED_RUNTIME_PATHS.retroArch),
-  retroArchCores: BUNDLED_RUNTIME_AVAILABLE ? MANAGED_RUNTIME_PATHS.cores : (detectedCoreDir || MANAGED_RUNTIME_PATHS.cores),
+  retroArchPath: MANAGED_RUNTIME_PREFERRED ? MANAGED_RUNTIME_PATHS.retroArch : (detectedRetroArch || MANAGED_RUNTIME_PATHS.retroArch),
+  retroArchCores: MANAGED_RUNTIME_PREFERRED ? MANAGED_RUNTIME_PATHS.cores : (detectedCoreDir || MANAGED_RUNTIME_PATHS.cores),
   mamePath: detectedMame,
-  retroArchSystem: process.env.GAMEDECK_RETROARCH_SYSTEM || (BUNDLED_RUNTIME_AVAILABLE
+  retroArchSystem: process.env.GAMEDECK_RETROARCH_SYSTEM || (MANAGED_RUNTIME_PREFERRED
     ? MANAGED_RUNTIME_PATHS.system
     : detectedRetroArch
       ? path.join(path.dirname(detectedRetroArch), 'system')
@@ -538,9 +555,15 @@ function installedCatalogFile(installed, value) {
   return '';
 }
 
+const ARCADE_SUPPORT_ARCHIVES = new Set(['neogeo.zip']);
+
 function isArcadeSystem(systemOrId) {
   const id = typeof systemOrId === 'string' ? systemOrId : systemOrId?.id;
   return id === 'arcade' || id === 'mame';
+}
+
+function isArcadeSupportArchive(file, systemOrId) {
+  return isArcadeSystem(systemOrId) && ARCADE_SUPPORT_ARCHIVES.has(path.basename(String(file || '')).toLowerCase());
 }
 
 function getMameTitleIndex() {
@@ -1167,7 +1190,7 @@ function getLibrary() {
   const state = readStore();
   const games = walk(LIBRARY).map(file => {
     const system = detectSystem(file);
-    if (!isPlayableFile(file, system)) return null;
+    if (!isPlayableFile(file, system) || isArcadeSupportArchive(file, system)) return null;
     let stat;
     try {
       stat = fs.statSync(file);
