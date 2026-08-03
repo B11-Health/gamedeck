@@ -51,6 +51,21 @@ For synchronized hosting, GameDeck launches RetroArch through the relay-backed n
 - Synchronized netplay uses RetroArch relay infrastructure and a temporary password inside the invitation.
 - Couch co-op never requires a network connection.
 
+## Synchronized netplay discovery trust boundary
+
+Synchronized hosting currently discovers the relay-published room through `http://lobby.libretro.com/list`. During the 2026-08-02 live audit, the upstream HTTPS form timed out while HTTP remained available, so switching the URL directly would have prevented rooms from reaching the ready state. The HTTP response must therefore be treated as **unauthenticated discovery metadata**, not as proof of relay identity.
+
+The response can influence which room GameDeck associates with the host and supplies the `mitm_ip`, `mitm_port`, `mitm_session`, player count, and spectator count used for the displayed room and generated invitation. A network intermediary able to modify that HTTP response could stall discovery, falsify counts, or substitute relay session metadata. The local game and core SHA-256 checks prevent incompatible content from joining, but they do not authenticate the lobby response or the relay endpoint. The temporary room password also does not make the discovery metadata authentic.
+
+Current safeguards reduce accidental cross-room matching: every host receives a cryptographically random nickname and password, GameDeck requires a recent room timestamp when the upstream record supplies one, invitations expire, and joining still requires matching local game and core hashes. These protections are useful, but they are not a replacement for authenticated transport. Remote Play Together does not use this lobby-list endpoint.
+
+### Non-breaking migration plan
+
+1. **Constrain the existing response.** Add strict response-size, JSON-shape, field-length, port-range, session-token, and relay-address validation. Accept only a room matching the random nickname and launch window, and reject metadata inconsistent with the selected known relay region.
+2. **Prefer HTTPS without breaking current hosting.** Probe the HTTPS endpoint first with a short timeout. While upstream HTTPS remains unreliable, allow the HTTP endpoint only as an explicit degraded-trust fallback and expose that state in diagnostics rather than silently treating it as authenticated.
+3. **Introduce authenticated discovery alongside the current invite format.** Use a reliable upstream HTTPS endpoint, signed lobby records, or a small GameDeck-controlled HTTPS relay directory with an allowlist. Add optional provenance fields to `GDPLAY1` version 1 payloads so updated hosts and guests can verify stronger discovery while older clients continue to parse the invitation.
+4. **Require secure discovery after a compatibility window.** Once authenticated discovery has passed Windows, macOS, Linux, and live-relay validation, stop creating new rooms from HTTP metadata. Continue giving clear errors for older invitations instead of silently connecting through untrusted substituted metadata.
+
 ## Troubleshooting
 
 - **Core needs attention:** open Community -> This device and allow GameDeck to finish preparing RetroArch and the required core.
