@@ -4,18 +4,22 @@ This file is the shared source of truth for parallel GameDeck workstreams. Updat
 
 ## Active handoff
 
-**Handoff ID:** GD-20260802-08
-**Updated:** 2026-08-02 21:42 ET
+**Handoff ID:** GD-20260802-09
+**Updated:** 2026-08-02 21:54 ET
 **Repository:** `B11-Health/gamedeck`
-**Branch / HEAD:** `main` / `7b7ecba`
+**Branch / HEAD:** `main` / `2f90e15`
 **Primary objective:** Acquire real GameDeck players while keeping the product, repository, branding, and release evidence pristine.
+
+## Discord-free operating model
+
+Treat Discord as unavailable. Do not appeal, replace the account, evade restrictions, or depend on Discord for growth, support, events, onboarding, sponsorship, or product copy. Use GitHub Discussions—especially Discussion #8—as the multiplayer community hub, with GitHub Issues, releases, the repository, YouTube, TikTok, Reddit, email, and the public site as supporting destinations.
 
 ## Workstream ownership
 
 ### Growth and community
 
 **Scope:** Authenticated browser work only: YouTube, TikTok, Discord, GitHub community surfaces, analytics, and carefully selected external engagement.
-**Current task:** Finish YouTube Shorts link normalization. The scheduled `RetroArch Setup Should Explain Itself` Short still displayed the retired Discord invite during the latest verification; confirm and save the permanent community link plus download and tester discussion on every public or scheduled Short.
+**Current task:** Apply the Discord-free operating model across owned browser surfaces. Remove Discord-dependent calls to action from every YouTube description, TikTok caption/profile, Reddit profile/post, and other growth surface; replace each with the relevant GitHub Discussion, issue form, release, repository, or public-site destination. The latest verification still showed a retired Discord invite on at least `dOEuy8g8Bmw` and the scheduled `RetroArch Setup Should Explain Itself` Short.
 **Do not touch:** Repository files unless a new handoff explicitly transfers ownership.
 **Return:** Exact video IDs checked, final title/description state, save/publication status, remaining blockers, and the next bounded task for another workstream.
 
@@ -34,6 +38,10 @@ This file is the shared source of truth for parallel GameDeck workstreams. Updat
 - `9ae4adf` — bounded GameDeck Live pairing API requests
 - `354b919` — enforced streamed runtime-cache byte limits
 - `7b7ecba` — promoted and polished the self-expiring Playtest Night strip
+- `61a9e93` — post-audit collaboration evidence
+- `367138d` — OS-assigned port for collision-free Live smoke tests
+- `d3b8aa4` — 44px Playtest Night touch targets
+- `2f90e15` — release workflow least-privilege permissions
 - GitHub Discussion #8 corrected to the verified 10:00 PM–midnight ET event time and canonical Discord event URL
 
 **Do not touch:** Browser surfaces currently owned by Growth and community.
@@ -55,10 +63,10 @@ This file is the shared source of truth for parallel GameDeck workstreams. Updat
 
 **Scope:** Read-only review of IPC validation, path safety, renderer boundaries, signaling services, workflows, release packaging, and evidence accuracy.
 **Current status:** Completed `e495c8d`, `a7994d3`, and `9865ccf`. The runtime audit verified 37 unique unpinned upstream assets: two Linux archives, one shared macOS DMG, and 34 architecture-specific macOS core archives. The HTTP lobby trust boundary and compatibility-safe migration plan are documented.
-**Current task:** Add a concise post-audit evidence addendum covering invitation limits, the successful live GDPLAY1/Remote Play regressions, pairing request limits, streamed runtime-cache limits, and the Playtest Night responsive/accessibility QA.
-**Owned files:** `docs/FULL_QA_2026-08-02.md` and `docs/e2e-results/GameDeck-Full-QA-2026-08-02.json` only.
-**Do not modify:** `site/*`, `src/*`, `main.js`, `netplay-manager.js`, `stream-server.js`, runtime-cache scripts, workflows, or social content.
-**Return:** One documentation-only commit, exact assertions added, `npm test`, `git diff --check`, and the next non-overlapping task.
+**Current status:** Completed invitation hardening, GameDeck Live pairing hardening, runtime-cache streamed-byte enforcement, the post-audit evidence addendum, CI port stabilization, and release-workflow least privilege.
+**Current task:** Ready for the next bounded security, packaging, workflow, or evidence assignment.
+**Do not modify:** Growth/community browser surfaces or files owned by another active handoff.
+**Return:** Findings or a commit with exact validation and one recommended next task.
 
 ## Latest verified production state
 
@@ -70,8 +78,12 @@ This file is the shared source of truth for parallel GameDeck workstreams. Updat
 - `e495c8d` CI: passed
 - `a7994d3` documentation task: reviewed against the manifest and runtime code
 - `9865ccf` local `npm test` and repository audit: passed
-- `354b919` pairing/runtime stream-limit tests and full repository gate: passed
+- `354b919` runtime stream-limit tests and full repository gate: passed
+- `9ae4adf` GameDeck Live pairing security regression: passed
 - `7b7ecba` desktop/tablet/phone event-state matrix and full `npm test`: passed
+- `61a9e93` evidence CI initially failed from a fixed-port collision; `367138d` moved the Live smoke server to an OS-assigned port and restored green CI
+- `d3b8aa4` CI and growth-site deployment: passed
+- `2f90e15` release-workflow least-privilege CI: passed
 - Post-`e495c8d` live GDPLAY1 and two-profile Remote Play regressions: passed
 - `8118ff1` growth-site deployment: passed
 - `2bbbe15` CI: Linux package smoke, Ubuntu tests, macOS tests, and Windows tests passed
@@ -108,6 +120,6 @@ EXPECTED RETURN:
 
 ## Expected next exchange
 
-1. Security and release quality returns the documentation-only QA evidence addendum.
-2. Growth and community returns the completed YouTube verification packet and assigns one bounded follow-up.
-3. Product/QA reviews both packets, integrates approved work, updates this file, and issues the next non-overlapping tasks.
+1. Growth and community returns the Discord-free browser-surface audit with exact surface IDs, old destinations, replacements, and save/publication verification.
+2. Product/QA reviews the browser return and checks that public-site/product copy no longer relies on Discord before assigning repository changes.
+3. Engineering and security remain available for the next non-overlapping integration or release task.
