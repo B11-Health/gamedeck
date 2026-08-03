@@ -22,7 +22,7 @@ const DISCORD_COMMUNITY = Object.freeze({
   invite: 'https://discord.gg/eS7d4VqTT',
   general: 'https://discord.com/channels/1533539059207504093/1533539060361203774',
   announcements: 'https://discord.com/channels/1533539059207504093/1533539409323102281',
-  remotePlay: 'https://discord.gg/uv2G7QPX4K',
+  remotePlay: 'https://discord.gg/eS7d4VqTT',
   support: 'https://discord.com/channels/1533539059207504093/1533539475836108943',
   showcase: 'https://discord.com/channels/1533539059207504093/1533539481141907589'
 });

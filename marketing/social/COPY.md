@@ -70,4 +70,4 @@ Start window: [TIME]
 
 Only the host needs the game for Remote Play. For synchronized netplay, both players need matching game and core IDs.
 
-Matchmaking: https://discord.gg/uv2G7QPX4K
+Matchmaking: https://discord.gg/eS7d4VqTT
