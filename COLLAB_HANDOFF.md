@@ -65,7 +65,7 @@ Treat Discord as unavailable. Do not appeal, replace the account, evade restrict
 ### Security and release quality
 
 **Scope:** Read-only review of IPC validation, path safety, renderer boundaries, signaling services, workflows, release packaging, and evidence accuracy.
-**Current status:** Completed `e495c8d`, `a7994d3`, and `9865ccf`. The runtime audit verified 37 unique unpinned upstream assets: two Linux archives, one shared macOS DMG, and 34 architecture-specific macOS core archives. The HTTP lobby trust boundary and compatibility-safe migration plan are documented.
+**Current status:** Completed `e495c8d`, `a7994d3`, and `9865ccf`. The runtime audit now covers 39 unique unpinned upstream assets: two Linux archives, one shared macOS DMG, and 36 architecture-specific macOS core archives. The HTTP lobby trust boundary and compatibility-safe migration plan are documented.
 **Current status:** Completed invitation hardening, GameDeck Live pairing hardening, runtime-cache streamed-byte enforcement, the post-audit evidence addendum, CI port stabilization, and release-workflow least privilege.
 **Current task:** Ready for the next bounded security, packaging, workflow, or evidence assignment.
 **Do not modify:** Growth/community browser surfaces or files owned by another active handoff.
@@ -84,6 +84,20 @@ NEXT BOUNDED TASK: Recheck the selected-game spotlight at minimum supported wind
 OWNED FILES / SURFACES: None after this return.
 DO NOT TOUCH: Authenticated growth/community browser surfaces.
 EXPECTED RETURN: Exact viewport matrix, launch result, and any remaining visual or controller regressions.
+
+## Latest bounded collection return
+
+HANDOFF ID: GD-20260803-11
+OBJECTIVE: Put mixed Sega and Nintendo disc libraries under the correct systems and surface valid local test games that were previously omitted.
+DONE: Added archive-content classification for shared Genesis/Master System/Game Gear folders, RVZ/ISO system detection for shared GameCube/Wii folders, Sega 32X support with PicoDrive, PSP CHD support, managed-runtime precedence, and truthful NO GAMES labels for empty systems.
+CHANGED FILES / SURFACES: `main.js`, `library-system-classifier.js`, `src/app.js`, `config/runtime-manifest.json`, `package.json`, tests, cross-platform docs, and README.
+TESTS AND RESULTS: Full `npm test` passed; live library scan reported 236 playable entries; Genesis 10, Master System 10, Game Gear 10, Sega 32X 2, PSP 4, and Wii 1 were classified correctly; Genesis, Master System, Game Gear, Sega 32X, Nintendo 64, and PSP representative boot probes passed; spotlight Favorite and Remove remained unclipped.
+OPEN RISKS OR BLOCKERS: No valid local MAME, GameCube, or Wii U game files exist, so those systems are labeled NO GAMES instead of being presented as populated. One local PS2 source archive for 50 Cent: Bulletproof is truncated; a partial extraction was removed and the archive was not added as playable. N64DD images were intentionally left hidden because the required IPL firmware is absent and a live probe failed.
+NEXT OWNER: Product and QA.
+NEXT BOUNDED TASK: Add an explicit, rights-safe test-content onboarding flow for empty systems, with user acknowledgement for any non-commercial-only downloads.
+OWNED FILES / SURFACES: None after this return.
+DO NOT TOUCH: Authenticated growth/community browser surfaces.
+EXPECTED RETURN: Provenance, license/terms, exact downloaded asset, launch result, and removal path for each optional test title.
 
 ## Latest verified production state
 

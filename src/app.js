@@ -530,6 +530,7 @@ function systemById(id) {
 }
 
 function systemStatusLabel(system) {
+  if (Number(system?.count || 0) === 0) return system?.ready ? 'NO GAMES' : 'SETUP';
   return system?.ready ? 'READY' : 'SETUP';
 }
 

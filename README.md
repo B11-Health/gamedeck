@@ -47,6 +47,7 @@ GameDeck does **not** include ROMs, BIOS files, encryption keys, or commercial g
 - BIOS-aware readiness checks with real setup locations
 - Cinematic title details, artwork caching, favorites, and recent plays
 - Exact No-Intro filename matching, revision aliases, Libretro CDN fallback, indexed fuzzy title matching, and quiet background cover enrichment
+- Correct mixed-folder routing for Genesis, Master System, Game Gear, GameCube, Wii, and Sega 32X libraries
 - Premium GameDeck-original posters for trustworthy no-source, homebrew, or unofficial exceptions
 - A calm four-stage startup panel that reports library, launcher, artwork, and control readiness
 - Context-aware hero actions for continuing a recent game, choosing a surprise title, or finishing setup

@@ -275,6 +275,13 @@ if (!String(pkg.scripts?.['dist:win'] || '').includes('runtime:cache') || !Strin
 if (!runtimeCacheBuilder.includes('cache-index.json') || !runtimeCacheBuilder.includes('darwin-universal') || !runtimeCacheBuilder.includes('.part')) fail('cross-platform resumable runtime cache builder is missing');
 if (!runtimeManager.includes('bundledCacheRoot') || !runtimeManager.includes("phase: 'retrying'") || !runtimeManager.includes('.part')) fail('managed runtime must prefer bundled assets and resume interrupted transfers');
 if (!main.includes('BUNDLED_RUNTIME_AVAILABLE') || !main.includes('MANAGED_RUNTIME_PATHS.retroArch')) fail('clean installs must target the managed runtime before extraction');
+if (!main.includes('libraryFolderSystems') || !main.includes('archiveContentExtensions') || !main.includes('discSystemForFile')) fail('shared-folder system classification is missing');
+if (!main.includes("id: 'sega32x'") || !main.includes("coreFile('picodrive_libretro')")) fail('Sega 32X library support is missing');
+if (!pkg.build?.files?.includes('library-system-classifier.js')) fail('library classifier must ship in desktop packages');
+for (const [platformKey, platformSpec] of Object.entries(managedRuntimeManifest.platforms || {})) {
+  const cores = (platformSpec.components || []).find(component => component.id === 'cores');
+  if (!cores?.expected?.some(value => value.includes('picodrive_libretro'))) fail(`${platformKey} runtime is missing the PicoDrive core`);
+}
 if (!main.includes('DOWNLOADS_FILE') || !main.includes('restorePersistedDownloads') || !main.includes('retryDownload') || !main.includes('pauseActiveDownloads')) fail('game transfer resume persistence is missing');
 if (!main.includes('shell.trashItem') || !main.includes("'delete-game'")) fail('safe operating-system Trash removal is missing');
 if (!main.includes('bundledSevenZip') || !String(pkg.build?.asarUnpack || []).includes('node_modules/7zip-bin/**/*')) fail('bundled archive extraction dependency is missing');
