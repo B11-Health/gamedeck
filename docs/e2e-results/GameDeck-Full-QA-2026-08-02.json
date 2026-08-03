@@ -47,7 +47,8 @@
     },
     "focusReturn": {
       "statusCenter": "headerMenuToggle",
-      "gameDeckLive": "streamToggle"
+      "gameDeckLive": "streamToggle",
+      "multiplayer": "netplayToggle"
     }
   },
   "multiplayer": {
