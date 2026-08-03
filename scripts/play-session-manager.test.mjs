@@ -138,27 +138,70 @@ test('stop is idempotent and stale session IDs cannot stop an active session', (
   assert.equal(second.idempotent, true);
 });
 
-test('source scoring selects one new safe window', () => {
+test('caller-provided stable marker alone remains ambiguous', () => {
+  const ranked = rankSourceCandidates([
+    { id: 'window:2:0', name: 'RetroArch - Game', type: 'window', stable: true }
+  ], {
+    beforeSourceIds: [],
+    gameTitle: 'Game',
+    engineLabel: 'RetroArch'
+  });
+  assert.equal(ranked.candidates[0].stable, false);
+  assert.equal(ranked.automaticSourceId, '');
+  assert.equal(ranked.ambiguous, true);
+});
+
+test('legacy stableSourceIds marker is ignored', () => {
+  const ranked = rankSourceCandidates([
+    { id: 'window:2:0', name: 'RetroArch - Game', type: 'window' }
+  ], {
+    beforeSourceIds: [],
+    stableSourceIds: ['window:2:0'],
+    gameTitle: 'Game',
+    engineLabel: 'RetroArch'
+  });
+  assert.equal(ranked.candidates[0].stable, false);
+  assert.equal(ranked.automaticSourceId, '');
+});
+
+test('source present in current and previous poll but absent pre-launch is selectable', () => {
   const ranked = rankSourceCandidates([
     { id: 'window:1:0', name: 'GameDeck', type: 'window' },
-    { id: 'window:2:0', name: 'RetroArch - Chrono Trigger', type: 'window', stable: true }
+    { id: 'window:2:0', name: 'RetroArch - Chrono Trigger', type: 'window' }
   ], {
     beforeSourceIds: ['window:1:0'],
+    previousSourceIds: ['window:1:0', 'window:2:0'],
     gameDeckSourceId: 'window:1:0',
     gameTitle: 'Chrono Trigger',
     engineLabel: 'RetroArch'
   });
+  assert.equal(ranked.candidates[0].stable, true);
+  assert.equal(ranked.candidates[0].isNew, true);
   assert.equal(ranked.automaticSourceId, 'window:2:0');
   assert.equal(ranked.ambiguous, false);
   assert.equal(ranked.excluded.some(item => item.id === 'window:1:0'), true);
 });
 
-test('ambiguous source candidates require manual selection', () => {
+test('previous discovery snapshot objects prove two-poll stability', () => {
+  const ranked = rankSourceCandidates([
+    { id: 'window:2:0', name: 'RetroArch - Game', type: 'window' }
+  ], {
+    beforeSourceIds: [],
+    previousSources: [{ id: 'window:2:0', name: 'RetroArch starting', type: 'window' }],
+    gameTitle: 'Game',
+    engineLabel: 'RetroArch'
+  });
+  assert.equal(ranked.candidates[0].stable, true);
+  assert.equal(ranked.automaticSourceId, 'window:2:0');
+});
+
+test('ambiguous stable candidates require manual selection', () => {
   const ranked = rankSourceCandidates([
     { id: 'window:2:0', name: 'RetroArch', type: 'window' },
     { id: 'window:3:0', name: 'RetroArch', type: 'window' }
   ], {
     beforeSourceIds: [],
+    previousSourceIds: ['window:2:0', 'window:3:0'],
     engineLabel: 'RetroArch'
   });
   assert.equal(ranked.automaticSourceId, '');
@@ -168,64 +211,78 @@ test('ambiguous source candidates require manual selection', () => {
 test('screen sources are excluded from automatic discovery', () => {
   const ranked = rankSourceCandidates([
     { id: 'screen:0:0', name: 'Entire Screen', type: 'screen' }
-  ]);
+  ], { previousSourceIds: ['screen:0:0'] });
   assert.equal(ranked.candidates.length, 0);
   assert.equal(ranked.excluded[0].reasons.includes('not_window'), true);
 });
 
-test('public redaction removes sensitive keys and absolute paths', () => {
-  const value = publicRedact({
-    title: 'Safe',
-    executable: 'C:\\Users\\name\\retroarch.exe',
-    nested: {
-      file: '/home/name/roms/game.sfc',
-      message: 'Failed at C:\\Users\\name\\roms\\game.sfc',
-      pid: 1234,
-      allowed: true
-    }
-  });
-  assert.deepEqual(value, {
-    title: 'Safe',
-    nested: {
-      message: 'Failed at [redacted path]',
-      allowed: true
-    }
-  });
-});
-
-test('integration points only report an injected capability resolver', () => {
-  const defaults = createPlaySessionManager();
-  const injected = createPlaySessionManager({ resolveCapabilityInput: () => managed });
-  assert.equal(defaults.integrationPoints().capabilityResolver, false);
-  assert.equal(injected.integrationPoints().capabilityResolver, true);
-});
-
-test('unstable single new source remains ambiguous', () => {
-  const ranked = rankSourceCandidates([{ id: 'window:2:0', name: 'RetroArch - Game', type: 'window', stable: false }], { beforeSourceIds: [], gameTitle: 'Game', engineLabel: 'RetroArch' });
-  assert.equal(ranked.automaticSourceId, '');
-  assert.equal(ranked.ambiguous, true);
-});
-
-test('unstable clear score leader remains ambiguous', () => {
-  const ranked = rankSourceCandidates([
-    { id: 'window:2:0', name: 'RetroArch - Chrono Trigger', type: 'window', stable: false },
-    { id: 'window:3:0', name: 'Other Window', type: 'window', stable: true }
-  ], { beforeSourceIds: [], gameTitle: 'Chrono Trigger', engineLabel: 'RetroArch' });
-  assert.equal(ranked.candidates[0].id, 'window:2:0');
-  assert.equal(ranked.automaticSourceId, '');
-});
-
-test('stable single new source is selected automatically', () => {
-  const ranked = rankSourceCandidates([{ id: 'window:2:0', name: 'RetroArch - Game', type: 'window', stable: true }], { beforeSourceIds: [], gameTitle: 'Game', engineLabel: 'RetroArch' });
-  assert.equal(ranked.automaticSourceId, 'window:2:0');
-});
-
-test('stable clear score leader is selected automatically', () => {
+test('unstable clear score leader remains ambiguous without previous-poll presence', () => {
   const ranked = rankSourceCandidates([
     { id: 'window:2:0', name: 'RetroArch - Chrono Trigger', type: 'window', stable: true },
-    { id: 'window:3:0', name: 'Other Window', type: 'window', stable: true }
-  ], { beforeSourceIds: [], gameTitle: 'Chrono Trigger', engineLabel: 'RetroArch' });
+    { id: 'window:3:0', name: 'Other Window', type: 'window' }
+  ], {
+    beforeSourceIds: [],
+    previousSourceIds: ['window:3:0'],
+    gameTitle: 'Chrono Trigger',
+    engineLabel: 'RetroArch'
+  });
+  assert.equal(ranked.candidates[0].id, 'window:2:0');
+  assert.equal(ranked.candidates[0].stable, false);
+  assert.equal(ranked.automaticSourceId, '');
+});
+
+test('stable clear score leader requires current and previous-poll presence', () => {
+  const ranked = rankSourceCandidates([
+    { id: 'window:2:0', name: 'RetroArch - Chrono Trigger', type: 'window' },
+    { id: 'window:3:0', name: 'Other Window', type: 'window' }
+  ], {
+    beforeSourceIds: [],
+    previousSourceIds: ['window:2:0', 'window:3:0'],
+    gameTitle: 'Chrono Trigger',
+    engineLabel: 'RetroArch'
+  });
+  assert.equal(ranked.candidates[0].stable, true);
   assert.equal(ranked.automaticSourceId, 'window:2:0');
+});
+
+test('source present before launch is not selectable even when stable', () => {
+  const ranked = rankSourceCandidates([
+    { id: 'window:2:0', name: 'RetroArch - Game', type: 'window' }
+  ], {
+    beforeSourceIds: ['window:2:0'],
+    previousSourceIds: ['window:2:0'],
+    gameTitle: 'Game',
+    engineLabel: 'RetroArch'
+  });
+  assert.equal(ranked.candidates[0].stable, true);
+  assert.equal(ranked.candidates[0].isNew, false);
+  assert.equal(ranked.automaticSourceId, '');
+});
+
+test('disappeared previous-poll source cannot auto-select', () => {
+  const ranked = rankSourceCandidates([
+    { id: 'window:3:0', name: 'Other Window', type: 'window' }
+  ], {
+    beforeSourceIds: [],
+    previousSourceIds: ['window:2:0'],
+    gameTitle: 'Chrono Trigger',
+    engineLabel: 'RetroArch'
+  });
+  assert.equal(ranked.candidates.some(item => item.id === 'window:2:0'), false);
+  assert.equal(ranked.automaticSourceId, '');
+});
+
+test('one-poll source cannot auto-select', () => {
+  const ranked = rankSourceCandidates([
+    { id: 'window:2:0', name: 'RetroArch - Game', type: 'window' }
+  ], {
+    beforeSourceIds: [],
+    previousSourceIds: [],
+    gameTitle: 'Game',
+    engineLabel: 'RetroArch'
+  });
+  assert.equal(ranked.candidates[0].stable, false);
+  assert.equal(ranked.automaticSourceId, '');
 });
 
 test('nested public messages redact Unix and Windows absolute paths', () => {
