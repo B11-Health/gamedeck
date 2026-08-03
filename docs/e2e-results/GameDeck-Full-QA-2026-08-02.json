@@ -119,7 +119,7 @@
   "limitations": [
     "No fresh native macOS or Linux binary execution in this Windows session.",
     "No attached physical Android or iOS device.",
-    "No second remote guest computer in this pass."
+    "Second isolated GameDeck profile used on the same Windows computer; no separate physical remote computer or external network."
   ],
   "auditedThroughCommit": "7b7ecba",
   "postAuditAddendum": {
