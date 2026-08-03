@@ -297,7 +297,7 @@ function createStreamServer(options = {}) {
     return new Promise((resolve, reject) => {
       const candidate = http.createServer(requestHandler);
       candidate.on('error', error => {
-        if (error.code === 'EADDRINUSE' && preferredPort !== 0) {
+        if (['EADDRINUSE', 'EACCES'].includes(error.code) && preferredPort !== 0) {
           candidate.close();
           server = null;
           ensureServer(0).then(resolve, reject);
@@ -327,7 +327,9 @@ function createStreamServer(options = {}) {
   }
 
   async function start(config = {}) {
-    await ensureServer(Number(config.port || 41783));
+    const configuredPort = Number(config.port);
+    const preferredPort = Number.isInteger(configuredPort) && configuredPort >= 0 && configuredPort <= 65535 ? configuredPort : 41783;
+    await ensureServer(preferredPort);
     active = true;
     code = randomCode();
     startedAt = Date.now();

@@ -401,8 +401,7 @@ if (!renderer.includes('GAMEDECK_SHARE_COPY') || !renderer.includes('copyRedditL
 const { createStreamServer } = require(path.join(root, 'stream-server.js'));
 const streamSecurityServer = createStreamServer({ mobileRoot: path.join(root, 'mobile', 'web') });
 try {
-  const requestedPort = 43000 + Math.floor(Math.random() * 12000);
-  const started = await streamSecurityServer.start({ port: requestedPort, title: 'Security smoke test' });
+  const started = await streamSecurityServer.start({ port: 0, title: 'Security smoke test' });
   const base = `http://127.0.0.1:${started.port}`;
   const requestJson = async (route, options = {}) => {
     const response = await fetch(`${base}${route}`, options);
