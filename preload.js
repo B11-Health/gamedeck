@@ -21,6 +21,8 @@ contextBridge.exposeInMainWorld('deck', {
   deleteGame: file => ipcRenderer.invoke('delete-game', file),
   diagnostics: (includeLibrary = false) => ipcRenderer.invoke('diagnostics', includeLibrary),
   runtimeStatus: () => ipcRenderer.invoke('runtime-status'),
+  playSessionCapabilities: file => ipcRenderer.invoke('play-session-capabilities', file),
+  playSessionStatus: () => ipcRenderer.invoke('play-session-status'),
   ensureRuntime: force => ipcRenderer.invoke('ensure-runtime', Boolean(force)),
   streamStatus: () => ipcRenderer.invoke('stream-status'),
   streamSources: () => ipcRenderer.invoke('stream-sources'),

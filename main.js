@@ -11,6 +11,14 @@ const { path7za } = require('7zip-bin');
 const { createRuntimeManager, pathsFor: managedRuntimePathsFor, key: managedRuntimeKey } = require('./runtime-manager');
 const { createStreamServer } = require('./stream-server');
 const { createNetplayManager } = require('./netplay-manager');
+const {
+  buildCapabilityFailure,
+  buildStatusFailure,
+  createPlaySessionManager,
+  isTrustedMainFrameCaller,
+  resolveCapabilitiesSafely,
+  validateCapabilityFileArgument
+} = require('./play-session-manager');
 
 if (process.platform === 'win32') app.setAppUserModelId('io.gamedeck.launcher');
 
@@ -320,6 +328,7 @@ let streamCaptureSourceId = '';
 let streamCaptureAudio = true;
 let streamServer = null;
 let netplayManager = null;
+let playSessionManager = null;
 let remotePlayProcess = null;
 let remotePlaySession = null;
 let remoteInputSocket = null;
@@ -700,6 +709,39 @@ function configuredEmulator(system) {
   if (coreReady) return { kind: 'libretro', executable: RA, corePath, label: system.id === 'arcade' ? 'RetroArch · FinalBurn Neo' : `RetroArch · ${system.name}` };
   if (standaloneReady) return { kind: system.launchMode || 'standalone', executable: system.exe, label: system.name };
   return null;
+}
+
+function playSessionCapabilityInput(file) {
+  const safeFile = safeLibraryFile(file);
+  const system = detectSystem(safeFile);
+  if (!system || !isPlayableFile(safeFile, system)) throw Error('Could not identify this game system.');
+
+  const emulator = configuredEmulator(system);
+  const corePath = system.core ? path.join(CORES, system.core) : '';
+  const firmwareReady = systemBiosReady(system);
+  const dependenciesReady = !isArcadeSystem(system) || arcadeDependencySpecs(safeFile).every(dependency => Boolean(installedArcadeDependency(safeFile, dependency)));
+  const managedRetroArch = Boolean(emulator?.kind === 'libretro' && emulator.executable === MANAGED_RUNTIME_PATHS.retroArch);
+  const managedCore = Boolean(corePath && path.relative(MANAGED_RUNTIME_PATHS.cores, corePath) && !path.relative(MANAGED_RUNTIME_PATHS.cores, corePath).startsWith('..') && !path.isAbsolute(path.relative(MANAGED_RUNTIME_PATHS.cores, corePath)));
+  const wayland = process.platform === 'linux' && Boolean(process.env.WAYLAND_DISPLAY || String(process.env.XDG_SESSION_TYPE || '').toLowerCase() === 'wayland');
+
+  return {
+    platform: process.platform,
+    wayland,
+    system: { id: system.id, name: system.name },
+    engine: {
+      kind: emulator?.kind || (system.core ? 'libretro' : 'unknown'),
+      label: emulator?.label || system.name,
+      managed: managedRetroArch && managedCore,
+      available: Boolean(emulator),
+      coreAvailable: system.core ? Boolean(fs.existsSync(RA) && fs.existsSync(corePath)) : true,
+      configAvailable: managedRetroArch ? fs.existsSync(MANAGED_RUNTIME_PATHS.config) : true
+    },
+    dependencies: {
+      firmwareReady,
+      ready: dependenciesReady
+    },
+    certification: 'experimental'
+  };
 }
 
 function systemSetupIssue(system) {
@@ -1204,6 +1246,9 @@ netplayManager = createNetplayManager({
   appVersion: app.getVersion(),
   onUpdate: emitNetplay,
   onLog: addActivity
+});
+playSessionManager = createPlaySessionManager({
+  resolveCapabilityInput: playSessionCapabilityInput
 });
 
 function emitDownload(job) {
@@ -3048,6 +3093,16 @@ ipcMain.handle('choose-game-artwork', (_, file) => chooseGameArtwork(file));
 ipcMain.handle('delete-game', (_, file) => deleteGame(file).catch(error => ({ ok: false, error: error.message })));
 ipcMain.handle('diagnostics', (_, includeLibrary) => diagnostics(includeLibrary !== false));
 ipcMain.handle('runtime-status', () => managedRuntimeStatus());
+ipcMain.handle('play-session-capabilities', (event, file) => {
+  if (!isTrustedMainFrameCaller(event, mainWindow)) return buildCapabilityFailure('untrusted_caller');
+  const validated = validateCapabilityFileArgument(file);
+  if (!validated.ok) return buildCapabilityFailure(validated.reasonCode);
+  return resolveCapabilitiesSafely(playSessionManager, validated.file);
+});
+ipcMain.handle('play-session-status', event => {
+  if (!isTrustedMainFrameCaller(event, mainWindow)) return buildStatusFailure('untrusted_caller');
+  return playSessionManager.status();
+});
 ipcMain.handle('ensure-runtime', (_, force) => ensureManagedRuntime({ force: Boolean(force) }));
 ipcMain.handle('stream-status', () => gameDeckStreamStatus());
 ipcMain.handle('stream-sources', () => gameDeckStreamSources().catch(error => ({ error: error.message, sources: [] })));
