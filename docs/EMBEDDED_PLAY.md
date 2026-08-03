@@ -1,8 +1,20 @@
 # GameDeck Embedded Play Sessions
 
-Status: architecture proposal
-Branch: architecture/embedded-play-session
-Owner: General Orchestrator / Multiplayer Platform
+Status: Phase 1 preview implementation
+Branch: feature/embedded-play-phase1-preview
+Owner: Multiplayer Platform / Product UX / Security QA
+
+## Implemented preview scope
+
+- Managed GameDeck RetroArch/libretro titles route through a GameDeck-owned Play Session instead of the legacy external-only Play action.
+- GameDeck launches the managed engine windowed, discovers only post-launch window candidates, and renders the approved source in an in-app video surface without a network hop.
+- F11 expands the same BrowserWindow session to fullscreen; Escape or the controller Guide/Menu button opens session controls.
+- Digital P1 controller input and a documented keyboard mapping are forwarded over the bounded local RetroPad UDP path while library navigation is suspended.
+- End session owns process termination, releases capture and input resources, exits fullscreen, and restores the previously selected library card.
+- Ambiguous or unavailable capture never falls back to the full display: GameDeck shows a safe window chooser, Cancel, and Play externally.
+- User-managed RetroArch, standalone emulators, Wayland-restricted capture, and unsupported engines remain truthful external sessions.
+
+Not yet certified for release: the real Windows collection launch/capture/audio matrix, analog axes, P2-P4 input, same-process pop-out/return, latency targets, and long-run leak testing. The implementation remains a preview until those gates pass.
 
 ## Product outcome
 

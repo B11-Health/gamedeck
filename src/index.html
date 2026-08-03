@@ -439,6 +439,68 @@
     </section>
   </main>
 
+  <section class="play-session hidden" id="playSession" aria-labelledby="playSessionTitle" aria-live="polite">
+    <div class="play-session-shell" id="playSessionShell" tabindex="-1">
+      <video id="playSessionVideo" autoplay playsinline></video>
+      <div class="play-session-ambient" id="playSessionAmbient" aria-hidden="true"><img id="playSessionAmbientArt" alt=""></div>
+
+      <div class="play-session-loading" id="playSessionLoading">
+        <div class="play-session-poster"><img id="playSessionArt" alt=""><span class="play-session-pulse"></span></div>
+        <div class="play-session-loading-copy">
+          <span class="play-session-kicker">PLAY SESSION</span>
+          <h2 id="playSessionTitle">Preparing your game</h2>
+          <p id="playSessionMessage">Checking the game, engine, and controller.</p>
+          <div class="play-session-readiness" aria-label="Play Session readiness">
+            <span><i id="playSessionVideoDot"></i><b>Video</b><small id="playSessionVideoState">Preparing</small></span>
+            <span><i id="playSessionAudioDot"></i><b>Audio</b><small id="playSessionAudioState">Checking</small></span>
+            <span><i id="playSessionControllerDot"></i><b>Controller</b><small id="playSessionControllerState">Waiting</small></span>
+          </div>
+          <button id="playSessionCancel" type="button">Cancel launch</button>
+        </div>
+      </div>
+
+      <div class="play-session-source-chooser hidden" id="playSessionSourceChooser" role="dialog" aria-modal="true" aria-labelledby="playSessionSourceTitle">
+        <div class="play-session-source-card">
+          <span class="play-session-kicker">CHOOSE GAME WINDOW</span>
+          <h2 id="playSessionSourceTitle">Which window contains your game?</h2>
+          <p>GameDeck only shows likely windows opened for this Play Session. It never silently captures your full display.</p>
+          <div class="play-session-source-list" id="playSessionSourceList"></div>
+          <div class="play-session-source-actions">
+            <button id="playSessionRefreshSources" type="button">Refresh windows</button>
+            <button id="playSessionUseExternal" type="button">Play externally</button>
+            <button id="playSessionSourceCancel" type="button">Cancel launch</button>
+          </div>
+        </div>
+      </div>
+
+      <header class="play-session-chrome hidden" id="playSessionChrome">
+        <div class="play-session-identity"><span id="playSessionMode">EMBEDDED SESSION</span><b id="playSessionHeaderTitle">Selected game</b></div>
+        <div class="play-session-actions">
+          <button id="playSessionFullscreen" type="button" title="Toggle fullscreen (F11)"><span aria-hidden="true">⛶</span><b>Fullscreen</b></button>
+          <button id="playSessionControls" type="button" title="Open Play Session controls (Escape)"><span aria-hidden="true">•••</span><b>Controls</b></button>
+          <button class="danger" id="playSessionEnd" type="button"><span aria-hidden="true">■</span><b>End session</b></button>
+        </div>
+      </header>
+
+      <div class="play-session-overlay hidden" id="playSessionOverlay" role="dialog" aria-modal="true" aria-labelledby="playSessionOverlayTitle">
+        <div class="play-session-menu">
+          <span class="play-session-kicker">PLAY SESSION</span>
+          <h2 id="playSessionOverlayTitle">Session controls</h2>
+          <p id="playSessionOverlayStatus">Your game keeps running while this menu is open.</p>
+          <div class="play-session-menu-actions">
+            <button class="primary" id="playSessionResume" type="button">Resume</button>
+            <button id="playSessionMenuFullscreen" type="button">Enter fullscreen</button>
+            <button id="playSessionMenuExternal" type="button">Open external window</button>
+            <button class="danger" id="playSessionMenuEnd" type="button">End session</button>
+          </div>
+          <small>F11 toggles fullscreen · Escape opens or closes controls · keyboard and controller input route to the running game</small>
+        </div>
+      </div>
+
+      <div class="play-session-hint hidden" id="playSessionHint"><span>ESC</span> Controls <span>F11</span> Fullscreen</div>
+    </div>
+  </section>
+
   <section class="stream-studio hidden" id="streamStudio" aria-labelledby="streamStudioTitle" aria-modal="true" role="dialog">
     <div class="stream-backdrop" data-stream-close></div>
     <div class="stream-window">
@@ -643,6 +705,7 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"><span class="toast-icon" aria-hidden="true">i</span><b class="toast-message"></b></div>
   <script src="app.js"></script>
+  <script src="play-session.js"></script>
   <script src="streaming.js"></script>
   <script src="netplay.js"></script>
 </body>

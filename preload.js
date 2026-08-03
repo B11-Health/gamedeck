@@ -23,6 +23,16 @@ contextBridge.exposeInMainWorld('deck', {
   runtimeStatus: () => ipcRenderer.invoke('runtime-status'),
   playSessionCapabilities: file => ipcRenderer.invoke('play-session-capabilities', file),
   playSessionStatus: () => ipcRenderer.invoke('play-session-status'),
+  playSessionView: () => ipcRenderer.invoke('play-session-view'),
+  playSessionStart: file => ipcRenderer.invoke('play-session-start', file),
+  playSessionSources: sessionId => ipcRenderer.invoke('play-session-sources', sessionId),
+  playSessionSelectSource: (sessionId, sourceId) => ipcRenderer.invoke('play-session-select-source', sessionId, sourceId),
+  playSessionArmCapture: (sessionId, audio = true) => ipcRenderer.invoke('play-session-arm-capture', sessionId, audio !== false),
+  playSessionMediaReady: (sessionId, media) => ipcRenderer.invoke('play-session-media-ready', sessionId, media || {}),
+  playSessionFullscreen: (sessionId, enabled) => ipcRenderer.invoke('play-session-fullscreen', sessionId, Boolean(enabled)),
+  playSessionStop: (sessionId, reason) => ipcRenderer.invoke('play-session-stop', sessionId, reason || 'Ended by player.'),
+  playSessionExternal: sessionId => ipcRenderer.invoke('play-session-external', sessionId),
+  playSessionInput: payload => ipcRenderer.send('play-session-input', payload || {}),
   ensureRuntime: force => ipcRenderer.invoke('ensure-runtime', Boolean(force)),
   streamStatus: () => ipcRenderer.invoke('stream-status'),
   streamSources: () => ipcRenderer.invoke('stream-sources'),
@@ -55,6 +65,11 @@ contextBridge.exposeInMainWorld('deck', {
   openExternal: target => ipcRenderer.invoke('open-external', target),
   restartApp: () => ipcRenderer.invoke('restart-app'),
   clearActivity: () => ipcRenderer.invoke('clear-activity'),
+  onPlaySession: callback => {
+    const listener = (_, update) => callback(update);
+    ipcRenderer.on('play-session-ui-update', listener);
+    return () => ipcRenderer.removeListener('play-session-ui-update', listener);
+  },
   onRuntime: callback => {
     const listener = (_, update) => callback(update);
     ipcRenderer.on('runtime-update', listener);

@@ -16,6 +16,7 @@ const {
   buildStatusFailure,
   createPlaySessionManager,
   isTrustedMainFrameCaller,
+  rankSourceCandidates,
   resolveCapabilitiesSafely,
   validateCapabilityFileArgument
 } = require('./play-session-manager');
@@ -26,12 +27,17 @@ const {
   parseDolphinHeaderSystem
 } = require('./library-system-classifier');
 
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 if (process.platform === 'win32') app.setAppUserModelId('io.gamedeck.launcher');
 
 const HOME_DIR = os.homedir();
 const DOCUMENTS_DIR = app.getPath('documents');
 const SETTINGS_FILE = path.join(app.getPath('userData'), 'settings.json');
 const NETPLAY_ROOT = path.join(app.getPath('userData'), 'netplay');
+const PLAY_SESSION_ROOT = path.join(app.getPath('userData'), 'play-sessions');
+const PLAY_SESSION_BASE_PORT = 55320;
+const PLAY_SESSION_SOURCE_TIMEOUT_MS = 1200;
+const PLAY_SESSION_DISCOVERY_DEADLINE_MS = 9000;
 const MANAGED_RUNTIME_ROOT = path.join(app.getPath('userData'), 'runtime');
 const MANAGED_RUNTIME_PATHS = managedRuntimePathsFor(MANAGED_RUNTIME_ROOT, process.platform);
 const BUNDLED_RUNTIME_ROOT = path.join(process.resourcesPath, 'runtime-cache', managedRuntimeKey());
@@ -372,6 +378,13 @@ let streamCaptureAudio = true;
 let streamServer = null;
 let netplayManager = null;
 let playSessionManager = null;
+let playSessionProcess = null;
+let playSessionRuntime = null;
+let playSessionInputSocket = null;
+let playSessionInputTimer = null;
+const playSessionInputQueue = [];
+let pendingDisplayCapture = null;
+let playSessionSourceRequest = null;
 let remotePlayProcess = null;
 let remotePlaySession = null;
 let remoteInputSocket = null;
@@ -415,17 +428,46 @@ async function gameDeckStreamSources() {
     }))
     .sort((a, b) => Number(a.type === 'screen') - Number(b.type === 'screen') || a.name.localeCompare(b.name));
 }
+function armDisplayCapture(owner, sourceId, audio = true, sessionId = '') {
+  pendingDisplayCapture = {
+    owner: String(owner || '').slice(0, 40),
+    sourceId: String(sourceId || '').slice(0, 512),
+    sessionId: String(sessionId || '').slice(0, 160),
+    audio: audio !== false,
+    expiresAt: Date.now() + 8000
+  };
+}
+
 function configureGameDeckCapture() {
   session.defaultSession.setDisplayMediaRequestHandler(async (_request, callback) => {
     try {
-      const sources = await desktopCapturer.getSources({ types: ['window', 'screen'], thumbnailSize: { width: 0, height: 0 } });
-      const selected = sources.find(source => source.id === streamCaptureSourceId)
+      const sources = await desktopCapturer.getSources({
+        types: ['window', 'screen'],
+        thumbnailSize: { width: 0, height: 0 }
+      });
+      const pending = pendingDisplayCapture && pendingDisplayCapture.expiresAt > Date.now()
+        ? pendingDisplayCapture
+        : null;
+      if (pendingDisplayCapture && !pending) pendingDisplayCapture = null;
+
+      if (pending?.owner === 'play-session') {
+        const selected = sources.find(source => source.id === pending.sourceId && source.id.startsWith('window:'));
+        pendingDisplayCapture = null;
+        if (!selected) return callback({});
+        return callback(pending.audio ? { video: selected, audio: 'loopback' } : { video: selected });
+      }
+
+      const selected = (pending?.sourceId && sources.find(source => source.id === pending.sourceId))
+        || sources.find(source => source.id === streamCaptureSourceId)
         || sources.find(source => source.id.startsWith('screen:'))
         || sources[0];
+      if (pending?.owner === 'stream') pendingDisplayCapture = null;
       if (!selected) return callback({});
-      callback(streamCaptureAudio ? { video: selected, audio: 'loopback' } : { video: selected });
+      const includeAudio = pending ? pending.audio : streamCaptureAudio;
+      callback(includeAudio ? { video: selected, audio: 'loopback' } : { video: selected });
     } catch (error) {
-      addActivity('error', 'GameDeck Live capture failed: ' + error.message);
+      addActivity('error', 'GameDeck capture failed: ' + error.message);
+      pendingDisplayCapture = null;
       callback({});
     }
   }, { useSystemPicker: false });
@@ -795,6 +837,7 @@ function playSessionCapabilityInput(file) {
       firmwareReady,
       ready: dependenciesReady
     },
+    implementation: { phase1Enabled: true },
     certification: 'experimental'
   };
 }
@@ -1417,6 +1460,516 @@ function addActivity(level, message, taskId = null) {
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('activity', entry);
 }
 
+function playSessionPhaseMessage(phase) {
+  const messages = {
+    idle: 'Ready to start a Play Session.',
+    resolving: 'Checking the game and embedded-play route…',
+    preparing: 'Preparing the managed game engine…',
+    spawning: 'Starting the game…',
+    discovering: 'Finding the game window…',
+    awaiting_source: 'Choose the window that contains the game.',
+    capture_armed: 'Connecting video, audio, and controls…',
+    playing: 'Playing inside GameDeck.',
+    external_launching: 'Opening the game in its own window…',
+    external_playing: 'The game is running in its own window.',
+    failed: 'The Play Session needs attention.',
+    stopping: 'Ending the Play Session…',
+    ended: 'Play Session ended.'
+  };
+  return messages[phase] || messages.idle;
+}
+
+function sanitizePlaySessionCandidates(candidates = []) {
+  return (Array.isArray(candidates) ? candidates : []).slice(0, 8).map(candidate => ({
+    id: String(candidate.id || '').slice(0, 512),
+    name: String(candidate.name || 'Game window').replace(/[\r\n\t]+/g, ' ').trim().slice(0, 160),
+    reason: Array.isArray(candidate.reasons)
+      ? candidate.reasons.filter(value => ['new_window', 'title_match', 'engine_match', 'stable'].includes(value)).slice(0, 4)
+      : []
+  })).filter(candidate => candidate.id && candidate.id.startsWith('window:'));
+}
+
+function playSessionUiView(extra = {}) {
+  const status = playSessionManager?.status?.() || {
+    active: false,
+    phase: 'idle',
+    sessionId: '',
+    title: '',
+    systemId: '',
+    classification: ''
+  };
+  const runtime = playSessionRuntime || {};
+  return {
+    active: Boolean(status.active || (runtime.sessionId && !['idle', 'ended'].includes(status.phase))),
+    phase: status.phase || 'idle',
+    sessionId: status.sessionId || '',
+    title: status.title || '',
+    systemId: status.systemId || '',
+    classification: status.classification || '',
+    mode: runtime.mode || (status.active ? 'embedded' : ''),
+    message: String(extra.message || runtime.message || playSessionPhaseMessage(status.phase)).slice(0, 240),
+    fullscreen: Boolean(mainWindow && !mainWindow.isDestroyed() && mainWindow.isFullScreen()),
+    captureReady: Boolean(runtime.sourceId),
+    audioState: String(extra.audioState || runtime.audioState || 'checking').slice(0, 32),
+    controllerState: String(extra.controllerState || runtime.controllerState || 'waiting').slice(0, 32),
+    candidates: sanitizePlaySessionCandidates(extra.candidates || runtime.candidates || []),
+    error: String(extra.error || status.error || '').replace(/[\r\n\t]+/g, ' ').slice(0, 320)
+  };
+}
+
+function emitPlaySessionUi(extra = {}) {
+  if (playSessionRuntime && extra.message) playSessionRuntime.message = String(extra.message).slice(0, 240);
+  const view = playSessionUiView(extra);
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('play-session-ui-update', view);
+  return view;
+}
+
+async function listPlaySessionSources() {
+  if (!playSessionSourceRequest) {
+    const request = desktopCapturer.getSources({
+      types: ['window'],
+      thumbnailSize: { width: 0, height: 0 },
+      fetchWindowIcons: false
+    });
+    const wrapped = request.finally(() => {
+      if (playSessionSourceRequest === wrapped) playSessionSourceRequest = null;
+    });
+    playSessionSourceRequest = wrapped;
+  }
+  const timeout = new Promise(resolve => {
+    const timer = setTimeout(() => resolve(null), PLAY_SESSION_SOURCE_TIMEOUT_MS);
+    timer.unref?.();
+  });
+  const result = await Promise.race([playSessionSourceRequest, timeout]).catch(() => null);
+  if (!Array.isArray(result)) return { sources: [], timedOut: true };
+  return {
+    timedOut: false,
+    sources: result.map(source => ({
+      id: source.id,
+      name: source.name,
+      type: 'window',
+      ownedByGameDeck: /^GameDeck$/i.test(String(source.name || '').trim())
+    }))
+  };
+}
+
+function playSessionSpecForFile(file) {
+  const safeFile = safeLibraryFile(file);
+  const system = detectSystem(safeFile);
+  if (!system || !isPlayableFile(safeFile, system)) throw Error('Could not identify this game system.');
+  if (!isArcadeSystem(system)) {
+    const archiveIntegrity = playableArchiveIntegrity(safeFile);
+    if (!archiveIntegrity.ok) throw Error(archiveIntegrity.message);
+  }
+  const setupIssue = systemSetupIssue(system);
+  if (setupIssue) throw Error(setupIssue);
+  const dependencyResult = resolveLaunchDependencies(safeFile, system);
+  if (dependencyResult?.queued) throw Error('GameDeck is still preparing this game. Start it when the transfer finishes.');
+  if (!dependencyResult?.ok) throw Error(dependencyResult?.error || 'Required game files could not be prepared.');
+
+  const game = { file: safeFile, system: system.id, shortName: rawGameName(safeFile) };
+  if (isArcadeSystem(system)) {
+    const audit = inspectArcadeArchiveSync(game);
+    if (audit.status === 'damaged' || audit.status === 'incomplete') throw Error(audit.message || 'This arcade set needs repair before play.');
+  }
+
+  const emulator = selectLaunchEmulator(system, game);
+  const relativeCore = emulator?.corePath ? path.relative(MANAGED_RUNTIME_PATHS.cores, emulator.corePath) : '';
+  const managed = Boolean(
+    emulator?.kind === 'libretro'
+    && emulator.executable === MANAGED_RUNTIME_PATHS.retroArch
+    && emulator.corePath
+    && relativeCore
+    && !relativeCore.startsWith('..')
+    && !path.isAbsolute(relativeCore)
+  );
+  if (!managed) throw Error(system.name + ' currently uses an external game engine.');
+  const controllerConfig = isArcadeSystem(system) ? ensureRetroArchArcadeControllerConfig() : '';
+  const rawTitle = isArcadeSystem(system) ? arcadeDisplayTitle(game.shortName) : cleanName(safeFile);
+  return {
+    executable: emulator.executable,
+    corePath: emulator.corePath,
+    contentFile: safeFile,
+    controllerConfig,
+    systemId: system.id,
+    systemName: system.name,
+    title: rawTitle.replace(/\s*\((?:NGM|NGH)-[^)]+\)$/i, ''),
+    shortName: game.shortName,
+    engineLabel: emulator.label || 'Managed RetroArch'
+  };
+}
+
+function writePlaySessionConfig(sessionId) {
+  fs.mkdirSync(PLAY_SESSION_ROOT, { recursive: true });
+  const configFile = path.join(PLAY_SESSION_ROOT, sessionId + '.cfg');
+  const lines = [
+    'video_fullscreen = "false"',
+    'video_windowed_fullscreen = "false"',
+    'video_force_aspect = "true"',
+    'video_scale = "3.000000"',
+    'pause_nonactive = "false"',
+    'menu_pause_libretro = "false"',
+    'menu_show_start_screen = "false"',
+    'input_overlay_enable = "false"',
+    'config_save_on_exit = "false"',
+    'quit_on_close_content = "true"',
+    'network_remote_enable = "true"',
+    'network_remote_base_port = "' + PLAY_SESSION_BASE_PORT + '"',
+    'network_remote_enable_user_p1 = "true"',
+    'input_max_users = "1"',
+    'input_player1_joypad_index = "99"'
+  ];
+  fs.writeFileSync(configFile, lines.join('\n') + '\n');
+  return configFile;
+}
+
+function stopPlaySessionInput() {
+  playSessionInputQueue.length = 0;
+  if (playSessionInputTimer) clearInterval(playSessionInputTimer);
+  playSessionInputTimer = null;
+  if (playSessionInputSocket) {
+    try { playSessionInputSocket.close(); } catch {}
+    playSessionInputSocket = null;
+  }
+}
+
+function ensurePlaySessionInputPump() {
+  if (playSessionInputTimer) return;
+  if (!playSessionInputSocket) playSessionInputSocket = dgram.createSocket('udp4');
+  playSessionInputTimer = setInterval(() => {
+    if (!playSessionRuntime || !['capture_armed', 'playing'].includes(playSessionManager?.status().phase)) return;
+    const event = playSessionInputQueue.shift();
+    if (!event) return;
+    const packet = remoteInputPacket(0, event.id, event.state);
+    playSessionInputSocket.send(packet, PLAY_SESSION_BASE_PORT, '127.0.0.1');
+  }, 8);
+  playSessionInputTimer.unref?.();
+}
+
+function queuePlaySessionInput(payload = {}) {
+  if (!playSessionRuntime || payload.sessionId !== playSessionRuntime.sessionId) return false;
+  if (!['capture_armed', 'playing'].includes(playSessionManager?.status().phase)) return false;
+  const events = Array.isArray(payload.events) ? payload.events.slice(0, 32) : [];
+  let accepted = 0;
+  for (const event of events) {
+    const id = Number(event?.id);
+    if (!Number.isInteger(id) || id < 0 || id > 15) continue;
+    playSessionInputQueue.push({ id, state: event.state ? 1 : 0 });
+    accepted += 1;
+  }
+  if (!accepted) return false;
+  if (playSessionInputQueue.length > 240) playSessionInputQueue.splice(0, playSessionInputQueue.length - 240);
+  playSessionRuntime.controllerState = 'connected';
+  ensurePlaySessionInputPump();
+  return true;
+}
+
+function terminatePlaySessionProcess() {
+  const child = playSessionProcess;
+  playSessionProcess = null;
+  if (!child?.pid) return;
+  try {
+    if (process.platform === 'win32') spawnSync('taskkill.exe', ['/PID', String(child.pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' });
+    else process.kill(-child.pid, 'SIGTERM');
+  } catch {
+    try { child.kill('SIGTERM'); } catch {}
+  }
+}
+
+function removePlaySessionFiles(runtime) {
+  for (const file of [runtime?.configFile, runtime?.logFile]) {
+    if (!file) continue;
+    try { fs.unlinkSync(file); } catch {}
+  }
+}
+
+function finishPlaySession(reason = 'Play Session ended.', options = {}) {
+  const runtime = playSessionRuntime;
+  if (!runtime || runtime.closing) return playSessionUiView({ message: reason });
+  runtime.closing = true;
+  pendingDisplayCapture = null;
+  stopPlaySessionInput();
+  if (options.terminate !== false) terminatePlaySessionProcess();
+  if (mainWindow && !mainWindow.isDestroyed() && mainWindow.isFullScreen()) mainWindow.setFullScreen(false);
+  const sessionId = runtime.sessionId;
+  const ended = playSessionManager.stop(sessionId, String(reason || 'ended').slice(0, 160));
+  removePlaySessionFiles(runtime);
+  const view = emitPlaySessionUi({ message: reason });
+  setTimeout(() => {
+    if (playSessionManager?.status().sessionId === sessionId && playSessionManager.status().phase === 'ended') {
+      playSessionManager.transition(sessionId, 'idle');
+    }
+    if (playSessionRuntime?.sessionId === sessionId) playSessionRuntime = null;
+    emitPlaySessionUi({ message: 'Ready to start a Play Session.' });
+  }, 650);
+  return { ...view, ok: ended?.ok !== false };
+}
+
+function failPlaySession(error) {
+  const runtime = playSessionRuntime;
+  const message = String(error?.message || error || 'Play Session failed.').replace(/[\r\n\t]+/g, ' ').slice(0, 320);
+  if (runtime && !['failed', 'stopping', 'ended', 'idle'].includes(playSessionManager.status().phase)) {
+    playSessionManager.transition(runtime.sessionId, 'failed', { error: message });
+  }
+  addActivity('error', 'Embedded Play: ' + message);
+  return emitPlaySessionUi({ message, error: message });
+}
+
+async function discoverPlaySessionSource(runtime, beforeSnapshot) {
+  const beforeSourceIds = beforeSnapshot.sources.map(source => source.id);
+  runtime.beforeSourceIds = beforeSourceIds;
+  runtime.beforeSnapshotReady = !beforeSnapshot.timedOut;
+  const deadline = Date.now() + PLAY_SESSION_DISCOVERY_DEADLINE_MS;
+  let previousSourceIds = [];
+  let latestCandidates = [];
+  let attempt = 0;
+  while (Date.now() < deadline) {
+    if (!playSessionRuntime || playSessionRuntime.sessionId !== runtime.sessionId || runtime.closing) return { sourceId: '', candidates: [] };
+    const snapshot = await listPlaySessionSources();
+    const sources = snapshot.sources;
+    if (snapshot.timedOut) {
+      runtime.candidates = [];
+      emitPlaySessionUi({ message: 'Window discovery is taking longer than expected…', candidates: [] });
+      attempt += 1;
+      continue;
+    }
+    if (!runtime.beforeSnapshotReady) {
+      runtime.beforeSnapshotReady = true;
+      runtime.beforeSourceIds = sources.map(source => source.id);
+      previousSourceIds = [...runtime.beforeSourceIds];
+      emitPlaySessionUi({ message: 'Window discovery recovered; waiting for a safely identifiable game window…', candidates: [] });
+      attempt += 1;
+      await new Promise(resolve => setTimeout(resolve, 225));
+      continue;
+    }
+    const ranked = rankSourceCandidates(sources, {
+      beforeSourceIds: runtime.beforeSourceIds,
+      previousPollSourceIds: previousSourceIds,
+      gameTitle: runtime.title,
+      shortName: runtime.shortName,
+      engineLabel: runtime.engineLabel
+    });
+    latestCandidates = ranked.candidates.filter(candidate => candidate.isNew);
+    runtime.candidates = latestCandidates;
+    emitPlaySessionUi({
+      message: attempt < 8 ? 'Finding the game window…' : 'Still looking for the game window…',
+      candidates: latestCandidates
+    });
+    if (ranked.automaticSourceId && latestCandidates.some(candidate => candidate.id === ranked.automaticSourceId)) {
+      return { sourceId: ranked.automaticSourceId, candidates: latestCandidates };
+    }
+    previousSourceIds = sources.map(source => source.id);
+    attempt += 1;
+    await new Promise(resolve => setTimeout(resolve, 225));
+  }
+  return { sourceId: '', candidates: latestCandidates, timedOut: true };
+}
+
+async function startEmbeddedPlaySession(file) {
+  if (playSessionManager.status().phase === 'ended') playSessionManager.transition(playSessionManager.status().sessionId, 'idle');
+  if (playSessionManager.status().phase !== 'idle' || playSessionRuntime) {
+    return { ok: false, error: 'A Play Session is already active.', status: playSessionUiView() };
+  }
+  const capability = resolveCapabilitiesSafely(playSessionManager, file);
+  if (!capability?.eligible || !capability?.presentation?.embedded) {
+    if (capability?.classification === 'blocked') {
+      return { ok: false, error: capability.fallback?.playerMessage || 'This game is not ready to play.', capability };
+    }
+    const launch = launchGame(file);
+    return {
+      ok: true,
+      embedded: false,
+      external: true,
+      capability,
+      message: capability?.fallback?.playerMessage || launch.message,
+      launch
+    };
+  }
+  if (gameDeckStreamStatus().active) {
+    return { ok: false, error: 'Stop GameDeck Live before starting an embedded Play Session.' };
+  }
+
+  let runtime = null;
+  try {
+    stopRemotePlay('Starting an embedded Play Session.');
+    netplayManager?.stop('Starting an embedded Play Session.');
+    const spec = playSessionSpecForFile(file);
+    const started = playSessionManager.start({
+      title: spec.title,
+      systemId: spec.systemId,
+      classification: capability.classification,
+      executable: spec.executable,
+      corePath: spec.corePath,
+      contentFile: spec.contentFile
+    });
+    if (!started.ok) throw Error('A Play Session is already active.');
+    runtime = playSessionRuntime = {
+      sessionId: started.sessionId,
+      file: spec.contentFile,
+      title: spec.title,
+      shortName: spec.shortName,
+      systemId: spec.systemId,
+      engineLabel: spec.engineLabel,
+      classification: capability.classification,
+      mode: 'embedded',
+      sourceId: '',
+      candidates: [],
+      audioState: 'checking',
+      controllerState: 'waiting',
+      message: 'Checking the game and embedded-play route…',
+      closing: false
+    };
+    emitPlaySessionUi();
+    playSessionManager.transition(runtime.sessionId, 'preparing');
+    emitPlaySessionUi({ message: 'Preparing the managed game engine…' });
+
+    const beforeSnapshot = await listPlaySessionSources();
+    runtime.configFile = writePlaySessionConfig(runtime.sessionId);
+    runtime.logFile = path.join(PLAY_SESSION_ROOT, runtime.sessionId + '.log');
+    const appendConfig = [spec.controllerConfig, runtime.configFile].filter(Boolean).join('|');
+    const args = [
+      '--verbose',
+      '--log-file=' + runtime.logFile,
+      '--config',
+      MANAGED_RUNTIME_PATHS.config,
+      ...(appendConfig ? ['--appendconfig=' + appendConfig] : []),
+      '-L',
+      spec.corePath,
+      spec.contentFile
+    ];
+
+    playSessionManager.transition(runtime.sessionId, 'spawning');
+    emitPlaySessionUi({ message: 'Starting ' + spec.engineLabel + '…' });
+    playSessionProcess = spawn(spec.executable, args, {
+      cwd: path.dirname(spec.executable),
+      detached: process.platform !== 'win32',
+      windowsHide: false,
+      stdio: 'ignore'
+    });
+    const child = playSessionProcess;
+    child.once('error', processError => {
+      if (playSessionRuntime?.sessionId !== runtime.sessionId || runtime.closing) return;
+      failPlaySession(processError);
+    });
+    child.once('exit', code => {
+      if (playSessionRuntime?.sessionId !== runtime.sessionId || runtime.closing) return;
+      playSessionProcess = null;
+      const message = code === 0 ? runtime.title + ' closed.' : runtime.title + ' exited with code ' + code + '.';
+      finishPlaySession(message, { terminate: false });
+    });
+
+    const store = readStore();
+    store.recent[spec.contentFile] = Date.now();
+    writeStore(store);
+    addActivity('success', 'Embedded Play started for ' + spec.title + '.');
+
+    playSessionManager.transition(runtime.sessionId, 'discovering');
+    emitPlaySessionUi({ message: 'Finding the game window…' });
+    const discovery = await discoverPlaySessionSource(runtime, beforeSnapshot);
+    if (!playSessionRuntime || playSessionRuntime.sessionId !== runtime.sessionId || runtime.closing) {
+      return { ok: false, error: 'The game closed before capture was ready.' };
+    }
+    runtime.candidates = discovery.candidates;
+    if (discovery.sourceId) {
+      runtime.sourceId = discovery.sourceId;
+      playSessionManager.transition(runtime.sessionId, 'capture_armed');
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.show();
+        mainWindow.focus();
+      }
+      return { ok: true, embedded: true, captureReady: true, status: emitPlaySessionUi({ message: 'Connecting the play surface…' }) };
+    }
+
+    playSessionManager.transition(runtime.sessionId, 'awaiting_source');
+    return {
+      ok: true,
+      embedded: true,
+      awaitingSource: true,
+      candidates: sanitizePlaySessionCandidates(runtime.candidates),
+      status: emitPlaySessionUi({ message: 'Choose the window that contains your game.', candidates: runtime.candidates })
+    };
+  } catch (error) {
+    failPlaySession(error);
+    if (playSessionRuntime) terminatePlaySessionProcess();
+    return { ok: false, error: String(error.message || error), status: playSessionUiView({ error: error.message }) };
+  }
+}
+
+async function refreshPlaySessionSources(sessionId) {
+  if (!playSessionRuntime || playSessionRuntime.sessionId !== String(sessionId || '')) return { ok: false, error: 'This Play Session is no longer active.', candidates: [] };
+  const snapshot = await listPlaySessionSources();
+  if (snapshot.timedOut) return { ok: true, candidates: [], message: 'Window discovery is temporarily unavailable.' };
+  if (!playSessionRuntime.beforeSnapshotReady) {
+    playSessionRuntime.beforeSnapshotReady = true;
+    playSessionRuntime.beforeSourceIds = snapshot.sources.map(source => source.id);
+    playSessionRuntime.candidates = [];
+    return { ok: true, candidates: [], message: 'Window discovery recovered. Reopen the game window or use external play.' };
+  }
+  const ranked = rankSourceCandidates(snapshot.sources, {
+    beforeSourceIds: playSessionRuntime.beforeSourceIds || [],
+    previousPollSourceIds: snapshot.sources.map(source => source.id),
+    gameTitle: playSessionRuntime.title,
+    shortName: playSessionRuntime.shortName,
+    engineLabel: playSessionRuntime.engineLabel
+  });
+  const candidates = ranked.candidates.filter(candidate => candidate.isNew);
+  playSessionRuntime.candidates = candidates;
+  return { ok: true, candidates: sanitizePlaySessionCandidates(candidates) };
+}
+
+async function selectPlaySessionSource(sessionId, sourceId) {
+  if (!playSessionRuntime || playSessionRuntime.sessionId !== String(sessionId || '')) return { ok: false, error: 'This Play Session is no longer active.' };
+  if (playSessionManager.status().phase !== 'awaiting_source') return { ok: false, error: 'The source chooser is not active.' };
+  const selectedId = String(sourceId || '');
+  const allowed = playSessionRuntime.candidates.some(candidate => candidate.id === selectedId && candidate.isNew);
+  if (!allowed) return { ok: false, error: 'That window was not opened for this Play Session.' };
+  const snapshot = await listPlaySessionSources();
+  if (snapshot.timedOut) return { ok: false, error: 'Window discovery is temporarily unavailable.' };
+  const source = snapshot.sources.find(candidate => candidate.id === selectedId && !candidate.ownedByGameDeck);
+  if (!source) return { ok: false, error: 'That game window is no longer available.' };
+  playSessionRuntime.sourceId = source.id;
+  playSessionManager.transition(playSessionRuntime.sessionId, 'capture_armed');
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.focus();
+  return { ok: true, captureReady: true, status: emitPlaySessionUi({ message: 'Connecting the play surface…' }) };
+}
+
+async function armPlaySessionCapture(sessionId, audio = true) {
+  if (!playSessionRuntime || playSessionRuntime.sessionId !== String(sessionId || '')) return { ok: false, error: 'This Play Session is no longer active.' };
+  if (!playSessionRuntime.sourceId || !['capture_armed', 'playing'].includes(playSessionManager.status().phase)) return { ok: false, error: 'The game window is not ready for capture.' };
+  const snapshot = await listPlaySessionSources();
+  if (snapshot.timedOut) return { ok: false, error: 'Window discovery is temporarily unavailable.' };
+  if (!snapshot.sources.some(source => source.id === playSessionRuntime.sourceId && !source.ownedByGameDeck)) return { ok: false, error: 'The selected game window is no longer available.' };
+  playSessionRuntime.audioState = audio === false ? 'unavailable' : 'checking';
+  armDisplayCapture('play-session', playSessionRuntime.sourceId, audio !== false, playSessionRuntime.sessionId);
+  return { ok: true, audio: audio !== false };
+}
+
+function markPlaySessionMediaReady(sessionId, media = {}) {
+  if (!playSessionRuntime || playSessionRuntime.sessionId !== String(sessionId || '')) return { ok: false, error: 'This Play Session is no longer active.' };
+  if (playSessionManager.status().phase === 'capture_armed') playSessionManager.transition(playSessionRuntime.sessionId, 'playing');
+  playSessionRuntime.audioState = media.audio ? 'ready' : 'unavailable';
+  playSessionRuntime.controllerState = media.controller ? 'connected' : 'waiting';
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.focus();
+  return { ok: true, status: emitPlaySessionUi({ message: 'Playing inside GameDeck.' }) };
+}
+
+function setPlaySessionFullscreen(sessionId, enabled) {
+  if (!playSessionRuntime || playSessionRuntime.sessionId !== String(sessionId || '')) return { ok: false, error: 'This Play Session is no longer active.' };
+  if (!mainWindow || mainWindow.isDestroyed()) return { ok: false, error: 'The GameDeck window is unavailable.' };
+  mainWindow.setFullScreen(Boolean(enabled));
+  mainWindow.focus();
+  return { ok: true, status: emitPlaySessionUi({ message: enabled ? 'Fullscreen Play Session.' : 'Playing inside GameDeck.' }) };
+}
+
+async function fallbackPlaySessionExternal(sessionId) {
+  if (!playSessionRuntime || playSessionRuntime.sessionId !== String(sessionId || '')) return { ok: false, error: 'This Play Session is no longer active.' };
+  const file = playSessionRuntime.file;
+  finishPlaySession('Switching to the external game window.');
+  await new Promise(resolve => setTimeout(resolve, 750));
+  const launch = launchGame(file);
+  return { ok: true, external: true, launch, message: launch.message };
+}
+
 runtimeManager = createRuntimeManager({
   root: MANAGED_RUNTIME_ROOT,
   manifestPath: path.join(__dirname, 'config', 'runtime-manifest.json'),
@@ -1437,7 +1990,8 @@ netplayManager = createNetplayManager({
   onLog: addActivity
 });
 playSessionManager = createPlaySessionManager({
-  resolveCapabilityInput: playSessionCapabilityInput
+  resolveCapabilityInput: playSessionCapabilityInput,
+  emitUpdate: () => emitPlaySessionUi()
 });
 
 function emitDownload(job) {
@@ -3246,6 +3800,8 @@ function createWindow() {
     if (level >= 2) addActivity('error', `Renderer: ${message} (${path.basename(sourceId || 'app')}:${line})`);
   });
   mainWindow.webContents.on('render-process-gone', (_, details) => addActivity('error', `Renderer stopped: ${details.reason}`));
+  mainWindow.on('enter-full-screen', () => emitPlaySessionUi());
+  mainWindow.on('leave-full-screen', () => emitPlaySessionUi());
 }
 
 ipcMain.handle('library', () => getLibrary());
@@ -3296,6 +3852,49 @@ ipcMain.handle('play-session-status', event => {
   if (!isTrustedMainFrameCaller(event, mainWindow)) return buildStatusFailure('untrusted_caller');
   return playSessionManager.status();
 });
+ipcMain.handle('play-session-start', async (event, file) => {
+  if (!isTrustedMainFrameCaller(event, mainWindow)) return { ok: false, error: 'Play Session is unavailable from this page.' };
+  const validated = validateCapabilityFileArgument(file);
+  if (!validated.ok) return { ok: false, error: 'Select a game from the GameDeck library and try again.' };
+  return startEmbeddedPlaySession(validated.file);
+});
+ipcMain.handle('play-session-view', event => {
+  if (!isTrustedMainFrameCaller(event, mainWindow)) return { active: false, phase: 'idle', error: 'untrusted_caller' };
+  return playSessionUiView();
+});
+ipcMain.handle('play-session-sources', (event, sessionId) => {
+  if (!isTrustedMainFrameCaller(event, mainWindow)) return { ok: false, error: 'Play Session is unavailable from this page.', candidates: [] };
+  return refreshPlaySessionSources(sessionId).catch(error => ({ ok: false, error: error.message, candidates: [] }));
+});
+ipcMain.handle('play-session-select-source', (event, sessionId, sourceId) => {
+  if (!isTrustedMainFrameCaller(event, mainWindow)) return { ok: false, error: 'Play Session is unavailable from this page.' };
+  return selectPlaySessionSource(sessionId, sourceId).catch(error => ({ ok: false, error: error.message }));
+});
+ipcMain.handle('play-session-arm-capture', (event, sessionId, audio) => {
+  if (!isTrustedMainFrameCaller(event, mainWindow)) return { ok: false, error: 'Play Session is unavailable from this page.' };
+  return armPlaySessionCapture(sessionId, audio !== false).catch(error => ({ ok: false, error: error.message }));
+});
+ipcMain.handle('play-session-media-ready', (event, sessionId, media) => {
+  if (!isTrustedMainFrameCaller(event, mainWindow)) return { ok: false, error: 'Play Session is unavailable from this page.' };
+  return markPlaySessionMediaReady(sessionId, media || {});
+});
+ipcMain.handle('play-session-fullscreen', (event, sessionId, enabled) => {
+  if (!isTrustedMainFrameCaller(event, mainWindow)) return { ok: false, error: 'Play Session is unavailable from this page.' };
+  return setPlaySessionFullscreen(sessionId, Boolean(enabled));
+});
+ipcMain.handle('play-session-stop', (event, sessionId, reason) => {
+  if (!isTrustedMainFrameCaller(event, mainWindow)) return { ok: false, error: 'Play Session is unavailable from this page.' };
+  if (!playSessionRuntime || playSessionRuntime.sessionId !== String(sessionId || '')) return { ok: true, active: false, phase: 'idle' };
+  return finishPlaySession(String(reason || 'Ended by player.').slice(0, 160));
+});
+ipcMain.handle('play-session-external', (event, sessionId) => {
+  if (!isTrustedMainFrameCaller(event, mainWindow)) return { ok: false, error: 'Play Session is unavailable from this page.' };
+  return fallbackPlaySessionExternal(sessionId).catch(error => ({ ok: false, error: error.message }));
+});
+ipcMain.on('play-session-input', (event, payload) => {
+  if (!isTrustedMainFrameCaller(event, mainWindow)) return;
+  queuePlaySessionInput(payload || {});
+});
 ipcMain.handle('ensure-runtime', (_, force) => ensureManagedRuntime({ force: Boolean(force) }));
 ipcMain.handle('stream-status', () => gameDeckStreamStatus());
 ipcMain.handle('stream-sources', () => gameDeckStreamSources().catch(error => ({ error: error.message, sources: [] })));
@@ -3307,6 +3906,7 @@ ipcMain.handle('stream-start', async (_, config = {}) => {
   if (!selected) return { ok: false, error: 'No screen or game window is available to stream.' };
   streamCaptureSourceId = selected.id;
   streamCaptureAudio = config.audio !== false;
+  armDisplayCapture('stream', streamCaptureSourceId, streamCaptureAudio);
   const stream = await streamServer.start({
     port: Number(config.port || 41783),
     title: config.title || 'GameDeck Live',
@@ -3409,6 +4009,7 @@ ipcMain.handle('clear-activity', () => {
 
 app.on('before-quit', () => {
   appIsQuitting = true;
+  if (playSessionRuntime) finishPlaySession('GameDeck closed.');
   pauseActiveDownloads();
   stopRemotePlay('GameDeck closed.');
   netplayManager?.stop('GameDeck closed.');

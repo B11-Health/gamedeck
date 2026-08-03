@@ -201,6 +201,7 @@ function buildCapabilityResult(input = {}) {
   const firmwareReady = input.dependencies?.firmwareReady !== false;
   const dependenciesReady = input.dependencies?.ready !== false;
   const certification = input.certification === 'verified' ? 'verified' : 'experimental';
+  const phase1Enabled = Boolean(input.implementation?.phase1Enabled);
 
   const base = {
     version: VERSION,
@@ -218,14 +219,14 @@ function buildCapabilityResult(input = {}) {
       wayland
     },
     implementation: {
-      phase: 'phase0a',
-      availableNow: false,
-      behaviorChanged: false
+      phase: phase1Enabled ? 'phase1_preview' : 'phase0a',
+      availableNow: phase1Enabled,
+      behaviorChanged: phase1Enabled
     },
     lifecycle: {
-      processOwned: false,
-      cleanStop: false,
-      restoreLibraryFocus: false
+      processOwned: phase1Enabled,
+      cleanStop: phase1Enabled,
+      restoreLibraryFocus: phase1Enabled
     }
   };
 
@@ -301,7 +302,7 @@ function buildCapabilityResult(input = {}) {
     return publicRedact({
       ...base,
       classification,
-      availability: 'phase1_candidate',
+      availability: phase1Enabled ? 'embedded_available' : 'phase1_candidate',
       eligible: true,
       presentation: { embedded: true, fullscreen: true, popOut: false },
       media: {
@@ -310,16 +311,22 @@ function buildCapabilityResult(input = {}) {
         sourceAutoDiscovery: true
       },
       input: {
-        owner: 'gamedeck_planned',
+        owner: phase1Enabled ? 'gamedeck' : 'gamedeck_planned',
         digitalP1: true,
-        duplicateInputPrevented: false,
-        backgroundRelay: false
+        duplicateInputPrevented: phase1Enabled,
+        backgroundRelay: phase1Enabled
       },
-      fallback: capabilityFallback(
-        'phase0a_external_default',
-        'This managed libretro game is eligible for the Phase 1 embedded prototype. Phase 0A keeps current Play behavior external.',
-        'Continue using external play until the embedded runtime receives Phase 1 approval.'
-      )
+      fallback: phase1Enabled
+        ? capabilityFallback(
+          'embedded_capture_fallback',
+          'GameDeck will play this managed libretro game inside the app. If exact window capture is unavailable, you can choose the game window or continue externally.',
+          'Use the Play Session window chooser or the external fallback.'
+        )
+        : capabilityFallback(
+          'phase0a_external_default',
+          'This managed libretro game is eligible for the Phase 1 embedded prototype. Phase 0A keeps current Play behavior external.',
+          'Continue using external play until the embedded runtime receives Phase 1 approval.'
+        )
     });
   }
 

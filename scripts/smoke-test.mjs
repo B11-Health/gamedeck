@@ -11,10 +11,11 @@ const fail = message => {
   process.exitCode = 1;
 };
 
-const [main, preload, renderer, html, styles, pkgText, donations, runtimeManager, runtimeManifest, runtimeCacheBuilder, streamServer, streamingRenderer, netplayManager, netplayRenderer, mobileReceiver, mobileManifestText, mobileSw, androidActivity, iosContent, iosInfo, siteHtml, siteStyles, siteApp] = await Promise.all([
+const [main, preload, renderer, playSessionRenderer, html, styles, pkgText, donations, runtimeManager, runtimeManifest, runtimeCacheBuilder, streamServer, streamingRenderer, netplayManager, netplayRenderer, mobileReceiver, mobileManifestText, mobileSw, androidActivity, iosContent, iosInfo, siteHtml, siteStyles, siteApp] = await Promise.all([
   read('main.js'),
   read('preload.js'),
   read('src/app.js'),
+  read('src/play-session.js'),
   read('src/index.html'),
   read('src/styles.css'),
   read('package.json'),
@@ -62,6 +63,65 @@ for (const asset of systemThemeAssets) {
 }
 if (!renderer.includes('SYSTEM_THEME_BACKGROUNDS') || !renderer.includes('applySystemTheme(game.system)')) fail('console-aware spotlight theme routing is missing');
 if (!styles.includes('--system-accent') || !styles.includes('.spotlight .feature-backdrop img.is-ready')) fail('console theme styling is missing');
+
+
+for (const id of [
+  'playSession',
+  'playSessionShell',
+  'playSessionVideo',
+  'playSessionLoading',
+  'playSessionSourceChooser',
+  'playSessionSourceList',
+  'playSessionChrome',
+  'playSessionFullscreen',
+  'playSessionOverlay',
+  'playSessionEnd'
+]) {
+  if (!html.includes(`id="${id}"`)) fail(`embedded Play Session UI is missing #${id}`);
+}
+if (!html.includes('<script src="play-session.js"></script>')) fail('embedded Play Session renderer is not loaded');
+for (const api of [
+  'playSessionStart',
+  'playSessionArmCapture',
+  'playSessionSelectSource',
+  'playSessionFullscreen',
+  'playSessionStop',
+  'playSessionExternal',
+  'playSessionInput',
+  'onPlaySession'
+]) {
+  if (!preload.includes(api)) fail(`embedded Play Session preload API is missing: ${api}`);
+}
+for (const handler of [
+  "ipcMain.handle('play-session-start'",
+  "ipcMain.handle('play-session-view'",
+  "ipcMain.handle('play-session-sources'",
+  "ipcMain.handle('play-session-select-source'",
+  "ipcMain.handle('play-session-arm-capture'",
+  "ipcMain.handle('play-session-media-ready'",
+  "ipcMain.handle('play-session-fullscreen'",
+  "ipcMain.handle('play-session-stop'",
+  "ipcMain.handle('play-session-external'",
+  "ipcMain.on('play-session-input'"
+]) {
+  if (!main.includes(handler)) fail(`embedded Play Session IPC is missing: ${handler}`);
+}
+if (!main.includes("pending?.owner === 'play-session'") || !main.includes("source.id.startsWith('window:')")) fail('embedded capture must require an explicitly armed window source');
+if (!main.includes('rankSourceCandidates') || !main.includes('beforeSourceIds') || !main.includes('previousPollSourceIds')) fail('embedded source discovery must use the stable new-window policy');
+if (!main.includes('PLAY_SESSION_SOURCE_TIMEOUT_MS') || !main.includes('PLAY_SESSION_DISCOVERY_DEADLINE_MS') || !main.includes('Promise.race([playSessionSourceRequest, timeout])')) fail('embedded source discovery must be bounded and non-overlapping');
+if (!main.includes('ranked.candidates.filter(candidate => candidate.isNew)') || !main.includes('candidate.id === selectedId && candidate.isNew')) fail('embedded source selection must be limited to proven post-launch windows');
+if (!main.includes('implementation: { phase1Enabled: true }')) fail('the live capability route must report the enabled Phase 1 preview truthfully');
+if (!main.includes('network_remote_enable_user_p1') || !main.includes('remoteInputPacket(0')) fail('embedded controller relay is missing');
+if (!main.includes('setPlaySessionFullscreen') || !main.includes('mainWindow.setFullScreen')) fail('embedded fullscreen stays within the GameDeck BrowserWindow');
+if (!main.includes("app.commandLine.appendSwitch('autoplay-policy'")) fail('embedded game audio autoplay policy is missing');
+if (!renderer.includes('window.GameDeckPlaySession.start(game)')) fail('the primary Play action does not route through embedded Play Session');
+if (!renderer.includes('window.GameDeckPlaySession?.active?.()')) fail('library navigation is not suspended while embedded play owns the controller');
+if (!playSessionRenderer.includes('navigator.mediaDevices.getDisplayMedia')) fail('embedded renderer capture is missing');
+if (!playSessionRenderer.includes("event.key === 'F11'") || !playSessionRenderer.includes("event.key === 'Escape'")) fail('Play Session fullscreen and controls shortcuts are missing');
+if (!playSessionRenderer.includes('GAMEPAD_TO_RETROPAD') || !playSessionRenderer.includes('KEY_TO_RETROPAD')) fail('Play Session controller and keyboard routing are missing');
+if (!playSessionRenderer.includes('Press again to end')) fail('Play Session destructive exit confirmation is missing');
+if (!styles.includes('/* Embedded Play Session */') || !styles.includes('body.play-session-fullscreen')) fail('embedded Play Session styling is missing');
+if (!pkg.scripts?.check?.includes('node --check src/play-session.js')) fail('Play Session renderer syntax check is missing from the repository gate');
 
 for (const id of [
   'games',

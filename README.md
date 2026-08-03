@@ -47,6 +47,7 @@ GameDeck does **not** include ROMs, BIOS files, encryption keys, or commercial g
 - BIOS-aware readiness checks with real setup locations, complete regional firmware requirements, and local-pack restoration
 - Launch-time integrity checks that stop damaged ZIP, 7Z, or RAR game archives before an emulator opens
 - Cinematic title details, artwork caching, favorites, and recent plays
+- Integrated Play Session preview for managed RetroArch titles, with in-app video, keyboard/controller relay, Escape controls, F11 fullscreen, safe window selection, and truthful external fallback
 - Console-aware environmental artwork that changes the spotlight atmosphere, accents, and active shelf cue for each hardware family
 - Exact No-Intro filename matching, revision aliases, Libretro CDN fallback, indexed fuzzy title matching, and quiet background cover enrichment
 - Correct mixed-folder routing for Genesis, Master System, Game Gear, GameCube, Wii, and Sega 32X libraries, with dedicated Famicom Disk System, Satellaview, and Sufami Turbo shelves

@@ -126,6 +126,20 @@ OWNED FILES / SURFACES: None after return.
 DO NOT TOUCH: Embedded Play security policy files or authenticated public growth surfaces.
 EXPECTED RETURN: Immutable integration commit hash and final visual acceptance at normal, compact, and reduced-motion settings.
 
+## Latest Embedded Play Phase 1 preview return
+
+HANDOFF ID: GD-20260803-14
+OBJECTIVE: Make supported games open inside the GameDeck desktop window with a fullscreen option while preserving truthful fallback and the existing collection, artwork, Aurora focus, and stable action layout.
+DONE: Added a GameDeck-owned Play Session for managed RetroArch/libretro titles. Primary Play now enters an in-app capture surface, F11 expands the same session fullscreen, Escape/Guide opens controls, keyboard and digital P1 controller changes relay through bounded local RetroPad UDP, and End owns process/capture/input cleanup before restoring the selected card. Exact post-launch window discovery is two-poll stable, window-only, bounded by a nine-second deadline, and falls back to a safe chooser or external launch without ever silently selecting the full display. User-managed RetroArch, standalone engines, Wayland, and unsupported routes remain external.
+CHANGED FILES / SURFACES: `main.js`, `play-session-manager.js`, `preload.js`, `src/app.js`, `src/index.html`, new `src/play-session.js`, `src/styles.css`, package/test gates, `README.md`, and `docs/EMBEDDED_PLAY.md`.
+TESTS AND RESULTS: Full `npm test` and repository audit passed; the play-session manager now passes 29 tests. Electron renderer QA at 1504x904 passed live in-app video attachment, safe ambiguous-source selection, no horizontal overflow, F11 same-session fullscreen, Escape focus on Resume, keyboard RetroPad press/release relay, two-step End confirmation, and return to library. A synthetic managed-engine lifecycle test proved bounded discovery on an environment that exposes no window sources: GameDeck reached the safe chooser within 11 seconds, exposed zero full-screen/unrelated candidates, Cancel terminated the engine, and the library returned cleanly.
+OPEN RISKS OR BLOCKERS: The authenticated Windows workspace connector dropped before a real-ROM Windows launch/capture/audio cycle could be completed. Linux Xvfb does not expose native window sources to Electron DesktopCapturer, so native-window video was validated through the renderer MediaStream harness while safe timeout/cleanup was validated against a real child window. Windows loopback audio, real controller gameplay, latency, repeated-cycle leak checks, and per-core certification remain required before merging this preview as a default release feature.
+NEXT OWNER: Windows Integration QA, Compatibility Lab, and Embedded Play Security reviewer.
+NEXT BOUNDED TASK: On the exact branch commit, run one real managed RetroArch title on Windows through Play -> embedded video/audio -> controller input -> F11 -> Escape -> End, then repeat launch/end cycles and certify representative cores.
+OWNED FILES / SURFACES: `main.js`, `play-session-manager.js`, `preload.js`, `src/app.js`, `src/index.html`, `src/play-session.js`, `src/styles.css`, embedded-play tests/docs until QA return.
+DO NOT TOUCH: Embedded Play security policy artifacts, unrelated authenticated growth surfaces, user ROM/BIOS/save content, or the superseded console-theme branch.
+EXPECTED RETURN: Immutable commit hash, exact Windows launch matrix, audio/controller/fullscreen evidence, process/track/socket cleanup evidence, and any bounded corrective patch.
+
 ## Latest verified production state
 
 - Public site event strip is visible in the first viewport before and during the event; it auto-hides at 2026-08-03 00:00 ET.

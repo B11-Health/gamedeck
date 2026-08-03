@@ -71,6 +71,25 @@ test('managed uncertified RetroArch is experimental', () => {
   assert.equal(result.eligible, true);
 });
 
+test('Phase 1 managed RetroArch is available inside GameDeck', () => {
+  const result = buildCapabilityResult({
+    ...managed,
+    implementation: { phase1Enabled: true }
+  });
+  assert.equal(result.classification, 'embedded_verified');
+  assert.equal(result.availability, 'embedded_available');
+  assert.equal(result.implementation.phase, 'phase1_preview');
+  assert.equal(result.implementation.availableNow, true);
+  assert.equal(result.implementation.behaviorChanged, true);
+  assert.equal(result.lifecycle.processOwned, true);
+  assert.equal(result.lifecycle.cleanStop, true);
+  assert.equal(result.lifecycle.restoreLibraryFocus, true);
+  assert.equal(result.input.owner, 'gamedeck');
+  assert.equal(result.input.duplicateInputPrevented, true);
+  assert.equal(result.input.backgroundRelay, true);
+  assert.equal(result.fallback.reasonCode, 'embedded_capture_fallback');
+});
+
 test('user RetroArch remains integrated external', () => {
   const result = buildCapabilityResult({
     ...managed,

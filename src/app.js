@@ -1316,6 +1316,14 @@ async function launch(file) {
     game = state.library.games.find(item => item.file === file);
     if (game && gameLaunchBlocked(game)) throw Error(game.archiveHealthMessage || 'This ROM set needs attention before launch');
     setLaunchingState(game, true);
+    if (game && window.GameDeckPlaySession?.start) {
+      const session = await window.GameDeckPlaySession.start(game);
+      if (session?.handled) {
+        setLaunchingState(game, false);
+        if (session.external) setTimeout(() => loadLibrary(false), 900);
+        return;
+      }
+    }
     toast('Opening ' + (game?.title || 'your game') + ' — GameDeck is checking everything automatically…', 'progress');
     const result = await window.deck.launch(file);
     if (result?.queued) {
@@ -2387,6 +2395,12 @@ function handleGamepad() {
   setControllerStatus();
   if (!pad) {
     gamepadState.initialized = false;
+    return;
+  }
+  if (window.GameDeckPlaySession?.active?.()) {
+    gamepadState.buttons = [...pad.buttons].map(button => button.pressed);
+    gamepadState.direction = null;
+    gamepadState.nextRepeat = 0;
     return;
   }
   if (document.body.classList.contains('modal-open')) {
