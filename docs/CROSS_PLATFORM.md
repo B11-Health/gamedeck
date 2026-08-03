@@ -16,7 +16,7 @@ GameDeck uses Electron and electron-builder. Each production artifact is built o
 
 ## Managed runtime provenance
 
-GameDeck accepts managed-runtime downloads only over HTTPS from hosts listed in `config/runtime-manifest.json`. The installed app rejects both advertised and actually streamed asset sizes over 1 GB. The release cache builder currently rejects an advertised response total over 1 GB, records SHA-256 digests, and verifies pinned downloads; it does not yet independently stop an unbounded stream when an upstream response omits or understates its length. Downloaded or bundled bytes are hashed before extraction. These controls protect transport and detect changed bytes, but the strength of the provenance check depends on where the expected digest came from.
+GameDeck accepts managed-runtime downloads only over HTTPS from hosts listed in `config/runtime-manifest.json`. Both the installed app and the release cache builder reject advertised or actually streamed asset sizes over 1 GB. The cache builder aborts and removes an oversized partial even when an upstream response omits or understates its length. Downloaded or bundled bytes are hashed before extraction. These controls protect transport and detect changed bytes, but the strength of the provenance check depends on where the expected digest came from.
 
 ### Current trust modes
 
@@ -42,7 +42,7 @@ Until every required input is pinned, release reviewers should retain each platf
 
 ### Non-breaking migration plan
 
-1. **Close the cache-builder size gap without changing provenance behavior.** Add the installed app’s streamed-byte counter to `scripts/prepare-runtime-cache.mjs`, so a response that omits or understates `Content-Length` still fails above 1 GB.
+1. **Keep the cache-builder size boundary enforced.** `scripts/prepare-runtime-cache.mjs` now counts streamed bytes, fails above 1 GB even when `Content-Length` is missing or understated, removes the oversized partial, and has focused regression coverage.
 2. **Capture reviewed digests without changing runtime behavior.** On each target runner, download the current required inputs once, retain the artifacts, and review the generated URL, size, and SHA-256 inventory.
 3. **Pin the stable archives first.** Add committed digests for the two Linux archives and the universal macOS DMG. Existing manifests and installed clients already understand component-level `sha256` values.
 4. **Extend the core-set schema compatibly.** Allow each core-set file to carry a digest, either as `{ name, sha256 }` entries or through a filename-to-digest map. Keep string entries valid during one transition release so older manifests and development workflows continue to work.
@@ -50,13 +50,6 @@ Until every required input is pinned, release reviewers should retain each platf
 6. **Add a release gate.** After all supported clients understand per-file core hashes, fail production builds when any required runtime input lacks a committed digest or does not match it. Development builds may retain an explicit opt-in trust-on-first-use path.
 7. **Publish provenance with the release.** Preserve the resolved runtime manifest, cache index, package SHA-256 files, and build attestation together. Signing and notarization authenticate the finished package; the pinned runtime inventory authenticates what was placed inside it.
 
-## Managed runtime provenance
-
-GameDeck release builds run the target-specific runtime cache step before packaging. Each bundled file is hashed into a platform `cache-index.json`, and the packaged runtime manager verifies that digest before extraction. Windows also commits SHA-256 values for both managed archives directly in `config/runtime-manifest.json`.
-
-Linux and macOS do not yet have committed hashes for all required upstream assets. Linux's two versioned archives and the macOS universal DMG are build-time pinned by the generated cache index. The 17 core archives for each macOS architecture also use mutable `nightly/.../latest` URLs. A source/development install without the bundled cache uses a locally persisted trust-on-first-use digest.
-
-See [Runtime provenance and multiplayer trust boundaries](RUNTIME_PROVENANCE.md) for the exact asset matrix, verification order, release implications, and the non-breaking migration plan to committed per-asset hashes.
 
 ## Release process
 
