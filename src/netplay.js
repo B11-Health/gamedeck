@@ -34,6 +34,7 @@
   let syncRelays = [];
   let syncBusy = false;
   let modalGamepadState = { buttons: [], direction: null, nextRepeat: 0 };
+  let netplayReturnFocus = null;
   let hostCapture = null;
   let hostOwnsCapture = false;
   const hostPeers = new Map();
@@ -305,9 +306,13 @@
   }
 
   function openStudio(tab = 'host', style = currentPlayStyle) {
+    const studio = $('#netplayStudio');
+    if (studio.classList.contains('hidden')) {
+      netplayReturnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    }
     currentTab = tab === 'join' ? 'join' : 'host';
     if (['couch', 'remote', 'sync'].includes(style)) currentPlayStyle = style;
-    $('#netplayStudio').classList.remove('hidden');
+    studio.classList.remove('hidden');
     document.body.classList.add('modal-open');
     renderPlayStyles();
     refreshSelectedGame();
@@ -321,7 +326,12 @@
   function closeStudio() {
     $('#netplayStudio').classList.add('hidden');
     document.body.classList.remove('modal-open');
-    $('#spotlightOnline')?.focus();
+    const target = netplayReturnFocus;
+    netplayReturnFocus = null;
+    setTimeout(() => {
+      const visible = target?.isConnected && target.getClientRects().length > 0 && getComputedStyle(target).visibility !== 'hidden';
+      (visible ? target : $('#netplayToggle'))?.focus?.({ preventScroll: true });
+    }, 0);
   }
 
   function renderTabs() {
