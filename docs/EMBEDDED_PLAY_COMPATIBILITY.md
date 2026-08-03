@@ -27,7 +27,7 @@ The architecture requires a GameDeck-owned play surface, truthful external fallb
 | Route | Proposed Phase 1 tier | Phase 1 ceiling | Primary blocker |
 |---|---|---|---|
 | Managed RetroArch/libretro | **Embedded verified candidate** | Exact Windows tuples may pass; global verification still requires macOS, X11, and Wayland | Play-session manager and embedded evidence do not yet exist |
-| User-installed RetroArch | **Experimental** | Experimental per exact executable/core tuple | User configuration, version, driver, shader, and window variance |
+| User-installed RetroArch | **Integrated external** | External launch only in Phase 1; a future experimental adapter requires separate explicit certification | GameDeck cannot assume configuration, input, window, version, or lifecycle ownership |
 | Standalone MAME | **Integrated external** | Integrated external | No GameDeck-owned input sink or lifecycle-owned adapter |
 | Dolphin | **Integrated external** | Integrated external | No safe input sink; motion/pointer classes unresolved |
 | PCSX2 | **Integrated external** | Integrated external | No safe input sink; pressure input and multitap unresolved |
@@ -77,7 +77,7 @@ The current local path spawns detached, calls `unref()`, and does not retain lif
 | Reason code | Player-facing copy | Required fallback |
 |---|---|---|
 | `EMBEDDED_ENGINE_UNAVAILABLE` | This game engine is not available for an embedded session. | Open setup or use existing external launch |
-| `EMBEDDED_RUNTIME_UNVERIFIED` | This RetroArch or core build has not been certified for embedded play. | Continue Experimental with consent or launch externally |
+| `EMBEDDED_RUNTIME_UNVERIFIED` | This RetroArch or core build has not been certified for embedded play. | Use integrated external launch; do not expose embedded consent |
 | `EMBEDDED_PROCESS_UNTRACKED` | GameDeck could not safely track the game process. | End capture attempt and launch externally |
 | `EMBEDDED_LAUNCH_FAILED` | The game engine did not start. | Return to library with retry and sanitized detail |
 | `EMBEDDED_SOURCE_NOT_FOUND` | GameDeck could not find the game window. | Source chooser, then external fallback |
@@ -120,16 +120,16 @@ Failure records may contain engine version, reason code, phase, elapsed time, an
 
 ### 5.2 User-installed RetroArch
 
-**Proposed tier:** Experimental.
+**Proposed tier:** Integrated external in Phase 1. A future experimental adapter is permitted only after separate explicit certification.
 
 - **Process/arguments:** Discovery uses an override, standard Windows paths, `/Applications/RetroArch.app`, or Linux `PATH`; nearby/standard core directories are discovered (`main.js:73-97`). Detected user paths may become defaults when a managed bundle is not active (`main.js:99-110`). Argument shape matches the Libretro launch above (`main.js:1835-1848`).
 - **Capture risk:** Same name-based `retroarch` rule, with greater variance from custom drivers, titles, wrappers, multiple installs, and existing sessions.
-- **Input/sink:** Use Remote RetroPad only after capability probing. Never edit the user's primary configuration; use a GameDeck-owned append config. No helper is required for a confirmed Remote RetroPad path.
-- **Audio/presentation:** Every executable/core/driver tuple remains Experimental across Windows, macOS, X11, and Wayland. Existing or wrapper-owned processes must not be silently adopted.
-- **Controller evidence:** Full Windows matrix against minimum and current supported versions, clean defaults, and one non-default driver profile; independent native runs elsewhere.
+- **Input/sink:** Phase 1 leaves input entirely under the user-configured RetroArch instance and exposes no embedded-input consent. A future experimental adapter may evaluate Remote RetroPad only after separate certification; it must never edit the user's primary configuration and may use only a GameDeck-owned append config.
+- **Audio/presentation:** Phase 1 uses the emulator's external window and native audio path on Windows, macOS, X11, and Wayland. GameDeck does not acquire an embedded capture source, expose embedded consent, or assume fullscreen/pop-out ownership; existing or wrapper-owned processes must not be silently adopted.
+- **Controller evidence:** Phase 1 verifies only truthful external launch, native controller ownership, process observation, and return-to-GameDeck behavior. A future experimental adapter would require the full Windows matrix against minimum and current supported versions, clean defaults, one non-default driver profile, and independent native runs elsewhere.
 - **Security:** Do not overwrite user config, terminate unrelated processes, or capture pre-existing windows without approval. Redact paths.
 - **Unknowns:** Version floor, forks, core ABI, driver behavior, config precedence, source naming, port conflict, audio, and cleanup.
-- **Failure/fallback:** `EMBEDDED_RUNTIME_UNVERIFIED`, `EMBEDDED_INPUT_CONFIG_CONFLICT`, or `EMBEDDED_PROCESS_UNTRACKED`; external launch unless explicit Experimental consent.
+- **Failure/fallback:** `EMBEDDED_RUNTIME_UNVERIFIED`, `EMBEDDED_INPUT_CONFIG_CONFLICT`, or `EMBEDDED_PROCESS_UNTRACKED`; always use integrated external launch in Phase 1 and do not offer embedded consent.
 
 
 ### 5.3 Standalone MAME
