@@ -20,8 +20,17 @@ function setConnection(value){
 async function api(path,options={}){
   const response=await fetch(path,{cache:'no-store',headers:{'content-type':'application/json',...(options.headers||{})},...options});
   const body=await response.json().catch(()=>({ok:false,error:`HTTP ${response.status}`}));
-  if(!response.ok||body.ok===false)throw Error(body.error||`HTTP ${response.status}`);
+  if(!response.ok||body.ok===false){const error=Error(body.error||`HTTP ${response.status}`);error.status=response.status;throw error}
   return body;
+}
+
+function pairingError(error){
+  const status=Number(error?.status||0);
+  const message=String(error?.message||'');
+  if(status===404||/HTTP 404|not found/i.test(message))return 'GameDeck host not found. Open this page from the address or QR code shown on the host.';
+  if(status===401||status===403||/invalid|expired|pairing code/i.test(message))return 'That pairing code is invalid or expired. Request a fresh code from the host.';
+  if(/Failed to fetch|NetworkError|Load failed/i.test(message))return 'Could not reach the GameDeck host. Confirm both devices are on the same network.';
+  return message||'Could not connect to GameDeck. Check the host and try again.';
 }
 
 async function sendSignal(payload){
@@ -116,7 +125,7 @@ async function pair(event){
     await createPeer();
     poll();
   }catch(error){
-    $('#pairError').textContent=error.message;
+    $('#pairError').textContent=pairingError(error);
     $('#pairError').classList.remove('hidden');
   }
 }

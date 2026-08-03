@@ -1,0 +1,116 @@
+{
+  "date": "2026-08-02",
+  "result": "pass",
+  "knownReleaseBlockers": 0,
+  "auditedBaseCommit": "4090bfea57778b739c10bde8b0279262a58dfb74",
+  "version": "1.2.0",
+  "source": {
+    "trackedFilesAtBase": 148,
+    "dependencies": 305,
+    "vulnerabilities": 0,
+    "publicLinks": {
+      "checked": 69,
+      "failed": 0
+    },
+    "repositoryAudit": "pass",
+    "gitObjectIntegrity": "pass"
+  },
+  "desktop": {
+    "platform": "Windows",
+    "gamesIndexed": 221,
+    "viewports": [
+      [
+        1504,
+        904
+      ],
+      [
+        1280,
+        720
+      ],
+      [
+        980,
+        650
+      ]
+    ],
+    "horizontalOverflow": false,
+    "unnamedVisibleControls": 0,
+    "unlabeledVisibleFields": 0,
+    "rendererWarningsOrErrors": 0,
+    "searchAndFilters": "pass",
+    "modalFocusAndEscape": "pass",
+    "sandbox": {
+      "contextIsolation": true,
+      "nodeIntegration": false,
+      "sandbox": true,
+      "webSecurity": true,
+      "nodeGlobalsExposed": false
+    }
+  },
+  "multiplayer": {
+    "game": "Metal Slug 3",
+    "core": "FinalBurn Neo",
+    "synchronized": {
+      "relay": "New York",
+      "phase": "ready",
+      "invitePrefix": "GDPLAY1.",
+      "inviteLength": 760,
+      "overflow": false
+    },
+    "remotePlay": {
+      "phase": "ready",
+      "invitePrefix": "GDREMOTE2.",
+      "inviteLength": 1733,
+      "overflow": false
+    },
+    "couch": {
+      "launched": true,
+      "processVerified": true
+    }
+  },
+  "packaging": {
+    "runtimeCacheMiB": 412.2,
+    "unpackedFiles": 92,
+    "unpackedBytes": 813142742,
+    "freshProfileRuntimeExtraction": "pass",
+    "packagedStartup": "pass",
+    "appAsarBytes": 4385402,
+    "webBrandKitExcluded": true
+  },
+  "publicSite": {
+    "viewport": [
+      1440,
+      900
+    ],
+    "releaseDataLoaded": true,
+    "overflow": false,
+    "brokenImages": 0,
+    "unnamedControls": 0
+  },
+  "mobileReceiver": {
+    "viewport": [
+      390,
+      844
+    ],
+    "overflow": false,
+    "serviceWorkerRegistered": true,
+    "pwaIcons": [
+      "192x192",
+      "512x512",
+      "192x192 maskable",
+      "512x512 maskable"
+    ],
+    "iconsCached": true,
+    "pairingValidation": "pass",
+    "friendlyUnavailableHostError": true
+  },
+  "privacy": {
+    "secretsIncluded": false,
+    "invitesIncluded": false,
+    "absoluteUserPathsIncluded": false
+  },
+  "limitations": [
+    "No fresh native macOS or Linux binary execution in this Windows session.",
+    "No attached physical Android or iOS device.",
+    "No second remote guest computer in this pass."
+  ]
+}

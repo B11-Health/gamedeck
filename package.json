@@ -63,6 +63,7 @@
       "netplay-manager.js",
       "src/**/*",
       "assets/**/*",
+      "!assets/branding/brand-kit/**/*",
       "config/**/*",
       "sponsors.json",
       "LICENSE",

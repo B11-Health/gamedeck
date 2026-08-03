@@ -446,9 +446,9 @@ function renderDownloads() {
     const stage = download.status === 'complete' ? 'Ready' : download.status === 'paused' ? 'Paused · progress saved' : download.status === 'error' ? 'Ready to retry' : download.stage || 'Downloading';
     const value = download.status === 'error' ? 'RETRY' : download.status === 'paused' ? 'PAUSED' : download.status === 'complete' ? 'READY' : `${Math.round(itemProgress)}%`;
     const controls = [
-      download.status === 'running' ? `<button class="transfer-control" data-transfer-action="pause" data-download-id="${escapeHtml(download.id)}">Pause</button>` : '',
-      ['paused', 'error'].includes(download.status) && download.resumable ? `<button class="transfer-control primary" data-transfer-action="resume" data-download-id="${escapeHtml(download.id)}">Resume</button>` : '',
-      ['complete', 'error'].includes(download.status) ? `<button class="transfer-control quiet" data-transfer-action="dismiss" data-download-id="${escapeHtml(download.id)}">Dismiss</button>` : ''
+      download.status === 'running' ? `<button type="button" class="transfer-control" data-transfer-action="pause" data-download-id="${escapeHtml(download.id)}">Pause</button>` : '',
+      ['paused', 'error'].includes(download.status) && download.resumable ? `<button type="button" class="transfer-control primary" data-transfer-action="resume" data-download-id="${escapeHtml(download.id)}">Resume</button>` : '',
+      ['complete', 'error'].includes(download.status) ? `<button type="button" class="transfer-control quiet" data-transfer-action="dismiss" data-download-id="${escapeHtml(download.id)}">Dismiss</button>` : ''
     ].filter(Boolean).join('');
     const actionable = download.status === 'complete';
     return `<article class="transfer-item ${escapeHtml(download.status)} ${actionable ? 'actionable' : ''}" data-download-id="${escapeHtml(download.id)}" ${actionable ? 'tabindex="0" role="button"' : ''}><img src="${escapeHtml(art)}" alt=""><div class="transfer-item-copy"><div><b title="${escapeHtml(download.title)}">${escapeHtml(download.title)}</b><span>${escapeHtml(stage)}</span></div><small>${escapeHtml(itemDetail)}</small><div class="transfer-item-track ${download.status === 'running' && itemProgress === 0 ? 'indeterminate' : ''}"><span style="width:${download.status === 'complete' ? 100 : itemProgress}%"></span></div></div><div class="transfer-item-end"><strong>${value}</strong><div class="transfer-item-controls">${controls}</div></div></article>`;
@@ -1028,7 +1028,7 @@ async function refreshFocusedDetails() {
 
 function renderSystems() {
   const allFocused = state.libraryZone === 'systems' && state.focusedLibrarySystem === 'all';
-  const all = `<button class="system ${state.selectedSystem === 'all' ? 'active' : ''} ${allFocused ? 'controller-focus' : ''}" data-id="all" title="All games"><span class="sys-icon" style="--c:#c8ff52">ALL</span><span class="sys-copy"><b>All games</b><small>Full collection</small></span><span class="count">${state.library.games.length}</span></button>`;
+  const all = `<button type="button" class="system ${state.selectedSystem === 'all' ? 'active' : ''} ${allFocused ? 'controller-focus' : ''}" data-id="all" title="All games"><span class="sys-icon" style="--c:#c8ff52">ALL</span><span class="sys-copy"><b>All games</b><small>Full collection</small></span><span class="count">${state.library.games.length}</span></button>`;
   const systems = state.library.systems.map(system => {
     const focused = state.libraryZone === 'systems' && state.focusedLibrarySystem === system.id;
     const art = system.image ? `<img src="${escapeHtml(system.image)}" alt="">` : escapeHtml(system.icon);
@@ -1041,7 +1041,7 @@ function renderSystems() {
     const status = isArcadeId(system.id) && arcadeGames.length
       ? (arcadeAttention ? `${arcadeAttention} SET${arcadeAttention === 1 ? '' : 'S'} TO CHECK` : `${arcadeGames.filter(game => game.archiveHealth === 'verified').length} PREFLIGHT OK`)
       : systemStatusLabel(system);
-    return `<button class="system ${state.selectedSystem === system.id ? 'active' : ''} ${focused ? 'controller-focus' : ''}" data-id="${system.id}" title="${escapeHtml(title)}"><span class="sys-icon" style="--c:${system.color}">${art}</span><span class="sys-copy"><b>${escapeHtml(system.name)}</b><small>${escapeHtml(status)}</small></span><span class="count">${countLabel}</span></button>`;
+    return `<button type="button" class="system ${state.selectedSystem === system.id ? 'active' : ''} ${focused ? 'controller-focus' : ''}" data-id="${system.id}" title="${escapeHtml(title)}"><span class="sys-icon" style="--c:${system.color}">${art}</span><span class="sys-copy"><b>${escapeHtml(system.name)}</b><small>${escapeHtml(status)}</small></span><span class="count">${countLabel}</span></button>`;
   }).join('');
   $('#systems').innerHTML = all + systems;
 
@@ -1139,7 +1139,7 @@ function renderGames() {
     const generatedArt = artMissing && artworkEnrichmentTried.has(game.id);
     const artStatus = artMissing ? `<span class="art-status ${generatedArt ? 'generated' : 'matching'}">${generatedArt ? 'GAMEDECK ART' : 'MATCHING ART'}</span>` : '';
     const stateClasses = [artMissing ? 'missing-art' : 'has-art', game.favorite ? 'is-favorite' : '', game.lastPlayed ? 'is-recent' : '', playable ? 'is-playable' : 'needs-setup'].filter(Boolean).join(' ');
-    return `<article class="game ${game.file === state.launchingFile ? 'launching' : ''} ${stateClasses} ${arcade ? 'arcade-card' : ''} ${blocked ? 'health-attention' : ''} ${repairable ? 'health-repairable' : ''} ${active ? 'active' : ''}" style="--delay:${Math.min(index, 14) * 18}ms" tabindex="0" role="listitem" aria-current="${active}" aria-label="Select ${escapeHtml(game.title)} on ${escapeHtml(system?.name || 'GameDeck')}" data-id="${game.id}"><div class="cover" style="--c:${system?.color || '#8992a3'}"><div class="cover-art"><img data-game-art="${game.id}" src="${escapeHtml(gameArt(game))}" alt="${escapeHtml(game.title)} artwork" loading="lazy"></div><span class="cover-system">${escapeHtml(system?.short || 'GAME')}</span>${badge}${artStatus}<button class="fav ${game.favorite ? 'on' : ''}" aria-label="${game.favorite ? 'Remove favorite' : 'Favorite'}"><span aria-hidden="true">${game.favorite ? '★' : '☆'}</span></button><div class="cover-logo">${escapeHtml(system?.icon || 'G')}</div><div class="cover-title">${escapeHtml(game.title)}</div><button class="play" aria-label="${blocked ? 'ROM set needs attention' : `Play ${escapeHtml(game.title)}`}" ${blocked ? 'disabled' : ''}><span aria-hidden="true">${blocked ? '!' : '▶'}</span> ${blocked ? 'CHECK' : 'PLAY'}</button></div><div class="meta"><b title="${escapeHtml(game.title)}">${escapeHtml(game.title)}</b><div class="game-card-facts">${facts}</div><small><span class="ready-dot ${playable ? 'ok' : 'setup'}"></span>${escapeHtml(status)}</small></div></article>`;
+    return `<article class="game ${game.file === state.launchingFile ? 'launching' : ''} ${stateClasses} ${arcade ? 'arcade-card' : ''} ${blocked ? 'health-attention' : ''} ${repairable ? 'health-repairable' : ''} ${active ? 'active' : ''}" style="--delay:${Math.min(index, 14) * 18}ms" tabindex="0" role="listitem" aria-current="${active}" aria-label="Select ${escapeHtml(game.title)} on ${escapeHtml(system?.name || 'GameDeck')}" data-id="${game.id}"><div class="cover" style="--c:${system?.color || '#8992a3'}"><div class="cover-art"><img data-game-art="${game.id}" src="${escapeHtml(gameArt(game))}" alt="${escapeHtml(game.title)} artwork" loading="lazy"></div><span class="cover-system">${escapeHtml(system?.short || 'GAME')}</span>${badge}${artStatus}<button type="button" class="fav ${game.favorite ? 'on' : ''}" aria-label="${game.favorite ? 'Remove favorite' : 'Favorite'}"><span aria-hidden="true">${game.favorite ? '★' : '☆'}</span></button><div class="cover-logo">${escapeHtml(system?.icon || 'G')}</div><div class="cover-title">${escapeHtml(game.title)}</div><button type="button" class="play" aria-label="${blocked ? 'ROM set needs attention' : `Play ${escapeHtml(game.title)}`}" ${blocked ? 'disabled' : ''}><span aria-hidden="true">${blocked ? '!' : '▶'}</span> ${blocked ? 'CHECK' : 'PLAY'}</button></div><div class="meta"><b title="${escapeHtml(game.title)}">${escapeHtml(game.title)}</b><div class="game-card-facts">${facts}</div><small><span class="ready-dot ${playable ? 'ok' : 'setup'}"></span>${escapeHtml(status)}</small></div></article>`;
   }).join('');
 
   renderEmptyState(games);
@@ -1333,7 +1333,7 @@ function renderCatalogGames() {
     const facts = [game.region || game.tags?.[0] || 'Catalog', game.size || 'RGSX'].filter(Boolean);
     const action = ready ? 'Play' : downloading ? `${Math.round(Number(downloading.progress || 0))}%` : installed ? 'Finish' : 'Add';
     const cardState = ready ? 'IN LIBRARY' : downloading ? escapeHtml(downloading.stage || 'WORKING') : installed ? 'DOWNLOADED' : 'AVAILABLE';
-    return `<article class="catalog-game ${game.art ? 'has-art' : 'art-pending'} ${active ? 'active' : ''} ${ready ? 'installed' : ''} ${installed && !ready ? 'downloaded' : ''} ${downloading ? 'downloading' : ''}" tabindex="0" role="listitem" aria-current="${active}" aria-label="Select ${escapeHtml(game.name)} for ${escapeHtml(state.catalogSystem?.name || 'this console')}" style="--delay:${Math.min(index, 14) * 18}ms" data-id="${game.id}"><div class="catalog-media"><img class="catalog-media-backdrop" data-catalog-art="${game.id}" src="${escapeHtml(art)}" alt="" loading="lazy"><img class="catalog-poster" data-catalog-art="${game.id}" src="${escapeHtml(art)}" alt="${escapeHtml(game.name)} artwork" loading="lazy"><span class="catalog-platform">${escapeHtml(state.catalogSystem?.name || 'GAME')}</span><span class="catalog-state">${cardState}</span></div><div class="catalog-info"><b title="${escapeHtml(game.name)}">${escapeHtml(game.name)}</b><small>${facts.map(fact => `<span>${escapeHtml(fact)}</span>`).join('')}</small><p>${escapeHtml(cardDescription(game, state.catalogSystem))}</p><button class="import" data-id="${game.id}" ${downloading ? 'disabled' : ''}>${action}</button></div></article>`;
+    return `<article class="catalog-game ${game.art ? 'has-art' : 'art-pending'} ${active ? 'active' : ''} ${ready ? 'installed' : ''} ${installed && !ready ? 'downloaded' : ''} ${downloading ? 'downloading' : ''}" tabindex="0" role="listitem" aria-current="${active}" aria-label="Select ${escapeHtml(game.name)} for ${escapeHtml(state.catalogSystem?.name || 'this console')}" style="--delay:${Math.min(index, 14) * 18}ms" data-id="${game.id}"><div class="catalog-media"><img class="catalog-media-backdrop" data-catalog-art="${game.id}" src="${escapeHtml(art)}" alt="" loading="lazy"><img class="catalog-poster" data-catalog-art="${game.id}" src="${escapeHtml(art)}" alt="${escapeHtml(game.name)} artwork" loading="lazy"><span class="catalog-platform">${escapeHtml(state.catalogSystem?.name || 'GAME')}</span><span class="catalog-state">${cardState}</span></div><div class="catalog-info"><b title="${escapeHtml(game.name)}">${escapeHtml(game.name)}</b><small>${facts.map(fact => `<span>${escapeHtml(fact)}</span>`).join('')}</small><p>${escapeHtml(cardDescription(game, state.catalogSystem))}</p><button type="button" class="import" data-id="${game.id}" ${downloading ? 'disabled' : ''}>${action}</button></div></article>`;
   }).join('');
 
   $$('.catalog-game').forEach(card => {
@@ -2413,10 +2413,25 @@ async function refreshDiagnostics(includeLibrary = false) {
   renderDownloads();
 }
 
+let consoleReturnFocus = null;
+
 function openConsole(show) {
-  $('#debugConsole').classList.toggle('hidden', !show);
+  const console = $('#debugConsole');
+  const wasHidden = console.classList.contains('hidden');
+  if (show && wasHidden) consoleReturnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  console.classList.toggle('hidden', !show);
   $('#consoleToggle').classList.toggle('active', show);
-  if (show) refreshDiagnostics();
+  if (show) {
+    refreshDiagnostics();
+    setTimeout(() => $('#consoleClose')?.focus(), 0);
+  } else if (!wasHidden) {
+    const target = consoleReturnFocus;
+    consoleReturnFocus = null;
+    setTimeout(() => {
+      const visible = target && target.isConnected && !target.closest('.hidden') && getComputedStyle(target).visibility !== 'hidden';
+      (visible ? target : $('#headerMenuToggle'))?.focus?.({ preventScroll: true });
+    }, 0);
+  }
 }
 
 async function loadLibrary(shouldRender = true) {

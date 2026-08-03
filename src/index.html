@@ -19,11 +19,11 @@
         <div class="brand"><span class="brand-mark"><img src="../assets/branding/gamedeck-mark-source.png" alt=""></span><span>GAMEDECK</span></div>
       </div>
       <nav class="primary-nav" aria-label="Main navigation">
-        <button class="nav active" data-view="home">Library</button>
-        <button class="nav" data-view="discover">Discover</button>
-        <button class="nav" data-view="favorites">Favorites</button>
-        <button class="nav" data-view="recent">Recent</button>
-        <button class="nav" data-view="community">Community</button>
+        <button type="button" class="nav active" data-view="home">Library</button>
+        <button type="button" class="nav" data-view="discover">Discover</button>
+        <button type="button" class="nav" data-view="favorites">Favorites</button>
+        <button type="button" class="nav" data-view="recent">Recent</button>
+        <button type="button" class="nav" data-view="community">Community</button>
       </nav>
       <div class="head-actions">
         <button class="header-button netplay-button" id="netplayToggle" type="button" aria-pressed="false" title="Host or join multiplayer"><span class="netplay-glyph" aria-hidden="true">⚔</span><span class="button-label" id="netplayButtonLabel">Multiplayer</span><small id="headerPlayerCount">0</small></button>
@@ -55,7 +55,7 @@
       <div id="systems" class="system-list"></div>
       <div class="aside-foot">
         <div><span class="status-dot"></span><b id="readyCount">0</b> emulators ready</div>
-        <button id="folder">Open game folder</button>
+        <button type="button" id="folder">Open game folder</button>
       </div>
     </aside>
 
@@ -175,14 +175,14 @@
         </div>
         <div class="spotlight-actions">
           <div class="spotlight-primary-actions">
-            <button class="primary" id="spotlightPlay">Play now</button>
-            <button class="online" id="spotlightOnline">Multiplayer</button>
-            <button id="spotlightFav">Save</button>
+            <button type="button" class="primary" id="spotlightPlay">Play now</button>
+            <button type="button" class="online" id="spotlightOnline">Multiplayer</button>
+            <button type="button" id="spotlightFav">Save</button>
           </div>
           <div class="spotlight-utility-actions" aria-label="Game details tools">
-            <button id="spotlightArtwork" title="Choose a local cover image"><span aria-hidden="true">▧</span><b>Artwork</b></button>
-            <button id="spotlightDetails" title="Retry the metadata lookup"><span aria-hidden="true">↻</span><b>Details</b></button>
-            <button class="danger" id="spotlightDelete" title="Move this game to Trash"><span aria-hidden="true">⌫</span><b>Remove</b></button>
+            <button type="button" id="spotlightArtwork" title="Choose a local cover image"><span aria-hidden="true">▧</span><b>Artwork</b></button>
+            <button type="button" id="spotlightDetails" title="Retry the metadata lookup"><span aria-hidden="true">↻</span><b>Details</b></button>
+            <button type="button" class="danger" id="spotlightDelete" title="Move this game to Trash"><span aria-hidden="true">⌫</span><b>Remove</b></button>
           </div>
         </div>
       </section>
@@ -200,7 +200,7 @@
           <label class="search">
             <span class="search-icon" aria-hidden="true">/</span>
             <span class="sr-only">Search games</span>
-            <input id="search" placeholder="Search your collection" autocomplete="off" aria-keyshortcuts="/">
+            <input id="search" placeholder="Search your collection" autocomplete="off" aria-label="Search your game library" aria-keyshortcuts="/">
             <button class="search-clear hidden" id="searchClear" type="button" aria-label="Clear search" title="Clear search">×</button>
             <kbd>/</kbd>
           </label>
@@ -239,8 +239,8 @@
         <h2 id="emptyTitle">Your deck is ready</h2>
         <p id="emptyMessage">Add games you legally own to your GameDeck folder, or use the optional Discover provider when connected.</p>
         <div class="empty-actions">
-          <button class="primary" id="emptyPrimary" data-action="discover">Browse Discover</button>
-          <button id="emptySecondary" data-action="folder">Open game folder</button>
+          <button type="button" class="primary" id="emptyPrimary" data-action="discover">Browse Discover</button>
+          <button type="button" id="emptySecondary" data-action="folder">Open game folder</button>
         </div>
       </section>
 
@@ -264,8 +264,8 @@
             <p class="feature-status" id="catalogFeatureMeta">Downloads are handled by RGSX.</p>
           </div>
           <div class="catalog-feature-actions">
-            <button id="catalogSetup" class="hidden">Setup console</button>
-            <button class="primary" id="catalogFeatureAction">Get with RGSX</button>
+            <button type="button" id="catalogSetup" class="hidden">Setup console</button>
+            <button type="button" class="primary" id="catalogFeatureAction">Get with RGSX</button>
           </div>
         </section>
 
@@ -290,9 +290,9 @@
             <h1>The deck gets better<br><em>when everyone builds.</em></h1>
             <p>GameDeck is a local-first launcher for legally owned game libraries. Help us ship cleaner setup, broader emulator support, and the best couch-first experience on every desktop.</p>
             <div class="community-actions">
-              <button class="primary" id="openGithub">View on GitHub</button>
-              <button id="openDiscord">Join Discord</button>
-              <button id="openContributing">Start contributing</button>
+              <button type="button" class="primary" id="openGithub">View on GitHub</button>
+              <button type="button" id="openDiscord">Join Discord</button>
+              <button type="button" id="openContributing">Start contributing</button>
             </div>
             <div class="community-badges">
               <span>MIT licensed</span><span>Windows</span><span>macOS</span><span>Linux</span><span>No ROMs included</span>
@@ -351,8 +351,8 @@
             <h2 id="arcadeReleaseTitle">MAME and FBNeo, without the mystery.</h2>
             <p>GameDeck now identifies arcade sets by their real names, checks archives before launch, routes current MAME sets to standalone MAME, and gives FinalBurn Neo its own Xbox-ready launch profile.</p>
             <div class="release-actions">
-              <button class="primary" id="openArcadeGuide">Read the arcade guide</button>
-              <button id="openArcadeFeedback">Share arcade feedback</button>
+              <button type="button" class="primary" id="openArcadeGuide">Read the arcade guide</button>
+              <button type="button" id="openArcadeFeedback">Share arcade feedback</button>
             </div>
           </div>
           <div class="release-proof" aria-label="Arcade release highlights">
@@ -369,9 +369,9 @@
             <h2 id="supportRallyTitle">Help us ship the game room everyone deserves.</h2>
             <p>Funding goes directly toward code signing, release infrastructure, accessibility, emulator compatibility, documentation, and the unglamorous QA work that makes setup feel effortless.</p>
             <div class="support-rally-actions">
-              <button class="primary" id="copyDonationAddress">Copy donation address</button>
-              <button id="sponsorPrimary">Become a founding sponsor</button>
-              <button id="supportTransparency">See funding transparency</button>
+              <button type="button" class="primary" id="copyDonationAddress">Copy donation address</button>
+              <button type="button" id="sponsorPrimary">Become a founding sponsor</button>
+              <button type="button" id="supportTransparency">See funding transparency</button>
             </div>
           </div>
           <div class="support-rally-proof" aria-label="What support funds">
@@ -387,7 +387,7 @@
             <div class="card-kicker" id="sponsorEyebrow">COMMUNITY SPONSOR</div>
             <h2 id="sponsorTitle">Become a founding GameDeck sponsor</h2>
             <p id="sponsorBody">Support open development and reach players through one tasteful, privacy-respecting placement—never behavioral tracking.</p>
-            <button id="sponsorAction">See sponsorship options</button>
+            <button type="button" id="sponsorAction">See sponsorship options</button>
             <small>Clearly labeled · static creative · no cross-app tracking</small>
           </article>
 
@@ -396,7 +396,7 @@
             <h2 id="donationHeadline">Fuel the next build</h2>
             <p id="donationMessage">Public donation methods are being configured. Wallet secrets never ship with GameDeck.</p>
             <div class="donation-methods" id="donationMethods"></div>
-            <button id="openFunding">Funding & transparency</button>
+            <button type="button" id="openFunding">Funding & transparency</button>
           </article>
         </div>
 
@@ -426,8 +426,8 @@
           </div>
           <div class="settings-actions">
             <span id="settingsStatus">Changes to paths apply after restart.</span>
-            <button id="restartApp" class="hidden">Restart now</button>
-            <button id="saveSettings" class="primary" disabled>Save settings</button>
+            <button type="button" id="restartApp" class="hidden">Restart now</button>
+            <button type="button" id="saveSettings" class="primary" disabled>Save settings</button>
           </div>
         </section>
 
@@ -609,9 +609,9 @@
     <div class="debug-head">
       <div><span>SYSTEM STATUS</span><b>Status center</b></div>
       <div>
-        <button id="consoleCopy">Copy report</button>
-        <button id="consoleClear">Clear history</button>
-        <button id="consoleClose">Close</button>
+        <button type="button" id="consoleCopy">Copy report</button>
+        <button type="button" id="consoleClear">Clear history</button>
+        <button type="button" id="consoleClose">Close</button>
       </div>
     </div>
     <div class="debug-health" id="debugHealth"></div>

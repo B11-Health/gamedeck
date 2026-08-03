@@ -4,6 +4,8 @@ All notable GameDeck releases are documented here.
 
 ## [Unreleased]
 
+- Completed a full repository, security, accessibility, packaged-runtime, public-site, mobile-receiver, and live multiplayer QA pass; added permanent integrity checks, explicit renderer sandboxing, readable status typography, installable PWA icons, and player-friendly pairing errors.
+
 - Reorganized multiplayer into a calm game → play style → lobby flow with a compact three-way mode switch, mode-accurate guidance, larger player slots, deduplicated metadata, and shorter Couch/online setup panels.
 - Expanded multiplayer to a consistent four-slot lobby with native game-capacity locks, four-player title detection, a simplified one-action setup, a dedicated no-duplicate live-session dashboard, laptop-height tuning, and full Metal Slug 3/Shadow over Mystara E2E coverage.
 - Reframed the public website around the three-mode multiplayer command center: Couch Co-op, Remote Play Together, and Synchronized Netplay.

@@ -1,5 +1,6 @@
 (() => {
   let captureStream = null;
+  let streamReturnFocus = null;
   let streamInfo = { active: false, viewerCount: 0, viewers: [], urls: [] };
   let signalingTimer = null;
   let elapsedTimer = null;
@@ -107,6 +108,7 @@
   }
 
   function openStudio() {
+    streamReturnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     $('#streamStudio').classList.remove('hidden');
     document.body.classList.add('modal-open');
     loadSources().catch(error => toast(error.message || 'Capture sources are unavailable.', 'warning'));
@@ -114,11 +116,15 @@
       streamInfo = status || streamInfo;
       renderStreamInfo();
     }).catch(() => {});
+    setTimeout(() => $('#streamClose')?.focus(), 0);
   }
 
   function closeStudio() {
     $('#streamStudio').classList.add('hidden');
     document.body.classList.remove('modal-open');
+    const target = streamReturnFocus;
+    streamReturnFocus = null;
+    setTimeout(() => target?.focus?.(), 0);
   }
 
   async function sendSignal(viewerId, payload) {

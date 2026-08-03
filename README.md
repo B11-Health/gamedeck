@@ -6,7 +6,7 @@
 
 <p align="center"><strong>Your legally owned game library, presented like the main event.</strong></p>
 
-<p align="center"><a href="https://www.youtube.com/playlist?list=PLG-ejeCsa-AI"><strong>Start here</strong></a> · <a href="https://www.youtube.com/playlist?list=PLCbffYifS8R8">Watch the 30-second tours</a> · <a href="https://youtu.be/vY-fFVu2ClM">Full tutorial</a> · <a href="docs/E2E_REPORT_1.2.0.md">E2E report</a></p>
+<p align="center"><a href="https://www.youtube.com/playlist?list=PLG-ejeCsa-AI"><strong>Start here</strong></a> · <a href="https://www.youtube.com/playlist?list=PLCbffYifS8R8">Watch the 30-second tours</a> · <a href="https://youtu.be/vY-fFVu2ClM">Full tutorial</a> · <a href="docs/E2E_REPORT_1.2.0.md">E2E report</a> · <a href="docs/FULL_QA_2026-08-02.md">Full QA report</a></p>
 
 <p align="center">
   <a href="https://b11-health.github.io/gamedeck/"><strong>Download GameDeck</strong></a> ·

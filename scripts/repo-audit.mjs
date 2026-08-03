@@ -111,12 +111,33 @@ for (const file of tracked) {
       if (resolved && !existsSync(path.join(root, resolved))) report(file, 0, `missing local reference "${match[1]}"`);
     }
 
+    for (const match of text.matchAll(/<button\b([^>]*)>/gi)) {
+      if (!/\btype\s*=\s*["'][^"']+["']/i.test(match[1])) report(file, 0, 'button is missing an explicit type');
+    }
+
+    const labelTargets = new Set([...text.matchAll(/<label\b[^>]*\bfor\s*=\s*["']([^"']+)["']/gi)].map(match => match[1]));
+    for (const match of text.matchAll(/<(input|select|textarea)\b([^>]*)>/gi)) {
+      const attributes = match[2];
+      if (/\btype\s*=\s*["']hidden["']/i.test(attributes)) continue;
+      const id = attributes.match(/\bid\s*=\s*["']([^"']+)["']/i)?.[1] || '';
+      const directlyNamed = /\baria-label(?:ledby)?\s*=\s*["'][^"']+["']/i.test(attributes) || (id && labelTargets.has(id));
+      const before = text.slice(Math.max(0, match.index - 600), match.index);
+      const nestedLabel = before.lastIndexOf('<label') > before.lastIndexOf('</label>');
+      if (!directlyNamed && !nestedLabel) report(file, 0, match[1] + ' control' + (id ? ' #' + id : '') + ' is missing an accessible label');
+    }
+
     for (const match of text.matchAll(/<a\b([^>]*)>/gi)) {
       const attributes = match[1];
       if (/\btarget\s*=\s*["']_blank["']/i.test(attributes) &&
           !/\brel\s*=\s*["'][^"']*\bnoopener\b[^"']*["']/i.test(attributes)) {
         report(file, 0, 'target="_blank" link is missing rel="noopener"');
       }
+    }
+  }
+
+  if (extension === '.js' && /^(?:src|mobile\/web|site)\//.test(file)) {
+    for (const match of text.matchAll(/<button\b([^>]*)>/gi)) {
+      if (!/\btype\s*=\s*["'][^"']+["']/i.test(match[1])) report(file, 0, 'generated button is missing an explicit type');
     }
   }
 
