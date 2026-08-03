@@ -192,7 +192,7 @@ if (!html.includes('class="app-shell-header"') || !html.includes('class="header-
 if (!html.includes('id="headerMenu"') || !html.includes('id="headerMenuToggle"')) fail('secondary header controls must live in an overflow menu');
 if (!renderer.includes('function toggleHeaderMenu') || !renderer.includes('function closeHeaderMenu')) fail('header overflow accessibility behavior is missing');
 if (!renderer.includes('https://discord.gg/eS7d4VqTT') || !html.includes('id="openDiscord"')) fail('official Discord community link is missing');
-if (!renderer.includes('DISCORD_COMMUNITY') || !renderer.includes('discord.gg/eS7d4VqTT')) fail('Discord matchmaking invite routing is missing');
+if (!renderer.includes('DISCORD_COMMUNITY') || !renderer.includes('discord.gg/uv2G7QPX4K')) fail('Discord matchmaking invite routing is missing');
 if (!netplayRenderer.includes('DISCORD_REMOTE_PLAY_URL') || !netplayRenderer.includes('message.length <= 2000')) fail('Discord-safe Remote Play sharing is missing');
 if (!html.includes('class="discord-community-hub"') || !styles.includes('.discord-channel-card')) fail('Discord community hub UI is missing');
 if (!html.includes('class="community-share"') || !renderer.includes('GAMEDECK_SHARE_COPY') || !styles.includes('.community-share-actions')) fail('community share loop is missing');
@@ -206,6 +206,7 @@ if (!main.includes('sandbox: true') || !main.includes('contextIsolation: true') 
 if (!styles.includes('Accessibility readability floor') || !styles.includes('font-size: 9px') || !styles.includes('readiness-chip b { font-size: 10px; }') || !styles.includes('.art-status { font-size: 9px; }')) fail('app readability floor is missing');
 if (/sendBeacon|\/events/.test(siteApp)) fail('public growth site must not add behavioral click telemetry');
 if (!siteStyles.includes('.multiplayer') || !siteStyles.includes('.mode-card') || !siteStyles.includes('@media(max-width:760px)')) fail('public growth site responsive product sections are missing');
+if (!siteHtml.includes('tiktok.com/@playgamedeck') || !siteHtml.includes('\"sameAs\"')) fail('public social discovery links are missing');
 if (!siteHtml.includes('ndETcPuCOyE') || !siteHtml.includes('dOEuy8g8Bmw') || !siteStyles.includes('.shorts-section') || !siteStyles.includes('.short-card')) fail('public Shorts discovery gallery is missing');
 if (!siteHtml.includes('PLCbffYifS8R8') || !siteHtml.includes('PLG-ejeCsa-AI')) fail('public YouTube playlist funnel is missing');
 if (e2eResult.releaseCommit !== '250bbd7bc3b929fe49205ee6c0695654426f49b2' || e2eResult.results?.windowsArtifacts?.setup?.sha256 !== '6677c63e871915d1dc001866d36255e126963bb3cc057be0c9c847af28ad0654' || !e2eReportText.includes('GameDeck-1.2.0-mac-universal.dmg')) fail('official v1.2.0 evidence is stale');
