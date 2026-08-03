@@ -2014,8 +2014,58 @@ function enterSystemZone() {
   document.querySelector(`.system[data-id="${state.focusedLibrarySystem}"]`)?.scrollIntoView({ block: 'nearest' });
 }
 
+function communityControls() {
+  const root = $('#community');
+  if (!root || root.classList.contains('hidden')) return [];
+  return [...root.querySelectorAll('button:not([disabled]), a[href], input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled])')].filter(control => {
+    const rect = control.getBoundingClientRect();
+    const style = getComputedStyle(control);
+    return control.tabIndex >= 0
+      && control.getAttribute('aria-disabled') !== 'true'
+      && rect.width > 0
+      && rect.height > 0
+      && style.display !== 'none'
+      && style.visibility !== 'hidden';
+  });
+}
+
+function moveCommunity(direction) {
+  const controls = communityControls();
+  if (!controls.length) return;
+  const delta = direction === 'up' || direction === 'left' ? -1 : 1;
+  const current = controls.indexOf(document.activeElement);
+  const index = current === -1
+    ? (delta > 0 ? 0 : controls.length - 1)
+    : (current + delta + controls.length) % controls.length;
+  const target = controls[index];
+  controls.forEach(control => control.classList.toggle('controller-focus', control === target));
+  target.focus({ preventScroll: true });
+  const content = target.closest('.content');
+  if (!content) {
+    target.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    return;
+  }
+  const targetRect = target.getBoundingClientRect();
+  const contentRect = content.getBoundingClientRect();
+  const edgePadding = 16;
+  if (targetRect.top < contentRect.top + edgePadding) {
+    content.scrollTo({
+      top: content.scrollTop + targetRect.top - contentRect.top - edgePadding,
+      behavior: 'instant'
+    });
+  } else if (targetRect.bottom > contentRect.bottom - edgePadding) {
+    content.scrollTo({
+      top: content.scrollTop + targetRect.bottom - contentRect.bottom + edgePadding,
+      behavior: 'instant'
+    });
+  }
+}
+
 function moveLibrary(direction) {
-  if (state.view === 'community') return;
+  if (state.view === 'community') {
+    moveCommunity(direction);
+    return;
+  }
   if (state.libraryZone === 'systems') {
     const ids = ['all', ...state.library.systems.map(system => system.id)];
     let index = Math.max(0, ids.indexOf(state.focusedLibrarySystem));
@@ -2095,7 +2145,16 @@ function moveDiscover(direction) {
 }
 
 function activateFocused() {
-  if (state.view === 'community') return;
+  if (state.view === 'community') {
+    const target = document.activeElement;
+    if (!$('#community')?.contains(target) || !communityControls().includes(target)) return;
+    if (target.matches('input[type="checkbox"], input[type="radio"], button, a[href], input[type="button"], input[type="submit"], input[type="reset"]')) {
+      target.click();
+    } else {
+      target.focus({ preventScroll: true });
+    }
+    return;
+  }
   if (state.view === 'discover') {
     if (state.discoverZone === 'systems') {
       selectCatalog(state.focusedConsoleId, true);

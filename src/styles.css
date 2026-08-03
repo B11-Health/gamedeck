@@ -2387,7 +2387,7 @@ main > aside {
 .community-resource-copy h2 { margin: 0; max-width: 680px; font: 650 clamp(25px, 3vw, 38px)/1.05 'Segoe UI Variable Display', 'Segoe UI', system-ui, sans-serif; letter-spacing: -1.1px; }
 .community-resource-copy > p { max-width: 72ch; margin: 12px 0 0; color: #99a5b6; font-size: 11px; line-height: 1.65; }
 .community-resource-actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 18px; }
-.community-resource-actions button { min-height: 42px; padding: 0 16px; border: 1px solid #4a5263; border-radius: 12px; color: #edf0f7; background: #141924; font-size: 10px; font-weight: 800; cursor: pointer; transition: transform .18s ease, border-color .18s ease, background .18s ease; }
+.community-resource-actions button { min-height: 44px; padding: 0 16px; border: 1px solid #4a5263; border-radius: 12px; color: #edf0f7; background: #141924; font-size: 10px; font-weight: 800; cursor: pointer; transition: transform .18s ease, border-color .18s ease, background .18s ease; }
 .community-resource-actions button:hover { transform: translateY(-1px); border-color: #8f7dff; }
 .community-resource-actions .primary { color: #fff; border-color: #8f7dff; background: linear-gradient(135deg, #7964ff, #5541c5); box-shadow: 0 12px 30px #6954e72b; }
 .community-resource-meta { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 16px; color: #6f7b8d; font-size: 8px; font-weight: 800; letter-spacing: .65px; text-transform: uppercase; }
@@ -3673,6 +3673,10 @@ body.density-compact .feature-source { padding: 4px 6px; }
 .control-legend[data-mode=controller]::before { color: #c8ff52; border-color: #c8ff5240; }
 .control-legend[data-mode=keyboard]::before { color: #d9c7ff; border-color: #9b8cff44; }
 body.input-controller, body.input-controller * { cursor: none !important; }
+body.input-controller #community .controller-focus {
+  outline: 2px solid #72e7ff;
+  outline-offset: 3px;
+}
 body.input-controller .controller-focus,
 body.input-controller .game.active .cover,
 body.input-controller .catalog-game.active {
