@@ -112,19 +112,19 @@ OWNED FILES / SURFACES: None after return.
 DO NOT TOUCH: Authenticated growth/community browser surfaces or the quarantined source archives without an explicit replacement decision.
 EXPECTED RETURN: Integrated commit hash, one-title-per-system launch matrix, and any remaining emulator-specific presentation issues.
 
-## Latest console-theme integration return
+## Latest corrected console-theme integration return
 
-HANDOFF ID: GD-20260803-12
-OBJECTIVE: Integrate console-themed environmental artwork into the real GameDeck Library UI so each shelf has an immediate visual identity without sacrificing readability or control stability.
-DONE: Added eight original vector background families and mapped every supported system to a console-appropriate theme. The selected-game spotlight now uses the system environment instead of enlarging box art, while the active system row, body ambience, facts, borders, and actions inherit the matching accent. Preserved the cover image as the game-specific foreground art and added a cross-fade for theme changes.
-CHANGED FILES / SURFACES: `assets/system-themes/*`, `src/app.js`, `src/styles.css`, `scripts/smoke-test.mjs`, `README.md`.
-TESTS AND RESULTS: Full `npm test` passed. Live Electron/CDP verification at 1504x904 confirmed all eight SVGs load. Theme switching passed for SNES, N64, NDS, Genesis, Sega CD, Saturn, Dreamcast, PS1, PS2, PSP, FinalBurn Neo, Atari 2600, and PC Engine. Favorite, Remove, and every spotlight action remained inside the panel. Long-title stress checks at 1504x904, 1280x800, and 1024x768 held identical spotlight height and button position with no horizontal overflow.
-OPEN RISKS OR BLOCKERS: The themes are intentionally original hardware-era abstractions rather than trademarked console renders or commercial game art. Final visual tuning may still be desirable after review on HDR and low-contrast displays.
-NEXT OWNER: Product design and independent UI QA.
-NEXT BOUNDED TASK: Review each hardware family at normal, compact, and reduced-motion settings, then stage the theme commit with the spotlight layout and collection fixes.
+HANDOFF ID: GD-20260803-13
+OBJECTIVE: Correct the console-theme integration so it contains the approved Aurora card focus, stable Favorite/Remove layout, current collection fixes, and actual panoramic artwork on one coherent current-main lineage.
+DONE: Superseded the incomplete `design/console-themed-backgrounds` lineage. Rebuilt from current `origin/main` at `62f3b3c`, then integrated the arcade/collection fixes, launch repairs, spotlight stability, Aurora hover/focus behavior, and eight original 640x360 WebP environmental backgrounds. The selected-game hero now loads real panoramic artwork by hardware family while retaining game cover art in the foreground.
+CHANGED FILES / SURFACES: `assets/system-themes/*.webp`, `assets/system-themes/README.md`, `src/app.js`, `src/styles.css`, `scripts/smoke-test.mjs`, collection/runtime files from the previously approved repair sequence, and documentation.
+TESTS AND RESULTS: Full `npm test` passed. Asset SHA-256 values match the generated source files exactly. Live Electron/CDP verified WebP loading and theme switching for SNES, Genesis, Nintendo DS, FinalBurn Neo, PS2, and Atari 2600; all images reported 640x360 natural size. A non-active card changed from zero Aurora opacity and no transform to visible perimeter/halo, translated scale, and pointer tilt on true mouse hover. Favorite, Remove, and all other spotlight actions remained fully contained at 1504x904, 1280x800, and 1024x768. Long-title stress held identical spotlight height, title height, and action position with no horizontal overflow.
+OPEN RISKS OR BLOCKERS: Final HDR/low-contrast visual review remains useful, but no known layout, asset-loading, hover, or collection regression remains in this integration branch.
+NEXT OWNER: Product design and independent integration QA.
+NEXT BOUNDED TASK: Review and merge `integration/console-themes-complete`; do not merge the superseded `design/console-themed-backgrounds` branch.
 OWNED FILES / SURFACES: None after return.
 DO NOT TOUCH: Embedded Play security policy files or authenticated public growth surfaces.
-EXPECTED RETURN: Integration commit hash, visual acceptance notes by hardware family, and any bounded contrast or crop corrections.
+EXPECTED RETURN: Immutable integration commit hash and final visual acceptance at normal, compact, and reduced-motion settings.
 
 ## Latest verified production state
 

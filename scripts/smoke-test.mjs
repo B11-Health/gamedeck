@@ -47,14 +47,14 @@ const [e2eReportText, e2eResultText] = await Promise.all([
 const e2eResult = JSON.parse(e2eResultText);
 
 const systemThemeAssets = [
-  'assets/system-themes/nintendo-classic.svg',
-  'assets/system-themes/nintendo-polygon.svg',
-  'assets/system-themes/nintendo-handheld.svg',
-  'assets/system-themes/sega-16bit.svg',
-  'assets/system-themes/sega-3d.svg',
-  'assets/system-themes/playstation.svg',
-  'assets/system-themes/arcade.svg',
-  'assets/system-themes/retro.svg'
+  'assets/system-themes/nintendo-classic.webp',
+  'assets/system-themes/nintendo-polygon.webp',
+  'assets/system-themes/nintendo-handheld.webp',
+  'assets/system-themes/sega-16bit.webp',
+  'assets/system-themes/sega-3d.webp',
+  'assets/system-themes/playstation.webp',
+  'assets/system-themes/arcade.webp',
+  'assets/system-themes/retro.webp'
 ];
 for (const asset of systemThemeAssets) {
   try { await access(path.join(root, asset)); }
