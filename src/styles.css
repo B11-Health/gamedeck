@@ -6006,16 +6006,27 @@ body.modal-open > main {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .game { --tilt-x: 0deg; --tilt-y: 0deg; --art-x: 0px; --art-y: 0px; }
-  .game:hover .aurora-shell::before,
-  .game:focus-visible .aurora-shell::before,
-  .game.active .aurora-shell::before,
-  .game:hover .aurora-shell::after,
-  .game:focus-visible .aurora-shell::after,
-  .game.active .aurora-shell::after,
-  .game:hover .cover::before,
-  .game:focus-visible .cover::before,
-  .game.active .cover::before { animation: none !important; }
+  .game {
+    --pointer-x: 50% !important;
+    --pointer-y: 50% !important;
+    --tilt-x: 0deg !important;
+    --tilt-y: 0deg !important;
+    --art-x: 0px !important;
+    --art-y: 0px !important;
+  }
+  .game,
+  .game .aurora-shell,
+  .game .aurora-shell::before,
+  .game .aurora-shell::after,
+  .game .cover,
+  .game .cover::before,
+  .game .cover::after,
+  .game .cover-art,
+  .game .cover-art::after,
+  .game .cover-art img {
+    animation: none !important;
+    transition: none !important;
+  }
   .game:hover .cover,
   .game:focus-visible .cover,
   .game.active .cover { transform: translateY(-4px) scale(1.01); }

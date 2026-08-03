@@ -1148,6 +1148,7 @@ function renderGames() {
   renderEmptyState(games);
   $$('.game').forEach(card => {
     const game = games.find(item => item.id === card.dataset.id);
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const resetAuroraPointer = () => {
       card.style.removeProperty('--pointer-x');
       card.style.removeProperty('--pointer-y');
@@ -1158,7 +1159,10 @@ function renderGames() {
     };
     card.onmouseenter = () => setFocusedGame(game);
     card.onpointermove = event => {
-      if (event.pointerType !== 'mouse' || !window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+      if (event.pointerType !== 'mouse' || !window.matchMedia('(hover: hover) and (pointer: fine)').matches || reducedMotion.matches) {
+        resetAuroraPointer();
+        return;
+      }
       const bounds = card.getBoundingClientRect();
       if (!bounds.width || !bounds.height) return;
       const x = Math.max(0, Math.min(1, (event.clientX - bounds.left) / bounds.width));
