@@ -394,13 +394,27 @@ function sourceType(source = {}) {
   return String(source.id || '').startsWith('screen:') ? 'screen' : 'window';
 }
 
+function sourceIdsFromSnapshot(snapshot) {
+  if (!Array.isArray(snapshot)) return new Set();
+  return new Set(snapshot.map(item => {
+    if (typeof item === 'string') return item;
+    if (item && typeof item === 'object') return String(item.id || '');
+    return '';
+  }).filter(Boolean));
+}
+
+function previousPollSourceIds(context = {}) {
+  if (Array.isArray(context.previousSourceIds)) return sourceIdsFromSnapshot(context.previousSourceIds);
+  return sourceIdsFromSnapshot(context.previousSources);
+}
+
 function normalizeSourceCandidate(source = {}, context = {}) {
   const id = String(source.id || '').slice(0, 512);
   const name = String(source.name || '').trim().slice(0, 200);
   const type = sourceType(source);
   const normalizedName = normalizeText(name);
-  const beforeSourceIds = new Set(context.beforeSourceIds || []);
-  const stableSourceIds = new Set(context.stableSourceIds || []);
+  const beforeSourceIds = sourceIdsFromSnapshot(context.beforeSourceIds);
+  const previousSourceIds = previousPollSourceIds(context);
   const gameDeckSourceId = String(context.gameDeckSourceId || '');
   const titleTerms = [
     context.gameTitle,
@@ -415,7 +429,7 @@ function normalizeSourceCandidate(source = {}, context = {}) {
   );
   const excluded = !id || type !== 'window' || isGameDeck;
   const isNew = Boolean(id && !beforeSourceIds.has(id));
-  const stable = Boolean(source.stable || stableSourceIds.has(id));
+  const stable = Boolean(id && previousSourceIds.has(id));
   const titleMatch = Boolean(normalizedName && titleTerms.some(term => normalizedName.includes(term)));
   const engineMatch = Boolean(
     normalizedName
@@ -467,15 +481,18 @@ function rankSourceCandidates(sources = [], context = {}) {
     .filter(candidate => !candidate.excluded)
     .sort((left, right) => right.score - left.score || left.name.localeCompare(right.name) || left.id.localeCompare(right.id));
   const newCandidates = candidates.filter(candidate => candidate.isNew);
+  const stableNewCandidates = newCandidates.filter(candidate => candidate.stable);
   let automaticSourceId = '';
   let reason = 'ambiguous';
 
-  if (newCandidates.length === 1 && newCandidates[0].stable) {
-    automaticSourceId = newCandidates[0].id;
+  if (newCandidates.length === 1 && stableNewCandidates.length === 1) {
+    automaticSourceId = stableNewCandidates[0].id;
     reason = 'single_new_window';
-  } else if (candidates.length) {
-    const top = candidates[0];
-    const runnerUp = candidates[1];
+  } else if (stableNewCandidates.length) {
+    const rankedNewCandidates = [...newCandidates]
+      .sort((left, right) => right.score - left.score || left.name.localeCompare(right.name) || left.id.localeCompare(right.id));
+    const top = rankedNewCandidates[0];
+    const runnerUp = rankedNewCandidates[1];
     const gap = runnerUp ? top.score - runnerUp.score : top.score;
     if (top.stable && top.score >= 120 && gap >= 40) {
       automaticSourceId = top.id;
