@@ -2019,13 +2019,20 @@ function communityControls() {
   if (!root || root.classList.contains('hidden')) return [];
   return [...root.querySelectorAll('button:not([disabled]), a[href], input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled])')].filter(control => {
     const rect = control.getBoundingClientRect();
-    const style = getComputedStyle(control);
+    for (let element = control; element; element = element.parentElement) {
+      const style = getComputedStyle(element);
+      if (element.hidden
+        || element.hasAttribute('hidden')
+        || element.hasAttribute('inert')
+        || element.getAttribute('aria-hidden') === 'true'
+        || style.display === 'none'
+        || style.visibility === 'hidden'
+        || Number.parseFloat(style.opacity) === 0) return false;
+    }
     return control.tabIndex >= 0
       && control.getAttribute('aria-disabled') !== 'true'
       && rect.width > 0
-      && rect.height > 0
-      && style.display !== 'none'
-      && style.visibility !== 'hidden';
+      && rect.height > 0;
   });
 }
 
@@ -2048,16 +2055,20 @@ function moveCommunity(direction) {
   const targetRect = target.getBoundingClientRect();
   const contentRect = content.getBoundingClientRect();
   const edgePadding = 16;
+  let nextTop = content.scrollTop;
+  let nextLeft = content.scrollLeft;
   if (targetRect.top < contentRect.top + edgePadding) {
-    content.scrollTo({
-      top: content.scrollTop + targetRect.top - contentRect.top - edgePadding,
-      behavior: 'instant'
-    });
+    nextTop += targetRect.top - contentRect.top - edgePadding;
   } else if (targetRect.bottom > contentRect.bottom - edgePadding) {
-    content.scrollTo({
-      top: content.scrollTop + targetRect.bottom - contentRect.bottom + edgePadding,
-      behavior: 'instant'
-    });
+    nextTop += targetRect.bottom - contentRect.bottom + edgePadding;
+  }
+  if (targetRect.left < contentRect.left + edgePadding) {
+    nextLeft += targetRect.left - contentRect.left - edgePadding;
+  } else if (targetRect.right > contentRect.right - edgePadding) {
+    nextLeft += targetRect.right - contentRect.right + edgePadding;
+  }
+  if (nextTop !== content.scrollTop || nextLeft !== content.scrollLeft) {
+    content.scrollTo({ top: nextTop, left: nextLeft, behavior: 'instant' });
   }
 }
 

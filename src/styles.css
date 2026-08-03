@@ -14,7 +14,11 @@
 * { box-sizing: border-box; }
 
 html,
-body { height: 100%; }
+body {
+  max-width: 100%;
+  height: 100%;
+  overflow-x: hidden;
+}
 
 body {
   margin: 0;
@@ -321,7 +325,9 @@ main > aside {
 }
 
 .content {
+  width: 100%;
   min-width: 0;
+  max-width: 100%;
   overflow-x: hidden;
   overflow-y: auto;
   padding: 44px 52px 84px;
@@ -2214,6 +2220,9 @@ main > aside {
 }
 
 .community {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   display: grid;
   gap: 22px;
   animation: rise .35s ease both;
@@ -2243,6 +2252,8 @@ main > aside {
   background: radial-gradient(circle at 86% 45%, #5422b948, transparent 27%), radial-gradient(circle at 72% 18%, #27c9ff25, transparent 25%);
 }
 
+.community-hero-copy { min-width: 0; }
+
 .community-hero-copy .eyebrow,
 .community-card .card-kicker,
 .settings-card .card-kicker { margin: 0 0 13px; color: #72e7ff; }
@@ -2270,6 +2281,12 @@ main > aside {
   margin-top: 24px;
 }
 
+.community-actions {
+  min-width: 0;
+  max-width: 100%;
+  flex-wrap: wrap;
+}
+
 .community-actions button,
 .community-card button,
 .settings-actions button,
@@ -2284,6 +2301,11 @@ main > aside {
   font-weight: 700;
   cursor: pointer;
   transition: transform .2s ease, border-color .2s ease, background .2s ease;
+}
+
+.community-actions button {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .community-actions button:hover,
@@ -2407,6 +2429,21 @@ main > aside {
   .community-resource-card em { display: none; }
 }
 @media (max-width: 760px) {
+  .community { overflow-x: hidden; }
+  .community > * { overflow-x: hidden; }
+  .community > *,
+  .community-hero-copy,
+  .community-resource-copy,
+  .community-card,
+  .settings-card { min-width: 0; max-width: 100%; }
+  .community h1,
+  .community h2,
+  .community p,
+  .community b,
+  .community small,
+  .community code,
+  .community button { overflow-wrap: anywhere; word-break: break-word; }
+  .community-note { flex-wrap: wrap; }
   .community-resource-primary { grid-template-columns: 1fr; padding: 23px; }
   .community-resource-mark { width: 68px; border-radius: 21px; }
   .community-resource-grid { grid-template-columns: 1fr; }
