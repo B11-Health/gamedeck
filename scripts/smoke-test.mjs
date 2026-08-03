@@ -46,6 +46,23 @@ const [e2eReportText, e2eResultText] = await Promise.all([
 ]);
 const e2eResult = JSON.parse(e2eResultText);
 
+const systemThemeAssets = [
+  'assets/system-themes/nintendo-classic.svg',
+  'assets/system-themes/nintendo-polygon.svg',
+  'assets/system-themes/nintendo-handheld.svg',
+  'assets/system-themes/sega-16bit.svg',
+  'assets/system-themes/sega-3d.svg',
+  'assets/system-themes/playstation.svg',
+  'assets/system-themes/arcade.svg',
+  'assets/system-themes/retro.svg'
+];
+for (const asset of systemThemeAssets) {
+  try { await access(path.join(root, asset)); }
+  catch { fail(`console theme asset is missing: ${asset}`); }
+}
+if (!renderer.includes('SYSTEM_THEME_BACKGROUNDS') || !renderer.includes('applySystemTheme(game.system)')) fail('console-aware spotlight theme routing is missing');
+if (!styles.includes('--system-accent') || !styles.includes('.spotlight .feature-backdrop img.is-ready')) fail('console theme styling is missing');
+
 for (const id of [
   'games',
   'discover',

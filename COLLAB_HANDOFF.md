@@ -112,6 +112,20 @@ OWNED FILES / SURFACES: None after return.
 DO NOT TOUCH: Authenticated growth/community browser surfaces or the quarantined source archives without an explicit replacement decision.
 EXPECTED RETURN: Integrated commit hash, one-title-per-system launch matrix, and any remaining emulator-specific presentation issues.
 
+## Latest console-theme integration return
+
+HANDOFF ID: GD-20260803-12
+OBJECTIVE: Integrate console-themed environmental artwork into the real GameDeck Library UI so each shelf has an immediate visual identity without sacrificing readability or control stability.
+DONE: Added eight original vector background families and mapped every supported system to a console-appropriate theme. The selected-game spotlight now uses the system environment instead of enlarging box art, while the active system row, body ambience, facts, borders, and actions inherit the matching accent. Preserved the cover image as the game-specific foreground art and added a cross-fade for theme changes.
+CHANGED FILES / SURFACES: `assets/system-themes/*`, `src/app.js`, `src/styles.css`, `scripts/smoke-test.mjs`, `README.md`.
+TESTS AND RESULTS: Full `npm test` passed. Live Electron/CDP verification at 1504x904 confirmed all eight SVGs load. Theme switching passed for SNES, N64, NDS, Genesis, Sega CD, Saturn, Dreamcast, PS1, PS2, PSP, FinalBurn Neo, Atari 2600, and PC Engine. Favorite, Remove, and every spotlight action remained inside the panel. Long-title stress checks at 1504x904, 1280x800, and 1024x768 held identical spotlight height and button position with no horizontal overflow.
+OPEN RISKS OR BLOCKERS: The themes are intentionally original hardware-era abstractions rather than trademarked console renders or commercial game art. Final visual tuning may still be desirable after review on HDR and low-contrast displays.
+NEXT OWNER: Product design and independent UI QA.
+NEXT BOUNDED TASK: Review each hardware family at normal, compact, and reduced-motion settings, then stage the theme commit with the spotlight layout and collection fixes.
+OWNED FILES / SURFACES: None after return.
+DO NOT TOUCH: Embedded Play security policy files or authenticated public growth surfaces.
+EXPECTED RETURN: Integration commit hash, visual acceptance notes by hardware family, and any bounded contrast or crop corrections.
+
 ## Latest verified production state
 
 - Public site event strip is visible in the first viewport before and during the event; it auto-hides at 2026-08-03 00:00 ET.

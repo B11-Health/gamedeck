@@ -98,6 +98,61 @@ const state = {
   sidebarCollapsed: readPreference('sidebar', 'expanded') === 'collapsed'
 };
 
+const SYSTEM_THEME_BACKGROUNDS = {
+  all: { key: 'all', image: '../assets/system-themes/nintendo-polygon.svg', accent: '#72e7ff', glow: '#8b5cff', position: '78% center' },
+  snes: { key: 'nintendo-classic', image: '../assets/system-themes/nintendo-classic.svg', accent: '#c86cff', glow: '#ff3eb5', position: '76% center' },
+  nes: { key: 'nintendo-classic', image: '../assets/system-themes/nintendo-classic.svg', accent: '#ff5a6f', glow: '#b947ff', position: '76% center' },
+  fds: { key: 'nintendo-classic', image: '../assets/system-themes/nintendo-classic.svg', accent: '#ff5a6f', glow: '#b947ff', position: '76% center' },
+  satellaview: { key: 'nintendo-classic', image: '../assets/system-themes/nintendo-classic.svg', accent: '#a66cff', glow: '#ff3eb5', position: '76% center' },
+  sufami: { key: 'nintendo-classic', image: '../assets/system-themes/nintendo-classic.svg', accent: '#d36cff', glow: '#ff3e9f', position: '76% center' },
+  n64: { key: 'nintendo-polygon', image: '../assets/system-themes/nintendo-polygon.svg', accent: '#45e6c1', glow: '#6d71ff', position: '80% center' },
+  gamecube: { key: 'nintendo-polygon', image: '../assets/system-themes/nintendo-polygon.svg', accent: '#8f72ff', glow: '#36d8ff', position: '80% center' },
+  wii: { key: 'nintendo-polygon', image: '../assets/system-themes/nintendo-polygon.svg', accent: '#7de7ff', glow: '#4e9fff', position: '80% center' },
+  wiiu: { key: 'nintendo-polygon', image: '../assets/system-themes/nintendo-polygon.svg', accent: '#36c8ff', glow: '#6f62ff', position: '80% center' },
+  gb: { key: 'nintendo-handheld', image: '../assets/system-themes/nintendo-handheld.svg', accent: '#a9ef5b', glow: '#5bdcff', position: '82% center' },
+  gba: { key: 'nintendo-handheld', image: '../assets/system-themes/nintendo-handheld.svg', accent: '#8d7cff', glow: '#5bdcff', position: '82% center' },
+  nds: { key: 'nintendo-handheld', image: '../assets/system-themes/nintendo-handheld.svg', accent: '#75dfff', glow: '#8d68ff', position: '82% center' },
+  genesis: { key: 'sega-16bit', image: '../assets/system-themes/sega-16bit.svg', accent: '#48a8ff', glow: '#ff3eb5', position: '80% center' },
+  sega32x: { key: 'sega-16bit', image: '../assets/system-themes/sega-16bit.svg', accent: '#ff9a47', glow: '#6b7cff', position: '80% center' },
+  mastersystem: { key: 'sega-16bit', image: '../assets/system-themes/sega-16bit.svg', accent: '#ff5a63', glow: '#4f8dff', position: '80% center' },
+  gamegear: { key: 'sega-16bit', image: '../assets/system-themes/sega-16bit.svg', accent: '#ef62ff', glow: '#3ccfff', position: '80% center' },
+  segacd: { key: 'sega-3d', image: '../assets/system-themes/sega-3d.svg', accent: '#55c8ff', glow: '#ff9c45', position: '80% center' },
+  saturn: { key: 'sega-3d', image: '../assets/system-themes/sega-3d.svg', accent: '#7dcfff', glow: '#8c6cff', position: '80% center' },
+  dreamcast: { key: 'sega-3d', image: '../assets/system-themes/sega-3d.svg', accent: '#ff9a47', glow: '#5bcfff', position: '80% center' },
+  ps1: { key: 'playstation', image: '../assets/system-themes/playstation.svg', accent: '#b7c6dd', glow: '#4d86ff', position: '80% center' },
+  ps2: { key: 'playstation', image: '../assets/system-themes/playstation.svg', accent: '#4c8dff', glow: '#825fff', position: '80% center' },
+  psp: { key: 'playstation', image: '../assets/system-themes/playstation.svg', accent: '#43d8ff', glow: '#586bff', position: '80% center' },
+  arcade: { key: 'arcade', image: '../assets/system-themes/arcade.svg', accent: '#ff49cc', glow: '#36d9ff', position: '82% center' },
+  mame: { key: 'arcade', image: '../assets/system-themes/arcade.svg', accent: '#ff49cc', glow: '#36d9ff', position: '82% center' },
+  atari2600: { key: 'retro', image: '../assets/system-themes/retro.svg', accent: '#ff9a3d', glow: '#ffc24b', position: '82% center' },
+  pce: { key: 'retro', image: '../assets/system-themes/retro.svg', accent: '#ff9a3d', glow: '#ffc24b', position: '82% center' }
+};
+
+function systemTheme(systemId) {
+  return SYSTEM_THEME_BACKGROUNDS[systemId] || SYSTEM_THEME_BACKGROUNDS.all;
+}
+
+function applySystemTheme(systemId) {
+  const theme = systemTheme(systemId);
+  const root = document.documentElement;
+  root.style.setProperty('--system-accent', theme.accent);
+  root.style.setProperty('--system-glow', theme.glow);
+  document.body.dataset.systemTheme = theme.key;
+  const spotlight = $('#spotlight');
+  const backdrop = $('#spotlightBackdrop');
+  if (!spotlight || !backdrop) return theme;
+  spotlight.dataset.systemTheme = theme.key;
+  backdrop.style.objectPosition = theme.position;
+  if (backdrop.dataset.themeSrc !== theme.image) {
+    backdrop.dataset.themeSrc = theme.image;
+    backdrop.classList.remove('is-ready');
+    backdrop.onload = () => backdrop.classList.add('is-ready');
+    backdrop.src = theme.image;
+    if (backdrop.complete) backdrop.classList.add('is-ready');
+  }
+  return theme;
+}
+
 const views = ['home', 'discover', 'favorites', 'recent', 'community'];
 const CATALOG_PAGE_SIZE = 120;
 let toastTimer = null;
@@ -730,7 +785,7 @@ function updateGameArtwork(game, url) {
   card?.querySelector('.art-status')?.remove();
   if (state.focusedGameId === game.id) {
     $('#spotlightArt').innerHTML = `<img src="${escapeHtml(url)}" alt="${escapeHtml(game.title)} cover">`;
-    $('#spotlightBackdrop').src = url;
+    applySystemTheme(game.system);
   }
   if (state.artworkFilter === 'missing-art' && !['discover', 'community'].includes(state.view)) renderGames();
   else renderSetupCoach();
@@ -946,7 +1001,7 @@ function setFocusedGame(game, options = {}) {
   $('#spotlightPlay').textContent = blocked ? 'Fix ROM set first' : 'Play now';
   $('#spotlightFav').textContent = game.favorite ? 'Remove favorite' : 'Add favorite';
   $('#spotlightArt').innerHTML = `<img src="${escapeHtml(art)}" alt="${escapeHtml(game.title)} cover">`;
-  $('#spotlightBackdrop').src = art;
+  applySystemTheme(game.system);
   spotlight.classList.remove('hidden');
   requestArtwork(game);
   queueGameDetails(gameMetadataTitle(game), game.system, gameDetailsContext(game), details => {
@@ -1186,6 +1241,7 @@ function selectLibrarySystem(id) {
   state.selectedSystem = id;
   state.focusedLibrarySystem = id;
   state.view = 'home';
+  applySystemTheme(id);
   state.query = '';
   $('#search').value = '';
   setActiveView('home');
