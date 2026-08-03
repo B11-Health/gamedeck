@@ -4,10 +4,10 @@ This file is the shared source of truth for parallel GameDeck workstreams. Updat
 
 ## Active handoff
 
-**Handoff ID:** GD-20260802-07
-**Updated:** 2026-08-02 21:32 ET
+**Handoff ID:** GD-20260802-08
+**Updated:** 2026-08-02 21:42 ET
 **Repository:** `B11-Health/gamedeck`
-**Branch / HEAD:** `main` / `9865ccf`
+**Branch / HEAD:** `main` / `7b7ecba`
 **Primary objective:** Acquire real GameDeck players while keeping the product, repository, branding, and release evidence pristine.
 
 ## Workstream ownership
@@ -31,22 +31,38 @@ This file is the shared source of truth for parallel GameDeck workstreams. Updat
 - `e495c8d` — bounded multiplayer invitation decoding and decompression limits
 - `a7994d3` — runtime provenance and synchronized-lobby trust-boundary documentation
 - `9865ccf` — corrected cache-builder size-limit claim and non-breaking hardening step
+- `9ae4adf` — bounded GameDeck Live pairing API requests
+- `354b919` — enforced streamed runtime-cache byte limits
+- `7b7ecba` — promoted and polished the self-expiring Playtest Night strip
 - GitHub Discussion #8 corrected to the verified 10:00 PM–midnight ET event time and canonical Discord event URL
 
 **Do not touch:** Browser surfaces currently owned by Growth and community.
+
+### Product and QA
+
+**Scope:** Live desktop behavior, public-site hierarchy, responsive UX, accessibility, focus flow, and real multiplayer regression testing.
+**Current status:** Completed the post-`e495c8d` live invitation regression and Playtest Night event QA.
+**Verified:**
+- Metal Slug 3 synchronized host reached the New York relay and produced a 760-character `GDPLAY1` invitation.
+- The same invitation passed the normal join path, reached `ready` as a client, and reported 2/2 players.
+- Two isolated GameDeck profiles completed the normal Remote Play handshake with a 1,721-character `GDREMOTE2` invite and a 1,306-character `GDREMOTEANSWER2` response.
+- The host accepted Player 2, both profiles showed two players, video attached, and 18 controller-input events reached the host as Player 2.
+- `7b7ecba` moves the urgent event into the first viewport, adds precise countdown wording, preserves 40px+ actions, supports reduced motion, and keeps expired state hidden.
+**Do not touch:** Authenticated growth/community browser surfaces.
+**Return:** Ready to review the next engineering or growth handoff.
 
 ### Security and release quality
 
 **Scope:** Read-only review of IPC validation, path safety, renderer boundaries, signaling services, workflows, release packaging, and evidence accuracy.
 **Current status:** Completed `e495c8d`, `a7994d3`, and `9865ccf`. The runtime audit verified 37 unique unpinned upstream assets: two Linux archives, one shared macOS DMG, and 34 architecture-specific macOS core archives. The HTTP lobby trust boundary and compatibility-safe migration plan are documented.
-**Current task:** Review the Product/QA return for normal GDPLAY1 and Remote Play invitation flows, then assign one non-overlapping remediation task, if any.
-**May inspect:** `main.js`, `preload.js`, `stream-server.js`, `netplay-manager.js`, workflows, package configuration, and QA evidence.
-**Do not modify:** Public-site files, social content, or files owned by another active handoff without transferring ownership first.
-**Return:** Findings ranked by severity, exact file/line evidence, tests run, false positives ruled out, and one recommended bounded remediation task.
+**Current task:** Add a concise post-audit evidence addendum covering invitation limits, the successful live GDPLAY1/Remote Play regressions, pairing request limits, streamed runtime-cache limits, and the Playtest Night responsive/accessibility QA.
+**Owned files:** `docs/FULL_QA_2026-08-02.md` and `docs/e2e-results/GameDeck-Full-QA-2026-08-02.json` only.
+**Do not modify:** `site/*`, `src/*`, `main.js`, `netplay-manager.js`, `stream-server.js`, runtime-cache scripts, workflows, or social content.
+**Return:** One documentation-only commit, exact assertions added, `npm test`, `git diff --check`, and the next non-overlapping task.
 
 ## Latest verified production state
 
-- Public site event strip is deployed and visible before the event; it auto-hides at 2026-08-03 00:00 ET.
+- Public site event strip is visible in the first viewport before and during the event; it auto-hides at 2026-08-03 00:00 ET.
 - Canonical event: https://discord.com/events/1533539059207504093/1533638688066633980
 - Tester discussion: https://github.com/B11-Health/gamedeck/discussions/8
 - Event time: 2026-08-02 22:00–24:00 ET
@@ -54,6 +70,9 @@ This file is the shared source of truth for parallel GameDeck workstreams. Updat
 - `e495c8d` CI: passed
 - `a7994d3` documentation task: reviewed against the manifest and runtime code
 - `9865ccf` local `npm test` and repository audit: passed
+- `354b919` pairing/runtime stream-limit tests and full repository gate: passed
+- `7b7ecba` desktop/tablet/phone event-state matrix and full `npm test`: passed
+- Post-`e495c8d` live GDPLAY1 and two-profile Remote Play regressions: passed
 - `8118ff1` growth-site deployment: passed
 - `2bbbe15` CI: Linux package smoke, Ubuntu tests, macOS tests, and Windows tests passed
 - Local repository status at handoff: clean
@@ -89,6 +108,6 @@ EXPECTED RETURN:
 
 ## Expected next exchange
 
-1. Product/QA returns the live GDPLAY1 and Remote Play regression packet after `e495c8d`.
+1. Security and release quality returns the documentation-only QA evidence addendum.
 2. Growth and community returns the completed YouTube verification packet and assigns one bounded follow-up.
-3. Engineering and integration reviews both packets, integrates approved work, updates this file, and issues the next non-overlapping tasks.
+3. Product/QA reviews both packets, integrates approved work, updates this file, and issues the next non-overlapping tasks.
