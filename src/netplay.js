@@ -1,5 +1,5 @@
 (() => {
-  const DISCORD_REMOTE_PLAY_URL = 'https://discord.com/channels/1533539059207504093/1533539469372821555';
+  const DISCORD_REMOTE_PLAY_URL = 'https://discord.gg/uv2G7QPX4K';
   const RTC_CONFIG = {
     iceServers: [
       { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },

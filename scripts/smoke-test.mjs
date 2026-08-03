@@ -192,7 +192,7 @@ if (!html.includes('class="app-shell-header"') || !html.includes('class="header-
 if (!html.includes('id="headerMenu"') || !html.includes('id="headerMenuToggle"')) fail('secondary header controls must live in an overflow menu');
 if (!renderer.includes('function toggleHeaderMenu') || !renderer.includes('function closeHeaderMenu')) fail('header overflow accessibility behavior is missing');
 if (!renderer.includes('https://discord.gg/eS7d4VqTT') || !html.includes('id="openDiscord"')) fail('official Discord community link is missing');
-if (!renderer.includes('DISCORD_COMMUNITY') || !renderer.includes('1533539469372821555')) fail('Discord channel routing is missing');
+if (!renderer.includes('DISCORD_COMMUNITY') || !renderer.includes('discord.gg/uv2G7QPX4K')) fail('Discord matchmaking invite routing is missing');
 if (!netplayRenderer.includes('DISCORD_REMOTE_PLAY_URL') || !netplayRenderer.includes('message.length <= 2000')) fail('Discord-safe Remote Play sharing is missing');
 if (!html.includes('class="discord-community-hub"') || !styles.includes('.discord-channel-card')) fail('Discord community hub UI is missing');
 if (!html.includes('class="community-share"') || !renderer.includes('GAMEDECK_SHARE_COPY') || !styles.includes('.community-share-actions')) fail('community share loop is missing');
@@ -200,6 +200,7 @@ if (!renderer.includes('Feedback-first Reddit launch copied') || !renderer.inclu
 if (!renderer.includes('LinkedIn launch post copied') || !renderer.includes('Facebook group post copied') || !renderer.includes('Looking-for-players post copied') || !renderer.includes('function playTonightCopy')) fail('cross-platform player acquisition copy is missing');
 if (!pkg.build?.mac?.x64ArchFiles?.includes('node_modules/7zip-bin')) fail('macOS universal 7zip merge rule is missing');
 if (!siteHtml.includes('GameDeck Live') || !siteHtml.includes('Couch Co-op') || !siteHtml.includes('Remote Play Together') || !siteHtml.includes('Synchronized Netplay') || !siteHtml.includes('docs/MULTIPLAYER.md') || !siteHtml.includes('data-platform="windows"')) fail('public growth site is missing GameDeck 1.2 conversion paths');
+if (!siteHtml.includes('Find players tonight') || !siteHtml.includes('multiplayer_session.yml') || !siteStyles.includes('.matchmaking') || !siteStyles.includes('.session-report')) fail('above-the-fold player activation and session reporting are missing');
 if (!siteApp.includes('api.github.com/repos/') || !siteApp.includes('releases/latest')) fail('public growth site must resolve current release assets dynamically');
 if (/sendBeacon|\/events/.test(siteApp)) fail('public growth site must not add behavioral click telemetry');
 if (!siteStyles.includes('.multiplayer') || !siteStyles.includes('.mode-card') || !siteStyles.includes('@media(max-width:760px)')) fail('public growth site responsive product sections are missing');

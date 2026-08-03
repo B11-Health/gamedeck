@@ -1,0 +1,92 @@
+name: Multiplayer session report
+description: Share the result of a real Couch Co-op, Remote Play Together, or synchronized netplay session
+title: "[Multiplayer session]: "
+labels: ["compatibility", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for testing GameDeck with another player. Report the session outcome without attaching ROMs, BIOS files, keys, credentials, save files, or copyrighted game assets.
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Multiplayer mode
+      options:
+        - Couch Co-op
+        - Remote Play Together
+        - Synchronized Netplay
+    validations:
+      required: true
+  - type: dropdown
+    id: role
+    attributes:
+      label: Your role
+      options:
+        - Host
+        - Guest
+        - Tested both sides
+        - Same-device Couch Co-op player
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Platform and GameDeck version
+      placeholder: Windows 11 x64, GameDeck 1.2.0
+    validations:
+      required: true
+  - type: input
+    id: game_system
+    attributes:
+      label: Game system and emulator/core
+      placeholder: Arcade / FinalBurn Neo, SNES / Snes9x, etc.
+    validations:
+      required: true
+  - type: input
+    id: controllers
+    attributes:
+      label: Controllers used
+      placeholder: Xbox Series controller, DualSense, keyboard fallback, etc.
+    validations:
+      required: true
+  - type: dropdown
+    id: outcome
+    attributes:
+      label: Session outcome
+      options:
+        - Completed a playable session
+        - Connected but gameplay was not usable
+        - Invitation or handshake failed
+        - Game/core match validation failed
+        - Controller mapping failed
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: experience
+    attributes:
+      label: What happened?
+      description: Include the successful path or the first failing step, connection impression, and anything confusing.
+      placeholder: We connected in under a minute. Guest input worked, but the player-slot language was unclear...
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Sanitized diagnostics
+      description: Paste relevant GameDeck Status Center output after removing personal paths, addresses, tokens, and identifiers.
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety and privacy
+      options:
+        - label: I did not attach ROMs, BIOS files, keys, credentials, save files, or copyrighted game assets.
+          required: true
+        - label: I removed personal paths, IP addresses, invite codes, session tokens, and account identifiers.
+          required: true
+  - type: checkboxes
+    id: credit
+    attributes:
+      label: Community credit
+      options:
+        - label: GameDeck may credit this test result in a public community recap using my GitHub username.
