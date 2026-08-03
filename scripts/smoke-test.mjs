@@ -277,6 +277,8 @@ if (!runtimeManager.includes('bundledCacheRoot') || !runtimeManager.includes("ph
 if (!main.includes('BUNDLED_RUNTIME_AVAILABLE') || !main.includes('MANAGED_RUNTIME_PATHS.retroArch')) fail('clean installs must target the managed runtime before extraction');
 if (!main.includes('libraryFolderSystems') || !main.includes('archiveContentExtensions') || !main.includes('discSystemForFile')) fail('shared-folder system classification is missing');
 if (!main.includes("id: 'sega32x'") || !main.includes("coreFile('picodrive_libretro')")) fail('Sega 32X library support is missing');
+if (!main.includes("id: 'fds'") || !main.includes("id: 'satellaview'") || !main.includes("id: 'sufami'") || !main.includes("bios: ['disksys.rom']") || !main.includes("bios: ['BS-X.bin']") || !main.includes("bios: ['STBIOS.bin']")) fail('firmware-backed add-on systems are not classified independently');
+if (!main.includes('playableArchiveIntegrity') || !main.includes('Unexpected end of archive') || !main.includes("biosMode: 'all'")) fail('game archive integrity or complete regional firmware checks are missing');
 if (!pkg.build?.files?.includes('library-system-classifier.js')) fail('library classifier must ship in desktop packages');
 for (const [platformKey, platformSpec] of Object.entries(managedRuntimeManifest.platforms || {})) {
   const cores = (platformSpec.components || []).find(component => component.id === 'cores');
