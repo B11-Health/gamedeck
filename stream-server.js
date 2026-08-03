@@ -6,6 +6,12 @@ const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
 
+const MAX_PAIR_BODY_BYTES = 8 * 1024;
+const MAX_SIGNAL_BODY_BYTES = 64 * 1024;
+const MAX_HOST_QUEUE = 128;
+const PAIR_FAILURE_LIMIT = 8;
+const PAIR_WINDOW_MS = 60 * 1000;
+
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
@@ -89,6 +95,7 @@ function createStreamServer(options = {}) {
   let audio = true;
   let hostQueue = [];
   const viewers = new Map();
+  const pairAttempts = new Map();
   let cleanupTimer = null;
 
   function publicViewer(viewer) {
@@ -122,6 +129,22 @@ function createStreamServer(options = {}) {
     };
   }
 
+  function receiverStatus() {
+    const current = status();
+    return {
+      active: current.active,
+      port: current.port,
+      viewerCount: current.viewerCount,
+      startedAt: current.startedAt,
+      title: current.title,
+      sourceName: current.sourceName,
+      quality: current.quality,
+      audio: current.audio,
+      localOnly: current.localOnly,
+      protocol: current.protocol
+    };
+  }
+
   function emit(extra = {}) {
     const value = { ...status(), ...extra, at: Date.now() };
     onUpdate(value);
@@ -132,6 +155,29 @@ function createStreamServer(options = {}) {
     return active && String(value || '').trim() === code;
   }
 
+  function requestAddress(request) {
+    return String(request.socket?.remoteAddress || 'unknown');
+  }
+
+  function pairingBlock(request) {
+    const entry = pairAttempts.get(requestAddress(request));
+    if (!entry || entry.blockedUntil <= Date.now()) return null;
+    return entry;
+  }
+
+  function recordPairFailure(request) {
+    const address = requestAddress(request);
+    const now = Date.now();
+    const previous = pairAttempts.get(address);
+    const entry = !previous || now - previous.windowStarted >= PAIR_WINDOW_MS
+      ? { failures: 0, windowStarted: now, blockedUntil: 0 }
+      : previous;
+    entry.failures += 1;
+    if (entry.failures >= PAIR_FAILURE_LIMIT) entry.blockedUntil = now + PAIR_WINDOW_MS;
+    pairAttempts.set(address, entry);
+    return entry;
+  }
+
   function viewerFor(id) {
     const viewer = viewers.get(String(id || ''));
     if (viewer) viewer.lastSeenAt = Date.now();
@@ -140,7 +186,7 @@ function createStreamServer(options = {}) {
 
   function pushHost(event) {
     hostQueue.push({ ...event, at: Date.now() });
-    if (hostQueue.length > 500) hostQueue = hostQueue.slice(-500);
+    if (hostQueue.length > MAX_HOST_QUEUE) hostQueue = hostQueue.slice(-MAX_HOST_QUEUE);
   }
 
   function staticPath(urlPath) {
@@ -152,26 +198,33 @@ function createStreamServer(options = {}) {
 
   async function api(request, response, url) {
     if (request.method === 'GET' && url.pathname === '/api/status') {
-      safeJson(response, 200, { ok: true, stream: status() });
+      safeJson(response, 200, { ok: true, stream: receiverStatus() });
       return true;
     }
     if (request.method === 'POST' && url.pathname === '/api/pair') {
-      const body = await readBody(request);
+      const blocked = pairingBlock(request);
+      if (blocked) {
+        safeJson(response, 429, { ok: false, error: 'Too many pairing attempts. Wait a minute and try again.' });
+        return true;
+      }
+      const body = await readBody(request, MAX_PAIR_BODY_BYTES);
       if (!validCode(body.code)) {
+        recordPairFailure(request);
         safeJson(response, 403, { ok: false, error: 'Pairing code is invalid or the stream is offline.' });
         return true;
       }
+      pairAttempts.delete(requestAddress(request));
       const id = randomId();
       const label = String(body.label || 'Mobile viewer').trim().slice(0, 64) || 'Mobile viewer';
       const viewer = { id, label, joinedAt: Date.now(), lastSeenAt: Date.now(), connected: true, queue: [] };
       viewers.set(id, viewer);
       pushHost({ type: 'viewer-joined', viewerId: id, label });
       emit({ event: 'viewer-joined', viewer: publicViewer(viewer) });
-      safeJson(response, 200, { ok: true, viewerId: id, stream: status() });
+      safeJson(response, 200, { ok: true, viewerId: id, stream: receiverStatus() });
       return true;
     }
     if (request.method === 'POST' && url.pathname === '/api/signal') {
-      const body = await readBody(request);
+      const body = await readBody(request, MAX_SIGNAL_BODY_BYTES);
       const viewer = viewerFor(body.viewerId);
       if (!viewer || !validCode(body.code)) {
         safeJson(response, 403, { ok: false, error: 'Viewer session expired.' });
@@ -188,12 +241,16 @@ function createStreamServer(options = {}) {
         return true;
       }
       const messages = viewer.queue.splice(0, 100);
-      safeJson(response, 200, { ok: true, messages, stream: status() });
+      safeJson(response, 200, { ok: true, messages, stream: receiverStatus() });
       return true;
     }
     if (request.method === 'POST' && url.pathname === '/api/leave') {
-      const body = await readBody(request);
+      const body = await readBody(request, MAX_PAIR_BODY_BYTES);
       const viewer = viewers.get(String(body.viewerId || ''));
+      if (!viewer || !validCode(body.code)) {
+        safeJson(response, 403, { ok: false, error: 'Viewer session expired.' });
+        return true;
+      }
       if (viewer) {
         viewers.delete(viewer.id);
         pushHost({ type: 'viewer-left', viewerId: viewer.id });
@@ -253,6 +310,9 @@ function createStreamServer(options = {}) {
         port = Number(candidate.address()?.port || 0);
         cleanupTimer = setInterval(() => {
           const cutoff = Date.now() - 45000;
+          for (const [address, entry] of pairAttempts) {
+            if (entry.blockedUntil <= Date.now() && Date.now() - entry.windowStarted >= PAIR_WINDOW_MS) pairAttempts.delete(address);
+          }
           for (const viewer of viewers.values()) {
             if (viewer.lastSeenAt >= cutoff) continue;
             viewers.delete(viewer.id);
@@ -277,6 +337,7 @@ function createStreamServer(options = {}) {
     audio = config.audio !== false;
     hostQueue = [];
     viewers.clear();
+    pairAttempts.clear();
     onLog('success', `GameDeck Live started on the local network at port ${port}.`);
     return emit({ event: 'started' });
   }
@@ -285,6 +346,7 @@ function createStreamServer(options = {}) {
     if (!active) return status();
     for (const viewer of viewers.values()) viewer.queue.push({ type: 'stream-stopped' });
     viewers.clear();
+    pairAttempts.clear();
     hostQueue = [];
     active = false;
     code = '';

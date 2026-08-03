@@ -1,8 +1,10 @@
 import { readFile, access } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
+import { createRequire } from 'node:module';
 
 const root = process.cwd();
+const require = createRequire(import.meta.url);
 const read = file => readFile(path.join(root, file), 'utf8');
 const fail = message => {
   console.error(`Smoke test failed: ${message}`);
@@ -395,5 +397,60 @@ if (!main.includes('thumbnailTokens') || !main.includes('tokens.every')) fail('o
 
 if (pkg.scripts?.['video:campaign'] !== 'node scripts/generate-social-campaign.cjs') fail('social campaign script is missing');
 if (!renderer.includes('GAMEDECK_SHARE_COPY') || !renderer.includes('copyRedditLaunch') || !renderer.includes('copyShortCaption')) fail('in-app share loop is missing');
+
+const { createStreamServer } = require(path.join(root, 'stream-server.js'));
+const streamSecurityServer = createStreamServer({ mobileRoot: path.join(root, 'mobile', 'web') });
+try {
+  const requestedPort = 43000 + Math.floor(Math.random() * 12000);
+  const started = await streamSecurityServer.start({ port: requestedPort, title: 'Security smoke test' });
+  const base = `http://127.0.0.1:${started.port}`;
+  const requestJson = async (route, options = {}) => {
+    const response = await fetch(`${base}${route}`, options);
+    const body = await response.json();
+    return { response, body };
+  };
+  const publicStatus = await requestJson('/api/status');
+  if (!publicStatus.body?.stream?.active) fail('GameDeck Live public status must report an active stream');
+  for (const secret of ['code', 'urls', 'primaryUrl', 'viewers']) {
+    if (secret in (publicStatus.body?.stream || {})) fail(`GameDeck Live public status exposes ${secret}`);
+  }
+  const paired = await requestJson('/api/pair', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ code: started.code, label: 'Security smoke viewer' })
+  });
+  if (!paired.response.ok || !paired.body?.viewerId) fail('GameDeck Live valid pairing failed');
+  if ('code' in (paired.body?.stream || {}) || 'viewers' in (paired.body?.stream || {})) fail('paired receiver status exposes host secrets');
+  const unauthorizedLeave = await requestJson('/api/leave', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ viewerId: paired.body.viewerId })
+  });
+  if (unauthorizedLeave.response.status !== 403 || streamSecurityServer.status().viewerCount !== 1) fail('unauthenticated viewer removal must be rejected');
+  const authorizedLeave = await requestJson('/api/leave', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ code: started.code, viewerId: paired.body.viewerId })
+  });
+  if (!authorizedLeave.response.ok || streamSecurityServer.status().viewerCount !== 0) fail('authenticated viewer removal failed');
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const rejected = await requestJson('/api/pair', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ code: '000000', label: 'Rate limit test' })
+    });
+    if (rejected.response.status !== 403) fail('pairing failures must be rejected before rate limiting');
+  }
+  const rateLimited = await requestJson('/api/pair', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ code: '000000', label: 'Rate limit test' })
+  });
+  if (rateLimited.response.status !== 429) fail('pairing attempts must be rate limited');
+} catch (error) {
+  fail(`GameDeck Live security regression: ${error.message}`);
+} finally {
+  await streamSecurityServer.close().catch(() => {});
+}
 
 if (!process.exitCode) console.log('GameDeck smoke test passed.');

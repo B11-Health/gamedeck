@@ -132,7 +132,7 @@ async function pair(event){
 
 async function disconnect(){
   clearTimeout(pollTimer);
-  if(viewerId)api('/api/leave',{method:'POST',body:JSON.stringify({viewerId})}).catch(()=>{});
+  if(viewerId)api('/api/leave',{method:'POST',body:JSON.stringify({code,viewerId})}).catch(()=>{});
   viewerId='';
   closePeer();
   $('#playerCard').classList.add('hidden');
@@ -155,7 +155,7 @@ $('#install').onclick=async()=>{
 window.addEventListener('beforeinstallprompt',event=>{
   event.preventDefault();installPrompt=event;$('#install').classList.remove('hidden');
 });
-window.addEventListener('beforeunload',()=>{if(viewerId)navigator.sendBeacon('/api/leave',JSON.stringify({viewerId}))});
+window.addEventListener('beforeunload',()=>{if(viewerId)navigator.sendBeacon('/api/leave',JSON.stringify({code,viewerId}))});
 
 const preset=new URLSearchParams(location.search).get('code')||'';
 $('#pairCode').value=preset.replace(/\D/g,'').slice(0,6);
