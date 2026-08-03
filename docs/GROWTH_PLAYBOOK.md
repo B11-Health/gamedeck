@@ -12,8 +12,8 @@ GameDeck should grow through proof, community participation, and visible product
 - Public Shorts: https://youtube.com/shorts/ndETcPuCOyE, https://youtube.com/shorts/dOEuy8g8Bmw, and https://youtube.com/shorts/-jxqMc0z2yg
 - Scheduled Short: https://youtube.com/shorts/ZZ-hHyyj5Lw — August 3, 2026 at 12:00 PM Eastern
 - YouTube branding: GameDeck banner and avatar are public; the video watermark is configured for the entire video.
-- Discord distribution: the v1.2 release is in #announcements and the Shorts campaign is in #showcase.
-- GitHub discussion: https://github.com/B11-Health/gamedeck/discussions/7
+- GitHub community hub: https://github.com/B11-Health/gamedeck/discussions
+- Multiplayer tester thread: https://github.com/B11-Health/gamedeck/discussions/8
 
 Current blockers are explicit: Reddit remains unauthenticated behind a humanity challenge; TikTok requires manual completion of its age gate; YouTube requires one-time channel verification before external description links and related-video controls become clickable. Do not bypass these gates or invent completed posts.
 
@@ -22,7 +22,7 @@ Current blockers are explicit: Reddit remains unauthenticated behind a humanity 
 1. A player sees a native 15–30 second clip showing the interface immediately.
 2. The post asks one concrete feedback question.
 3. The viewer reaches the GitHub README, where the tutorial, CI status, legal-use statement, screenshots, and installation path are obvious.
-4. The player joins Discord for support or Remote Play matchmaking.
+4. The player uses GitHub Discussions for community help or multiplayer coordination and opens a structured issue for reproducible defects.
 5. Their issue, compatibility report, or showcase becomes the next product improvement or piece of community proof.
 
 ## Seven-day launch cadence
@@ -31,7 +31,7 @@ Current blockers are explicit: Reddit remains unauthenticated behind a humanity 
 | --- | --- | --- |
 | 1 | Publish the 30-second vertical clip as a YouTube Short | Tutorial and GitHub visits |
 | 2 | Post a native-video, feedback-first launch in one rule-compatible Reddit community | Detailed product feedback |
-| 3 | Run **Remote Play Friday** in Discord `#remote-play` | First community-hosted sessions |
+| 3 | Run a scheduled multiplayer test through [Discussion #8](https://github.com/B11-Health/gamedeck/discussions/8) | First community-hosted sessions |
 | 4 | Publish a UI teardown: before, design decision, after | Design and open-source audiences |
 | 5 | Invite five small retro-gaming or open-source creators with a personalized note and press kit | Authentic creator coverage |
 | 6 | Share one solved compatibility case with evidence | Trust and search visibility |
@@ -57,13 +57,13 @@ Lead with the interface in the first second. Keep captions burned in, use the ve
 
 Keep CI green, releases current, issue forms precise, and the README visual. Label newcomer-friendly work honestly. Never create fake stars, forks, watchers, contributors, or issue activity.
 
-### Discord
+### GitHub Discussions
 
-Use `#announcements` sparingly. Drive repeat participation through Remote Play sessions, setup clinics, and showcase prompts. Promote helpful members into moderators only after consistent behavior.
+Use Discussions for open questions, setup conversations, showcases, and scheduled multiplayer tests. Use Discussion #8 for matchmaking and session outcomes. Move reproducible defects into Issues, and exchange fresh invitation codes privately rather than posting them in public threads.
 
 ## Out-of-the-box campaigns
 
-- **Library Makeover:** invite players to post a before/after library screenshot in `#showcase`; feature one weekly with permission.
+- **Library Makeover:** invite players to post a before/after library screenshot in GitHub Discussions; feature one weekly with permission.
 - **Remote Play Friday:** one scheduled session, one featured game category, and a post-session compatibility note.
 - **Setup Rescue:** turn a real support issue into a 45-second fix video and documentation patch.
 - **Compatibility Bounty:** tag small, reproducible compatibility issues that a first-time contributor can solve.
@@ -72,4 +72,4 @@ Use `#announcements` sparingly. Drive repeat participation through Remote Play s
 
 ## Metrics without invasive telemetry
 
-Track only public or platform-provided signals: GitHub clones, unique visitors, stars, release downloads, issue quality, Discord joins, tutorial retention, Short completion rate, and the number of support conversations resolved. Do not add cross-app behavioral tracking to GameDeck.
+Track only public or platform-provided signals: GitHub clones, unique visitors, stars, release downloads, issue quality, Discussion participants, confirmed multiplayer sessions, tutorial retention, Short completion rate, and the number of support conversations resolved. Do not add cross-app behavioral tracking to GameDeck.

@@ -90,7 +90,7 @@ Select a game and choose **Multiplayer**, press **M**, or press **Start** on a s
 
 The command center recommends the best route for the current setup, shows every player slot before launch, copies game/core match IDs, and can read a pasted `GDREMOTE2`, `GDREMOTEANSWER2`, or `GDPLAY1` code from the clipboard and route it to the correct join screen. Once a room is live, setup controls collapse into a focused lobby that remains fully visible at standard desktop sizes.
 
-For Remote Play Together, select a supported local multiplayer game and choose **Remote Play**. GameDeck launches the host game with RetroArch's native Remote RetroPad input enabled, starts the GameDeck Live capture pipeline, and creates a short-lived `GDREMOTE2` invitation for a selected player slot. Send that invitation through Discord or another private channel. The friend pastes it into **Join a friend**, creates a `GDREMOTEANSWER2` response, and sends the response back to the host. Once the host accepts it, encrypted WebRTC video/audio and controller input connect directly between the two computers.
+For Remote Play Together, select a supported local multiplayer game and choose **Remote Play**. GameDeck launches the host game with RetroArch's native Remote RetroPad input enabled, starts the GameDeck Live capture pipeline, and creates a short-lived `GDREMOTE2` invitation for a selected player slot. Send that invitation through a private channel you trust. The friend pastes it into **Join a friend**, creates a `GDREMOTEANSWER2` response, and sends the response back to the host. Once the host accepts it, encrypted WebRTC video/audio and controller input connect directly between the two computers.
 
 Only the host needs the game. GameDeck does not transfer the ROM, BIOS, save files, or game metadata to the guest. Standard browser gamepads are mapped to RetroPad buttons; keyboard fallback uses arrows, `Z`, `X`, `A`, `S`, `Enter`, and `Shift`. Each invitation expires after 20 minutes and is bound to one player slot and session token.
 
@@ -156,13 +156,12 @@ Environment overrides are also supported: `GAMEDECK_LIBRARY`, `GAMEDECK_RGSX_ROO
 
 ## Community
 
-- Join the official [GameDeck Discord community](https://discord.gg/eS7d4VqTT) for Remote Play sessions, support, announcements, and showcases.
-- Use the [growth playbook](docs/GROWTH_PLAYBOOK.md) and [platform-ready social kit](marketing/social/README.md) for respectful, evidence-led community outreach.
-- GameDeck links directly to `#remote-play`, `#support`, `#announcements`, and `#showcase` from the Community screen. See the [Discord community playbook](docs/DISCORD_COMMUNITY.md).
-- Remote Play can prepare a Discord-safe, paste-ready invite or response and open `#remote-play` without exposing ROMs, firmware, or save files.
-- Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
-- Check the [roadmap](ROADMAP.md) and [open issues](https://github.com/B11-Health/gamedeck/issues).
-- Use the [arcade community launch kit](docs/COMMUNITY_LAUNCH.md) for evidence, screenshots, channel rules, and outreach sequencing.
+- Use [GitHub Discussions](https://github.com/B11-Health/gamedeck/discussions) for questions, ideas, showcases, and project updates.
+- Use [Discussion #8](https://github.com/B11-Health/gamedeck/discussions/8) to find multiplayer testers, schedule a session, and report the result. Exchange fresh connection codes privately after choosing a player; never post invitation payloads publicly.
+- Open a structured [issue](https://github.com/B11-Health/gamedeck/issues) for reproducible bugs or compatibility problems.
+- Read the [community guide](docs/COMMUNITY.md), [growth playbook](docs/GROWTH_PLAYBOOK.md), and [platform-ready social kit](marketing/social/README.md) for respectful, evidence-led participation.
+- Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request and check the [roadmap](ROADMAP.md) for current priorities.
+- Use the [arcade community launch kit](docs/COMMUNITY_LAUNCH.md) for evidence, screenshots, community rules, and outreach sequencing.
 - Report security problems privately using [SECURITY.md](SECURITY.md).
 - See [FUNDING.md](FUNDING.md) and the transparent [sponsorship policy](docs/SPONSORSHIP.md).
 

@@ -4,6 +4,8 @@ All notable GameDeck releases are documented here.
 
 ## [Unreleased]
 
+- Retired Discord as a GameDeck dependency. GitHub Discussions is now the community hub, Discussion #8 handles multiplayer coordination, Issues handle reproducible support, and live invitation codes must be exchanged privately.
+
 - Completed a full repository, security, accessibility, packaged-runtime, public-site, mobile-receiver, and live multiplayer QA pass; added permanent integrity checks, explicit renderer sandboxing, readable status typography, installable PWA icons, and player-friendly pairing errors.
 
 - Reorganized multiplayer into a calm game → play style → lobby flow with a compact three-way mode switch, mode-accurate guidance, larger player slots, deduplicated metadata, and shorter Couch/online setup panels.
