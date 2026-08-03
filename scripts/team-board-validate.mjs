@@ -2,12 +2,18 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const ALLOWED_STATUSES = new Set(['planned','ready','active','blocked','review','approved','complete','paused']);
-const OWNERSHIP_STATUSES = new Set(['active','review']);
-const SCOPE_KINDS = ['files','surfaces','artifacts'];
+const ALLOWED_STATUSES = new Set(['planned', 'ready', 'active', 'blocked', 'review', 'approved', 'complete', 'paused']);
+const ALLOWED_PRIORITIES = new Set(['P0', 'P1', 'P2']);
+const OWNERSHIP_STATUSES = new Set(['active', 'review']);
+const EVIDENCE_STATUSES = new Set(['review', 'approved', 'complete']);
+const SCOPE_KINDS = ['files', 'surfaces', 'artifacts'];
 
 function isNonEmptyString(value) {
   return typeof value === 'string' && value.trim().length > 0;
+}
+
+function isIsoDate(value) {
+  return isNonEmptyString(value) && !Number.isNaN(Date.parse(value));
 }
 
 function findPrivateRoomReferences(value, at = 'board', found = []) {
@@ -19,19 +25,86 @@ function findPrivateRoomReferences(value, at = 'board', found = []) {
   return found;
 }
 
+function validateStringArray(value, at, errors, { nonEmpty = false } = {}) {
+  if (!Array.isArray(value)) {
+    errors.push(`${at} must be an array`);
+    return [];
+  }
+  const normalized = value.map((item) => typeof item === 'string' ? item.trim() : item);
+  if (nonEmpty && normalized.length === 0) errors.push(`${at} must be non-empty`);
+  if (normalized.some((item) => !isNonEmptyString(item))) errors.push(`${at} contains an empty or non-string value`);
+  if (new Set(normalized.map((item) => String(item).toLowerCase())).size !== normalized.length) errors.push(`${at} contains duplicates`);
+  return normalized;
+}
+
+function scopeCount(scope) {
+  return SCOPE_KINDS.reduce((sum, kind) => sum + (Array.isArray(scope?.[kind]) ? scope[kind].length : 0), 0);
+}
+
+function validateScope(scope, at, errors) {
+  if (!scope || typeof scope !== 'object' || Array.isArray(scope)) {
+    errors.push(`${at} must be an object`);
+    return;
+  }
+  for (const kind of SCOPE_KINDS) validateStringArray(scope[kind], `${at}.${kind}`, errors);
+}
+
+function findDependencyCycle(itemsById) {
+  const visiting = new Set();
+  const visited = new Set();
+  const stack = [];
+
+  function visit(id) {
+    if (visiting.has(id)) {
+      const start = stack.indexOf(id);
+      return [...stack.slice(start), id];
+    }
+    if (visited.has(id)) return null;
+    visiting.add(id);
+    stack.push(id);
+    for (const dependency of itemsById.get(id)?.dependencies || []) {
+      if (!itemsById.has(dependency)) continue;
+      const cycle = visit(dependency);
+      if (cycle) return cycle;
+    }
+    stack.pop();
+    visiting.delete(id);
+    visited.add(id);
+    return null;
+  }
+
+  for (const id of itemsById.keys()) {
+    const cycle = visit(id);
+    if (cycle) return cycle;
+  }
+  return null;
+}
+
 export function validateBoard(board) {
   const errors = [];
   if (!board || typeof board !== 'object' || Array.isArray(board)) return ['board must be a JSON object'];
-  if (board.version !== 1) errors.push('version must equal 1');
+  if (board.version !== 2) errors.push('version must equal 2');
   if (!isNonEmptyString(board.northStar) || board.northStar.trim().length < 40) errors.push('northStar must be a concrete sentence of at least 40 characters');
-  if (!isNonEmptyString(board.updatedAt) || Number.isNaN(Date.parse(board.updatedAt))) errors.push('updatedAt must be a valid ISO date');
+  if (!isIsoDate(board.updatedAt)) errors.push('updatedAt must be a valid ISO date');
   if (!Array.isArray(board.lanes) || board.lanes.length === 0) errors.push('lanes must be a non-empty array');
+  if (!Array.isArray(board.workItems) || board.workItems.length === 0) errors.push('workItems must be a non-empty array');
 
   const privateRefs = findPrivateRoomReferences(board);
-  if (privateRefs.length) errors.push(`private ChatGPT room URLs are forbidden in the public board: ${privateRefs.join(", ")}`);
+  if (privateRefs.length) errors.push(`private ChatGPT room URLs are forbidden in the public board: ${privateRefs.join(', ')}`);
+
+  const policy = board.operatingPolicy;
+  if (!policy || typeof policy !== 'object' || Array.isArray(policy)) errors.push('operatingPolicy must be an object');
+  const ownerWipLimit = Number(policy?.wipLimitPerLane);
+  const reviewWipLimit = Number(policy?.reviewWipLimitPerLane);
+  if (!Number.isInteger(ownerWipLimit) || ownerWipLimit < 1) errors.push('operatingPolicy.wipLimitPerLane must be a positive integer');
+  if (!Number.isInteger(reviewWipLimit) || reviewWipLimit < 1) errors.push('operatingPolicy.reviewWipLimitPerLane must be a positive integer');
+  for (const status of ['active', 'review', 'blocked']) {
+    const hours = Number(policy?.staleAfterHours?.[status]);
+    if (!Number.isFinite(hours) || hours <= 0) errors.push(`operatingPolicy.staleAfterHours.${status} must be a positive number`);
+  }
 
   const lanes = Array.isArray(board.lanes) ? board.lanes : [];
-  const ids = new Set();
+  const laneIds = new Set();
   for (const [index, lane] of lanes.entries()) {
     const prefix = `lanes[${index}]`;
     if (!lane || typeof lane !== 'object' || Array.isArray(lane)) {
@@ -39,50 +112,101 @@ export function validateBoard(board) {
       continue;
     }
     if (!isNonEmptyString(lane.id)) errors.push(`${prefix}.id is required`);
-    else if (ids.has(lane.id)) errors.push(`duplicate lane id: ${lane.id}`);
-    else ids.add(lane.id);
+    else if (laneIds.has(lane.id)) errors.push(`duplicate lane id: ${lane.id}`);
+    else laneIds.add(lane.id);
     if (!isNonEmptyString(lane.name)) errors.push(`${prefix}.name is required`);
     if (!isNonEmptyString(lane.mission)) errors.push(`${prefix}.mission is required`);
     if (!ALLOWED_STATUSES.has(lane.status)) errors.push(`${prefix}.status is invalid: ${lane.status}`);
     if (!isNonEmptyString(lane.ownerRole)) errors.push(`${prefix}.ownerRole is required`);
     if (!isNonEmptyString(lane.reviewerRole)) errors.push(`${prefix}.reviewerRole is required`);
-    if (!Array.isArray(lane.dependencies)) errors.push(`${prefix}.dependencies must be an array`);
-    if (!lane.scope || typeof lane.scope !== 'object' || Array.isArray(lane.scope)) errors.push(`${prefix}.scope must be an object`);
-    for (const kind of SCOPE_KINDS) {
-      const values = lane.scope?.[kind];
-      if (!Array.isArray(values)) errors.push(`${prefix}.scope.${kind} must be an array`);
-      else {
-        const normalized = values.map((value) => typeof value === 'string' ? value.trim() : value);
-        if (normalized.some((value) => !isNonEmptyString(value))) errors.push(`${prefix}.scope.${kind} contains an empty or non-string value`);
-        if (new Set(normalized.map((value) => String(value).toLowerCase())).size !== normalized.length) errors.push(`${prefix}.scope.${kind} contains duplicates`);
-      }
-    }
-    if (!Array.isArray(lane.evidenceRequired) || lane.evidenceRequired.length === 0) errors.push(`${prefix}.evidenceRequired must be non-empty`);
+    validateStringArray(lane.capabilities, `${prefix}.capabilities`, errors, { nonEmpty: true });
+    validateScope(lane.scope, `${prefix}.scope`, errors);
+    validateStringArray(lane.evidenceRequired, `${prefix}.evidenceRequired`, errors, { nonEmpty: true });
     if (!isNonEmptyString(lane.nextAction)) errors.push(`${prefix}.nextAction is required`);
-    if (OWNERSHIP_STATUSES.has(lane.status)) {
-      const scopeCount = SCOPE_KINDS.reduce((sum, kind) => sum + (Array.isArray(lane.scope?.[kind]) ? lane.scope[kind].length : 0), 0);
-      if (scopeCount === 0) errors.push(`${prefix} is ${lane.status} but owns no files, surfaces, or artifacts`);
+  }
+
+  const workItems = Array.isArray(board.workItems) ? board.workItems : [];
+  const itemsById = new Map();
+  for (const [index, item] of workItems.entries()) {
+    const prefix = `workItems[${index}]`;
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      errors.push(`${prefix} must be an object`);
+      continue;
+    }
+    if (!isNonEmptyString(item.id)) errors.push(`${prefix}.id is required`);
+    else if (itemsById.has(item.id)) errors.push(`duplicate work item id: ${item.id}`);
+    else itemsById.set(item.id, item);
+    if (!isNonEmptyString(item.title)) errors.push(`${prefix}.title is required`);
+    if (!ALLOWED_PRIORITIES.has(item.priority)) errors.push(`${prefix}.priority is invalid: ${item.priority}`);
+    if (!ALLOWED_STATUSES.has(item.status)) errors.push(`${prefix}.status is invalid: ${item.status}`);
+    if (!laneIds.has(item.ownerLane)) errors.push(`${prefix}.ownerLane is unknown: ${item.ownerLane}`);
+    if (!laneIds.has(item.reviewerLane)) errors.push(`${prefix}.reviewerLane is unknown: ${item.reviewerLane}`);
+    if (item.ownerLane === item.reviewerLane) errors.push(`${prefix} ownerLane and reviewerLane must be different`);
+    const approvals = validateStringArray(item.approvalLanes, `${prefix}.approvalLanes`, errors);
+    for (const approval of approvals) {
+      if (!laneIds.has(approval)) errors.push(`${prefix}.approvalLanes contains unknown lane ${approval}`);
+      if (approval === item.ownerLane) errors.push(`${prefix}.approvalLanes cannot include ownerLane ${approval}`);
+    }
+    validateStringArray(item.dependencies, `${prefix}.dependencies`, errors);
+    if (!isNonEmptyString(item.objective)) errors.push(`${prefix}.objective is required`);
+    validateStringArray(item.nonGoals, `${prefix}.nonGoals`, errors, { nonEmpty: true });
+    validateScope(item.scope, `${prefix}.scope`, errors);
+    validateStringArray(item.evidenceRequired, `${prefix}.evidenceRequired`, errors, { nonEmpty: true });
+    validateStringArray(item.exitCriteria, `${prefix}.exitCriteria`, errors, { nonEmpty: true });
+    if (!isNonEmptyString(item.nextAction)) errors.push(`${prefix}.nextAction is required`);
+    if (!isNonEmptyString(item.rollbackPoint)) errors.push(`${prefix}.rollbackPoint is required`);
+
+    if (OWNERSHIP_STATUSES.has(item.status) && scopeCount(item.scope) === 0) errors.push(`${prefix} is ${item.status} but owns no files, surfaces, or artifacts`);
+    if (['active', 'review'].includes(item.status)) {
+      if (!isIsoDate(item.startedAt)) errors.push(`${prefix}.startedAt must be a valid ISO date while ${item.status}`);
+      if (!isIsoDate(item.lastEvidenceAt)) errors.push(`${prefix}.lastEvidenceAt must be a valid ISO date while ${item.status}`);
+    }
+    if (item.status === 'blocked') {
+      if (!isNonEmptyString(item.blocker)) errors.push(`${prefix}.blocker is required while blocked`);
+      if (!isNonEmptyString(item.unblockOwner)) errors.push(`${prefix}.unblockOwner is required while blocked`);
+      if (!isIsoDate(item.lastEvidenceAt)) errors.push(`${prefix}.lastEvidenceAt must be a valid ISO date while blocked`);
+    }
+    if (EVIDENCE_STATUSES.has(item.status)) validateStringArray(item.exactEvidence, `${prefix}.exactEvidence`, errors, { nonEmpty: true });
+  }
+
+  for (const item of workItems) {
+    if (!item || !Array.isArray(item.dependencies)) continue;
+    for (const dependency of item.dependencies) {
+      if (!itemsById.has(dependency)) errors.push(`work item ${item.id} depends on unknown work item ${dependency}`);
+      if (dependency === item.id) errors.push(`work item ${item.id} cannot depend on itself`);
+    }
+    if (item.status === 'ready') {
+      const incomplete = item.dependencies.filter((dependency) => itemsById.get(dependency)?.status !== 'complete');
+      if (incomplete.length) errors.push(`work item ${item.id} is ready but dependencies are incomplete: ${incomplete.join(', ')}`);
     }
   }
 
-  for (const lane of lanes) {
-    if (!lane || !Array.isArray(lane.dependencies)) continue;
-    for (const dependency of lane.dependencies) {
-      if (!ids.has(dependency)) errors.push(`lane ${lane.id} depends on unknown lane ${dependency}`);
-      if (dependency === lane.id) errors.push(`lane ${lane.id} cannot depend on itself`);
-    }
-  }
+  const cycle = findDependencyCycle(itemsById);
+  if (cycle) errors.push(`work item dependency cycle: ${cycle.join(' -> ')}`);
 
   const ownership = new Map();
-  for (const lane of lanes.filter((item) => OWNERSHIP_STATUSES.has(item?.status))) {
+  for (const item of workItems.filter((entry) => OWNERSHIP_STATUSES.has(entry?.status))) {
     for (const kind of SCOPE_KINDS) {
-      for (const value of lane.scope?.[kind] || []) {
+      for (const value of item.scope?.[kind] || []) {
         const key = `${kind}:${value.trim().toLowerCase()}`;
         const prior = ownership.get(key);
-        if (prior && prior !== lane.id) errors.push(`ownership collision for ${kind} "${value}": ${prior} and ${lane.id}`);
-        else ownership.set(key, lane.id);
+        if (prior && prior !== item.id) errors.push(`ownership collision for ${kind} "${value}": ${prior} and ${item.id}`);
+        else ownership.set(key, item.id);
       }
     }
+  }
+
+  const activeByOwner = new Map();
+  const reviewByReviewer = new Map();
+  for (const item of workItems) {
+    if (item?.status === 'active') activeByOwner.set(item.ownerLane, (activeByOwner.get(item.ownerLane) || 0) + 1);
+    if (item?.status === 'review') reviewByReviewer.set(item.reviewerLane, (reviewByReviewer.get(item.reviewerLane) || 0) + 1);
+  }
+  if (Number.isInteger(ownerWipLimit)) {
+    for (const [lane, count] of activeByOwner) if (count > ownerWipLimit) errors.push(`owner WIP limit exceeded for ${lane}: ${count} > ${ownerWipLimit}`);
+  }
+  if (Number.isInteger(reviewWipLimit)) {
+    for (const [lane, count] of reviewByReviewer) if (count > reviewWipLimit) errors.push(`review WIP limit exceeded for ${lane}: ${count} > ${reviewWipLimit}`);
   }
 
   return errors;
@@ -107,11 +231,15 @@ function main() {
     process.exitCode = 1;
     return;
   }
-  const counts = board.lanes.reduce((result, lane) => {
+  const laneCounts = board.lanes.reduce((result, lane) => {
     result[lane.status] = (result[lane.status] || 0) + 1;
     return result;
   }, {});
-  console.log('Team board valid: ' + board.lanes.length + ' lanes; ' + Object.entries(counts).map(([status, count]) => status + '=' + count).join(', '));
+  const itemCounts = board.workItems.reduce((result, item) => {
+    result[item.status] = (result[item.status] || 0) + 1;
+    return result;
+  }, {});
+  console.log(`Team board valid: ${board.lanes.length} lanes (${Object.entries(laneCounts).map(([status, count]) => `${status}=${count}`).join(', ')}); ${board.workItems.length} work items (${Object.entries(itemCounts).map(([status, count]) => `${status}=${count}`).join(', ')})`);
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main();

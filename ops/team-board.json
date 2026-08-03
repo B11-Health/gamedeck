@@ -1,7 +1,14 @@
 {
-  "version": 1,
-  "updatedAt": "2026-08-03T13:44:00-04:00",
+  "version": 2,
+  "updatedAt": "2026-08-03T14:11:00-04:00",
   "northStar": "A friend can receive an invitation, pass readiness checks, and reach responsive gameplay in under ten minutes across the widest truthful set of legally owned games.",
+  "productTargets": {
+    "inviteToPlayableP95Minutes": 10,
+    "readyToRouteDecisionP95Seconds": 30,
+    "disconnectReleaseAllP95Milliseconds": 250,
+    "reconnectDecisionP95Seconds": 10,
+    "truthRule": "Every failed path returns one stable public reason, one action, and no unsupported compatibility claim."
+  },
   "operatingPolicy": {
     "mainProtected": true,
     "oneOwnerPerFileOrSurface": true,
@@ -10,7 +17,24 @@
     "exactCommitReview": true,
     "noUnverifiedClaims": true,
     "discordDependency": false,
-    "permissionPromptPolicy": "Approve Authenticated Shell prompts, then verify execution actually started."
+    "wipLimitPerLane": 1,
+    "reviewWipLimitPerLane": 2,
+    "staleAfterHours": {
+      "active": 24,
+      "review": 12,
+      "blocked": 24
+    },
+    "priorityOrder": [
+      "P0",
+      "P1",
+      "P2"
+    ],
+    "sourceOfTruthOrder": [
+      "immutable commit or artifact evidence",
+      "ops/team-board.json",
+      "conversation status"
+    ],
+    "permissionPromptPolicy": "Approve Authenticated Shell prompts only for the bounded task, then verify execution actually started."
   },
   "statuses": [
     "planned",
@@ -26,55 +50,107 @@
     "objective",
     "done",
     "changedScope",
+    "exactEvidence",
     "tests",
     "risks",
     "nextOwner",
     "nextTask",
     "doNotTouch",
-    "expectedReturn"
+    "expectedReturn",
+    "rollbackPoint"
+  ],
+  "missionTeams": [
+    {
+      "id": "join-to-play",
+      "outcome": "Turn an invitation into a responsive, recoverable session.",
+      "lanes": [
+        "multiplayer-platform",
+        "player-experience",
+        "security-privacy",
+        "qa-observability"
+      ]
+    },
+    {
+      "id": "compatibility-scale",
+      "outcome": "Route the widest truthful set of games without pretending all engines support the same network model.",
+      "lanes": [
+        "compatibility-lab",
+        "multiplayer-platform",
+        "player-experience",
+        "qa-observability"
+      ]
+    },
+    {
+      "id": "trust-release",
+      "outcome": "Ship only independently reviewed, reproducible, reversible releases.",
+      "lanes": [
+        "program-ops",
+        "security-privacy",
+        "qa-observability"
+      ]
+    },
+    {
+      "id": "adoption-funding",
+      "outcome": "Recruit players and fund infrastructure without weakening local-first trust.",
+      "lanes": [
+        "growth-community",
+        "monetization",
+        "analytics",
+        "partnerships"
+      ]
+    }
   ],
   "lanes": [
     {
       "id": "program-ops",
       "name": "Program Operations and Integration",
-      "mission": "Maintain the dependency board, allocate non-overlapping ownership, verify handoffs, and protect main.",
+      "mission": "Maintain the critical path, allocate non-overlapping ownership, verify handoffs, and protect main.",
       "status": "active",
       "ownerRole": "General Orchestrator",
       "reviewerRole": "Independent Integration QA",
-      "dependencies": [],
+      "capabilities": [
+        "portfolio prioritization",
+        "scope allocation",
+        "integration gates",
+        "remediation closure"
+      ],
       "branch": "ops/team-operating-system-v2",
       "worktree": "gamedeck-program-ops",
       "scope": {
         "files": [
-          "COLLAB_HANDOFF.md",
           "docs/TEAM_OPERATING_SYSTEM.md",
+          "docs/ORCHESTRATOR_RUNBOOK.md",
           "docs/ONLINE_PLAY_PROGRAM.md",
-          "ops/team-board.json",
-          "scripts/team-board-validate.mjs",
-          "scripts/team-board-validate.test.mjs",
-          "package.json"
+          "ops/team-board.json"
         ],
         "surfaces": [],
-        "artifacts": []
+        "artifacts": [
+          "orchestrator pulse"
+        ]
       },
       "evidenceRequired": [
-        "clean worktree before task",
-        "npm test",
+        "clean worktree",
+        "full npm test",
         "git diff --check",
-        "exact commit and remote hash",
+        "exact pushed commit",
         "independent review"
       ],
-      "nextAction": "Publish and independently review the operating-system branch."
+      "nextAction": "Finish OPS-001, publish the exact commit, and keep the Runtime V1.0.4 review loop visible until closure."
     },
     {
       "id": "multiplayer-platform",
       "name": "Multiplayer Platform and Network Reliability",
       "mission": "Deliver dependable host, join, reconnect, NAT traversal, relay fallback, input, and stream behavior.",
-      "status": "ready",
+      "status": "active",
       "ownerRole": "Multiplayer Platform Architect",
       "reviewerRole": "Network Reliability QA",
-      "dependencies": [
-        "program-ops"
+      "capabilities": [
+        "session lifecycle",
+        "signaling",
+        "NAT traversal",
+        "relay",
+        "remote input",
+        "stream adaptation"
       ],
       "branch": null,
       "worktree": null,
@@ -82,26 +158,29 @@
         "files": [],
         "surfaces": [],
         "artifacts": [
-          "multiplayer reliability plan"
+          "runtime and network contracts"
         ]
       },
       "evidenceRequired": [
         "connection-state traces",
         "latency and loss matrix",
-        "direct and relay path tests",
+        "direct and relay tests",
         "failure diagnostics"
       ],
-      "nextAction": "Define the 30/60/90-day network reliability plan and first bounded pure/test slice."
+      "nextAction": "Close PLAY-001, then start the first pure readiness and network-diagnostics slices without product side effects."
     },
     {
       "id": "compatibility-lab",
       "name": "Universal Game Compatibility Lab",
-      "mission": "Route each title truthfully to Couch, synchronized netplay, Remote Play, or external launch without overclaiming.",
+      "mission": "Route each title truthfully to Couch, synchronized netplay, Remote Play, external launch, or a blocked repair path.",
       "status": "ready",
       "ownerRole": "Compatibility Lab Lead",
       "reviewerRole": "Integration QA",
-      "dependencies": [
-        "multiplayer-platform"
+      "capabilities": [
+        "route evidence",
+        "engine and core matrices",
+        "controller profiles",
+        "fallback diagnostics"
       ],
       "branch": null,
       "worktree": null,
@@ -113,11 +192,11 @@
         ]
       },
       "evidenceRequired": [
-        "engine/core/OS/controller matrix",
+        "engine/core/OS/controller tuple",
         "exact game evidence",
         "fallback reason codes"
       ],
-      "nextAction": "Create the universal play-route matrix and top compatibility gaps."
+      "nextAction": "Prepare the matrix schema now and populate it after PLAY-001 fixes the route vocabulary."
     },
     {
       "id": "player-experience",
@@ -126,9 +205,11 @@
       "status": "ready",
       "ownerRole": "Player Experience Lead",
       "reviewerRole": "Accessibility QA",
-      "dependencies": [
-        "multiplayer-platform",
-        "compatibility-lab"
+      "capabilities": [
+        "host and join journey",
+        "focus behavior",
+        "recovery copy",
+        "controller accessibility"
       ],
       "branch": null,
       "worktree": null,
@@ -145,17 +226,20 @@
         "reduced-motion behavior",
         "controller-only walkthrough"
       ],
-      "nextAction": "Define the host/join readiness, lobby, diagnostics, reconnect, and recovery contract."
+      "nextAction": "Approve PLAY-001 vocabulary, then define preflight, lobby, reconnect, and recovery behavior."
     },
     {
       "id": "security-privacy",
       "name": "Security and Privacy",
-      "mission": "Protect invitations, signaling, input, capture, relay, release, and user data boundaries.",
-      "status": "ready",
+      "mission": "Protect invitations, signaling, input, capture, relay, releases, and user-data boundaries.",
+      "status": "active",
       "ownerRole": "Security Lead",
       "reviewerRole": "Independent Security Reviewer",
-      "dependencies": [
-        "multiplayer-platform"
+      "capabilities": [
+        "threat modeling",
+        "protocol abuse testing",
+        "privacy review",
+        "release hardening"
       ],
       "branch": null,
       "worktree": null,
@@ -163,7 +247,8 @@
         "files": [],
         "surfaces": [],
         "artifacts": [
-          "multiplayer threat model"
+          "multiplayer threat model",
+          "contract review packets"
         ]
       },
       "evidenceRequired": [
@@ -172,7 +257,7 @@
         "bounded payload tests",
         "privacy review"
       ],
-      "nextAction": "Prioritize authenticated discovery, invitation replay protection, relay trust, and privacy-safe diagnostics."
+      "nextAction": "Complete the immutable PLAY-001 review and retain ownership through any remediation successor."
     },
     {
       "id": "qa-observability",
@@ -181,11 +266,11 @@
       "status": "ready",
       "ownerRole": "Reliability QA Lead",
       "reviewerRole": "Independent Integration QA",
-      "dependencies": [
-        "multiplayer-platform",
-        "compatibility-lab",
-        "player-experience",
-        "security-privacy"
+      "capabilities": [
+        "multi-client harnesses",
+        "fault injection",
+        "evidence schemas",
+        "release gates"
       ],
       "branch": null,
       "worktree": null,
@@ -202,7 +287,7 @@
         "NAT and packet-loss tests",
         "artifact hashes"
       ],
-      "nextAction": "Design the automated and manual acceptance matrix, evidence schema, and release gates."
+      "nextAction": "Define the harness contract and independently review OPS-001 after publication."
     },
     {
       "id": "growth-community",
@@ -211,8 +296,11 @@
       "status": "ready",
       "ownerRole": "Growth Lead",
       "reviewerRole": "Brand and Evidence Reviewer",
-      "dependencies": [
-        "qa-observability"
+      "capabilities": [
+        "tester recruitment",
+        "proof campaigns",
+        "community loops",
+        "onboarding content"
       ],
       "branch": null,
       "worktree": null,
@@ -234,7 +322,7 @@
         "CTA destination",
         "measured results"
       ],
-      "nextAction": "Build a multiplayer proof campaign around verified host/join sessions and tester recruitment."
+      "nextAction": "Execute GROWTH-001 without making availability or compatibility claims that QA has not verified."
     },
     {
       "id": "monetization",
@@ -243,9 +331,11 @@
       "status": "ready",
       "ownerRole": "Monetization Architect",
       "reviewerRole": "Trust and Product Reviewer",
-      "dependencies": [
-        "multiplayer-platform",
-        "analytics"
+      "capabilities": [
+        "cost modeling",
+        "pricing hypotheses",
+        "supporter programs",
+        "sponsorship design"
       ],
       "branch": null,
       "worktree": null,
@@ -262,7 +352,7 @@
         "pricing hypotheses",
         "rollback criteria"
       ],
-      "nextAction": "Model supporter, sponsor, and optional relay-service paths with transparent costs."
+      "nextAction": "Execute MON-001 and separate verified costs, assumptions, and unknown demand."
     },
     {
       "id": "analytics",
@@ -271,8 +361,11 @@
       "status": "ready",
       "ownerRole": "Analytics Lead",
       "reviewerRole": "Privacy Reviewer",
-      "dependencies": [
-        "program-ops"
+      "capabilities": [
+        "metric contracts",
+        "aggregate counters",
+        "opt-in diagnostics",
+        "experiment design"
       ],
       "branch": null,
       "worktree": null,
@@ -280,7 +373,7 @@
         "files": [],
         "surfaces": [],
         "artifacts": [
-          "multiplayer KPI tree"
+          "multiplayer KPI dictionary"
         ]
       },
       "evidenceRequired": [
@@ -289,7 +382,7 @@
         "opt-in design",
         "metric definitions"
       ],
-      "nextAction": "Define the multiplayer funnel, success events, evidence sources, and opt-in measurement plan."
+      "nextAction": "Execute ANALYTICS-001 in parallel with product work."
     },
     {
       "id": "partnerships",
@@ -298,10 +391,11 @@
       "status": "ready",
       "ownerRole": "Partnerships Lead",
       "reviewerRole": "Trust and Legal Reviewer",
-      "dependencies": [
-        "compatibility-lab",
-        "growth-community",
-        "monetization"
+      "capabilities": [
+        "partner research",
+        "technical validation",
+        "outreach preparation",
+        "ecosystem mapping"
       ],
       "branch": null,
       "worktree": null,
@@ -318,7 +412,724 @@
         "no unauthorized commitments",
         "owner approval gates"
       ],
-      "nextAction": "Map high-fit technical and distribution partners, then prepare non-spam outreach drafts."
+      "nextAction": "Prepare PARTNER-001 inputs, but do not send commitments before compatibility and cost evidence exists."
+    }
+  ],
+  "workItems": [
+    {
+      "id": "OPS-001",
+      "title": "Operationalize the GameDeck team system",
+      "priority": "P0",
+      "status": "active",
+      "ownerLane": "program-ops",
+      "reviewerLane": "qa-observability",
+      "approvalLanes": [
+        "security-privacy"
+      ],
+      "dependencies": [],
+      "objective": "Replace lane-wide blocking with task-level dependencies and provide an executable pulse that exposes focus, ready work, stale work, WIP, and critical risks.",
+      "nonGoals": [
+        "modify multiplayer product code",
+        "merge to main",
+        "publish marketing",
+        "make partner or spending commitments"
+      ],
+      "branch": "ops/team-operating-system-v2",
+      "worktree": "gamedeck-program-ops",
+      "scope": {
+        "files": [
+          "docs/TEAM_OPERATING_SYSTEM.md",
+          "docs/ORCHESTRATOR_RUNBOOK.md",
+          "docs/ONLINE_PLAY_PROGRAM.md",
+          "ops/team-board.json",
+          "scripts/team-board-validate.mjs",
+          "scripts/team-board-validate.test.mjs",
+          "scripts/orchestrator-pulse.mjs",
+          "scripts/orchestrator-pulse.test.mjs",
+          "package.json"
+        ],
+        "surfaces": [],
+        "artifacts": [
+          "orchestrator pulse output"
+        ]
+      },
+      "evidenceRequired": [
+        "baseline and successor npm test",
+        "validator negative tests",
+        "pulse tests",
+        "git diff --check",
+        "exact pushed commit",
+        "independent review"
+      ],
+      "exitCriteria": [
+        "board schema v2 validates",
+        "pulse identifies focus and parallel-ready work",
+        "WIP, dependency cycles, stale rules, and reviewer independence are enforced",
+        "worktree is clean after push"
+      ],
+      "startedAt": "2026-08-03T13:44:00-04:00",
+      "lastEvidenceAt": "2026-08-03T14:11:00-04:00",
+      "exactEvidence": [],
+      "blocker": null,
+      "unblockOwner": null,
+      "nextAction": "Finish implementation and tests, push the exact commit, then hand the immutable hash to Independent Integration QA.",
+      "rollbackPoint": "ba0ac57a4cabf29b81b74cfde7a7110fffe28e27"
+    },
+    {
+      "id": "PLAY-001",
+      "title": "Approve immutable Runtime pure contract V1.0.4",
+      "priority": "P0",
+      "status": "review",
+      "ownerLane": "multiplayer-platform",
+      "reviewerLane": "security-privacy",
+      "approvalLanes": [
+        "compatibility-lab",
+        "player-experience",
+        "qa-observability"
+      ],
+      "dependencies": [],
+      "objective": "Obtain independent agreement on one immutable Runtime pure contract before adapter or side-effect implementation proceeds.",
+      "nonGoals": [
+        "rewrite the reviewed artifact in place",
+        "implement Electron or network side effects",
+        "treat V1.0.3 as valid"
+      ],
+      "branch": null,
+      "worktree": null,
+      "scope": {
+        "files": [],
+        "surfaces": [],
+        "artifacts": [
+          "GAMEDECK-EP-RUNTIME-PURE-CONTRACT-V1.0.4",
+          "GAMEDECK-EP-RUNTIME-PURE-CONTRACT-V1.0.4 manifest"
+        ]
+      },
+      "evidenceRequired": [
+        "byte length",
+        "SHA-256",
+        "foundation and baseline identity",
+        "cross-role invariant review",
+        "explicit approval or bounded remediation packet"
+      ],
+      "exitCriteria": [
+        "all required reviewers evaluate identical bytes",
+        "no unresolved contradiction across Runtime, Compatibility, Player Experience, Security, and Integration QA",
+        "approval packet names exact hashes"
+      ],
+      "startedAt": "2026-08-03T13:50:00-04:00",
+      "lastEvidenceAt": "2026-08-03T14:05:00-04:00",
+      "exactEvidence": [
+        "Markdown 102969 bytes SHA-256 89f9dc4d7881e3263c22527278362395d8a16c3e595e8a36dc596316f3e937ef",
+        "Manifest 4173 bytes SHA-256 7147b3669dfbd65cf95f8e0c0e7e65fff852cd89c0c63a65618570d901e1998e",
+        "Foundation 7c42367d085bd79871b796123fcf704d2c327de9",
+        "Baseline 9d038f7215d031004acf70c6055308090620f745"
+      ],
+      "blocker": null,
+      "unblockOwner": null,
+      "nextAction": "Collect the independent Security verdict and keep any rejection in the same reviewer-owned remediation loop.",
+      "rollbackPoint": "V1.0.3 remains invalid and superseded; no implementation may fall back to it."
+    },
+    {
+      "id": "PLAY-002",
+      "title": "Build pure host and guest readiness model",
+      "priority": "P0",
+      "status": "planned",
+      "ownerLane": "multiplayer-platform",
+      "reviewerLane": "qa-observability",
+      "approvalLanes": [
+        "player-experience",
+        "security-privacy",
+        "compatibility-lab"
+      ],
+      "dependencies": [
+        "PLAY-001"
+      ],
+      "objective": "Model route, ownership, game/core match, controller slots, capture, audio, NAT, relay, and repair outcomes without side effects.",
+      "nonGoals": [
+        "open sockets",
+        "launch processes",
+        "capture screens",
+        "change renderer behavior"
+      ],
+      "branch": null,
+      "worktree": null,
+      "scope": {
+        "files": [],
+        "surfaces": [],
+        "artifacts": [
+          "pure readiness module and exhaustive tests"
+        ]
+      },
+      "evidenceRequired": [
+        "state table",
+        "exhaustive transition tests",
+        "stable public reason mapping",
+        "no side-effect imports"
+      ],
+      "exitCriteria": [
+        "all legal tuples resolve deterministically",
+        "unknown evidence never becomes verified",
+        "blocked outcomes include one repair action"
+      ],
+      "startedAt": null,
+      "lastEvidenceAt": null,
+      "exactEvidence": [],
+      "blocker": null,
+      "unblockOwner": null,
+      "nextAction": "Promote to ready immediately after PLAY-001 completes and allocate one clean worktree.",
+      "rollbackPoint": "PLAY-001 approved artifact and the base commit named in its handoff."
+    },
+    {
+      "id": "SEC-001",
+      "title": "Harden invitations, discovery authority, and slot consumption",
+      "priority": "P0",
+      "status": "planned",
+      "ownerLane": "security-privacy",
+      "reviewerLane": "qa-observability",
+      "approvalLanes": [
+        "multiplayer-platform"
+      ],
+      "dependencies": [
+        "PLAY-001"
+      ],
+      "objective": "Define and test expiry, replay resistance, bounded parsing, authenticated discovery, and exactly-once controller-slot consumption.",
+      "nonGoals": [
+        "deploy a public relay",
+        "store player profiles",
+        "transfer game content or private files"
+      ],
+      "branch": null,
+      "worktree": null,
+      "scope": {
+        "files": [],
+        "surfaces": [],
+        "artifacts": [
+          "invitation and discovery threat model",
+          "pure abuse tests"
+        ]
+      },
+      "evidenceRequired": [
+        "abuse matrix",
+        "oversized and malformed payload tests",
+        "replay and race tests",
+        "privacy data-flow review"
+      ],
+      "exitCriteria": [
+        "replay cannot consume a second slot",
+        "unauthenticated discovery cannot authorize a session",
+        "public errors reveal no private metadata"
+      ],
+      "startedAt": null,
+      "lastEvidenceAt": null,
+      "exactEvidence": [],
+      "blocker": null,
+      "unblockOwner": null,
+      "nextAction": "Promote after PLAY-001 and coordinate exact reason codes with PLAY-002.",
+      "rollbackPoint": "The approved PLAY-001 security boundary and predecessor commit."
+    },
+    {
+      "id": "NET-001",
+      "title": "Define deterministic network diagnostics and route fallback",
+      "priority": "P0",
+      "status": "planned",
+      "ownerLane": "multiplayer-platform",
+      "reviewerLane": "qa-observability",
+      "approvalLanes": [
+        "security-privacy",
+        "player-experience"
+      ],
+      "dependencies": [
+        "PLAY-001",
+        "PLAY-002"
+      ],
+      "objective": "Separate signaling, NAT, transport, media, input, and relay health so every failure produces a stable diagnosis and safe retry path.",
+      "nonGoals": [
+        "purchase relay capacity",
+        "claim universal NAT traversal",
+        "hide direct-path failures behind paid fallback"
+      ],
+      "branch": null,
+      "worktree": null,
+      "scope": {
+        "files": [],
+        "surfaces": [],
+        "artifacts": [
+          "network state model",
+          "fault-injection matrix"
+        ]
+      },
+      "evidenceRequired": [
+        "direct and relay state traces",
+        "packet loss and jitter probes",
+        "timeout ordering tests",
+        "duplicate-launch prevention"
+      ],
+      "exitCriteria": [
+        "all terminal states have one public reason and action",
+        "fallback requires clean teardown",
+        "input responsiveness remains higher priority than video quality"
+      ],
+      "startedAt": null,
+      "lastEvidenceAt": null,
+      "exactEvidence": [],
+      "blocker": null,
+      "unblockOwner": null,
+      "nextAction": "Start after PLAY-002 fixes readiness inputs and outputs.",
+      "rollbackPoint": "The last approved pure readiness commit."
+    },
+    {
+      "id": "COMPAT-001",
+      "title": "Create the evidence-backed universal route matrix",
+      "priority": "P0",
+      "status": "planned",
+      "ownerLane": "compatibility-lab",
+      "reviewerLane": "qa-observability",
+      "approvalLanes": [
+        "multiplayer-platform",
+        "player-experience"
+      ],
+      "dependencies": [
+        "PLAY-001"
+      ],
+      "objective": "Track route evidence by game, platform, engine/core revision, OS, controller, player count, capture mode, and network mode.",
+      "nonGoals": [
+        "collect copyrighted game files",
+        "generalize one successful title to a platform",
+        "mark external launch as embedded support"
+      ],
+      "branch": null,
+      "worktree": null,
+      "scope": {
+        "files": [],
+        "surfaces": [],
+        "artifacts": [
+          "route matrix schema",
+          "top-title evidence backlog"
+        ]
+      },
+      "evidenceRequired": [
+        "exact test tuple",
+        "verified/experimental/external/blocked status",
+        "reason code",
+        "reproduction evidence"
+      ],
+      "exitCriteria": [
+        "every row names exact evidence",
+        "unknowns remain unknown",
+        "community reports can be submitted without copyrighted content"
+      ],
+      "startedAt": null,
+      "lastEvidenceAt": null,
+      "exactEvidence": [],
+      "blocker": null,
+      "unblockOwner": null,
+      "nextAction": "Prepare the schema now and promote after PLAY-001 vocabulary is approved.",
+      "rollbackPoint": "The approved route vocabulary from PLAY-001."
+    },
+    {
+      "id": "UX-001",
+      "title": "Freeze the controller-first host and join journey",
+      "priority": "P0",
+      "status": "planned",
+      "ownerLane": "player-experience",
+      "reviewerLane": "qa-observability",
+      "approvalLanes": [
+        "multiplayer-platform",
+        "security-privacy",
+        "compatibility-lab"
+      ],
+      "dependencies": [
+        "PLAY-001",
+        "PLAY-002"
+      ],
+      "objective": "Define invitation preview, preflight, lobby, readiness, launch, reconnect, diagnostics, cancellation, and focus restoration.",
+      "nonGoals": [
+        "change route semantics",
+        "invent unsupported audio or ownership modes",
+        "hide unavailable controls while leaving them focusable"
+      ],
+      "branch": null,
+      "worktree": null,
+      "scope": {
+        "files": [],
+        "surfaces": [],
+        "artifacts": [
+          "host-join journey contract",
+          "focus maps",
+          "copy table"
+        ]
+      },
+      "evidenceRequired": [
+        "controller-only walkthrough",
+        "keyboard and screen-reader review",
+        "reduced-motion behavior",
+        "44-pixel target review"
+      ],
+      "exitCriteria": [
+        "a player always knows the current state",
+        "cancel and retry are deterministic",
+        "focus restores correctly after every terminal path"
+      ],
+      "startedAt": null,
+      "lastEvidenceAt": null,
+      "exactEvidence": [],
+      "blocker": null,
+      "unblockOwner": null,
+      "nextAction": "Start once PLAY-002 fixes readiness states and reasons.",
+      "rollbackPoint": "The approved PLAY-001 copy and action vocabulary."
+    },
+    {
+      "id": "QA-001",
+      "title": "Build the two-to-four-player acceptance harness",
+      "priority": "P0",
+      "status": "planned",
+      "ownerLane": "qa-observability",
+      "reviewerLane": "program-ops",
+      "approvalLanes": [
+        "security-privacy",
+        "compatibility-lab",
+        "player-experience"
+      ],
+      "dependencies": [
+        "PLAY-002",
+        "SEC-001",
+        "NET-001",
+        "COMPAT-001",
+        "UX-001"
+      ],
+      "objective": "Produce reproducible multi-client evidence across supported operating systems, network conditions, controllers, routes, and player counts.",
+      "nonGoals": [
+        "declare universal compatibility",
+        "replace manual accessibility review",
+        "publish private diagnostics"
+      ],
+      "branch": null,
+      "worktree": null,
+      "scope": {
+        "files": [],
+        "surfaces": [],
+        "artifacts": [
+          "automated harness",
+          "manual acceptance matrix",
+          "release evidence schema"
+        ]
+      },
+      "evidenceRequired": [
+        "two-to-four-player runs",
+        "fault injection",
+        "artifact hashes",
+        "clean teardown proof",
+        "rollback drill"
+      ],
+      "exitCriteria": [
+        "P0 route tuples are reproducible",
+        "failures are classified by stable reason",
+        "release gate can be rerun by an independent reviewer"
+      ],
+      "startedAt": null,
+      "lastEvidenceAt": null,
+      "exactEvidence": [],
+      "blocker": null,
+      "unblockOwner": null,
+      "nextAction": "Design fixtures in parallel, but do not mark ready until all contract dependencies complete.",
+      "rollbackPoint": "The exact approved pure-module sequence."
+    },
+    {
+      "id": "ANALYTICS-001",
+      "title": "Define the privacy-safe multiplayer KPI dictionary",
+      "priority": "P1",
+      "status": "ready",
+      "ownerLane": "analytics",
+      "reviewerLane": "security-privacy",
+      "approvalLanes": [
+        "program-ops",
+        "growth-community",
+        "monetization"
+      ],
+      "dependencies": [],
+      "objective": "Define aggregate and opt-in evidence for awareness, invitation, readiness, connection, gameplay, retention, contribution, and cost.",
+      "nonGoals": [
+        "track personal game libraries",
+        "sell user data",
+        "require account identity",
+        "invent traction"
+      ],
+      "branch": null,
+      "worktree": null,
+      "scope": {
+        "files": [],
+        "surfaces": [],
+        "artifacts": [
+          "metric dictionary",
+          "data-minimization matrix"
+        ]
+      },
+      "evidenceRequired": [
+        "event definition",
+        "aggregation level",
+        "retention period",
+        "consent basis",
+        "hard evidence vs directional signal"
+      ],
+      "exitCriteria": [
+        "every metric has numerator and denominator",
+        "no metric requires player identity",
+        "unknown baselines remain explicit"
+      ],
+      "startedAt": null,
+      "lastEvidenceAt": null,
+      "exactEvidence": [],
+      "blocker": null,
+      "unblockOwner": null,
+      "nextAction": "Assign one clean artifact-only task and return the metric dictionary for privacy review.",
+      "rollbackPoint": "No telemetry implementation; retain the existing local-first privacy posture."
+    },
+    {
+      "id": "MON-001",
+      "title": "Model supporter, sponsor, and optional relay economics",
+      "priority": "P1",
+      "status": "ready",
+      "ownerLane": "monetization",
+      "reviewerLane": "analytics",
+      "approvalLanes": [
+        "security-privacy",
+        "program-ops"
+      ],
+      "dependencies": [],
+      "objective": "Build a transparent cost and trust model for supporter memberships, sponsorships, grants, and optional relay capacity.",
+      "nonGoals": [
+        "paywall direct peer-to-peer play",
+        "degrade the free route",
+        "purchase services",
+        "promise pricing or partner terms"
+      ],
+      "branch": null,
+      "worktree": null,
+      "scope": {
+        "files": [],
+        "surfaces": [],
+        "artifacts": [
+          "relay cost envelope",
+          "ethical revenue hypotheses"
+        ]
+      },
+      "evidenceRequired": [
+        "unit-cost ranges",
+        "assumptions",
+        "demand scenarios",
+        "trust constraints",
+        "stop-loss and rollback criteria"
+      ],
+      "exitCriteria": [
+        "verified costs are separated from assumptions",
+        "free local and direct paths remain protected",
+        "no scenario depends on selling user data"
+      ],
+      "startedAt": null,
+      "lastEvidenceAt": null,
+      "exactEvidence": [],
+      "blocker": null,
+      "unblockOwner": null,
+      "nextAction": "Produce a low/base/high model and identify which unknowns require technical measurement before pricing.",
+      "rollbackPoint": "No spending or product commitment; discard unsupported pricing hypotheses."
+    },
+    {
+      "id": "GROWTH-001",
+      "title": "Prepare verified multiplayer tester recruitment",
+      "priority": "P1",
+      "status": "ready",
+      "ownerLane": "growth-community",
+      "reviewerLane": "qa-observability",
+      "approvalLanes": [
+        "security-privacy",
+        "program-ops"
+      ],
+      "dependencies": [],
+      "objective": "Create a truthful recruitment and proof-capture plan for regional, controller, OS, and network diversity.",
+      "nonGoals": [
+        "claim that online play is universally available",
+        "publish unreviewed footage",
+        "depend on Discord",
+        "collect unnecessary personal data"
+      ],
+      "branch": null,
+      "worktree": null,
+      "scope": {
+        "files": [],
+        "surfaces": [
+          "YouTube",
+          "TikTok",
+          "Reddit",
+          "GitHub Discussions",
+          "public site"
+        ],
+        "artifacts": [
+          "tester cohort plan",
+          "proof checklist"
+        ]
+      },
+      "evidenceRequired": [
+        "target cohort gaps",
+        "CTA destination",
+        "consent and privacy copy",
+        "publication approval gate",
+        "measured response"
+      ],
+      "exitCriteria": [
+        "recruitment asks for exact useful evidence",
+        "claims are bounded by QA status",
+        "testers have a clear safe reporting path"
+      ],
+      "startedAt": null,
+      "lastEvidenceAt": null,
+      "exactEvidence": [],
+      "blocker": null,
+      "unblockOwner": null,
+      "nextAction": "Draft the cohort matrix and messages, but hold publication until the General Orchestrator approves the exact proof claim.",
+      "rollbackPoint": "No posts or account changes; retain drafts only."
+    },
+    {
+      "id": "PARTNER-001",
+      "title": "Qualify relay, emulator, controller, and creator partners",
+      "priority": "P2",
+      "status": "planned",
+      "ownerLane": "partnerships",
+      "reviewerLane": "program-ops",
+      "approvalLanes": [
+        "security-privacy",
+        "monetization",
+        "compatibility-lab"
+      ],
+      "dependencies": [
+        "MON-001",
+        "COMPAT-001"
+      ],
+      "objective": "Build a prioritized partner pipeline grounded in real technical, distribution, or funding fit.",
+      "nonGoals": [
+        "send spam",
+        "promise exclusivity",
+        "commit budget",
+        "misrepresent user or compatibility evidence"
+      ],
+      "branch": null,
+      "worktree": null,
+      "scope": {
+        "files": [],
+        "surfaces": [],
+        "artifacts": [
+          "partner scorecard",
+          "approved outreach drafts"
+        ]
+      },
+      "evidenceRequired": [
+        "fit rationale",
+        "public evidence",
+        "mutual value",
+        "risk and conflict review",
+        "owner approval gate"
+      ],
+      "exitCriteria": [
+        "each target has a specific evidence-backed reason",
+        "outreach contains no unsupported claims",
+        "no commitment is sent without approval"
+      ],
+      "startedAt": null,
+      "lastEvidenceAt": null,
+      "exactEvidence": [],
+      "blocker": null,
+      "unblockOwner": null,
+      "nextAction": "Research candidates now, but wait for MON-001 and COMPAT-001 before promoting to ready.",
+      "rollbackPoint": "No outreach sent and no external commitment made."
+    },
+    {
+      "id": "REL-001",
+      "title": "Integrate the first dependable online-play slice",
+      "priority": "P0",
+      "status": "planned",
+      "ownerLane": "program-ops",
+      "reviewerLane": "qa-observability",
+      "approvalLanes": [
+        "security-privacy",
+        "compatibility-lab",
+        "player-experience"
+      ],
+      "dependencies": [
+        "QA-001"
+      ],
+      "objective": "Integrate only the exact approved sequence for the first end-to-end online-play slice with reproducible tests and rollback.",
+      "nonGoals": [
+        "merge unrelated UI or marketing work",
+        "accept moving branch names instead of commits",
+        "skip live multi-client evidence"
+      ],
+      "branch": null,
+      "worktree": null,
+      "scope": {
+        "files": [],
+        "surfaces": [],
+        "artifacts": [
+          "integration branch",
+          "release packet",
+          "rollback proof"
+        ]
+      },
+      "evidenceRequired": [
+        "exact ancestry",
+        "two-to-four-player evidence",
+        "full CI",
+        "checksums",
+        "clean worktree",
+        "rollback drill"
+      ],
+      "exitCriteria": [
+        "integration contains only approved commits",
+        "all product and trust gates pass",
+        "main can be advanced or left untouched with a clear reason"
+      ],
+      "startedAt": null,
+      "lastEvidenceAt": null,
+      "exactEvidence": [],
+      "blocker": null,
+      "unblockOwner": null,
+      "nextAction": "Remain planned until QA-001 completes; prepare the integration checklist without reserving product files.",
+      "rollbackPoint": "The exact main commit named when the integration task is activated."
+    }
+  ],
+  "risks": [
+    {
+      "id": "RISK-001",
+      "severity": "high",
+      "ownerLane": "multiplayer-platform",
+      "risk": "NAT and firewall diversity can make direct peer-to-peer success unpredictable.",
+      "mitigation": "Measure before launch, return precise diagnostics, and design an optional transparent relay fallback."
+    },
+    {
+      "id": "RISK-002",
+      "severity": "high",
+      "ownerLane": "compatibility-lab",
+      "risk": "Any-game language can overstate engine, ownership, audio, controller, or determinism support.",
+      "mitigation": "Route every exact tuple to verified, experimental, external, or blocked with evidence."
+    },
+    {
+      "id": "RISK-003",
+      "severity": "high",
+      "ownerLane": "security-privacy",
+      "risk": "Invitations and unauthenticated discovery can be replayed, substituted, or abused.",
+      "mitigation": "Use bounded short-lived invitations, authenticated authority, exactly-once slots, and abuse tests."
+    },
+    {
+      "id": "RISK-004",
+      "severity": "medium",
+      "ownerLane": "program-ops",
+      "risk": "Parallel teams can duplicate work, collide on files, or leave rejected work without closure.",
+      "mitigation": "One active item per owner lane, exact scope locks, reviewer-owned remediation, and stale-task escalation."
+    },
+    {
+      "id": "RISK-005",
+      "severity": "medium",
+      "ownerLane": "monetization",
+      "risk": "Relay costs can grow faster than voluntary funding.",
+      "mitigation": "Set explicit capacity, cost, consent, and stop-loss limits before deployment."
     }
   ]
 }

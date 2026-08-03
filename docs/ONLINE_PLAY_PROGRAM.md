@@ -6,6 +6,17 @@ A friend can receive an invitation, pass readiness checks, and reach responsive 
 
 GameDeck should not pretend that every title supports the same network model. It should choose the best safe route, explain why, and recover cleanly when the network, emulator, controller, or game cannot support the preferred path.
 
+## Initial service-level targets
+
+These are product targets, not claims about current production performance. They must be measured by QA before publication.
+
+- Invitation open to playable session: p95 at or below ten minutes for a supported, already-installed route.
+- Ready lobby to route decision: p95 at or below thirty seconds, including a direct-path result or a clear relay/repair decision.
+- Disconnect input release-all: p95 at or below 250 milliseconds after disconnect is detected.
+- Reconnect decision: p95 at or below ten seconds, ending in resumed play or one stable recovery action.
+- Every terminal failure returns one public reason, one action, and no private path, token, library, or network detail.
+- Video adaptation may reduce visual quality before it degrades input responsiveness.
+
 ## Universal play routing
 
 Every game resolves to one explicit route:
@@ -94,6 +105,28 @@ The route decision must be deterministic, versioned, locally explainable, and ne
 4. Publish a reproducible multiplayer release matrix and public reliability dashboard based on aggregate, privacy-safe evidence.
 5. Run recurring community playtests across multiple regions and network types.
 6. Establish partner validation with emulator, controller, and networking communities without making unsupported compatibility claims.
+
+## Program increments
+
+### Increment 0: shared contracts
+
+Freeze route, readiness, public reason, copy, action, lifecycle, cleanup, focus, security, and rollback semantics across Runtime, Compatibility, Player Experience, Security, and Integration QA.
+
+### Increment 1: pure models
+
+Implement readiness, invitations, slot consumption, state transitions, reconnect, route choice, and diagnostics as pure modules with exhaustive tests and no product side effects.
+
+### Increment 2: injected adapters
+
+Introduce fake process, signaling, capture, input, transport, and relay adapters. Prove ordering, idempotency, timeout, stale-event rejection, and cleanup before real integrations.
+
+### Increment 3: live two-player slice
+
+Validate one exact supported route across host and guest with controller input, audio mode, network diagnostics, reconnect, teardown, privacy review, and rollback evidence.
+
+### Increment 4: compatibility and scale
+
+Expand the evidence matrix, mixed local/remote slots, three-to-four-player sessions, regional networks, relay fallback, and community playtests without broadening claims beyond verified tuples.
 
 ## Stage gates
 
