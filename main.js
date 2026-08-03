@@ -1558,8 +1558,13 @@ async function netplayMatchInfo(file) {
   }
 }
 
+const MAX_REMOTE_PLAY_CODE_LENGTH = 64 * 1024;
+const MAX_REMOTE_PLAY_COMPRESSED_BYTES = 48 * 1024;
+const MAX_REMOTE_PLAY_PAYLOAD_BYTES = 256 * 1024;
+
 function encodeRemotePlayCode(prefix, payload) {
   const json = Buffer.from(JSON.stringify(payload));
+  if (json.length > MAX_REMOTE_PLAY_PAYLOAD_BYTES) throw Error('Remote Play invitation data is too large.');
   const compressed = zlib.brotliCompressSync(json, {
     params: {
       [zlib.constants.BROTLI_PARAM_QUALITY]: 11,
@@ -1572,15 +1577,21 @@ function encodeRemotePlayCode(prefix, payload) {
 
 function decodeRemotePlayCode(value, acceptedPrefixes = []) {
   const text = String(value || '').trim();
+  if (!text || text.length > MAX_REMOTE_PLAY_CODE_LENGTH) throw Error('This Remote Play code is empty or too large.');
   const prefix = acceptedPrefixes.find(candidate => text.startsWith(`${candidate}.`));
   if (!prefix) throw Error(`Expected a ${acceptedPrefixes.join(' or ')} code.`);
   const encoded = text.slice(prefix.length + 1);
   let payload;
+  if (!/^[A-Za-z0-9_-]+$/.test(encoded)) throw Error('This Remote Play code is malformed.');
   if (prefix.endsWith('2')) {
     const compressed = Buffer.from(encoded, 'base64url');
-    payload = JSON.parse(zlib.brotliDecompressSync(compressed).toString('utf8'));
+    if (!compressed.length || compressed.length > MAX_REMOTE_PLAY_COMPRESSED_BYTES) throw Error('This Remote Play code is too large.');
+    const decoded = zlib.brotliDecompressSync(compressed, { maxOutputLength: MAX_REMOTE_PLAY_PAYLOAD_BYTES });
+    payload = JSON.parse(decoded.toString('utf8'));
   } else {
-    payload = JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8'));
+    const decoded = Buffer.from(encoded, 'base64url');
+    if (!decoded.length || decoded.length > MAX_REMOTE_PLAY_PAYLOAD_BYTES) throw Error('This Remote Play code is too large.');
+    payload = JSON.parse(decoded.toString('utf8'));
   }
   if (payload?.version !== 1) throw Error('This Remote Play code uses an unsupported version.');
   if (payload.expiresAt && Date.now() > Number(payload.expiresAt)) throw Error('This Remote Play code has expired.');

@@ -6,6 +6,8 @@ const crypto = require("crypto");
 const { spawn, spawnSync } = require("child_process");
 
 const LOBBY_LIST_URL = "http://lobby.libretro.com/list";
+const MAX_INVITE_LENGTH = 32 * 1024;
+const MAX_INVITE_PAYLOAD_BYTES = 24 * 1024;
 const digestCache = new Map();
 const RELAYS = Object.freeze({
   nyc: { id: "nyc", label: "New York", address: "us-east1.relay.retroarch.com", port: 55435 },
@@ -45,6 +47,7 @@ function encodeInvite(payload) {
 function decodeInvite(value) {
   let text = String(value || "").trim();
   if (!text) throw new Error("Paste a GameDeck multiplayer invite.");
+  if (text.length > MAX_INVITE_LENGTH) throw new Error("This GameDeck invite is too large.");
   if (/^gamedeck:\/\//i.test(text)) {
     try {
       const url = new URL(text);
@@ -55,13 +58,16 @@ function decodeInvite(value) {
   }
   const encoded = text.startsWith("GDPLAY1.") ? text.slice("GDPLAY1.".length) : text;
   try {
-    const payload = JSON.parse(Buffer.from(encoded, "base64url").toString("utf8"));
+    if (!encoded || !/^[A-Za-z0-9_-]+$/.test(encoded)) throw new Error("This is not a valid GameDeck multiplayer invite.");
+    const decoded = Buffer.from(encoded, "base64url");
+    if (!decoded.length || decoded.length > MAX_INVITE_PAYLOAD_BYTES) throw new Error("This GameDeck invite is too large.");
+    const payload = JSON.parse(decoded.toString("utf8"));
     if (payload?.version !== 1 || !payload?.relay?.address || !payload?.relay?.session) {
       throw new Error("Invite data is incomplete.");
     }
     return payload;
   } catch (error) {
-    if (error.message === "Invite data is incomplete.") throw error;
+    if (["Invite data is incomplete.", "This GameDeck invite is too large.", "This is not a valid GameDeck multiplayer invite."].includes(error.message)) throw error;
     throw new Error("This is not a valid GameDeck multiplayer invite.");
   }
 }
