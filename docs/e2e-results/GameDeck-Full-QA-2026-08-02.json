@@ -44,6 +44,10 @@
       "sandbox": true,
       "webSecurity": true,
       "nodeGlobalsExposed": false
+    },
+    "focusReturn": {
+      "statusCenter": "headerMenuToggle",
+      "gameDeckLive": "streamToggle"
     }
   },
   "multiplayer": {
@@ -70,10 +74,10 @@
   "packaging": {
     "runtimeCacheMiB": 412.2,
     "unpackedFiles": 92,
-    "unpackedBytes": 813142826,
+    "unpackedBytes": 813142222,
     "freshProfileRuntimeExtraction": "pass",
     "packagedStartup": "pass",
-    "appAsarBytes": 4385486,
+    "appAsarBytes": 4384882,
     "webBrandKitExcluded": true,
     "unpackedMiB": 775.5
   },
