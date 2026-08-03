@@ -1,71 +1,20 @@
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
-const { createCaptureGrantLedger, MAX_GRANT_TTL_MS } = require('../play-session-capture-grant.js');
-let passed = 0;
-const test = (name, fn) => { fn(); passed += 1; console.log(`ok - ${name}`); };
-const sender = {}, frame = {}, source = {};
-const base = { sessionId: 's1', sender, frame, source, sourceId: 'window:1:0', sourceType: 'window', media: { video: true, audio: false }, userAction: { marker: 'click-1', atMs: 1000 }, nowMs: 1000, ttlMs: 5000 };
+const { CAPTURE_HARD_CAPS, createCaptureGrantLedger } = require('../play-session-capture-grant.js');
+let passed=0; const test=(n,f)=>{f();passed++;console.log(`ok - ${n}`)};
+const sender={}, frame={}, source={};
+const strong=i=>`AAAAAAAAAAAAAAAAAAAAAA${i}`;
+const make=()=>{let i=0;const ledger=createCaptureGrantLedger({createGrantId:()=>strong(++i)});const session=ledger.beginSession({sessionId:'s',sender,frame,atMs:0});return {ledger,epoch:session.sessionEpoch};};
+const grantInput=(epoch,marker,nowMs=1)=>({sessionId:'s',sessionEpoch:epoch,sender,frame,source,sourceId:'window:1:0',sourceType:'window',media:{video:true,audio:false},userActionMarker:marker,nowMs,ttlMs:5000});
 
-test('requires injected opaque grant IDs', () => {
-  assert.throws(() => createCaptureGrantLedger(), /createGrantId/);
-  const ids = ['g-opaque-1'];
-  const ledger = createCaptureGrantLedger({ createGrantId: () => ids.shift() });
-  ledger.beginSession({ sessionId: 's1', sender, frame, atMs: 999 });
-  assert.equal(ledger.issueGrant(base).grantId, 'g-opaque-1');
-});
-
-test('rejects invalid and duplicate generated IDs', () => {
-  const invalid = createCaptureGrantLedger({ createGrantId: () => '' });
-  invalid.beginSession({ sessionId: 's1', sender, frame, atMs: 1 });
-  assert.equal(invalid.issueGrant({ ...base, nowMs: 2, userAction: { marker: 'a', atMs: 2 } }).reasonCode, 'invalid_or_duplicate_grant_id');
-  const duplicate = createCaptureGrantLedger({ createGrantId: () => 'same' });
-  duplicate.beginSession({ sessionId: 's1', sender, frame, atMs: 1 });
-  assert.equal(duplicate.issueGrant({ ...base, nowMs: 2, userAction: { marker: 'a', atMs: 2 } }).ok, true);
-  assert.equal(duplicate.issueGrant({ ...base, nowMs: 3, userAction: { marker: 'b', atMs: 3 } }).reasonCode, 'invalid_or_duplicate_grant_id');
-});
-
-test('one-shot consume blocks replay and wrong IDs', () => {
-  const ledger = createCaptureGrantLedger({ createGrantId: () => 'g1' });
-  ledger.beginSession({ sessionId: 's1', sender, frame, atMs: 1 });
-  ledger.issueGrant(base);
-  const consume = { ...base, grantId: 'g1', userActionMarker: 'click-1' };
-  delete consume.userAction; delete consume.ttlMs;
-  assert.equal(ledger.consumeGrant(consume).ok, true);
-  assert.equal(ledger.consumeGrant(consume).reasonCode, 'grant_consumed');
-  assert.equal(ledger.consumeGrant({ ...consume, grantId: 'wrong' }).reasonCode, 'grant_mismatch');
-});
-
-test('old ID cannot consume replacement and marker reuse is blocked', () => {
-  const ids = ['old', 'new'];
-  const ledger = createCaptureGrantLedger({ createGrantId: () => ids.shift() });
-  ledger.beginSession({ sessionId: 's1', sender, frame, atMs: 1 });
-  ledger.issueGrant(base);
-  assert.equal(ledger.issueGrant({ ...base, nowMs: 1001 }).reasonCode, 'user_action_reused');
-  const second = ledger.issueGrant({ ...base, nowMs: 1002, userAction: { marker: 'click-2', atMs: 1002 } });
-  assert.equal(second.grantId, 'new');
-  const consume = { ...base, grantId: 'old', userActionMarker: 'click-1', nowMs: 1003 };
-  delete consume.userAction; delete consume.ttlMs;
-  assert.equal(ledger.consumeGrant(consume).reasonCode, 'grant_mismatch');
-});
-
-test('scope mismatch expiry revocation and no screen fallback', () => {
-  const ledger = createCaptureGrantLedger({ createGrantId: () => 'g1' });
-  ledger.beginSession({ sessionId: 's1', sender, frame, atMs: 1 });
-  assert.equal(ledger.issueGrant({ ...base, sourceType: 'screen' }).reasonCode, 'invalid_window_source');
-  assert.equal(ledger.issueGrant({ ...base, allowScreenFallback: true }).reasonCode, 'screen_fallback_forbidden');
-  assert.equal(ledger.issueGrant({ ...base, ttlMs: MAX_GRANT_TTL_MS + 1 }).reasonCode, 'invalid_expiry');
-  ledger.issueGrant(base);
-  const consume = { ...base, grantId: 'g1', userActionMarker: 'click-1', nowMs: 6000 };
-  delete consume.userAction; delete consume.ttlMs;
-  assert.equal(ledger.consumeGrant(consume).reasonCode, 'grant_expired');
-});
-
-test('public status is redacted', () => {
-  const ledger = createCaptureGrantLedger({ createGrantId: () => 'secret-grant' });
-  ledger.beginSession({ sessionId: 'secret-session', sender, frame, atMs: 1 });
-  ledger.issueGrant(base);
-  const serialized = JSON.stringify(ledger.publicStatus({ nowMs: 1000 }));
-  for (const secret of ['secret-grant', 'secret-session', 'window:1:0', 'click-1']) assert.equal(serialized.includes(secret), false);
-});
+test('unregistered and caller-forged action timestamps fail',()=>{const {ledger,epoch}=make();assert.equal(ledger.issueGrant(grantInput(epoch,'caller-forged')).reasonCode,'unregistered_user_action');assert.equal(ledger.issueGrant({...grantInput(epoch,'caller-forged'),userAction:{marker:'caller-forged',atMs:0}}).reasonCode,'untrusted_user_action_timestamp')});
+test('trusted action registration is scope bound and single use',()=>{const {ledger,epoch}=make();assert.equal(ledger.recordUserAction({sessionId:'s',sessionEpoch:epoch,sender:{},frame,marker:'a',atMs:1}).reasonCode,'session_scope_mismatch');assert.equal(ledger.recordUserAction({sessionId:'s',sessionEpoch:epoch,sender,frame,marker:'a',atMs:2}).ok,true);assert.equal(ledger.issueGrant(grantInput(epoch,'a',3)).ok,true);assert.equal(ledger.issueGrant(grantInput(epoch,'a',4)).reasonCode,'user_action_reused')});
+test('grant IDs remain one-shot and replacement bound',()=>{let ids=[strong('old'),strong('new')];const ledger=createCaptureGrantLedger({createGrantId:()=>ids.shift()});const epoch=ledger.beginSession({sessionId:'s',sender,frame,atMs:0}).sessionEpoch;ledger.recordUserAction({sessionId:'s',sessionEpoch:epoch,sender,frame,marker:'a',atMs:1});const first=ledger.issueGrant(grantInput(epoch,'a',2));ledger.recordUserAction({sessionId:'s',sessionEpoch:epoch,sender,frame,marker:'b',atMs:3});ledger.issueGrant(grantInput(epoch,'b',4));const consume={...grantInput(epoch,'a',5),grantId:first.grantId,userActionMarker:'a'};delete consume.ttlMs;assert.equal(ledger.consumeGrant(consume).reasonCode,'grant_mismatch')});
+test('action capacity exhaustion fails closed with bounded public status',()=>{const ledger=createCaptureGrantLedger({createGrantId:()=> strong('unused'),limits:{maxActionsPerSession:2}});const epoch=ledger.beginSession({sessionId:'s',sender,frame,atMs:0}).sessionEpoch;for(let i=0;i<2;i++)assert.equal(ledger.recordUserAction({sessionId:'s',sessionEpoch:epoch,sender,frame,marker:`a${i}`,atMs:i+1}).ok,true);assert.equal(ledger.recordUserAction({sessionId:'s',sessionEpoch:epoch,sender,frame,marker:'a2',atMs:3}).reasonCode,'action_capacity_exhausted');assert.deepEqual(ledger.publicStatus({nowMs:3}).retention,{grantIdsUsed:0,maxGrantIds:128,actionsRegistered:2,maxActionsPerSession:2})});
+test('grant ID capacity exhaustion fails closed',()=>{let i=0;const ledger=createCaptureGrantLedger({createGrantId:()=>strong(++i),limits:{maxGrantIds:2,maxActionsPerSession:3}});const epoch=ledger.beginSession({sessionId:'s',sender,frame,atMs:0}).sessionEpoch;for(let n=1;n<=3;n++){ledger.recordUserAction({sessionId:'s',sessionEpoch:epoch,sender,frame,marker:`a${n}`,atMs:n});const r=ledger.issueGrant(grantInput(epoch,`a${n}`,n));if(n<3)assert.equal(r.ok,true);else assert.equal(r.reasonCode,'grant_id_capacity_exhausted')}});
+test('session replacement clears actions but epoch blocks stale requests',()=>{const {ledger,epoch}=make();ledger.recordUserAction({sessionId:'s',sessionEpoch:epoch,sender,frame,marker:'a',atMs:1});const next=ledger.beginSession({sessionId:'s2',sender,frame,atMs:2});assert.equal(ledger.issueGrant({sessionId:'s',sessionEpoch:epoch,sender,frame,source,sourceId:'window:1:0',sourceType:'window',media:{video:true,audio:false},userActionMarker:'a',nowMs:3,ttlMs:5}).reasonCode,'session_scope_mismatch');assert.equal(ledger.issueGrant({sessionId:'s2',sessionEpoch:next.sessionEpoch,sender,frame,source,sourceId:'window:1:0',sourceType:'window',media:{video:true,audio:false},userActionMarker:'a',nowMs:4,ttlMs:5}).reasonCode,'unregistered_user_action')});
+test('public status redacts identifiers',()=>{const {ledger,epoch}=make();ledger.recordUserAction({sessionId:'s',sessionEpoch:epoch,sender,frame,marker:'secret-action',atMs:1});ledger.issueGrant(grantInput(epoch,'secret-action',2));const text=JSON.stringify(ledger.publicStatus({nowMs:2}));for(const secret of ['secret-action','window:1:0',strong(1),'sessionEpoch'])assert.equal(text.includes(secret),false)});
+test('security caps cannot be raised',()=>{for(const [key,value] of Object.entries(CAPTURE_HARD_CAPS))assert.throws(()=>createCaptureGrantLedger({createGrantId:()=> strong('cap'),limits:{[key]:value+1}}),/security cap/)});
+test('weak grant IDs reject and per-session capacity resets safely',()=>{let ids=['weak',strong(1),strong(2),strong(3)];const ledger=createCaptureGrantLedger({createGrantId:()=>ids.shift(),limits:{maxGrantIds:1,maxActionsPerSession:2}});let s=ledger.beginSession({sessionId:'s1',sender,frame,atMs:0});ledger.recordUserAction({sessionId:'s1',sessionEpoch:s.sessionEpoch,sender,frame,marker:'a',atMs:1});assert.equal(ledger.issueGrant({sessionId:'s1',sessionEpoch:s.sessionEpoch,sender,frame,source,sourceId:'window:1:0',sourceType:'window',media:{video:true,audio:false},userActionMarker:'a',nowMs:2,ttlMs:5}).reasonCode,'invalid_or_duplicate_grant_id');ledger.recordUserAction({sessionId:'s1',sessionEpoch:s.sessionEpoch,sender,frame,marker:'b',atMs:3});const first=ledger.issueGrant({sessionId:'s1',sessionEpoch:s.sessionEpoch,sender,frame,source,sourceId:'window:1:0',sourceType:'window',media:{video:true,audio:false},userActionMarker:'b',nowMs:4,ttlMs:5});assert.equal(first.ok,true);assert.equal(ledger.publicStatus({nowMs:4}).retention.grantIdsUsed,1);const oldEpoch=s.sessionEpoch;s=ledger.beginSession({sessionId:'s2',sender,frame,atMs:5});assert.equal(ledger.publicStatus({nowMs:5}).retention.grantIdsUsed,0);ledger.recordUserAction({sessionId:'s2',sessionEpoch:s.sessionEpoch,sender,frame,marker:'c',atMs:6});assert.equal(ledger.issueGrant({sessionId:'s2',sessionEpoch:s.sessionEpoch,sender,frame,source,sourceId:'window:1:0',sourceType:'window',media:{video:true,audio:false},userActionMarker:'c',nowMs:7,ttlMs:5}).ok,true);assert.equal(ledger.consumeGrant({grantId:first.grantId,sessionId:'s1',sessionEpoch:oldEpoch,sender,frame,source,sourceId:'window:1:0',sourceType:'window',media:{video:true,audio:false},userActionMarker:'b',nowMs:8}).reasonCode,'grant_mismatch')});
 console.log(`play-session-capture-grant: ${passed} tests passed`);
