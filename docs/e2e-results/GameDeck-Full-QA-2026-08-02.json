@@ -120,5 +120,95 @@
     "No fresh native macOS or Linux binary execution in this Windows session.",
     "No attached physical Android or iOS device.",
     "No second remote guest computer in this pass."
-  ]
+  ],
+  "auditedThroughCommit": "7b7ecba",
+  "postAuditAddendum": {
+    "recordedAt": "2026-08-02T21:45:00-04:00",
+    "invitationBoundaries": {
+      "commit": "e495c8d",
+      "synchronized": {
+        "maxCodeBytes": 32768,
+        "maxDecodedBytes": 24576,
+        "strictBase64Url": true
+      },
+      "remotePlay": {
+        "maxCodeBytes": 65536,
+        "maxCompressedBytes": 49152,
+        "maxDecodedBytes": 262144,
+        "strictBase64Url": true
+      }
+    },
+    "liveInvitationRegression": {
+      "synchronized": {
+        "game": "Metal Slug 3",
+        "relay": "New York",
+        "inviteLength": 760,
+        "hostPhase": "ready",
+        "joinPhase": "ready",
+        "players": "2/2"
+      },
+      "remotePlay": {
+        "isolatedProfiles": 2,
+        "inviteLength": 1721,
+        "responseLength": 1306,
+        "hostAccepted": true,
+        "players": 2,
+        "videoAttached": true,
+        "player2InputEvents": 18,
+        "cleanTeardown": true
+      }
+    },
+    "gameDeckLiveSecurity": {
+      "commit": "9ae4adf",
+      "publicStatusExposesPairingCode": false,
+      "publicStatusExposesViewerIds": false,
+      "pairBodyLimitBytes": 8192,
+      "signalBodyLimitBytes": 65536,
+      "hostQueueLimit": 128,
+      "failedPairAttemptsBeforeRateLimit": 8,
+      "rateLimitWindowSeconds": 60,
+      "nextAttemptStatus": 429,
+      "unauthorizedLeaveStatus": 403,
+      "authorizedLeave": "pass"
+    },
+    "runtimeCacheBoundary": {
+      "commit": "354b919",
+      "maxAssetBytes": 1073741824,
+      "advertisedSizeEnforced": true,
+      "streamedSizeEnforced": true,
+      "missingOrUnderstatedContentLengthCovered": true,
+      "oversizedPartialRemoved": true,
+      "focusedRegression": "pass"
+    },
+    "playtestEventQa": {
+      "commit": "7b7ecba",
+      "firstViewport": true,
+      "states": [
+        "pre-live",
+        "61-minute countdown",
+        "live",
+        "expired"
+      ],
+      "exact61MinuteCopy": "Starts in 1 hour 1 minute",
+      "viewports": [
+        "desktop",
+        "tablet",
+        "phone"
+      ],
+      "horizontalOverflow": false,
+      "minimumDesktopActionHeightPx": 40,
+      "phoneActionLayout": "two-column",
+      "atomicLiveRegion": true,
+      "safeExternalLinks": true,
+      "visibleFocus": true,
+      "reducedMotionDisablesPulse": true
+    },
+    "consolidatedGate": {
+      "trackedFiles": 156,
+      "repositoryAudit": "pass",
+      "npmTest": "pass",
+      "runtimeCacheStreamLimitTest": "pass",
+      "gameDeckSmokeTest": "pass"
+    }
+  }
 }
