@@ -1,0 +1,324 @@
+{
+  "version": 1,
+  "updatedAt": "2026-08-03T13:44:00-04:00",
+  "northStar": "A friend can receive an invitation, pass readiness checks, and reach responsive gameplay in under ten minutes across the widest truthful set of legally owned games.",
+  "operatingPolicy": {
+    "mainProtected": true,
+    "oneOwnerPerFileOrSurface": true,
+    "rejectionRequiresRemediationPacket": true,
+    "reviewerOwnsClosure": true,
+    "exactCommitReview": true,
+    "noUnverifiedClaims": true,
+    "discordDependency": false,
+    "permissionPromptPolicy": "Approve Authenticated Shell prompts, then verify execution actually started."
+  },
+  "statuses": [
+    "planned",
+    "ready",
+    "active",
+    "blocked",
+    "review",
+    "approved",
+    "complete",
+    "paused"
+  ],
+  "handoffRequiredFields": [
+    "objective",
+    "done",
+    "changedScope",
+    "tests",
+    "risks",
+    "nextOwner",
+    "nextTask",
+    "doNotTouch",
+    "expectedReturn"
+  ],
+  "lanes": [
+    {
+      "id": "program-ops",
+      "name": "Program Operations and Integration",
+      "mission": "Maintain the dependency board, allocate non-overlapping ownership, verify handoffs, and protect main.",
+      "status": "active",
+      "ownerRole": "General Orchestrator",
+      "reviewerRole": "Independent Integration QA",
+      "dependencies": [],
+      "branch": "ops/team-operating-system-v2",
+      "worktree": "gamedeck-program-ops",
+      "scope": {
+        "files": [
+          "COLLAB_HANDOFF.md",
+          "docs/TEAM_OPERATING_SYSTEM.md",
+          "docs/ONLINE_PLAY_PROGRAM.md",
+          "ops/team-board.json",
+          "scripts/team-board-validate.mjs",
+          "scripts/team-board-validate.test.mjs",
+          "package.json"
+        ],
+        "surfaces": [],
+        "artifacts": []
+      },
+      "evidenceRequired": [
+        "clean worktree before task",
+        "npm test",
+        "git diff --check",
+        "exact commit and remote hash",
+        "independent review"
+      ],
+      "nextAction": "Publish and independently review the operating-system branch."
+    },
+    {
+      "id": "multiplayer-platform",
+      "name": "Multiplayer Platform and Network Reliability",
+      "mission": "Deliver dependable host, join, reconnect, NAT traversal, relay fallback, input, and stream behavior.",
+      "status": "ready",
+      "ownerRole": "Multiplayer Platform Architect",
+      "reviewerRole": "Network Reliability QA",
+      "dependencies": [
+        "program-ops"
+      ],
+      "branch": null,
+      "worktree": null,
+      "scope": {
+        "files": [],
+        "surfaces": [],
+        "artifacts": [
+          "multiplayer reliability plan"
+        ]
+      },
+      "evidenceRequired": [
+        "connection-state traces",
+        "latency and loss matrix",
+        "direct and relay path tests",
+        "failure diagnostics"
+      ],
+      "nextAction": "Define the 30/60/90-day network reliability plan and first bounded pure/test slice."
+    },
+    {
+      "id": "compatibility-lab",
+      "name": "Universal Game Compatibility Lab",
+      "mission": "Route each title truthfully to Couch, synchronized netplay, Remote Play, or external launch without overclaiming.",
+      "status": "ready",
+      "ownerRole": "Compatibility Lab Lead",
+      "reviewerRole": "Integration QA",
+      "dependencies": [
+        "multiplayer-platform"
+      ],
+      "branch": null,
+      "worktree": null,
+      "scope": {
+        "files": [],
+        "surfaces": [],
+        "artifacts": [
+          "universal route matrix"
+        ]
+      },
+      "evidenceRequired": [
+        "engine/core/OS/controller matrix",
+        "exact game evidence",
+        "fallback reason codes"
+      ],
+      "nextAction": "Create the universal play-route matrix and top compatibility gaps."
+    },
+    {
+      "id": "player-experience",
+      "name": "Multiplayer Player Experience",
+      "mission": "Make hosting and joining controller-first, accessible, truthful, and understandable in under ten minutes.",
+      "status": "ready",
+      "ownerRole": "Player Experience Lead",
+      "reviewerRole": "Accessibility QA",
+      "dependencies": [
+        "multiplayer-platform",
+        "compatibility-lab"
+      ],
+      "branch": null,
+      "worktree": null,
+      "scope": {
+        "files": [],
+        "surfaces": [],
+        "artifacts": [
+          "host-join journey contract"
+        ]
+      },
+      "evidenceRequired": [
+        "focus maps",
+        "copy table",
+        "reduced-motion behavior",
+        "controller-only walkthrough"
+      ],
+      "nextAction": "Define the host/join readiness, lobby, diagnostics, reconnect, and recovery contract."
+    },
+    {
+      "id": "security-privacy",
+      "name": "Security and Privacy",
+      "mission": "Protect invitations, signaling, input, capture, relay, release, and user data boundaries.",
+      "status": "ready",
+      "ownerRole": "Security Lead",
+      "reviewerRole": "Independent Security Reviewer",
+      "dependencies": [
+        "multiplayer-platform"
+      ],
+      "branch": null,
+      "worktree": null,
+      "scope": {
+        "files": [],
+        "surfaces": [],
+        "artifacts": [
+          "multiplayer threat model"
+        ]
+      },
+      "evidenceRequired": [
+        "threat model",
+        "abuse cases",
+        "bounded payload tests",
+        "privacy review"
+      ],
+      "nextAction": "Prioritize authenticated discovery, invitation replay protection, relay trust, and privacy-safe diagnostics."
+    },
+    {
+      "id": "qa-observability",
+      "name": "QA, Reliability, and Observability",
+      "mission": "Turn multiplayer promises into repeatable cross-platform, multi-client evidence and actionable diagnostics.",
+      "status": "ready",
+      "ownerRole": "Reliability QA Lead",
+      "reviewerRole": "Independent Integration QA",
+      "dependencies": [
+        "multiplayer-platform",
+        "compatibility-lab",
+        "player-experience",
+        "security-privacy"
+      ],
+      "branch": null,
+      "worktree": null,
+      "scope": {
+        "files": [],
+        "surfaces": [],
+        "artifacts": [
+          "multiplayer acceptance matrix"
+        ]
+      },
+      "evidenceRequired": [
+        "Windows/macOS/Linux matrix",
+        "two-to-four-player runs",
+        "NAT and packet-loss tests",
+        "artifact hashes"
+      ],
+      "nextAction": "Design the automated and manual acceptance matrix, evidence schema, and release gates."
+    },
+    {
+      "id": "growth-community",
+      "name": "Growth and Community",
+      "mission": "Acquire real players through truthful multiplayer proof, clear onboarding, and community feedback loops.",
+      "status": "ready",
+      "ownerRole": "Growth Lead",
+      "reviewerRole": "Brand and Evidence Reviewer",
+      "dependencies": [
+        "qa-observability"
+      ],
+      "branch": null,
+      "worktree": null,
+      "scope": {
+        "files": [],
+        "surfaces": [
+          "YouTube",
+          "TikTok",
+          "Reddit",
+          "GitHub Discussions",
+          "public site"
+        ],
+        "artifacts": []
+      },
+      "evidenceRequired": [
+        "live URLs",
+        "publication state",
+        "source footage",
+        "CTA destination",
+        "measured results"
+      ],
+      "nextAction": "Build a multiplayer proof campaign around verified host/join sessions and tester recruitment."
+    },
+    {
+      "id": "monetization",
+      "name": "Ethical Monetization",
+      "mission": "Fund relay infrastructure and development without paywalling local play, compatibility, or user-owned libraries.",
+      "status": "ready",
+      "ownerRole": "Monetization Architect",
+      "reviewerRole": "Trust and Product Reviewer",
+      "dependencies": [
+        "multiplayer-platform",
+        "analytics"
+      ],
+      "branch": null,
+      "worktree": null,
+      "scope": {
+        "files": [],
+        "surfaces": [],
+        "artifacts": [
+          "ethical revenue model"
+        ]
+      },
+      "evidenceRequired": [
+        "cost model",
+        "trust constraints",
+        "pricing hypotheses",
+        "rollback criteria"
+      ],
+      "nextAction": "Model supporter, sponsor, and optional relay-service paths with transparent costs."
+    },
+    {
+      "id": "analytics",
+      "name": "Privacy-Preserving Analytics",
+      "mission": "Measure awareness, invitation success, readiness, connection, gameplay, retention, and contribution without invasive telemetry.",
+      "status": "ready",
+      "ownerRole": "Analytics Lead",
+      "reviewerRole": "Privacy Reviewer",
+      "dependencies": [
+        "program-ops"
+      ],
+      "branch": null,
+      "worktree": null,
+      "scope": {
+        "files": [],
+        "surfaces": [],
+        "artifacts": [
+          "multiplayer KPI tree"
+        ]
+      },
+      "evidenceRequired": [
+        "hard evidence vs estimates",
+        "data minimization",
+        "opt-in design",
+        "metric definitions"
+      ],
+      "nextAction": "Define the multiplayer funnel, success events, evidence sources, and opt-in measurement plan."
+    },
+    {
+      "id": "partnerships",
+      "name": "Partnerships and Ecosystem",
+      "mission": "Develop relationships with emulator, relay, hardware, creator, and open-source communities.",
+      "status": "ready",
+      "ownerRole": "Partnerships Lead",
+      "reviewerRole": "Trust and Legal Reviewer",
+      "dependencies": [
+        "compatibility-lab",
+        "growth-community",
+        "monetization"
+      ],
+      "branch": null,
+      "worktree": null,
+      "scope": {
+        "files": [],
+        "surfaces": [],
+        "artifacts": [
+          "partner pipeline"
+        ]
+      },
+      "evidenceRequired": [
+        "fit rationale",
+        "public evidence",
+        "no unauthorized commitments",
+        "owner approval gates"
+      ],
+      "nextAction": "Map high-fit technical and distribution partners, then prepare non-spam outreach drafts."
+    }
+  ]
+}
