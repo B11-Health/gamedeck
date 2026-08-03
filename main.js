@@ -19,6 +19,12 @@ const {
   resolveCapabilitiesSafely,
   validateCapabilityFileArgument
 } = require('./play-session-manager');
+const {
+  chooseLibrarySystem,
+  parseArchiveEntryExtensions,
+  parseDiscHeaderSystem,
+  parseDolphinHeaderSystem
+} = require('./library-system-classifier');
 
 if (process.platform === 'win32') app.setAppUserModelId('io.gamedeck.launcher');
 
@@ -137,6 +143,11 @@ const defaultSettings = {
   sponsorManifestUrl: 'https://raw.githubusercontent.com/B11-Health/gamedeck/main/sponsors.json'
 };
 const runtimeSettings = { ...defaultSettings, ...readJson(SETTINGS_FILE, {}) };
+if (MANAGED_RUNTIME_PREFERRED) {
+  runtimeSettings.retroArchPath = MANAGED_RUNTIME_PATHS.retroArch;
+  runtimeSettings.retroArchCores = MANAGED_RUNTIME_PATHS.cores;
+  runtimeSettings.retroArchSystem = MANAGED_RUNTIME_PATHS.system;
+}
 const environmentOverrides = {
   libraryRoot: process.env.GAMEDECK_LIBRARY,
   rgsxRoot: process.env.GAMEDECK_RGSX_ROOT,
@@ -224,6 +235,12 @@ const emulatorPaths = {
   mame: MAME
 };
 
+const DOLPHIN_TOOL = firstExisting([
+  emulatorPaths.dolphin && path.join(path.dirname(emulatorPaths.dolphin), process.platform === 'win32' ? 'DolphinTool.exe' : 'dolphin-tool'),
+  process.platform === 'win32' && findOnPath(['DolphinTool.exe']),
+  process.platform !== 'win32' && findOnPath(['dolphin-tool'])
+].filter(Boolean));
+
 const firmwareSearchRoots = [
   path.join(process.env.APPDATA || '', 'RetroArch', 'system'),
   path.join(process.env.LOCALAPPDATA || '', 'RetroArch', 'system'),
@@ -263,6 +280,7 @@ const thumbnailRepos = {
   nds: 'Nintendo_-_Nintendo_DS',
   megadrive: 'Sega_-_Mega_Drive_-_Genesis',
   genesis: 'Sega_-_Mega_Drive_-_Genesis',
+  sega32x: 'Sega_-_32X',
   mastersystem: 'Sega_-_Master_System_-_Mark_III',
   gamegear: 'Sega_-_Game_Gear',
   segacd: 'Sega_-_Mega-CD_-_Sega_CD',
@@ -293,6 +311,7 @@ const systems = [
   { id: 'gba', name: 'Game Boy Advance', short: 'GBA', color: '#6366f1', folders: ['gba'], exts: ['.gba', '.zip'], core: coreFile('mgba_libretro'), icon: 'A' },
   { id: 'nds', name: 'Nintendo DS', short: 'NDS', color: '#64748b', folders: ['nds'], exts: ['.nds', '.zip'], core: coreFile('melondsds_libretro'), icon: 'DS' },
   { id: 'genesis', name: 'Sega Genesis', short: 'GENESIS', color: '#2563eb', folders: ['megadrive', 'genesis'], exts: ['.md', '.gen', '.bin', '.zip'], core: coreFile('genesis_plus_gx_libretro'), icon: 'SE' },
+  { id: 'sega32x', name: 'Sega 32X', short: '32X', color: '#334155', folders: ['sega32x', '32x'], exts: ['.32x', '.bin', '.zip'], core: coreFile('picodrive_libretro'), icon: '32' },
   { id: 'mastersystem', name: 'Sega Master System', short: 'MASTER SYSTEM', color: '#e11d48', folders: ['mastersystem'], exts: ['.sms', '.zip'], core: coreFile('genesis_plus_gx_libretro'), icon: 'MS' },
   { id: 'gamegear', name: 'Sega Game Gear', short: 'GAME GEAR', color: '#f43f5e', folders: ['gamegear'], exts: ['.gg', '.zip'], core: coreFile('genesis_plus_gx_libretro'), icon: 'GG' },
   { id: 'segacd', name: 'Sega CD', short: 'SEGA CD', color: '#3b82f6', folders: ['segacd', 'megacd'], exts: ['.cue', '.chd'], core: coreFile('genesis_plus_gx_libretro'), bios: ['bios_CD_E.bin', 'bios_CD_U.bin', 'bios_CD_J.bin'], biosDirs: [RA_SYSTEM, ...firmwareSearchRoots], icon: 'CD' },
@@ -304,7 +323,7 @@ const systems = [
   { id: 'mame', name: 'MAME', short: 'MAME', color: '#f43f8f', folders: ['mame', 'arcade'], exts: ['.zip', '.7z'], core: coreFile('mame_libretro'), exe: emulatorPaths.mame, preferExe: true, launchMode: 'mame', icon: 'M' },
   { id: 'ps1', name: 'PlayStation', short: 'PS1', color: '#94a3b8', folders: ['psx', 'ps1'], exts: ['.cue', '.chd', '.pbp'], core: coreFile('pcsx_rearmed_libretro'), exe: emulatorPaths.duckstation, preferExe: true, args: ['-batch', '-fullscreen'], biosPattern: /^scph[a-z0-9_-]*\.(?:bin|rom)$/i, biosHint: 'a BIOS file named like scph1001.bin or scph5500.rom', biosDirs: [path.join(localAppData, 'DuckStation', 'bios'), path.join(applicationSupport, 'DuckStation', 'bios'), path.join(HOME_DIR, '.local', 'share', 'duckstation', 'bios'), path.join(RGSX_ROOT, 'roms', 'bios')], icon: 'PS' },
   { id: 'ps2', name: 'PlayStation 2', short: 'PS2', color: '#3b82f6', folders: ['ps2'], exts: ['.iso', '.chd'], core: coreFile('play_libretro'), exe: emulatorPaths.pcsx2, preferExe: true, args: ['-fullscreen', '-batch', '--'], biosPattern: /^scph[a-z0-9_-]*\.(?:bin|rom)$/i, biosHint: 'a BIOS file named like scph39001.bin or scph70012.rom', biosDirs: [path.join(DOCUMENTS_DIR, 'PCSX2', 'bios'), path.join(applicationSupport, 'PCSX2', 'bios'), path.join(HOME_DIR, '.config', 'PCSX2', 'bios'), path.join(HOME_DIR, '.local', 'share', 'PCSX2', 'bios'), path.join(RGSX_ROOT, 'roms', 'bios')], icon: 'P2' },
-  { id: 'psp', name: 'PlayStation Portable', short: 'PSP', color: '#06b6d4', folders: ['psp'], exts: ['.iso', '.cso', '.pbp'], core: coreFile('ppsspp_libretro'), exe: emulatorPaths.ppsspp, preferExe: true, icon: 'PP' },
+  { id: 'psp', name: 'PlayStation Portable', short: 'PSP', color: '#06b6d4', folders: ['psp'], exts: ['.iso', '.cso', '.pbp', '.chd'], core: coreFile('ppsspp_libretro'), exe: emulatorPaths.ppsspp, preferExe: true, icon: 'PP' },
   { id: 'gamecube', name: 'Nintendo GameCube', short: 'GAMECUBE', color: '#7c3aed', folders: ['gamecube'], exts: ['.iso', '.gcm', '.rvz'], core: coreFile('dolphin_libretro'), exe: emulatorPaths.dolphin, preferExe: true, args: ['-b', '-e'], icon: 'GC' },
   { id: 'wii', name: 'Nintendo Wii', short: 'WII', color: '#0ea5e9', folders: ['wii'], exts: ['.wbfs', '.rvz'], core: coreFile('dolphin_libretro'), exe: emulatorPaths.dolphin, preferExe: true, args: ['-b', '-e'], icon: 'W' },
   { id: 'wiiu', name: 'Nintendo Wii U', short: 'WII U', color: '#00a2e8', folders: ['wiiu'], exts: ['.wud', '.wux', '.rpx'], exe: emulatorPaths.cemu, args: ['-f', '-g'], icon: 'WU' }
@@ -340,6 +359,9 @@ let arcadeAuditTask = null;
 let controllerHintsCache = null;
 const mameMetadataCache = new Map();
 const firmwareInventoryCache = new Map();
+const archiveSystemHintCache = new Map();
+const discSystemHintCache = new Map();
+let libraryFolderSystemIndex = null;
 let runtimeManager = null;
 let streamCaptureSourceId = '';
 let streamCaptureAudio = true;
@@ -507,6 +529,7 @@ function cleanName(file) {
   return leaf
     .replace(/\.[^.]+$/, '')
     .replace(/[_.]/g, ' ')
+    .replace(/^Sega\s*-\s*32X\s*/i, '')
     .replace(/\s*\[[^\]]*\]|\s*\([^)]*\)/g, '')
     .replace(/\s+/g, ' ')
     .trim();
@@ -787,14 +810,118 @@ function systemForFolder(folder) {
   return systems.find(system => system.folders.includes(key)) || null;
 }
 
+function canonicalLibraryRootKey(value) {
+  const resolved = path.resolve(value);
+  try {
+    const real = fs.realpathSync(resolved);
+    return process.platform === 'win32' ? real.toLowerCase() : real;
+  } catch {
+    return process.platform === 'win32' ? resolved.toLowerCase() : resolved;
+  }
+}
+
+function libraryFolderSystems(folder) {
+  if (!libraryFolderSystemIndex) {
+    const rootGroups = new Map();
+    const folderRoots = new Map();
+    for (const system of systems) {
+      for (const alias of system.folders) {
+        const key = canonicalLibraryRootKey(path.join(LIBRARY, alias));
+        folderRoots.set(alias, key);
+        const group = rootGroups.get(key) || new Map();
+        group.set(system.id, system);
+        rootGroups.set(key, group);
+      }
+    }
+    libraryFolderSystemIndex = new Map([...folderRoots].map(([alias, key]) => [alias, [...(rootGroups.get(key)?.values() || [])]]));
+  }
+  return libraryFolderSystemIndex.get(String(folder || '').toLowerCase()) || [];
+}
+
+function archiveContentExtensions(file) {
+  let fingerprint = '';
+  try {
+    const stat = fs.statSync(file);
+    fingerprint = stat.size + ':' + Math.floor(stat.mtimeMs);
+  } catch {
+    return new Set();
+  }
+  const cached = archiveSystemHintCache.get(file);
+  if (cached?.fingerprint === fingerprint) return cached.extensions;
+  if (!SEVEN_ZIP || !fs.existsSync(SEVEN_ZIP)) return new Set();
+  const listing = spawnSync(SEVEN_ZIP, ['l', '-ba', file], {
+    windowsHide: true,
+    encoding: 'utf8',
+    timeout: 6000,
+    maxBuffer: 2 * 1024 * 1024
+  });
+  const extensions = listing.status === 0 ? parseArchiveEntryExtensions(listing.stdout) : new Set();
+  archiveSystemHintCache.set(file, { fingerprint, extensions });
+  return extensions;
+}
+
+function rawDiscSystem(file) {
+  try {
+    const handle = fs.openSync(file, 'r');
+    const header = Buffer.alloc(512);
+    fs.readSync(handle, header, 0, header.length, 0);
+    fs.closeSync(handle);
+    return parseDiscHeaderSystem(header);
+  } catch {
+    return '';
+  }
+}
+
+function discSystemForFile(file) {
+  const extension = path.extname(file).toLowerCase();
+  if (extension === '.wbfs' || extension === '.wad') return 'wii';
+  if (extension === '.gcm' || extension === '.tgc') return 'gamecube';
+  let fingerprint = '';
+  try {
+    const stat = fs.statSync(file);
+    fingerprint = stat.size + ':' + Math.floor(stat.mtimeMs);
+  } catch {
+    return '';
+  }
+  const cached = discSystemHintCache.get(file);
+  if (cached?.fingerprint === fingerprint) return cached.systemId;
+  let systemId = ['.iso', '.gcm', '.rvz', '.wia', '.gcz'].includes(extension) ? rawDiscSystem(file) : '';
+  if (!systemId && DOLPHIN_TOOL && fs.existsSync(DOLPHIN_TOOL) && ['.rvz', '.wia', '.gcz', '.iso'].includes(extension)) {
+    const header = spawnSync(DOLPHIN_TOOL, ['header', '-i', file, '-j'], {
+      windowsHide: true,
+      encoding: 'utf8',
+      timeout: 10000,
+      maxBuffer: 1024 * 1024
+    });
+    if (header.status === 0) systemId = parseDolphinHeaderSystem(header.stdout);
+  }
+  if (!systemId) {
+    const name = path.basename(file);
+    if (/\bwii\b/i.test(name)) systemId = 'wii';
+    else if (/\bgamecube\b|\bgc\b/i.test(name)) systemId = 'gamecube';
+  }
+  discSystemHintCache.set(file, { fingerprint, systemId });
+  return systemId;
+}
+
 function detectSystem(file) {
   const relative = path.relative(LIBRARY, file);
   if (relative.startsWith('..') || path.isAbsolute(relative)) return null;
   const folder = relative.split(path.sep)[0].toLowerCase();
-  const byFolder = systemForFolder(folder);
-  if (byFolder) return byFolder;
-
+  const direct = systemForFolder(folder);
+  const candidates = libraryFolderSystems(folder);
   const extension = path.extname(file).toLowerCase();
+  const compatible = candidates.filter(system => system.exts.includes(extension));
+  const selected = chooseLibrarySystem(compatible, {
+    fileExtension: extension,
+    archiveExtensions: ['.zip', '.7z'].includes(extension) ? archiveContentExtensions(file) : new Set(),
+    discSystemId: ['.iso', '.gcm', '.rvz', '.wbfs', '.wia', '.gcz', '.tgc', '.wad'].includes(extension) ? discSystemForFile(file) : '',
+    directSystemId: direct?.id || '',
+    sharedRoot: new Set(candidates.map(system => system.id)).size > 1
+  });
+  if (selected) return selected;
+  if (direct && candidates.length <= 1 && direct.exts.includes(extension)) return direct;
+
   const matches = systems.filter(system => system.exts.includes(extension));
   return matches.length === 1 ? matches[0] : null;
 }
