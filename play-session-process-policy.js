@@ -1,9 +1,13 @@
 'use strict';
 
+const path = require('node:path');
+
 const PLATFORMS = Object.freeze(['win32', 'linux', 'darwin']);
 const STOP_PHASES = Object.freeze(['running', 'graceful_requested', 'escalated_requested', 'exited', 'verifying', 'stopped', 'failed']);
 const fail = reasonCode => Object.freeze({ ok: false, reasonCode });
 const isToken = (value, max = 4096) => typeof value === 'string' && value.length > 0 && value.length <= max && !value.includes('\0');
+const isOpaqueId = value => typeof value === 'string' && /^[A-Za-z0-9_-]{22,128}$/.test(value);
+const isSha256 = value => typeof value === 'string' && /^[a-f0-9]{64}$/i.test(value);
 const isTime = value => Number.isSafeInteger(value) && value >= 0;
 
 function normalizeCanonical(value, platform) {
@@ -13,51 +17,169 @@ function normalizeCanonical(value, platform) {
 
 function isAbsolutePath(value, platform) {
   if (!isToken(value)) return false;
-  if (platform === 'win32') return /^[A-Za-z]:\\/.test(value.replaceAll('/', '\\')) || /^\\\\[^\\]+\\[^\\]+/.test(value.replaceAll('/', '\\'));
+  if (platform === 'win32') {
+    const normalized = value.replaceAll('/', '\\');
+    return /^[A-Za-z]:\\/.test(normalized) || /^\\\\[^\\]+\\[^\\]+/.test(normalized);
+  }
   if (platform === 'linux' || platform === 'darwin') return value.startsWith('/');
   return false;
 }
 
-function validateContainment(contract = {}) {
-  const { platform, candidatePath, canonicalCandidatePath, canonicalRootPath, canonicalizationComplete, canonicalizedFromRaw, reparseOrSymlink } = contract;
+function canonicalDirname(value, platform) {
+  if (!isAbsolutePath(value, platform)) return null;
+  return platform === 'win32' ? path.win32.dirname(value) : path.posix.dirname(value);
+}
+
+function validateContainment(contract = {}, options = {}) {
+  const {
+    platform,
+    candidatePath,
+    canonicalCandidatePath,
+    canonicalRootPath,
+    canonicalizationComplete,
+    canonicalizedFromRaw,
+    canonicalizationEvidenceId,
+    reparseOrSymlink,
+    pathKind
+  } = contract;
+  const { allowRoot = false, expectedKind = null } = options;
   if (!PLATFORMS.includes(platform)) return fail('unsupported_platform');
-  if (!isAbsolutePath(candidatePath, platform) || !isAbsolutePath(canonicalCandidatePath, platform) || !isAbsolutePath(canonicalRootPath, platform)) return fail('absolute_path_required');
-  if (canonicalizationComplete !== true || canonicalizedFromRaw !== true) return fail('canonical_binding_required');
+  if (!isAbsolutePath(candidatePath, platform) ||
+      !isAbsolutePath(canonicalCandidatePath, platform) ||
+      !isAbsolutePath(canonicalRootPath, platform)) return fail('absolute_path_required');
+  if (canonicalizationComplete !== true || canonicalizedFromRaw !== true ||
+      !isOpaqueId(canonicalizationEvidenceId)) return fail('canonical_binding_required');
   if (typeof reparseOrSymlink !== 'boolean') return fail('reparse_decision_required');
   if (reparseOrSymlink) return fail('reparse_or_symlink_rejected');
+  if (expectedKind && pathKind !== expectedKind) return fail('path_kind_mismatch');
   const candidate = normalizeCanonical(canonicalCandidatePath, platform);
   const root = normalizeCanonical(canonicalRootPath, platform);
   const separator = platform === 'win32' ? '\\' : '/';
   const rootWithSeparator = root.endsWith(separator) ? root : root + separator;
-  if (!candidate.startsWith(rootWithSeparator)) return fail('path_outside_managed_root');
-  return Object.freeze({ ok: true, canonicalPath: canonicalCandidatePath });
+  if (!(allowRoot && candidate === root) && !candidate.startsWith(rootWithSeparator)) {
+    return fail('path_outside_managed_root');
+  }
+  return Object.freeze({
+    ok: true,
+    canonicalPath: canonicalCandidatePath,
+    canonicalRootPath,
+    pathKind
+  });
+}
+
+function validateReceipt(input = {}) {
+  const { receipt, expectedReceipt } = input;
+  if (!receipt || !expectedReceipt ||
+      !isOpaqueId(receipt.installId) || !isOpaqueId(receipt.receiptId) ||
+      !isOpaqueId(expectedReceipt.installId) || !isOpaqueId(expectedReceipt.receiptId)) {
+    return fail('invalid_receipt_identity');
+  }
+  const digestKeys = ['executableDigest', 'coreDigest', 'configDigest', 'contentDigest'];
+  for (const key of digestKeys) {
+    if (!isSha256(receipt[key]) || !isSha256(expectedReceipt[key])) {
+      return fail('invalid_receipt_identity');
+    }
+  }
+  for (const key of ['installId', 'receiptId', ...digestKeys]) {
+    if (receipt[key] !== expectedReceipt[key]) return fail('receipt_identity_mismatch');
+  }
+  return Object.freeze({ ok: true });
 }
 
 function validateManagedLaunch(input = {}) {
-  const { platform, executable, core, config, content, receipt, launch } = input;
+  const {
+    platform,
+    executable,
+    core,
+    config,
+    content,
+    environmentHome,
+    environmentPath,
+    launch
+  } = input;
   if (!PLATFORMS.includes(platform)) return fail('unsupported_platform');
-  const executableCheck = validateContainment({ ...executable, platform });
+
+  const executableCheck = validateContainment({ ...executable, platform }, { expectedKind: 'file' });
   if (!executableCheck.ok) return executableCheck;
-  const coreCheck = validateContainment({ ...core, platform });
+  const coreCheck = validateContainment({ ...core, platform }, { expectedKind: 'file' });
   if (!coreCheck.ok) return coreCheck;
-  const configCheck = validateContainment({ ...config, platform });
+  const configCheck = validateContainment({ ...config, platform }, { expectedKind: 'file' });
   if (!configCheck.ok) return configCheck;
-  const contentCheck = validateContainment({ ...content, platform });
+  const contentCheck = validateContainment({ ...content, platform }, { expectedKind: 'file' });
   if (!contentCheck.ok) return contentCheck;
-  const exact = (actual, expected) => normalizeCanonical(actual, platform) === normalizeCanonical(expected, platform);
+  const homeCheck = validateContainment(
+    { ...environmentHome, platform },
+    { allowRoot: true, expectedKind: 'directory' }
+  );
+  if (!homeCheck.ok) return fail('environment_home_policy_mismatch');
+  const pathCheck = validateContainment(
+    { ...environmentPath, platform },
+    { allowRoot: true, expectedKind: 'directory' }
+  );
+  if (!pathCheck.ok) return fail('environment_path_policy_mismatch');
+
+  const exact = (actual, expected) =>
+    normalizeCanonical(actual, platform) === normalizeCanonical(expected, platform);
   if (!exact(executableCheck.canonicalPath, input.expectedExecutablePath)) return fail('unexpected_executable_path');
   if (!exact(coreCheck.canonicalPath, input.expectedCorePath)) return fail('unexpected_core_path');
   if (!exact(configCheck.canonicalPath, input.expectedConfigPath)) return fail('unexpected_config_path');
   if (!exact(contentCheck.canonicalPath, input.expectedContentPath)) return fail('unexpected_content_path');
-  if (!receipt || !isToken(receipt.installId, 256) || !isToken(receipt.executableDigest, 256) || !isToken(receipt.coreDigest, 256) || !isToken(receipt.configDigest, 256) || !isToken(receipt.contentDigest, 256)) return fail('invalid_receipt_identity');
-  for (const [actual, expected] of [[receipt.installId,input.expectedInstallId],[receipt.executableDigest,input.expectedExecutableDigest],[receipt.coreDigest,input.expectedCoreDigest],[receipt.configDigest,input.expectedConfigDigest],[receipt.contentDigest,input.expectedContentDigest]]) if (actual !== expected) return fail('receipt_identity_mismatch');
+
+  const receiptCheck = validateReceipt(input);
+  if (!receiptCheck.ok) return receiptCheck;
   if (!launch || launch.fullscreen !== false) return fail('fullscreen_forbidden');
-  const expectedArgs = ['--config', configCheck.canonicalPath, '-L', coreCheck.canonicalPath, contentCheck.canonicalPath];
-  if (!Array.isArray(launch.args) || launch.args.length !== expectedArgs.length || launch.args.some((value, index) => value !== expectedArgs[index])) return fail('launch_contract_mismatch');
-  if (!exact(launch.cwd, input.expectedCwdPath) || !isAbsolutePath(launch.cwd, platform)) return fail('cwd_policy_mismatch');
-  const expectedEnvironment = Object.freeze({ HOME: input.environmentHome, LANG: 'C', LC_ALL: 'C', PATH: input.environmentPath });
-  if (!isToken(input.environmentHome) || !isToken(input.environmentPath) || !launch.environment || Object.keys(launch.environment).sort().join(',') !== 'HOME,LANG,LC_ALL,PATH' || Object.entries(expectedEnvironment).some(([key,value]) => launch.environment[key] !== value)) return fail('environment_policy_mismatch');
-  return Object.freeze({ ok: true, executablePath: executableCheck.canonicalPath, corePath: coreCheck.canonicalPath, configPath: configCheck.canonicalPath, contentPath: contentCheck.canonicalPath, args: Object.freeze([...expectedArgs]), spawnOptions: Object.freeze({ shell: false, detached: false, windowsHide: true, unref: false, cwd: launch.cwd, env: expectedEnvironment }) });
+
+  const expectedArgs = [
+    '--config',
+    configCheck.canonicalPath,
+    '-L',
+    coreCheck.canonicalPath,
+    contentCheck.canonicalPath
+  ];
+  if (!Array.isArray(launch.args) || launch.args.length !== expectedArgs.length ||
+      launch.args.some((value, index) => value !== expectedArgs[index])) {
+    return fail('launch_contract_mismatch');
+  }
+
+  const managedCwd = canonicalDirname(executableCheck.canonicalPath, platform);
+  if (!managedCwd || !exact(managedCwd, executableCheck.canonicalRootPath)) {
+    return fail('managed_runtime_directory_mismatch');
+  }
+  if (!exact(pathCheck.canonicalPath, managedCwd) ||
+      !exact(pathCheck.canonicalRootPath, executableCheck.canonicalRootPath)) {
+    return fail('environment_path_policy_mismatch');
+  }
+  if (!exact(launch.cwd, managedCwd)) return fail('cwd_policy_mismatch');
+
+  const expectedEnvironment = Object.freeze({
+    HOME: homeCheck.canonicalPath,
+    LANG: 'C',
+    LC_ALL: 'C',
+    PATH: pathCheck.canonicalPath
+  });
+  const environmentKeys = launch.environment && Object.keys(launch.environment).sort();
+  if (!environmentKeys || environmentKeys.join(',') !== 'HOME,LANG,LC_ALL,PATH' ||
+      Object.entries(expectedEnvironment).some(([key, value]) => launch.environment[key] !== value)) {
+    return fail('environment_policy_mismatch');
+  }
+
+  const spawnOptions = Object.freeze({
+    shell: false,
+    detached: false,
+    windowsHide: true,
+    unref: false,
+    cwd: managedCwd,
+    env: expectedEnvironment
+  });
+  return Object.freeze({
+    ok: true,
+    executablePath: executableCheck.canonicalPath,
+    corePath: coreCheck.canonicalPath,
+    configPath: configCheck.canonicalPath,
+    contentPath: contentCheck.canonicalPath,
+    args: Object.freeze([...expectedArgs]),
+    spawnOptions
+  });
 }
 
 function createStopPolicy({ managedProcessId, managedTreeReceipt, maxGraceMs = 10000, maxEscalationMs = 10000 } = {}) {
@@ -74,7 +196,6 @@ function createStopPolicy({ managedProcessId, managedTreeReceipt, maxGraceMs = 1
   const safeReason = value => typeof value === 'string' && /^[a-z0-9_]{1,64}$/.test(value) ? value : null;
   function status() { return Object.freeze({ phase, reasonCode, gracefulDeadlineMs, escalationDeadlineMs, exitedAtMs, lastTransitionAtMs, completeTreeRequired: true, verificationRequired: true }); }
   function transition(action = {}) {
-    const before = status();
     if (!isTime(action.atMs) || (lastTransitionAtMs !== null && action.atMs < lastTransitionAtMs)) return fail('invalid_time');
     if (!identityMatches(action)) return fail('process_identity_mismatch');
     let next = null;
@@ -111,4 +232,16 @@ function createStopPolicy({ managedProcessId, managedTreeReceipt, maxGraceMs = 1
   return Object.freeze({ transition, status });
 }
 
-module.exports = { PLATFORMS, STOP_PHASES, createStopPolicy, isAbsolutePath, normalizeCanonical, validateContainment, validateManagedLaunch };
+module.exports = {
+  PLATFORMS,
+  STOP_PHASES,
+  canonicalDirname,
+  createStopPolicy,
+  isAbsolutePath,
+  isOpaqueId,
+  isSha256,
+  normalizeCanonical,
+  validateContainment,
+  validateManagedLaunch,
+  validateReceipt
+};
