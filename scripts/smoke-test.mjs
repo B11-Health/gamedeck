@@ -151,13 +151,13 @@ for (const id of [
   'setupSteps',
   'surpriseMe',
   'communitySettings',
-  'openDiscord',
-  'discordCommunityHub',
-  'openDiscordPlayers',
-  'copyDiscordInvite',
-  'openDiscordAnnouncements',
-  'openDiscordSupport',
-  'openDiscordShowcase',
+  'openDiscussions',
+  'communityResourceHub',
+  'openPlayerDiscussion',
+  'copyPlayerDiscussion',
+  'openReleases',
+  'openSupport',
+  'openShowcase',
   'shareGameDeck',
   'copyRedditLaunch',
   'copyShortCaption',
@@ -196,17 +196,21 @@ for (const channel of ['settings', 'save-settings', 'sponsors', 'donations', 're
 if (!html.includes('class="app-shell-header"') || !html.includes('class="header-info-bar"')) fail('two-tier operational header is missing');
 if (!html.includes('id="headerMenu"') || !html.includes('id="headerMenuToggle"')) fail('secondary header controls must live in an overflow menu');
 if (!renderer.includes('function toggleHeaderMenu') || !renderer.includes('function closeHeaderMenu')) fail('header overflow accessibility behavior is missing');
-if (!renderer.includes('https://discord.gg/eS7d4VqTT') || !html.includes('id="openDiscord"')) fail('official Discord community link is missing');
-if (!renderer.includes('DISCORD_COMMUNITY') || !renderer.includes('discord.gg/uv2G7QPX4K')) fail('Discord matchmaking invite routing is missing');
-if (!netplayRenderer.includes('DISCORD_REMOTE_PLAY_URL') || !netplayRenderer.includes('message.length <= 2000')) fail('Discord-safe Remote Play sharing is missing');
-if (!html.includes('class="discord-community-hub"') || !styles.includes('.discord-channel-card')) fail('Discord community hub UI is missing');
+if (!renderer.includes('GAMEDECK_LINKS.discussions') || !renderer.includes('GAMEDECK_LINKS.players') || !html.includes('id="openDiscussions"')) fail('GitHub community routing is missing');
+if (!renderer.includes('COMMUNITY_LINKS') || !renderer.includes('discussions/8')) fail('GitHub player-discussion routing is missing');
+if (!netplayRenderer.includes('PLAYER_DISCUSSION_URL') || !netplayRenderer.includes('send it privately')) fail('private Remote Play sharing guidance is missing');
+if (!html.includes('class="community-resource-hub"') || !styles.includes('.community-resource-card')) fail('GitHub community resource hub is missing');
 if (!html.includes('class="community-share"') || !renderer.includes('GAMEDECK_SHARE_COPY') || !styles.includes('.community-share-actions')) fail('community share loop is missing');
+const retiredChatBrand = ['dis', 'cord'].join('');
+for (const [label, content] of [['desktop renderer', renderer], ['desktop HTML', html], ['multiplayer renderer', netplayRenderer], ['desktop styles', styles], ['public site', siteHtml]]) {
+  if (new RegExp(retiredChatBrand, 'i').test(content)) fail(`${label} still contains a retired chat-platform dependency`);
+}
 if (!renderer.includes('Feedback-first Reddit launch copied') || !renderer.includes('#GameDeck #OpenSource')) fail('platform-ready share copy is missing');
 if (!renderer.includes('LinkedIn launch post copied') || !renderer.includes('Facebook group post copied') || !renderer.includes('Looking-for-players post copied') || !renderer.includes('function playTonightCopy')) fail('cross-platform player acquisition copy is missing');
 if (!pkg.build?.mac?.x64ArchFiles?.includes('node_modules/7zip-bin')) fail('macOS universal 7zip merge rule is missing');
 if (!siteHtml.includes('GameDeck Live') || !siteHtml.includes('Couch Co-op') || !siteHtml.includes('Remote Play Together') || !siteHtml.includes('Synchronized Netplay') || !siteHtml.includes('docs/MULTIPLAYER.md') || !siteHtml.includes('data-platform="windows"')) fail('public growth site is missing GameDeck 1.2 conversion paths');
 if (!siteHtml.includes('Find players tonight') || !siteHtml.includes('multiplayer_session.yml') || !siteStyles.includes('.matchmaking') || !siteStyles.includes('.session-report')) fail('above-the-fold player activation and session reporting are missing');
-if (!siteHtml.includes('id="liveEvent"') || !siteHtml.includes('discord.com/events/1533539059207504093/1533638688066633980') || !siteHtml.includes('data-end="2026-08-03T00:00:00-04:00"') || !siteApp.includes('function hydrateLiveEvent') || !siteApp.includes('now>=end') || !siteStyles.includes('.live-event[hidden]')) fail('self-expiring playtest event strip is missing');
+if (!siteHtml.includes('id="liveEvent"') || !siteHtml.includes('github.com/B11-Health/gamedeck/discussions/8') || !siteHtml.includes('data-end="2026-08-03T00:00:00-04:00"') || !siteApp.includes('function hydrateLiveEvent') || !siteApp.includes('now>=end') || !siteStyles.includes('.live-event[hidden]')) fail('self-expiring playtest event strip is missing');
 if (!siteApp.includes('api.github.com/repos/') || !siteApp.includes('releases/latest')) fail('public growth site must resolve current release assets dynamically');
 if (!main.includes('sandbox: true') || !main.includes('contextIsolation: true') || !main.includes('nodeIntegration: false') || !main.includes('webSecurity: true')) fail('Electron renderer security hardening is missing');
 if (!styles.includes('Accessibility readability floor') || !styles.includes('font-size: 9px') || !styles.includes('readiness-chip b { font-size: 10px; }') || !styles.includes('.art-status { font-size: 9px; }')) fail('app readability floor is missing');
@@ -307,7 +311,7 @@ if (!netplayRenderer.includes('renderAcceptAnswerAction') || !html.includes('cla
 if (!netplayRenderer.includes('recommendationForSetup') || !netplayRenderer.includes('renderPlayerRail') || !netplayRenderer.includes('routeClipboardInvite')) fail('guided multiplayer recommendation or invite routing is missing');
 if (!styles.includes('.multiplayer-coach') || !styles.includes('.multiplayer-player-rail') || !styles.includes('.multiplayer-style-badge')) fail('guided multiplayer lobby styling is missing');
 if (!html.includes('class="multiplayer-setup-flow"') || !html.includes('class="multiplayer-lobby-card"') || !styles.includes('.multiplayer-player-slots') || !netplayRenderer.includes('PLAY_STYLE_DETAILS')) fail('calm game, mode, and lobby flow is missing');
-if (!main.includes('brotliCompressSync') || !main.includes('brotliDecompressSync')) fail('Discord-sized Brotli Remote Play codes are missing');
+if (!main.includes('brotliCompressSync') || !main.includes('brotliDecompressSync')) fail('compact Brotli Remote Play codes are missing');
 if (!netplayRenderer.includes('remotePlayInput') || !netplayRenderer.includes('navigator.getGamepads')) fail('remote gamepad forwarding is missing');
 if (!html.includes('Only the host needs the game') || !html.includes('NO ROM TRANSFER') || !html.includes('NATIVE RETROPAD INPUT')) fail('Remote Play ownership and privacy guidance are missing');
 if (Object.keys(pkg.dependencies || {}).some(name => /(^|[-_])(obs|webrtc|websocket|ws)([-_]|$)/i.test(name))) fail('GameDeck Live must not add OBS, WebRTC, or WebSocket runtime dependencies');

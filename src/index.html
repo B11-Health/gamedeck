@@ -291,7 +291,7 @@
             <p>GameDeck is a local-first launcher for legally owned game libraries. Help us ship cleaner setup, broader emulator support, and the best couch-first experience on every desktop.</p>
             <div class="community-actions">
               <button type="button" class="primary" id="openGithub">View on GitHub</button>
-              <button type="button" id="openDiscord">Join Discord</button>
+              <button type="button" id="openDiscussions">Open Discussions</button>
               <button type="button" id="openContributing">Start contributing</button>
             </div>
             <div class="community-badges">
@@ -304,24 +304,24 @@
           </div>
         </section>
 
-        <section class="discord-community-hub" id="discordCommunityHub" aria-labelledby="discordCommunityTitle">
-          <article class="discord-community-primary">
-            <div class="discord-community-mark" aria-hidden="true">GD</div>
-            <div class="discord-community-copy">
+        <section class="community-resource-hub" id="communityResourceHub" aria-labelledby="communityResourceTitle">
+          <article class="community-resource-primary">
+            <div class="community-resource-mark" aria-hidden="true">GD</div>
+            <div class="community-resource-copy">
               <div class="card-kicker">LIVE PLAYER COMMUNITY</div>
-              <h2 id="discordCommunityTitle">Find a player. Fix a setup. Shape the next release.</h2>
-              <p>Jump directly into the channel you need. GameDeck keeps Remote Play invitations private and gives the community one clear home for support, announcements, and showcases.</p>
-              <div class="discord-community-actions">
-                <button class="primary" id="openDiscordPlayers" type="button">Find Remote Play partners</button>
-                <button id="copyDiscordInvite" type="button">Copy community invite</button>
+              <h2 id="communityResourceTitle">Find a player. Fix a setup. Shape the next release.</h2>
+              <p>Use GitHub Discussions to find players and share ideas. Keep Remote Play invitations private, use Releases for announcements, and use Issues for support and compatibility reports.</p>
+              <div class="community-resource-actions">
+                <button class="primary" id="openPlayerDiscussion" type="button">Find Remote Play partners</button>
+                <button id="copyPlayerDiscussion" type="button">Copy tester link</button>
               </div>
-              <div class="discord-community-meta"><span>Permanent invite</span><span>5 focused channels</span><span>Open-source community</span></div>
+              <div class="community-resource-meta"><span>GitHub Discussions</span><span>Public issue tracking</span><span>Open-source community</span></div>
             </div>
           </article>
-          <div class="discord-channel-grid" aria-label="GameDeck Discord channels">
-            <button class="discord-channel-card" id="openDiscordAnnouncements" type="button"><span class="discord-channel-icon" aria-hidden="true">↗</span><span><b>Announcements</b><small>Releases, tutorials, and project milestones</small></span><em>Open</em></button>
-            <button class="discord-channel-card" id="openDiscordSupport" type="button"><span class="discord-channel-icon" aria-hidden="true">?</span><span><b>Support</b><small>Setup help, diagnostics, and compatibility</small></span><em>Open</em></button>
-            <button class="discord-channel-card" id="openDiscordShowcase" type="button"><span class="discord-channel-icon" aria-hidden="true">◆</span><span><b>Showcase</b><small>Share libraries, rooms, and controller setups</small></span><em>Open</em></button>
+          <div class="community-resource-grid" aria-label="GameDeck community resources">
+            <button class="community-resource-card" id="openReleases" type="button"><span class="community-resource-icon" aria-hidden="true">↗</span><span><b>Announcements</b><small>Releases, tutorials, and project milestones</small></span><em>Open</em></button>
+            <button class="community-resource-card" id="openSupport" type="button"><span class="community-resource-icon" aria-hidden="true">?</span><span><b>Support</b><small>Setup help, diagnostics, and compatibility</small></span><em>Open</em></button>
+            <button class="community-resource-card" id="openShowcase" type="button"><span class="community-resource-icon" aria-hidden="true">◆</span><span><b>Showcase</b><small>Share libraries, rooms, and controller setups</small></span><em>Open</em></button>
           </div>
         </section>
 
@@ -542,9 +542,9 @@
                 <button class="multiplayer-quiet-action" id="netplayCreateInvite" type="button">Create fresh invite</button>
               </div>
               <div class="netplay-invite hidden" id="netplayInvite">
-                <div><span>ENCRYPTED PLAYER INVITE</span><small id="netplayInviteMeta" aria-live="polite">Send this code to your friend in Discord.</small></div>
+                <div><span>ENCRYPTED PLAYER INVITE</span><small id="netplayInviteMeta" aria-live="polite">Copy this short-lived code and send it to your friend privately.</small></div>
                 <textarea id="netplayInviteValue" readonly aria-label="Remote Play invitation"></textarea>
-                <div class="netplay-share-actions"><button class="netplay-copy-primary" id="netplayCopyInvite" type="button">Copy invite</button><button class="multiplayer-quiet-action" id="netplayShareInvite" type="button">Open Discord</button></div>
+                <div class="netplay-share-actions"><button class="netplay-copy-primary" id="netplayCopyInvite" type="button">Copy invite</button><button class="multiplayer-quiet-action" id="netplayShareInvite" type="button">Player discussion</button></div>
               </div>
               <label class="netplay-invite-input"><span>Friend's response code</span><textarea id="netplayAnswerInput" placeholder="Paste the GDREMOTEANSWER2 response from your friend"></textarea><small>The response completes the direct encrypted connection.</small></label>
               <button class="netplay-primary hidden" id="netplayAcceptAnswer" type="button"><span aria-hidden="true">✓</span><b>Connect this player</b></button>
@@ -555,9 +555,9 @@
             <label><span>Player name</span><input id="netplayNickname" maxlength="28" placeholder="Friend"></label>
             <button class="netplay-primary" id="netplayJoin" type="button"><span aria-hidden="true">→</span><b>Create join response</b></button>
             <div class="netplay-invite hidden" id="netplayJoinResponse">
-              <div><span>RESPONSE FOR THE HOST</span><small id="netplayResponseMeta" aria-live="polite">Send this code back in Discord, then wait for the host to connect you.</small></div>
+              <div><span>RESPONSE FOR THE HOST</span><small id="netplayResponseMeta" aria-live="polite">Copy this response and send it privately to the host, then wait to connect.</small></div>
               <textarea id="netplayJoinResponseValue" readonly aria-label="Remote Play response"></textarea>
-              <div class="netplay-share-actions"><button class="netplay-copy-primary" id="netplayCopyResponse" type="button">Copy response</button><button class="multiplayer-quiet-action" id="netplayShareResponse" type="button">Open Discord</button></div>
+              <div class="netplay-share-actions"><button class="netplay-copy-primary" id="netplayCopyResponse" type="button">Copy response</button><button class="multiplayer-quiet-action" id="netplayShareResponse" type="button">Player discussion</button></div>
             </div>
             <div class="netplay-remote-stage hidden" id="netplayRemoteStage">
               <video id="netplayRemoteVideo" autoplay playsinline></video>
@@ -590,7 +590,7 @@
             <div class="netplay-invite hidden" id="syncInvite">
               <div><span>SAME-GAME INVITE</span><small id="syncInviteMeta">Share only with a friend who owns the matching game.</small></div>
               <textarea id="syncInviteValue" readonly aria-label="Synchronized netplay invitation"></textarea>
-              <div class="netplay-share-actions"><button class="netplay-copy-primary" id="syncCopyInvite" type="button">Copy invite</button><button class="multiplayer-quiet-action" id="syncShareInvite" type="button">Open Discord</button></div>
+              <div class="netplay-share-actions"><button class="netplay-copy-primary" id="syncCopyInvite" type="button">Copy invite</button><button class="multiplayer-quiet-action" id="syncShareInvite" type="button">Player discussion</button></div>
             </div>
           </section>
           <section class="netplay-panel hidden" id="syncJoinPanel" role="tabpanel">

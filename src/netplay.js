@@ -1,5 +1,5 @@
 (() => {
-  const DISCORD_REMOTE_PLAY_URL = 'https://discord.gg/uv2G7QPX4K';
+  const PLAYER_DISCUSSION_URL = 'https://github.com/B11-Health/gamedeck/discussions/8';
   const RTC_CONFIG = {
     iceServers: [
       { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
@@ -71,13 +71,9 @@
     return window.deck.remotePlayCodeDecode(value, Array.isArray(prefixes) ? prefixes : [prefixes]);
   }
 
-  function discordCodeStatus(length) {
-    const remaining = 2000 - Number(length || 0);
-    return remaining >= 0
-      ? `${length.toLocaleString()} characters · fits in one Discord message`
-      : `${length.toLocaleString()} characters · ${Math.abs(remaining).toLocaleString()} over Discord's message limit`;
+  function privateCodeStatus(length) {
+    return `${Number(length || 0).toLocaleString()} characters · copy and send privately`;
   }
-
   function preferRemotePlayCodecs(peer, track, sender) {
     const transceiver = peer.getTransceivers().find(item => item.sender === sender);
     if (!transceiver?.setCodecPreferences || !window.RTCRtpReceiver?.getCapabilities) return;
@@ -631,7 +627,7 @@
     };
     entry.invite = await encodeCode('GDREMOTE2', payload);
     $('#netplayInviteValue').value = entry.invite;
-    $('#netplayInviteMeta').textContent = discordCodeStatus(entry.invite.length);
+    $('#netplayInviteMeta').textContent = privateCodeStatus(entry.invite.length);
     $('#netplayInvite').classList.remove('hidden');
     $('#netplayAnswerInput').value = '';
     toast(`Player ${playerIndex + 1} invitation ready.`, 'success');
@@ -669,7 +665,7 @@
       });
       hostOwnsCapture = true;
       await createHostInvite(1);
-      toast('Game is live. Send the player invitation in Discord.', 'success');
+      toast('Game is live. Copy the invitation and send it privately.', 'success');
     } catch (error) {
       await window.deck.remotePlayStop().catch(() => {});
       if (hostOwnsCapture) await window.GameDeckLive.stop().catch(() => {});
@@ -807,7 +803,7 @@
       description: { type: guestPeer.localDescription.type, sdp: guestPeer.localDescription.sdp }
     });
     $('#netplayJoinResponseValue').value = guestResponse;
-    $('#netplayResponseMeta').textContent = discordCodeStatus(guestResponse.length);
+    $('#netplayResponseMeta').textContent = privateCodeStatus(guestResponse.length);
     $('#netplayJoinResponse').classList.remove('hidden');
     $('#netplayRemoteStage').classList.remove('hidden');
     $('#netplayRemoteEmpty').classList.remove('hidden');
@@ -816,7 +812,7 @@
     $('#netplayLatency').textContent = 'DIRECT · PAIRING';
     remoteStatus = { active: false, phase: 'pairing', title: invite.title, playerCount: 1, maxPlayers: invite.maxPlayers, message: 'Send the response code to the host.' };
     renderRemotePlay();
-    toast('Response ready. Send it back to the host in Discord.', 'success');
+    toast('Response ready. Copy it and send it privately to the host.', 'success');
   }
 
   async function endSession(silent = false) {
@@ -984,13 +980,8 @@
     toast('Same-game invitation copied.', 'success');
   };
   $('#syncShareInvite').onclick = async () => {
-    const value = $('#syncInviteValue').value;
-    if (!value) return;
-    const title = String(syncStatus.title || selectedGame()?.title || 'GameDeck netplay').slice(0, 80);
-    const message = `🎮 ${title} · exact-match GameDeck invitation\n${value}\nBoth players need the matching game and core.`;
-    await window.deck.copyText(message.length <= 2000 ? message : value);
-    const opened = await window.deck.openExternal(DISCORD_REMOTE_PLAY_URL);
-    toast(opened?.ok ? 'Invite copied. Paste it in #remote-play.' : 'Invite copied. Open #remote-play when Discord is available.', opened?.ok ? 'success' : 'warning');
+    const opened = await window.deck.openExternal(PLAYER_DISCUSSION_URL);
+    toast(opened?.ok ? 'Player discussion opened. Share the invitation only in a private channel.' : 'Open Discussion #8 to find a player, then share the invitation privately.', opened?.ok ? 'success' : 'warning');
   };
   $('#netplayCopyInvite').onclick = async () => {
     const value = $('#netplayInviteValue').value;
@@ -999,14 +990,8 @@
     toast('Encrypted player invitation copied.', 'success');
   };
   $('#netplayShareInvite').onclick = async () => {
-    const value = $('#netplayInviteValue').value;
-    if (!value) return;
-    const player = Number($('#netplayPlayerSlot').value || 1) + 1;
-    const title = String(remoteStatus.title || 'GameDeck Remote Play').slice(0, 80);
-    const message = `🎮 ${title} · Player ${player} invite\n${value}\nPaste into GameDeck → Play Online → Join a friend.`;
-    await window.deck.copyText(message.length <= 2000 ? message : value);
-    const opened = await window.deck.openExternal(DISCORD_REMOTE_PLAY_URL);
-    toast(opened?.ok ? 'Discord message copied. Paste it in #remote-play.' : 'Message copied. Open #remote-play when Discord is available.', opened?.ok ? 'success' : 'warning');
+    const opened = await window.deck.openExternal(PLAYER_DISCUSSION_URL);
+    toast(opened?.ok ? 'Player discussion opened. Copy the invitation separately and send it privately.' : 'Open Discussion #8 to find a player, then share the invitation privately.', opened?.ok ? 'success' : 'warning');
   };
   $('#netplayCopyResponse').onclick = async () => {
     if (!guestResponse) return;
@@ -1014,12 +999,8 @@
     toast('Join response copied. Send it to the host.', 'success');
   };
   $('#netplayShareResponse').onclick = async () => {
-    if (!guestResponse) return;
-    const title = String(guestInvite?.title || 'GameDeck Remote Play').slice(0, 80);
-    const message = `✅ ${title} · join response\n${guestResponse}\nHost: paste this into the response field and connect the player.`;
-    await window.deck.copyText(message.length <= 2000 ? message : guestResponse);
-    const opened = await window.deck.openExternal(DISCORD_REMOTE_PLAY_URL);
-    toast(opened?.ok ? 'Response copied. Paste it in #remote-play.' : 'Response copied. Open #remote-play when Discord is available.', opened?.ok ? 'success' : 'warning');
+    const opened = await window.deck.openExternal(PLAYER_DISCUSSION_URL);
+    toast(opened?.ok ? 'Player discussion opened. Copy the response separately and send it privately.' : 'Open Discussion #8 to find a player, then share the response privately.', opened?.ok ? 'success' : 'warning');
   };
 
   document.addEventListener('keydown', event => {
