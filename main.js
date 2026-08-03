@@ -304,8 +304,11 @@ const thumbnailRepos = {
 };
 
 const systems = [
-  { id: 'snes', name: 'Super Nintendo', short: 'SNES', color: '#8b5cf6', folders: ['snes', 'sufami', 'satellaview'], exts: ['.sfc', '.smc', '.bs', '.zip'], core: coreFile('snes9x_libretro'), icon: 'S' },
-  { id: 'nes', name: 'Nintendo Entertainment System', short: 'NES', color: '#ef4444', folders: ['nes', 'fds'], exts: ['.nes', '.fds', '.zip'], core: coreFile('mesen_libretro'), icon: 'N' },
+  { id: 'snes', name: 'Super Nintendo', short: 'SNES', color: '#8b5cf6', folders: ['snes'], exts: ['.sfc', '.smc', '.zip'], core: coreFile('snes9x_libretro'), icon: 'S' },
+  { id: 'satellaview', name: 'Satellaview', short: 'BS-X', color: '#7c3aed', folders: ['satellaview'], exts: ['.bs', '.zip'], core: coreFile('snes9x_libretro'), bios: ['BS-X.bin'], biosDirs: [RA_SYSTEM, ...firmwareSearchRoots], icon: 'BS' },
+  { id: 'sufami', name: 'Sufami Turbo', short: 'SUFAMI', color: '#a855f7', folders: ['sufami'], exts: ['.st', '.zip'], core: coreFile('snes9x_libretro'), bios: ['STBIOS.bin'], biosDirs: [RA_SYSTEM, ...firmwareSearchRoots], icon: 'ST' },
+  { id: 'nes', name: 'Nintendo Entertainment System', short: 'NES', color: '#ef4444', folders: ['nes'], exts: ['.nes', '.zip'], core: coreFile('mesen_libretro'), icon: 'N' },
+  { id: 'fds', name: 'Famicom Disk System', short: 'FDS', color: '#dc2626', folders: ['fds'], exts: ['.fds', '.zip'], core: coreFile('mesen_libretro'), bios: ['disksys.rom'], biosDirs: [RA_SYSTEM, ...firmwareSearchRoots], icon: 'FD' },
   { id: 'n64', name: 'Nintendo 64', short: 'N64', color: '#22c55e', folders: ['n64', 'n64dd'], exts: ['.n64', '.z64', '.v64', '.zip'], core: coreFile('mupen64plus_next_libretro'), icon: '64' },
   { id: 'gb', name: 'Game Boy and Color', short: 'GB / GBC', color: '#84cc16', folders: ['gb', 'gbc'], exts: ['.gb', '.gbc', '.zip'], core: coreFile('sameboy_libretro'), icon: 'GB' },
   { id: 'gba', name: 'Game Boy Advance', short: 'GBA', color: '#6366f1', folders: ['gba'], exts: ['.gba', '.zip'], core: coreFile('mgba_libretro'), icon: 'A' },
@@ -314,9 +317,9 @@ const systems = [
   { id: 'sega32x', name: 'Sega 32X', short: '32X', color: '#334155', folders: ['sega32x', '32x'], exts: ['.32x', '.bin', '.zip'], core: coreFile('picodrive_libretro'), icon: '32' },
   { id: 'mastersystem', name: 'Sega Master System', short: 'MASTER SYSTEM', color: '#e11d48', folders: ['mastersystem'], exts: ['.sms', '.zip'], core: coreFile('genesis_plus_gx_libretro'), icon: 'MS' },
   { id: 'gamegear', name: 'Sega Game Gear', short: 'GAME GEAR', color: '#f43f5e', folders: ['gamegear'], exts: ['.gg', '.zip'], core: coreFile('genesis_plus_gx_libretro'), icon: 'GG' },
-  { id: 'segacd', name: 'Sega CD', short: 'SEGA CD', color: '#3b82f6', folders: ['segacd', 'megacd'], exts: ['.cue', '.chd'], core: coreFile('genesis_plus_gx_libretro'), bios: ['bios_CD_E.bin', 'bios_CD_U.bin', 'bios_CD_J.bin'], biosDirs: [RA_SYSTEM, ...firmwareSearchRoots], icon: 'CD' },
+  { id: 'segacd', name: 'Sega CD', short: 'SEGA CD', color: '#3b82f6', folders: ['segacd', 'megacd'], exts: ['.cue', '.chd'], core: coreFile('genesis_plus_gx_libretro'), bios: ['bios_CD_E.bin', 'bios_CD_U.bin', 'bios_CD_J.bin'], biosMode: 'all', biosDirs: [RA_SYSTEM, ...firmwareSearchRoots], icon: 'CD' },
   { id: 'pce', name: 'PC Engine', short: 'PCE', color: '#f97316', folders: ['pcengine', 'supergrafx'], exts: ['.pce', '.zip'], core: coreFile('mednafen_pce_fast_libretro'), icon: 'P' },
-  { id: 'saturn', name: 'Sega Saturn', short: 'SATURN', color: '#38bdf8', folders: ['saturn'], exts: ['.cue', '.chd', '.m3u'], core: coreFile('mednafen_saturn_libretro'), bios: ['sega_101.bin', 'mpr-17933.bin'], biosDirs: [RA_SYSTEM, ...firmwareSearchRoots], icon: 'ST' },
+  { id: 'saturn', name: 'Sega Saturn', short: 'SATURN', color: '#38bdf8', folders: ['saturn'], exts: ['.cue', '.chd', '.m3u'], core: coreFile('mednafen_saturn_libretro'), bios: ['sega_101.bin', 'mpr-17933.bin'], biosMode: 'all', biosDirs: [RA_SYSTEM, ...firmwareSearchRoots], icon: 'ST' },
   { id: 'dreamcast', name: 'Dreamcast', short: 'DC', color: '#fb923c', folders: ['dreamcast'], exts: ['.gdi', '.cdi', '.chd'], core: coreFile('flycast_libretro'), icon: 'DC' },
   { id: 'atari2600', name: 'Atari 2600', short: 'ATARI', color: '#f59e0b', folders: ['atari2600'], exts: ['.a26', '.bin', '.zip'], core: coreFile('stella_libretro'), icon: 'A' },
   { id: 'arcade', name: 'FinalBurn Neo', short: 'FBNEO', color: '#ec4899', folders: ['fbneo', 'neogeo'], exts: ['.zip', '.7z'], core: coreFile('fbneo_libretro'), icon: 'FB' },
@@ -330,7 +333,7 @@ const systems = [
 ];
 
 const tgdbPlatforms = {
-  snes: 6, nes: 7, n64: 3, gb: 4, gba: 5, nds: 8, genesis: 18,
+  snes: 6, satellaview: 6, sufami: 6, nes: 7, fds: 7, n64: 3, gb: 4, gba: 5, nds: 8, genesis: 18,
   mastersystem: 35, gamegear: 20, segacd: 21, pce: 34, saturn: 17,
   dreamcast: 16, atari2600: 22, arcade: 23, mame: 23, ps1: 10, ps2: 11,
   psp: 13, gamecube: 2, wii: 9, wiiu: 38
@@ -360,6 +363,7 @@ let controllerHintsCache = null;
 const mameMetadataCache = new Map();
 const firmwareInventoryCache = new Map();
 const archiveSystemHintCache = new Map();
+const playableArchiveIntegrityCache = new Map();
 const discSystemHintCache = new Map();
 let libraryFolderSystemIndex = null;
 let runtimeManager = null;
@@ -696,7 +700,11 @@ function systemBiosReady(system) {
   const files = (system.biosDirs || []).flatMap(firmwareFiles);
   if (system.bios) {
     const available = new Set(files.map(file => file.toLowerCase()));
-    if (system.bios.some(file => available.has(file.toLowerCase()))) return true;
+    const expected = system.bios.map(file => file.toLowerCase());
+    const ready = system.biosMode === 'all'
+      ? expected.every(file => available.has(file))
+      : expected.some(file => available.has(file));
+    if (ready) return true;
   }
   return Boolean(system.biosPattern && files.some(file => system.biosPattern.test(file)));
 }
@@ -737,7 +745,8 @@ function systemFirmwareIssue(system) {
   const dirs = (system.biosDirs || []).filter(Boolean);
   const preferredDir = dirs[0] || '';
   if (system.bios?.length) {
-    return `${system.name} firmware is required. Add ${system.bios.join(' or ')} to ${preferredDir}.`;
+    const separator = system.biosMode === 'all' ? ' and ' : ' or ';
+    return `${system.name} firmware is required. Add ${system.bios.join(separator)} to ${preferredDir}.`;
   }
   if (system.biosPattern) {
     return `${system.name} firmware is required. Add ${system.biosHint || 'a compatible BIOS file'} to ${preferredDir}.`;
@@ -858,6 +867,36 @@ function archiveContentExtensions(file) {
   const extensions = listing.status === 0 ? parseArchiveEntryExtensions(listing.stdout) : new Set();
   archiveSystemHintCache.set(file, { fingerprint, extensions });
   return extensions;
+}
+
+function playableArchiveIntegrity(file) {
+  const extension = path.extname(file).toLowerCase();
+  if (!['.zip', '.7z', '.rar'].includes(extension)) return { ok: true, checked: false, message: '' };
+  let fingerprint = '';
+  try {
+    const stat = fs.statSync(file);
+    fingerprint = stat.size + ':' + Math.floor(stat.mtimeMs);
+  } catch {
+    return { ok: false, checked: true, message: 'The game archive is missing or unreadable.' };
+  }
+  const cached = playableArchiveIntegrityCache.get(file);
+  if (cached?.fingerprint === fingerprint) return cached.result;
+  if (!SEVEN_ZIP || !fs.existsSync(SEVEN_ZIP)) return { ok: true, checked: false, message: '' };
+  const test = spawnSync(SEVEN_ZIP, ['t', '-bd', '-bso0', '-bsp0', '--', file], {
+    windowsHide: true,
+    encoding: 'utf8',
+    timeout: 120000,
+    maxBuffer: 4 * 1024 * 1024
+  });
+  const output = [test.stdout, test.stderr].filter(Boolean).join('\n');
+  const ok = test.status === 0 && !/Unexpected end of archive|Data Error|CRC Failed|Headers Error|Can not open the file as archive/i.test(output);
+  const result = {
+    ok,
+    checked: true,
+    message: ok ? '' : 'This game archive is damaged or incomplete. Replace it from a legally owned backup before launching.'
+  };
+  playableArchiveIntegrityCache.set(file, { fingerprint, result });
+  return result;
 }
 
 function rawDiscSystem(file) {
@@ -1995,6 +2034,10 @@ function launchGame(file, options = {}) {
   const system = detectSystem(safeFile);
   if (!system || !isPlayableFile(safeFile, system)) throw Error('Could not identify this game system.');
   if (netplayManager?.status().active && !options.netplay) netplayManager.stop('Opening a local game.');
+  if (!isArcadeSystem(system)) {
+    const archiveIntegrity = playableArchiveIntegrity(safeFile);
+    if (!archiveIntegrity.ok) throw Error(archiveIntegrity.message);
+  }
   const setupIssue = systemSetupIssue(system);
   if (setupIssue) {
     if (String(setupIssue).toLowerCase().includes('firmware')) {

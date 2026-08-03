@@ -10,6 +10,11 @@ const {
 } = require('../library-system-classifier.js');
 
 const genesis = { id: 'genesis', exts: ['.md', '.gen', '.bin', '.zip'] };
+const nes = { id: 'nes', exts: ['.nes', '.zip'] };
+const fds = { id: 'fds', exts: ['.fds', '.zip'] };
+const snes = { id: 'snes', exts: ['.sfc', '.smc', '.zip'] };
+const satellaview = { id: 'satellaview', exts: ['.bs', '.zip'] };
+const sufami = { id: 'sufami', exts: ['.st', '.zip'] };
 const masterSystem = { id: 'mastersystem', exts: ['.sms', '.zip'] };
 const gameGear = { id: 'gamegear', exts: ['.gg', '.zip'] };
 const gameCube = { id: 'gamecube', exts: ['.iso', '.gcm', '.rvz'] };
@@ -32,6 +37,21 @@ assert.equal(chooseLibrarySystem([genesis, masterSystem, gameGear], {
   archiveExtensions: new Set(['.gg']),
   sharedRoot: true
 })?.id, 'gamegear');
+assert.equal(chooseLibrarySystem([nes, fds], {
+  fileExtension: '.zip',
+  archiveExtensions: new Set(['.fds']),
+  sharedRoot: true
+})?.id, 'fds');
+assert.equal(chooseLibrarySystem([snes, satellaview, sufami], {
+  fileExtension: '.zip',
+  archiveExtensions: new Set(['.bs']),
+  sharedRoot: true
+})?.id, 'satellaview');
+assert.equal(chooseLibrarySystem([snes, satellaview, sufami], {
+  fileExtension: '.zip',
+  archiveExtensions: new Set(['.st']),
+  sharedRoot: true
+})?.id, 'sufami');
 assert.equal(chooseLibrarySystem([gameCube, wii], {
   fileExtension: '.rvz',
   discSystemId: 'wii',

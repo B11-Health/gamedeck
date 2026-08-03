@@ -99,6 +99,19 @@ OWNED FILES / SURFACES: None after this return.
 DO NOT TOUCH: Authenticated growth/community browser surfaces.
 EXPECTED RETURN: Provenance, license/terms, exact downloaded asset, launch result, and removal path for each optional test title.
 
+
+HANDOFF ID: GD-20260803-11
+OBJECTIVE: Remove every reproducible broken-game launch from the current local collection and stop damaged archives from being presented as playable.
+DONE: Restored the required Famicom Disk System, Satellaview, Sufami Turbo, Sega CD, Saturn, Dreamcast, PlayStation, and PPSSPP support files from the user's existing local firmware pack; separated FDS, Satellaview, and Sufami Turbo into truthful shelves; required complete regional Sega CD and Saturn firmware; added a cached launch-time ZIP/7Z/RAR integrity gate; preserved two irrecoverably truncated Nintendo DS archives in a quarantine folder outside the library.
+CHANGED FILES / SURFACES: `main.js`, `README.md`, `scripts/library-system-classifier.test.mjs`, `scripts/smoke-test.mjs`; local runtime firmware and local quarantine state were repaired without adding ROMs or BIOS files to Git.
+TESTS AND RESULTS: Full `npm test` passed. 143 archive integrity checks found 141 valid and exactly two truncated NDS archives, both quarantined. All 30 CHD images passed full CHD verification. Core initialization covered the entire resulting 234-game collection: 163 first-pass successes plus 71 successful targeted reprobes after firmware restoration, with no failing title remaining in the live library. Exact standalone routes passed 8/8 across PS1, PS2, PSP, and Wii. Live library scan reports 234 games and all populated systems ready.
+OPEN RISKS OR BLOCKERS: No valid local backup was found for the quarantined Chrono Trigger DS and Pokemon HeartGold archives, so they remain preserved but intentionally absent from the playable shelf. MAME, GameCube, and Wii U have no local games to validate.
+NEXT OWNER: Product and independent QA.
+NEXT BOUNDED TASK: Merge with the selected-game spotlight stability branch, then repeat a visible launch/exit cycle for one title per populated system on the integration commit.
+OWNED FILES / SURFACES: None after return.
+DO NOT TOUCH: Authenticated growth/community browser surfaces or the quarantined source archives without an explicit replacement decision.
+EXPECTED RETURN: Integrated commit hash, one-title-per-system launch matrix, and any remaining emulator-specific presentation issues.
+
 ## Latest verified production state
 
 - Public site event strip is visible in the first viewport before and during the event; it auto-hides at 2026-08-03 00:00 ET.
