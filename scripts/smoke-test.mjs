@@ -231,6 +231,9 @@ if (!main.includes('catalogFileIdentities') || !main.includes('installedCatalogF
 if (!main.includes('inspectArcadeArchive') || !renderer.includes('renderArcadeDeck')) fail('arcade health diagnostics are missing');
 if (!preload.includes('onArcadeAudit')) fail('arcade audit progress bridge is missing');
 if (!main.includes('createRuntimeManager') || !main.includes('queueManagedRuntimeLaunch')) fail('managed runtime launch recovery is missing');
+if (!main.includes('MANAGED_RUNTIME_PREFERRED') || !main.includes('managedRuntimeInstalled')) fail('an already installed managed runtime must take precedence over an unverified external core set');
+if (!main.includes("ARCADE_SUPPORT_ARCHIVES = new Set(['neogeo.zip'])") || !main.includes('isArcadeSupportArchive(file, system)')) fail('arcade BIOS support archives must stay out of the playable library');
+if (!styles.includes('body.density-compact .spotlight-primary-actions button') || !styles.includes('min-width: 0; flex: 1 1 0;')) fail('spotlight action rows must shrink without clipping Favorite or Remove');
 if (!preload.includes('ensureRuntime') || !preload.includes('onRuntime')) fail('managed runtime preload bridge is missing');
 if (!renderer.includes('Preparing game engines') || !renderer.includes('window.deck.ensureRuntime')) fail('first-run runtime setup UI is missing');
 if (!runtimeManager.includes('AbortSignal.timeout') || !runtimeManager.includes('content-range') || !runtimeManager.includes('SHA-256')) fail('managed runtime download safety or resume support is missing');

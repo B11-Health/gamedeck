@@ -4,10 +4,10 @@ This file is the shared source of truth for parallel GameDeck workstreams. Updat
 
 ## Active handoff
 
-**Handoff ID:** GD-20260802-09
-**Updated:** 2026-08-02 21:54 ET
+**Handoff ID:** GD-20260803-10
+**Updated:** 2026-08-03 06:49 ET
 **Repository:** `B11-Health/gamedeck`
-**Branch / HEAD:** `main` / `2f90e15`
+**Branch / HEAD:** `main` / current UI and arcade compatibility task
 **Primary objective:** Acquire real GameDeck players while keeping the product, repository, branding, and release evidence pristine.
 
 ## Discord-free operating model
@@ -42,6 +42,9 @@ Treat Discord as unavailable. Do not appeal, replace the account, evade restrict
 - `367138d` — OS-assigned port for collision-free Live smoke tests
 - `d3b8aa4` — 44px Playtest Night touch targets
 - `2f90e15` — release workflow least-privilege permissions
+- Fixed selected-game action-row overflow so Favorite and Remove remain fully visible at the reported 1504×904 viewport.
+- Preferred an already-installed verified GameDeck managed runtime over an unrelated external RetroArch core set, and removed `neogeo.zip` BIOS support data from the playable library.
+- Boot-probed all 32 installed FinalBurn Neo/Neo Geo game archives against the managed core; all 32 initialized successfully. The external core reproduced one mismatch (`progear.7z`), confirming the routing defect.
 - GitHub Discussion #8 corrected to the verified 10:00 PM–midnight ET event time and canonical Discord event URL
 
 **Do not touch:** Browser surfaces currently owned by Growth and community.
@@ -67,6 +70,20 @@ Treat Discord as unavailable. Do not appeal, replace the account, evade restrict
 **Current task:** Ready for the next bounded security, packaging, workflow, or evidence assignment.
 **Do not modify:** Growth/community browser surfaces or files owned by another active handoff.
 **Return:** Findings or a commit with exact validation and one recommended next task.
+
+## Latest bounded engineering return
+
+HANDOFF ID: GD-20260803-10
+OBJECTIVE: Restore full selected-game actions and make the installed arcade collection use the verified compatible core.
+DONE: Corrected action flex sizing; detected and preferred complete managed runtimes; excluded the Neo Geo BIOS archive from playable titles.
+CHANGED FILES / SURFACES: `main.js`, `src/styles.css`, `scripts/smoke-test.mjs`.
+TESTS AND RESULTS: Full `npm test` passed; live 1504×904 DOM check found no clipped action; live runtime diagnostics selected the managed RetroArch/core paths; 32/32 installed arcade games boot-probed successfully.
+OPEN RISKS OR BLOCKERS: Broader non-arcade launch coverage was not re-run in this bounded task.
+NEXT OWNER: Product and QA.
+NEXT BOUNDED TASK: Recheck the selected-game spotlight at minimum supported window sizes and perform a normal user-visible Progear launch/exit cycle.
+OWNED FILES / SURFACES: None after this return.
+DO NOT TOUCH: Authenticated growth/community browser surfaces.
+EXPECTED RETURN: Exact viewport matrix, launch result, and any remaining visual or controller regressions.
 
 ## Latest verified production state
 
