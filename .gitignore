@@ -39,3 +39,4 @@ tmp-*.log
 # Local staging and E2E scratch files
 .tmp-stage-*
 .tmp-multiplayer-e2e*
+.tmp-*

@@ -5704,3 +5704,60 @@ body.modal-open > main {
   .multiplayer-command-window:not(.session-active) .couch-layout { grid-template-columns: 1fr; }
   .multiplayer-command-window:not(.session-active) .controller-check { grid-template-columns: 1fr; }
 }
+
+
+/* Accessibility readability floor */
+.loading-step small,
+.setup-step small,
+.setting-state,
+.transfer-copy small,
+.transfer-item-copy > div > span,
+.transfer-item-copy small,
+.transfer-item.complete > strong,
+.donation-method b small,
+.arcade-metrics span,
+.arcade-controller-head small,
+.arcade-controller-head > span,
+.arcade-mapping span,
+.arcade-mapping kbd,
+.archive-badge,
+.debug-head span,
+.debug-health span,
+.status-filters button,
+.activity-row small,
+.activity-repeat,
+.console-state,
+.catalog-platform,
+.catalog-state,
+.console-card small span + span,
+.control-legend::before,
+.feature-source {
+  font-size: 9px;
+}
+
+.multiplayer-selected-card .readiness-chip small,
+.multiplayer-section-head span,
+.multiplayer-section-head small,
+.multiplayer-setup-flow .multiplayer-style-badge,
+.multiplayer-setup-flow .multiplayer-coach span,
+.multiplayer-player-rail-label span,
+.multiplayer-player-rail-label small,
+.multiplayer-player-slot small,
+.multiplayer-player-slot i,
+.netplay-player-count span {
+  font-size: 9px;
+}
+
+.multiplayer-selected-card .readiness-chip b { font-size: 10px; }
+.multiplayer-setup-flow .multiplayer-style-badge,
+.multiplayer-player-rail-label span,
+.multiplayer-player-rail-label small,
+.multiplayer-player-slot i { letter-spacing: .08em; }
+
+
+/* Final information-label readability */
+.setup-score span,
+.setting-field > span small,
+.multiplayer-match-pill small { font-size: 8px; }
+
+.art-status { font-size: 9px; }
