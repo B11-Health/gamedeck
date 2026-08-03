@@ -49,7 +49,9 @@
       "statusCenter": "headerMenuToggle",
       "gameDeckLive": "streamToggle",
       "multiplayer": "netplayToggle"
-    }
+    },
+    "offlineFontDependencyRemoved": true,
+    "packagedStartupNetworkErrors": 0
   },
   "multiplayer": {
     "game": "Metal Slug 3",

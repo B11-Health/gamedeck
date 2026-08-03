@@ -84,6 +84,14 @@ for (const file of tracked) {
     }
   }
 
+  if (file.startsWith('src/') && extension === '.css' && /@import\s+(?:url\()?['"]?https?:/i.test(text)) {
+    report(file, 0, 'desktop stylesheet must not depend on remote font or CSS imports');
+  }
+
+  if (file === 'src/index.html' && /fonts\.(?:googleapis|gstatic)\.com/i.test(text)) {
+    report(file, 0, 'desktop CSP must not allow remote Google Fonts origins');
+  }
+
   if (extension === '.css') {
     const scrubbed = text
       .replace(/\/\*[\s\S]*?\*\//g, '')
