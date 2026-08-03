@@ -26,6 +26,7 @@ const forbiddenTracked = [
   /(^|\/)\.env(?:\.|$)/,
   /\.(?:log|tmp)$/i
 ];
+const unfinishedPattern = new RegExp(`\\b(?:${['TO' + 'DO', 'FIX' + 'ME', 'HA' + 'CK', 'X' + 'XX'].join('|')})\\b`, 'i');
 const secretPatterns = [
   /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/,
   /\b(?:AIza[0-9A-Za-z_-]{30,}|gh[pousr]_[A-Za-z0-9]{30,}|sk-[A-Za-z0-9]{20,})\b/,
@@ -66,7 +67,7 @@ for (const file of tracked) {
   lines.forEach((line, index) => {
     const number = index + 1;
     if (/[ \t]+$/.test(line)) report(file, number, 'trailing whitespace');
-    if (/\b(?:TODO|FIXME|HACK|XXX)\b/i.test(line)) report(file, number, 'unfinished marker');
+    if (unfinishedPattern.test(line)) report(file, number, 'unfinished marker');
     if (/\bdebugger\s*;/.test(line)) report(file, number, 'debugger statement');
     if (/\b(?:eval|new Function)\s*\(/.test(line)) report(file, number, 'dynamic code evaluation');
     if (!file.startsWith('scripts/') && /console\.(?:log|debug|trace)\s*\(/.test(line)) {
