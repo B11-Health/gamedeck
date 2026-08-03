@@ -5806,3 +5806,231 @@ body.modal-open > main {
 .boot-cards i,
 .boot-visual > small,
 .loading-foot { font-size: 8px; }
+
+
+/* Aurora Focus — premium browsing highlight for game cards */
+@property --aurora-angle { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+.game {
+  --pointer-x: 50%;
+  --pointer-y: 50%;
+  --tilt-x: 0deg;
+  --tilt-y: 0deg;
+  --art-x: 0px;
+  --art-y: 0px;
+  position: relative;
+  isolation: isolate;
+  perspective: 900px;
+}
+
+.aurora-shell {
+  position: relative;
+  isolation: isolate;
+  border-radius: 21px;
+  transform-style: preserve-3d;
+}
+
+.aurora-shell::before,
+.aurora-shell::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .24s ease, transform .3s ease;
+}
+
+.aurora-shell::before {
+  z-index: -2;
+  inset: -3px;
+  padding: 2px;
+  border-radius: inherit;
+  background: conic-gradient(from var(--aurora-angle, 0deg) at 50% 50%, #66edff, #866cff 24%, var(--c) 48%, #c8ff52 70%, #66edff);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  filter: saturate(1.18);
+}
+
+.aurora-shell::after {
+  z-index: -3;
+  inset: -12px;
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at var(--pointer-x) var(--pointer-y), color-mix(in srgb, var(--c) 58%, #66edff) 0, transparent 42%),
+    radial-gradient(circle at 78% 20%, #866cff88, transparent 42%),
+    radial-gradient(circle at 24% 82%, #c8ff5266, transparent 40%);
+  filter: blur(16px);
+  transform: scale(.96);
+}
+
+.game:hover .aurora-shell::before,
+.game:focus-visible .aurora-shell::before,
+.game.active .aurora-shell::before,
+.game:hover .aurora-shell::after,
+.game:focus-visible .aurora-shell::after,
+.game.active .aurora-shell::after {
+  opacity: 1;
+}
+
+.game:hover .aurora-shell::before,
+.game:focus-visible .aurora-shell::before,
+.game.active .aurora-shell::before { animation: auroraPerimeter 3.6s linear infinite; }
+.game:hover .aurora-shell::after,
+.game:focus-visible .aurora-shell::after,
+.game.active .aurora-shell::after {
+  animation: auroraHalo 2.2s ease-in-out infinite;
+  transform: scale(1);
+}
+
+.game .cover {
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  will-change: auto;
+}
+
+.game:hover .cover,
+.game:focus-visible .cover,
+.game.active .cover {
+  border-color: color-mix(in srgb, var(--c) 52%, #bdf7ff);
+  box-shadow:
+    0 28px 64px #000c,
+    0 0 0 1px #ffffff45 inset,
+    0 0 0 3px #72e7ff18,
+    0 0 32px color-mix(in srgb, var(--c) 38%, transparent);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .game:hover .cover {
+    transform: translateY(-7px) scale(1.015) rotateX(var(--tilt-x)) rotateY(var(--tilt-y));
+    will-change: transform;
+  }
+}
+
+.game:focus-visible .cover,
+.game.active .cover {
+  transform: translateY(-7px) scale(1.015);
+}
+
+.game .cover-art::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(circle at var(--pointer-x) var(--pointer-y), #ffffff38 0, #72e7ff16 19%, transparent 49%);
+  mix-blend-mode: screen;
+  transition: opacity .2s ease;
+}
+
+.game:hover .cover-art::after,
+.game:focus-visible .cover-art::after,
+.game.active .cover-art::after { opacity: .85; }
+
+.game .cover-art img {
+  transform: translate3d(0, 0, 0) scale(1);
+  transition: transform .34s cubic-bezier(.2,.75,.2,1), filter .3s ease, opacity .3s ease;
+}
+
+.game:hover .cover-art img,
+.game:focus-visible .cover-art img,
+.game.active .cover-art img {
+  transform: translate3d(var(--art-x), var(--art-y), 18px) scale(1.055);
+  filter: saturate(1.12) contrast(1.04) drop-shadow(0 14px 24px #0008);
+  opacity: 1;
+}
+
+.game:focus-visible .cover-art img,
+.game.active .cover-art img { transform: translate3d(0, 0, 18px) scale(1.055); }
+
+.game .cover::before {
+  width: 54%;
+  background: linear-gradient(96deg, transparent 5%, #ffffff12 28%, #72e7ff32 48%, #9d7bff2b 60%, transparent 92%);
+}
+
+.game:hover .cover::before,
+.game:focus-visible .cover::before,
+.game.active .cover::before { animation: auroraSweep 1.15s cubic-bezier(.22,.7,.2,1) both; }
+
+.game:hover .fav,
+.game:focus-visible .fav,
+.game.active .fav,
+.game:hover .play,
+.game:focus-visible .play,
+.game.active .play,
+.game:hover .cover-title,
+.game:focus-visible .cover-title,
+.game.active .cover-title {
+  opacity: 1;
+}
+
+.game:hover .play,
+.game:focus-visible .play,
+.game.active .play { transform: none; }
+
+.game:hover .meta > b,
+.game:focus-visible .meta > b,
+.game.active .meta > b { color: #f8fbff; }
+.game:hover .game-card-facts,
+.game:focus-visible .game-card-facts,
+.game.active .game-card-facts { color: #a8b5c8; }
+
+@keyframes auroraPerimeter { to { --aurora-angle: 360deg; } }
+@keyframes auroraHalo { 50% { opacity: .72; transform: scale(1.025); } }
+@keyframes auroraSweep {
+  from { transform: skewX(-14deg) translateX(-240%); }
+  to { transform: skewX(-14deg) translateX(560%); }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .game:hover:not(.active):not(:focus-visible) .aurora-shell::before,
+  .game:hover:not(.active):not(:focus-visible) .aurora-shell::after,
+  .game:hover:not(.active):not(:focus-visible) .cover-art::after { opacity: 0; }
+  .game:hover:not(.active):not(:focus-visible) .cover {
+    transform: none;
+    border-color: #ffffff14;
+    box-shadow: 0 16px 40px #0006;
+  }
+  .game:hover:not(.active):not(:focus-visible) .cover-art img {
+    transform: none;
+    filter: drop-shadow(0 10px 18px #0007);
+  }
+  .game:hover:not(.active):not(:focus-visible) .cover::before { transform: skewX(-14deg) translateX(-240%); }
+  .game:hover .cover,
+  .game:hover .cover-art img,
+  .game:hover .aurora-shell::before,
+  .game:hover .aurora-shell::after,
+  .game:hover .cover-art::after,
+  .game:hover .cover::before {
+    animation: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game { --tilt-x: 0deg; --tilt-y: 0deg; --art-x: 0px; --art-y: 0px; }
+  .game:hover .aurora-shell::before,
+  .game:focus-visible .aurora-shell::before,
+  .game.active .aurora-shell::before,
+  .game:hover .aurora-shell::after,
+  .game:focus-visible .aurora-shell::after,
+  .game.active .aurora-shell::after,
+  .game:hover .cover::before,
+  .game:focus-visible .cover::before,
+  .game.active .cover::before { animation: none !important; }
+  .game:hover .cover,
+  .game:focus-visible .cover,
+  .game.active .cover { transform: translateY(-4px) scale(1.01); }
+  .game:hover .cover-art img,
+  .game:focus-visible .cover-art img,
+  .game.active .cover-art img { transform: scale(1.035); }
+  .game:hover .aurora-shell::after,
+  .game:focus-visible .aurora-shell::after,
+  .game.active .aurora-shell::after { opacity: .7; transform: none; }
+  .game:hover .cover::before,
+  .game:focus-visible .cover::before,
+  .game.active .cover::before { transform: skewX(-14deg) translateX(145%); }
+}
+
+@media (max-width: 520px) {
+  .aurora-shell { border-radius: 19px; }
+  .aurora-shell::after { inset: -8px; filter: blur(12px); }
+}
