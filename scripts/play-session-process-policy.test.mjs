@@ -82,7 +82,9 @@ function launchFixture(platform = 'win32', policyLimits) {
     executablePath,
     corePath,
     configPath,
-    contentPath
+    contentPath,
+    homePath: home,
+    homeRoot: home
   };
   const expectedReceipt = {
     installId: opaqueId('install'),
@@ -262,6 +264,8 @@ test('request-authored expected paths and receipt cannot authorize attacker iden
   fixture.input.expectedCorePath = fixture.input.core.canonicalCandidatePath;
   fixture.input.expectedConfigPath = fixture.input.config.canonicalCandidatePath;
   fixture.input.expectedContentPath = fixture.input.content.canonicalCandidatePath;
+  fixture.input.expectedHomePath = fixture.input.environmentHome.canonicalCandidatePath;
+  fixture.input.expectedHomeRoot = fixture.input.environmentHome.canonicalRootPath;
   fixture.input.expectedReceipt = { ...fixture.input.receipt };
   assert.equal(validateManagedLaunch(fixture.input, fixture.policy).reasonCode,
     'untrusted_expected_identity');
@@ -283,6 +287,59 @@ test('policy-owned expected identity rejects canonical managed substitutions', (
   fixture.input.executable = attackerContract;
   assert.equal(validateManagedLaunch(fixture.input, fixture.policy).reasonCode,
     'unexpected_executable_path');
+  assert.equal(fixture.policy.status().canonicalEvidenceUsed, 0);
+});
+
+test('absolute unmanaged HOME rejects before canonical evidence commit', () => {
+  const fixture = launchFixture();
+  const evilHome = contract(
+    'C:\\Evil',
+    'C:\\Evil',
+    'C:\\Evil',
+    'directory',
+    evidenceId('evil-home')
+  );
+  fixture.map.set(evilHome.canonicalizationEvidenceId,
+    evidenceRecord('win32', evilHome));
+  fixture.input.environmentHome = evilHome;
+  fixture.input.launch.environment.HOME = 'C:\\Evil';
+  assert.equal(validateManagedLaunch(fixture.input, fixture.policy).reasonCode,
+    'environment_home_policy_mismatch');
+  assert.equal(fixture.policy.status().canonicalEvidenceUsed, 0);
+});
+
+test('correct HOME path with substituted root rejects without evidence commit', () => {
+  const fixture = launchFixture();
+  const substitutedRoot = contract(
+    'C:\\GameDeck\\home',
+    'C:\\GameDeck\\home',
+    'C:\\GameDeck',
+    'directory',
+    evidenceId('home-root-substitution')
+  );
+  fixture.map.set(substitutedRoot.canonicalizationEvidenceId,
+    evidenceRecord('win32', substitutedRoot));
+  fixture.input.environmentHome = substitutedRoot;
+  assert.equal(validateManagedLaunch(fixture.input, fixture.policy).reasonCode,
+    'environment_home_policy_mismatch');
+  assert.equal(fixture.policy.status().canonicalEvidenceUsed, 0);
+});
+
+test('correct HOME root with substituted path rejects without evidence commit', () => {
+  const fixture = launchFixture();
+  const substitutedPath = contract(
+    'C:\\GameDeck\\home\\other',
+    'C:\\GameDeck\\home\\other',
+    'C:\\GameDeck\\home',
+    'directory',
+    evidenceId('home-path-substitution')
+  );
+  fixture.map.set(substitutedPath.canonicalizationEvidenceId,
+    evidenceRecord('win32', substitutedPath));
+  fixture.input.environmentHome = substitutedPath;
+  fixture.input.launch.environment.HOME = 'C:\\GameDeck\\home\\other';
+  assert.equal(validateManagedLaunch(fixture.input, fixture.policy).reasonCode,
+    'environment_home_policy_mismatch');
   assert.equal(fixture.policy.status().canonicalEvidenceUsed, 0);
 });
 

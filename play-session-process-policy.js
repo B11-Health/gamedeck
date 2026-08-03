@@ -119,7 +119,9 @@ function createManagedProcessPolicy({
       'executablePath',
       'corePath',
       'configPath',
-      'contentPath'
+      'contentPath',
+      'homePath',
+      'homeRoot'
     ];
     for (const key of requiredPathKeys) {
       if (!isCanonicalSyntax(expectedLaunchIdentity[key], expectedLaunchIdentity.platform)) {
@@ -138,7 +140,9 @@ function createManagedProcessPolicy({
       executablePath: expectedLaunchIdentity.executablePath,
       corePath: expectedLaunchIdentity.corePath,
       configPath: expectedLaunchIdentity.configPath,
-      contentPath: expectedLaunchIdentity.contentPath
+      contentPath: expectedLaunchIdentity.contentPath,
+      homePath: expectedLaunchIdentity.homePath,
+      homeRoot: expectedLaunchIdentity.homeRoot
     });
     approvedReceipt = Object.freeze({ ...expectedReceipt });
   }
@@ -250,6 +254,8 @@ function createManagedProcessPolicy({
       'expectedCorePath',
       'expectedConfigPath',
       'expectedContentPath',
+      'expectedHomePath',
+      'expectedHomeRoot',
       'expectedReceipt'
     ];
     if (untrustedExpectedKeys.some(key => Object.hasOwn(input, key))) {
@@ -292,6 +298,10 @@ function createManagedProcessPolicy({
     }
     if (!exact(contentCheck.canonicalPath, approvedLaunchIdentity.contentPath)) {
       return fail('unexpected_content_path');
+    }
+    if (!exact(homeCheck.canonicalPath, approvedLaunchIdentity.homePath) ||
+        !exact(homeCheck.canonicalRootPath, approvedLaunchIdentity.homeRoot)) {
+      return fail('environment_home_policy_mismatch');
     }
 
     const receiptCheck = validateReceipt({
