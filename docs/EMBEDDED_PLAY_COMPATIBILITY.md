@@ -1,8 +1,8 @@
 # GameDeck Embedded Play Compatibility Certification Matrix
 
-Status: Phase 1 certification plan  
-Branch: `qa/embedded-play-compatibility`  
-Base: `0fa427b3816d531658c30736c6b6054a8dedc5fc`  
+Status: Phase 1 certification plan
+Branch: `qa/embedded-play-compatibility`
+Base: `0fa427b3816d531658c30736c6b6054a8dedc5fc`
 Owner: Compatibility Lab / Universal Game Integration
 
 Scope: evidence and certification only. This document changes no launch, capture, input, runtime, support claim, or public surface.
