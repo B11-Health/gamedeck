@@ -44,6 +44,9 @@ public class MainActivity extends Activity {
     private void buildWebView() {
         webView = new WebView(this);
         webView.setBackgroundColor(Color.rgb(9, 11, 16));
+        webView.setVisibility(View.VISIBLE);
+        webView.setAlpha(1f);
+        webView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
         applySystemBarInsets();
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
@@ -55,7 +58,8 @@ public class MainActivity extends Activity {
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         settings.setBuiltInZoomControls(false);
         settings.setDisplayZoomControls(false);
-        settings.setUserAgentString(settings.getUserAgentString() + " GameDeckAndroid/0.3.0-parity-preview");
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) settings.setOffscreenPreRaster(true);
+        settings.setUserAgentString(settings.getUserAgentString() + " GameDeckAndroid/0.3.1-parity-preview");
         bridge = new DeckBridge(this);
         exposeBridge();
         webView.setWebChromeClient(new WebChromeClient());
@@ -76,10 +80,30 @@ public class MainActivity extends Activity {
 
             @Override
             public void onPageFinished(WebView view, String url) {
+                view.setVisibility(View.VISIBLE);
+                view.setAlpha(1f);
+                view.invalidate();
+                view.requestLayout();
                 view.requestFocus(View.FOCUS_DOWN);
             }
         });
         setContentView(webView);
+    }
+
+    private void useLocalRendererLayer() {
+        if (webView == null) return;
+        webView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+        webView.setVisibility(View.VISIBLE);
+        webView.setAlpha(1f);
+        webView.invalidate();
+    }
+
+    private void useRemoteRendererLayer() {
+        if (webView == null) return;
+        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        webView.setVisibility(View.VISIBLE);
+        webView.setAlpha(1f);
+        webView.invalidate();
     }
 
     private void applySystemBarInsets() {
@@ -114,6 +138,7 @@ public class MainActivity extends Activity {
     private void loadLocalShell() {
         remoteMode = false;
         remoteOrigin = null;
+        useLocalRendererLayer();
         exposeBridge();
         webView.loadUrl(LOCAL_URL);
     }
@@ -169,6 +194,7 @@ public class MainActivity extends Activity {
             remoteMode = true;
             remoteOrigin = uri;
             hideBridge();
+            useRemoteRendererLayer();
             webView.loadUrl(uri.toString());
         });
     }
