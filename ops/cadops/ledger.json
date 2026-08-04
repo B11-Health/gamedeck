@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "project": "GameDeck",
   "createdAt": "2026-08-03T23:44:00.000Z",
-  "updatedAt": "2026-08-04T07:49:20.096Z",
+  "updatedAt": "2026-08-04T07:59:16.768Z",
   "policy": {
     "nonReplay": true,
     "visibleLaunchRequired": true,
@@ -40,11 +40,11 @@
   },
   "counters": {
     "E": 12,
-    "T": 11,
-    "M": 11,
-    "W": 11,
+    "T": 12,
+    "M": 12,
+    "W": 12,
     "recovery": 0,
-    "event": 180
+    "event": 193
   },
   "tickets": [
     {
@@ -2538,19 +2538,294 @@
       "objective": "Implement ANALYTICS-001 as a privacy-safe multiplayer KPI dictionary and machine-checked data-minimization contract",
       "assignee": "builder-analytics-kpi-22",
       "authorizedBy": "general-orchestrator",
-      "status": "active",
+      "status": "completed",
       "chainId": "E-0012",
       "predecessorTicketId": null,
       "predecessorReceiptHash": null,
-      "successorTicketId": null,
+      "successorTicketId": "T-0012",
       "recoveryForTicketId": null,
       "recoveryTicketId": null,
       "createdAt": "2026-08-04T07:49:02.521Z",
       "acceptedAt": "2026-08-04T07:49:11.472Z",
       "startedAt": "2026-08-04T07:49:20.096Z",
-      "completedAt": null,
+      "completedAt": "2026-08-04T07:55:30.398Z",
       "launchEvidence": "Authenticated Shell active in isolated gamedeck-analytics-kpi worktree at origin/main 2970c93e4fbbdde717bce95b9f098594ee15c88b",
-      "receipt": null,
+      "receipt": {
+        "ticketId": "E-0012",
+        "lane": "E",
+        "role": "builder",
+        "actor": "builder-analytics-kpi-22",
+        "objective": "Implement ANALYTICS-001 as a privacy-safe multiplayer KPI dictionary and machine-checked data-minimization contract",
+        "outcome": "pass",
+        "summary": "Defined a 16-metric privacy-safe multiplayer evidence contract and adversarial validation gate without enabling telemetry.",
+        "softwareVersion": "4d2604eba2f40be05fb592010f98222d18018178",
+        "predecessorTicketId": null,
+        "predecessorReceiptHash": null,
+        "launchEvidence": "Authenticated Shell active in isolated gamedeck-analytics-kpi worktree at origin/main 2970c93e4fbbdde717bce95b9f098594ee15c88b",
+        "startedAt": "2026-08-04T07:49:20.096Z",
+        "completedAt": "2026-08-04T07:55:30.398Z",
+        "artifacts": [
+          {
+            "path": "config/multiplayer-metrics.json",
+            "source": "git-blob",
+            "commit": "4d2604eba2f40be05fb592010f98222d18018178",
+            "objectFormat": "sha1",
+            "objectId": "80d031e86c5a8b602ca8ad733d9c15f433b2d266",
+            "bytes": 18092,
+            "sha256": "af9969caad50e52c92226416a7cf177ee42836114694c3fd74286d83aabf8c05"
+          },
+          {
+            "path": "docs/MULTIPLAYER_METRICS.md",
+            "source": "git-blob",
+            "commit": "4d2604eba2f40be05fb592010f98222d18018178",
+            "objectFormat": "sha1",
+            "objectId": "0fd8951eb40b4cd85a233958a2c6fbd91a51ee24",
+            "bytes": 10553,
+            "sha256": "f317be6c1fcb76c177cc4f801239a8527a09ea8c6503c1df2ab2dee145ce8238"
+          },
+          {
+            "path": "scripts/multiplayer-metrics-contract.test.mjs",
+            "source": "git-blob",
+            "commit": "4d2604eba2f40be05fb592010f98222d18018178",
+            "objectFormat": "sha1",
+            "objectId": "1d8aa87d2c8427b7ef7a4f06d4f1658cad630bd2",
+            "bytes": 6739,
+            "sha256": "907083260bad168266b9f0cb35e41f58e2a673fb5421d1f791df609b74b2c96d"
+          }
+        ],
+        "checks": [
+          "focused contract passed; 6 privacy mutations rejected",
+          "full npm test and git diff --check passed"
+        ],
+        "nextAuthorizedLanes": [
+          "T"
+        ],
+        "chainDisposition": "handoff-required",
+        "hash": "6a98e636e2d88ff1205e3ce2f0523ec7ee6eb5302dcc53bdf75bffd849cc60b8"
+      },
+      "uncertainty": null,
+      "quarantine": null
+    },
+    {
+      "id": "T-0012",
+      "lane": "T",
+      "role": "tester",
+      "objective": "Independently review exact commit 4d2604e for metric completeness, privacy minimization, adversarial enforcement, and repository compatibility",
+      "assignee": "tester-analytics-privacy-23",
+      "authorizedBy": "general-orchestrator",
+      "status": "completed",
+      "chainId": "E-0012",
+      "predecessorTicketId": "E-0012",
+      "predecessorReceiptHash": "6a98e636e2d88ff1205e3ce2f0523ec7ee6eb5302dcc53bdf75bffd849cc60b8",
+      "successorTicketId": "M-0012",
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T07:55:45.478Z",
+      "acceptedAt": "2026-08-04T07:56:01.453Z",
+      "startedAt": "2026-08-04T07:56:07.822Z",
+      "completedAt": "2026-08-04T07:56:56.389Z",
+      "launchEvidence": "Independent detached review worktree at exact commit 4d2604eba2f40be05fb592010f98222d18018178; no source edits",
+      "receipt": {
+        "ticketId": "T-0012",
+        "lane": "T",
+        "role": "tester",
+        "actor": "tester-analytics-privacy-23",
+        "objective": "Independently review exact commit 4d2604e for metric completeness, privacy minimization, adversarial enforcement, and repository compatibility",
+        "outcome": "pass",
+        "summary": "Exact commit 4d2604e independently passed privacy, completeness, mutation, full repository, clean worktree, and diff checks.",
+        "softwareVersion": "4d2604eba2f40be05fb592010f98222d18018178",
+        "predecessorTicketId": "E-0012",
+        "predecessorReceiptHash": "6a98e636e2d88ff1205e3ce2f0523ec7ee6eb5302dcc53bdf75bffd849cc60b8",
+        "launchEvidence": "Independent detached review worktree at exact commit 4d2604eba2f40be05fb592010f98222d18018178; no source edits",
+        "startedAt": "2026-08-04T07:56:07.822Z",
+        "completedAt": "2026-08-04T07:56:56.389Z",
+        "artifacts": [
+          {
+            "path": "config/multiplayer-metrics.json",
+            "source": "git-blob",
+            "commit": "4d2604eba2f40be05fb592010f98222d18018178",
+            "objectFormat": "sha1",
+            "objectId": "80d031e86c5a8b602ca8ad733d9c15f433b2d266",
+            "bytes": 18092,
+            "sha256": "af9969caad50e52c92226416a7cf177ee42836114694c3fd74286d83aabf8c05"
+          },
+          {
+            "path": "docs/MULTIPLAYER_METRICS.md",
+            "source": "git-blob",
+            "commit": "4d2604eba2f40be05fb592010f98222d18018178",
+            "objectFormat": "sha1",
+            "objectId": "0fd8951eb40b4cd85a233958a2c6fbd91a51ee24",
+            "bytes": 10553,
+            "sha256": "f317be6c1fcb76c177cc4f801239a8527a09ea8c6503c1df2ab2dee145ce8238"
+          },
+          {
+            "path": "scripts/multiplayer-metrics-contract.test.mjs",
+            "source": "git-blob",
+            "commit": "4d2604eba2f40be05fb592010f98222d18018178",
+            "objectFormat": "sha1",
+            "objectId": "1d8aa87d2c8427b7ef7a4f06d4f1658cad630bd2",
+            "bytes": 6739,
+            "sha256": "907083260bad168266b9f0cb35e41f58e2a673fb5421d1f791df609b74b2c96d"
+          }
+        ],
+        "checks": [
+          "16 metrics cover all 8 stages with explicit unknown baselines",
+          "6 privacy mutations rejected and full npm test passed"
+        ],
+        "nextAuthorizedLanes": [
+          "M"
+        ],
+        "chainDisposition": "handoff-required",
+        "hash": "7bc6d2f93d794c03123893c4f539657df18887d5a63bc1a268ca15e6daab6915"
+      },
+      "uncertainty": null,
+      "quarantine": null
+    },
+    {
+      "id": "M-0012",
+      "lane": "M",
+      "role": "supervisor",
+      "objective": "Supervise exact commit 4d2604e for immutable scope, receipt integrity, privacy boundaries, current-main ancestry, and merge authorization",
+      "assignee": "supervisor-analytics-kpi-24",
+      "authorizedBy": "general-orchestrator",
+      "status": "completed",
+      "chainId": "E-0012",
+      "predecessorTicketId": "T-0012",
+      "predecessorReceiptHash": "7bc6d2f93d794c03123893c4f539657df18887d5a63bc1a268ca15e6daab6915",
+      "successorTicketId": "W-0012",
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T07:57:15.000Z",
+      "acceptedAt": "2026-08-04T07:57:23.345Z",
+      "startedAt": "2026-08-04T07:57:32.122Z",
+      "completedAt": "2026-08-04T07:57:53.757Z",
+      "launchEvidence": "Supervisor re-fetched origin/main 2970c93 and inspected exact tester-approved commit 4d2604e plus immutable receipts",
+      "receipt": {
+        "ticketId": "M-0012",
+        "lane": "M",
+        "role": "supervisor",
+        "actor": "supervisor-analytics-kpi-24",
+        "objective": "Supervise exact commit 4d2604e for immutable scope, receipt integrity, privacy boundaries, current-main ancestry, and merge authorization",
+        "outcome": "pass",
+        "summary": "Approved exact commit 4d2604e: current-main ancestry is exact, scope is bounded, Tester receipt is valid, and the design-only privacy boundary is enforced.",
+        "softwareVersion": "4d2604eba2f40be05fb592010f98222d18018178",
+        "predecessorTicketId": "T-0012",
+        "predecessorReceiptHash": "7bc6d2f93d794c03123893c4f539657df18887d5a63bc1a268ca15e6daab6915",
+        "launchEvidence": "Supervisor re-fetched origin/main 2970c93 and inspected exact tester-approved commit 4d2604e plus immutable receipts",
+        "startedAt": "2026-08-04T07:57:32.122Z",
+        "completedAt": "2026-08-04T07:57:53.757Z",
+        "artifacts": [
+          {
+            "path": "config/multiplayer-metrics.json",
+            "source": "git-blob",
+            "commit": "4d2604eba2f40be05fb592010f98222d18018178",
+            "objectFormat": "sha1",
+            "objectId": "80d031e86c5a8b602ca8ad733d9c15f433b2d266",
+            "bytes": 18092,
+            "sha256": "af9969caad50e52c92226416a7cf177ee42836114694c3fd74286d83aabf8c05"
+          },
+          {
+            "path": "docs/MULTIPLAYER_METRICS.md",
+            "source": "git-blob",
+            "commit": "4d2604eba2f40be05fb592010f98222d18018178",
+            "objectFormat": "sha1",
+            "objectId": "0fd8951eb40b4cd85a233958a2c6fbd91a51ee24",
+            "bytes": 10553,
+            "sha256": "f317be6c1fcb76c177cc4f801239a8527a09ea8c6503c1df2ab2dee145ce8238"
+          },
+          {
+            "path": "scripts/multiplayer-metrics-contract.test.mjs",
+            "source": "git-blob",
+            "commit": "4d2604eba2f40be05fb592010f98222d18018178",
+            "objectFormat": "sha1",
+            "objectId": "1d8aa87d2c8427b7ef7a4f06d4f1658cad630bd2",
+            "bytes": 6739,
+            "sha256": "907083260bad168266b9f0cb35e41f58e2a673fb5421d1f791df609b74b2c96d"
+          }
+        ],
+        "checks": [
+          "merge-base equals origin/main 2970c93 and exact scope is six files",
+          "Tester receipt 7bc6d2f9 valid; telemetry remains disabled"
+        ],
+        "nextAuthorizedLanes": [
+          "W"
+        ],
+        "chainDisposition": "handoff-required",
+        "hash": "0d47b8727e0636ca03ebfd9dbfcdc3ab1f25afabee420d8ddca24cc47f4fb42f"
+      },
+      "uncertainty": null,
+      "quarantine": null
+    },
+    {
+      "id": "W-0012",
+      "lane": "W",
+      "role": "watcher",
+      "objective": "Close ANALYTICS-001 custody after final ledger health, remote identity, exact tests, privacy boundary, and safe integration verification",
+      "assignee": "watcher-analytics-kpi-25",
+      "authorizedBy": "general-orchestrator",
+      "status": "completed",
+      "chainId": "E-0012",
+      "predecessorTicketId": "M-0012",
+      "predecessorReceiptHash": "0d47b8727e0636ca03ebfd9dbfcdc3ab1f25afabee420d8ddca24cc47f4fb42f",
+      "successorTicketId": null,
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T07:58:13.100Z",
+      "acceptedAt": "2026-08-04T07:58:21.496Z",
+      "startedAt": "2026-08-04T07:58:38.914Z",
+      "completedAt": "2026-08-04T07:59:16.768Z",
+      "launchEvidence": "Final Watcher audit on exact commit 4d2604e; private room registry absent and no ChatGPT loopback CDP endpoint available, so no tab rotation attempted",
+      "receipt": {
+        "ticketId": "W-0012",
+        "lane": "W",
+        "role": "watcher",
+        "actor": "watcher-analytics-kpi-25",
+        "objective": "Close ANALYTICS-001 custody after final ledger health, remote identity, exact tests, privacy boundary, and safe integration verification",
+        "outcome": "pass",
+        "summary": "Closed ANALYTICS-001 custody after healthy ledger, exact current-main ancestry, independent approval, full gates, and preserved privacy and publication boundaries.",
+        "softwareVersion": "4d2604eba2f40be05fb592010f98222d18018178",
+        "predecessorTicketId": "M-0012",
+        "predecessorReceiptHash": "0d47b8727e0636ca03ebfd9dbfcdc3ab1f25afabee420d8ddca24cc47f4fb42f",
+        "launchEvidence": "Final Watcher audit on exact commit 4d2604e; private room registry absent and no ChatGPT loopback CDP endpoint available, so no tab rotation attempted",
+        "startedAt": "2026-08-04T07:58:38.914Z",
+        "completedAt": "2026-08-04T07:59:16.768Z",
+        "artifacts": [
+          {
+            "path": "config/multiplayer-metrics.json",
+            "source": "git-blob",
+            "commit": "4d2604eba2f40be05fb592010f98222d18018178",
+            "objectFormat": "sha1",
+            "objectId": "80d031e86c5a8b602ca8ad733d9c15f433b2d266",
+            "bytes": 18092,
+            "sha256": "af9969caad50e52c92226416a7cf177ee42836114694c3fd74286d83aabf8c05"
+          },
+          {
+            "path": "docs/MULTIPLAYER_METRICS.md",
+            "source": "git-blob",
+            "commit": "4d2604eba2f40be05fb592010f98222d18018178",
+            "objectFormat": "sha1",
+            "objectId": "0fd8951eb40b4cd85a233958a2c6fbd91a51ee24",
+            "bytes": 10553,
+            "sha256": "f317be6c1fcb76c177cc4f801239a8527a09ea8c6503c1df2ab2dee145ce8238"
+          },
+          {
+            "path": "scripts/multiplayer-metrics-contract.test.mjs",
+            "source": "git-blob",
+            "commit": "4d2604eba2f40be05fb592010f98222d18018178",
+            "objectFormat": "sha1",
+            "objectId": "1d8aa87d2c8427b7ef7a4f06d4f1658cad630bd2",
+            "bytes": 6739,
+            "sha256": "907083260bad168266b9f0cb35e41f58e2a673fb5421d1f791df609b74b2c96d"
+          }
+        ],
+        "checks": [
+          "CADOps Watcher healthy with zero risks",
+          "No ChatChain tabs rotated because no private registry or ChatGPT CDP endpoint was available"
+        ],
+        "nextAuthorizedLanes": [],
+        "chainDisposition": "closed",
+        "hash": "832652491efdc48a96b30a89521ab05705018c04b4fc104bd8e477bb0e2a39de"
+      },
       "uncertainty": null,
       "quarantine": null
     }
@@ -4939,6 +5214,179 @@
         "launchEvidence": "Authenticated Shell active in isolated gamedeck-analytics-kpi worktree at origin/main 2970c93e4fbbdde717bce95b9f098594ee15c88b"
       },
       "hash": "73addee6a83976416643a3de2e73db7aaf2d35f49da43165de4839ab6b3eca91"
+    },
+    {
+      "eventId": "EVT-000181",
+      "type": "ticket.completed",
+      "ticketId": "E-0012",
+      "actor": "builder-analytics-kpi-22",
+      "at": "2026-08-04T07:55:30.398Z",
+      "previousHash": "73addee6a83976416643a3de2e73db7aaf2d35f49da43165de4839ab6b3eca91",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "6a98e636e2d88ff1205e3ce2f0523ec7ee6eb5302dcc53bdf75bffd849cc60b8",
+        "softwareVersion": "4d2604eba2f40be05fb592010f98222d18018178"
+      },
+      "hash": "c224c8b5d403bbd283268176640e6700c901e652f696cf2763bc49ad12213512"
+    },
+    {
+      "eventId": "EVT-000182",
+      "type": "custody.handed-off",
+      "ticketId": "E-0012",
+      "actor": "general-orchestrator",
+      "at": "2026-08-04T07:55:45.478Z",
+      "previousHash": "c224c8b5d403bbd283268176640e6700c901e652f696cf2763bc49ad12213512",
+      "payload": {
+        "successorTicketId": "T-0012",
+        "successorLane": "T",
+        "predecessorReceiptHash": "6a98e636e2d88ff1205e3ce2f0523ec7ee6eb5302dcc53bdf75bffd849cc60b8",
+        "assignee": "tester-analytics-privacy-23"
+      },
+      "hash": "3350c503169e8efa43f547e1274204d298f71ce43d18f2865e0b3f44aea81820"
+    },
+    {
+      "eventId": "EVT-000183",
+      "type": "ticket.accepted",
+      "ticketId": "T-0012",
+      "actor": "tester-analytics-privacy-23",
+      "at": "2026-08-04T07:56:01.453Z",
+      "previousHash": "3350c503169e8efa43f547e1274204d298f71ce43d18f2865e0b3f44aea81820",
+      "payload": {
+        "role": "tester"
+      },
+      "hash": "a2deb59037038e77e35d88bceed8750db301214edad446649b96348474302b00"
+    },
+    {
+      "eventId": "EVT-000184",
+      "type": "ticket.started",
+      "ticketId": "T-0012",
+      "actor": "tester-analytics-privacy-23",
+      "at": "2026-08-04T07:56:07.822Z",
+      "previousHash": "a2deb59037038e77e35d88bceed8750db301214edad446649b96348474302b00",
+      "payload": {
+        "launchEvidence": "Independent detached review worktree at exact commit 4d2604eba2f40be05fb592010f98222d18018178; no source edits"
+      },
+      "hash": "7d63c1f590dbd010bd339727fb894929712ed1bbceec7ac54a0840fb5af1f3d7"
+    },
+    {
+      "eventId": "EVT-000185",
+      "type": "ticket.completed",
+      "ticketId": "T-0012",
+      "actor": "tester-analytics-privacy-23",
+      "at": "2026-08-04T07:56:56.389Z",
+      "previousHash": "7d63c1f590dbd010bd339727fb894929712ed1bbceec7ac54a0840fb5af1f3d7",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "7bc6d2f93d794c03123893c4f539657df18887d5a63bc1a268ca15e6daab6915",
+        "softwareVersion": "4d2604eba2f40be05fb592010f98222d18018178"
+      },
+      "hash": "31120f4f70218460c5d20d84c0d1b6684d3ab9fab13114000da5e310e9e50b87"
+    },
+    {
+      "eventId": "EVT-000186",
+      "type": "custody.handed-off",
+      "ticketId": "T-0012",
+      "actor": "general-orchestrator",
+      "at": "2026-08-04T07:57:15.000Z",
+      "previousHash": "31120f4f70218460c5d20d84c0d1b6684d3ab9fab13114000da5e310e9e50b87",
+      "payload": {
+        "successorTicketId": "M-0012",
+        "successorLane": "M",
+        "predecessorReceiptHash": "7bc6d2f93d794c03123893c4f539657df18887d5a63bc1a268ca15e6daab6915",
+        "assignee": "supervisor-analytics-kpi-24"
+      },
+      "hash": "c7068453e9180fdf779d21b99a007859c1f56ffa6ba208d3339991716725623d"
+    },
+    {
+      "eventId": "EVT-000187",
+      "type": "ticket.accepted",
+      "ticketId": "M-0012",
+      "actor": "supervisor-analytics-kpi-24",
+      "at": "2026-08-04T07:57:23.345Z",
+      "previousHash": "c7068453e9180fdf779d21b99a007859c1f56ffa6ba208d3339991716725623d",
+      "payload": {
+        "role": "supervisor"
+      },
+      "hash": "63be0b6df60055323f3b59757dcb3fd9ca0f08d6f45ada93fe1237f9f8ab9130"
+    },
+    {
+      "eventId": "EVT-000188",
+      "type": "ticket.started",
+      "ticketId": "M-0012",
+      "actor": "supervisor-analytics-kpi-24",
+      "at": "2026-08-04T07:57:32.122Z",
+      "previousHash": "63be0b6df60055323f3b59757dcb3fd9ca0f08d6f45ada93fe1237f9f8ab9130",
+      "payload": {
+        "launchEvidence": "Supervisor re-fetched origin/main 2970c93 and inspected exact tester-approved commit 4d2604e plus immutable receipts"
+      },
+      "hash": "b16562392e2739ca4462124df8f788cfd2a7e92840f61a21eebfad2b9e77d35c"
+    },
+    {
+      "eventId": "EVT-000189",
+      "type": "ticket.completed",
+      "ticketId": "M-0012",
+      "actor": "supervisor-analytics-kpi-24",
+      "at": "2026-08-04T07:57:53.757Z",
+      "previousHash": "b16562392e2739ca4462124df8f788cfd2a7e92840f61a21eebfad2b9e77d35c",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "0d47b8727e0636ca03ebfd9dbfcdc3ab1f25afabee420d8ddca24cc47f4fb42f",
+        "softwareVersion": "4d2604eba2f40be05fb592010f98222d18018178"
+      },
+      "hash": "cd703fca7e88e4cf789ccb139b80db8ad18b08587b17162d122bfd7b66ab2176"
+    },
+    {
+      "eventId": "EVT-000190",
+      "type": "custody.handed-off",
+      "ticketId": "M-0012",
+      "actor": "general-orchestrator",
+      "at": "2026-08-04T07:58:13.100Z",
+      "previousHash": "cd703fca7e88e4cf789ccb139b80db8ad18b08587b17162d122bfd7b66ab2176",
+      "payload": {
+        "successorTicketId": "W-0012",
+        "successorLane": "W",
+        "predecessorReceiptHash": "0d47b8727e0636ca03ebfd9dbfcdc3ab1f25afabee420d8ddca24cc47f4fb42f",
+        "assignee": "watcher-analytics-kpi-25"
+      },
+      "hash": "dfd74fdd4771d1dc9c9467a59f527cd67a3de02ae037b00ab76f90b489f00f9f"
+    },
+    {
+      "eventId": "EVT-000191",
+      "type": "ticket.accepted",
+      "ticketId": "W-0012",
+      "actor": "watcher-analytics-kpi-25",
+      "at": "2026-08-04T07:58:21.496Z",
+      "previousHash": "dfd74fdd4771d1dc9c9467a59f527cd67a3de02ae037b00ab76f90b489f00f9f",
+      "payload": {
+        "role": "watcher"
+      },
+      "hash": "b0d9a981f68ce795ed760533e0d9ac97da43f7e6e69e7cafbf9de6a0d6fc5565"
+    },
+    {
+      "eventId": "EVT-000192",
+      "type": "ticket.started",
+      "ticketId": "W-0012",
+      "actor": "watcher-analytics-kpi-25",
+      "at": "2026-08-04T07:58:38.914Z",
+      "previousHash": "b0d9a981f68ce795ed760533e0d9ac97da43f7e6e69e7cafbf9de6a0d6fc5565",
+      "payload": {
+        "launchEvidence": "Final Watcher audit on exact commit 4d2604e; private room registry absent and no ChatGPT loopback CDP endpoint available, so no tab rotation attempted"
+      },
+      "hash": "c92b3eb55cafc5264f79cfd09249338cc3778aacfbca81b0e312df4f9fb6a3d6"
+    },
+    {
+      "eventId": "EVT-000193",
+      "type": "ticket.completed",
+      "ticketId": "W-0012",
+      "actor": "watcher-analytics-kpi-25",
+      "at": "2026-08-04T07:59:16.768Z",
+      "previousHash": "c92b3eb55cafc5264f79cfd09249338cc3778aacfbca81b0e312df4f9fb6a3d6",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "832652491efdc48a96b30a89521ab05705018c04b4fc104bd8e477bb0e2a39de",
+        "softwareVersion": "4d2604eba2f40be05fb592010f98222d18018178"
+      },
+      "hash": "35d127f74503b4e4a4a70f3bd4ad4518da6cdfe58b2e4609bc3795cee1e9c482"
     }
   ]
 }
