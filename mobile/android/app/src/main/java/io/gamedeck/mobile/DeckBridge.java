@@ -9,8 +9,11 @@ import android.webkit.JavascriptInterface;
 
 import org.json.JSONObject;
 
+import java.io.File;
+
 final class DeckBridge {
     private static final String RENDERER_TAG = "GameDeckRenderer";
+    private static final String DEBUG_FIXTURE_FILE = "renderer-fixture.enabled";
     private final MainActivity activity;
     private final AndroidRuntimeManager runtime;
     private final LibraryRepository library;
@@ -29,10 +32,11 @@ final class DeckBridge {
         try {
             value.put("platform", "android");
             value.put("platformKey", AndroidRuntimeManager.PLATFORM_KEY);
-            value.put("version", "0.3.0-parity-preview");
+            value.put("version", "0.3.1-parity-preview");
             value.put("localFirst", true);
             value.put("accountRequired", false);
             value.put("embeddedRuntimeReady", false);
+            value.put("debugFixture", BuildConfig.DEBUG && new File(activity.getFilesDir(), DEBUG_FIXTURE_FILE).isFile());
         } catch (Exception ignored) {}
         return value.toString();
     }
@@ -125,7 +129,7 @@ final class DeckBridge {
 
     private String safeLog(String value) {
         String cleaned = value == null ? "" : value.replace('\n', ' ').replace('\r', ' ').trim();
-        return cleaned.length() > 1200 ? cleaned.substring(0, 1200) : cleaned;
+        return cleaned.length() > 1600 ? cleaned.substring(0, 1600) : cleaned;
     }
 
     void setLibraryRoot(Uri uri) {
