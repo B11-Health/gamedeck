@@ -48,6 +48,8 @@ function writePreference(key, value) {
 }
 
 const savedSort = readPreference('sort', 'title');
+const HAPTIC_PREFERENCE_ORDER = ['auto', 'enhance', 'off'];
+const savedHapticPreference = readPreference('haptics', readPreference('adaptive-haptics', 'on') === 'off' ? 'off' : 'auto');
 const requestedCaptureView = new URLSearchParams(window.location.search).get('captureView');
 
 const state = {
@@ -100,7 +102,8 @@ const state = {
   catalogLimit: 120,
   sort: GAME_SORTS.has(savedSort) ? savedSort : 'title',
   density: 'compact',
-  sidebarCollapsed: readPreference('sidebar', 'expanded') === 'collapsed'
+  sidebarCollapsed: readPreference('sidebar', 'expanded') === 'collapsed',
+  hapticPreference: HAPTIC_PREFERENCE_ORDER.includes(savedHapticPreference) ? savedHapticPreference : 'auto'
 };
 
 let playCaptureStream = null;
@@ -114,6 +117,11 @@ let fullscreenControlsTimer = null;
 let playPointerTimer = null;
 let playAspectTimer = null;
 let reportedPlayAspect = 0;
+let playHapticSessionKey = '';
+let playHapticStream = null;
+let playHapticRenderedMode = '';
+let playHapticRenderedPreference = '';
+let playHaptics = null;
 
 const SYSTEM_THEME_BACKGROUNDS = {
   all: { key: 'all', image: '../assets/system-themes/nintendo-polygon.webp', accent: '#72e7ff', glow: '#8b5cff', position: '78% center' },
@@ -1394,6 +1402,124 @@ function playPhaseMessage(status = {}) {
   }[status.phase] || 'Preparing integrated play…';
 }
 
+const LOADING_HAPTIC_PHASES = new Set(['resolving', 'spawning', 'discovering', 'capture_armed']);
+
+function playHapticStatusCopy(status = {}) {
+  const name = status.padName ? status.padName.replace(/\s*\([^)]*\)\s*$/, '').trim() : 'your controller';
+  const preference = HAPTIC_PREFERENCE_ORDER.includes(status.preference) ? status.preference : state.hapticPreference;
+  return {
+    loading: `${name} is breathing gently while GameDeck prepares the game.`,
+    adaptive: preference === 'enhance'
+      ? 'Enhanced haptics follow local sound impacts even on rumble-capable systems.'
+      : 'Auto haptics add local-only sound-reactive feedback when native rumble is unavailable.',
+    native: 'Native game rumble is preserved. Choose Enhance to add sound-reactive feedback for this session.',
+    popout: 'Pop out gives vibration control back to the native game engine.',
+    unsupported: 'This controller does not expose vibration to GameDeck.',
+    'no-audio': 'GameDeck could not access the local analysis track; game audio and controls remain unchanged.',
+    off: 'Haptics are off. Press the button to return to Auto.',
+    idle: preference === 'enhance' ? 'Enhanced haptics are ready.' : 'Auto haptics are ready.'
+  }[status.mode] || 'GameDeck haptics are ready.';
+}
+
+function renderPlayHapticStatus(status = {}) {
+  const button = $('#playHapticsToggle');
+  const hint = $('#playInputHint');
+  const surface = $('#playSurface');
+  if (!button) return;
+  const preference = HAPTIC_PREFERENCE_ORDER.includes(status.preference) ? status.preference : state.hapticPreference;
+  const enabled = preference !== 'off' && status.enabled !== false;
+  const mode = String(status.mode || 'idle');
+  const label = preference === 'enhance' ? 'Haptics Enhance' : preference === 'off' ? 'Haptics Off' : 'Haptics Auto';
+  button.classList.toggle('active', enabled);
+  button.classList.toggle('enhance', preference === 'enhance');
+  button.classList.toggle('reactive', mode === 'adaptive');
+  button.classList.toggle('breathing', mode === 'loading');
+  button.setAttribute('aria-pressed', String(enabled));
+  button.setAttribute('aria-label', `${label}. Press to change haptic mode.`);
+  button.dataset.hapticPreference = preference;
+  button.dataset.hapticMode = mode;
+  button.dataset.hapticPulses = String(Number(status.pulses || 0));
+  button.dataset.hapticLevel = Number(status.level || 0).toFixed(3);
+  button.style.setProperty('--haptic-level', String(Math.max(0, Math.min(1, Number(status.level || 0)))));
+  surface?.style.setProperty('--haptic-level', String(Math.max(0, Math.min(1, Number(status.level || 0)))));
+  button.title = playHapticStatusCopy({ ...status, preference });
+  surface?.classList.toggle('haptics-live', mode === 'adaptive' || mode === 'loading');
+  surface?.classList.toggle('haptics-impact', mode === 'adaptive' && Number(status.level || 0) > 0.26);
+  if (mode !== playHapticRenderedMode || preference !== playHapticRenderedPreference) {
+    playHapticRenderedMode = mode;
+    playHapticRenderedPreference = preference;
+    button.innerHTML = `<span aria-hidden="true">≋</span> ${label}`;
+    if (hint) hint.textContent = playHapticStatusCopy({ ...status, preference });
+  }
+}
+
+function ensurePlayHaptics() {
+  if (playHaptics) return playHaptics;
+  if (!window.GameDeckHaptics?.createController) {
+    renderPlayHapticStatus({ enabled: false, mode: 'unsupported' });
+    return null;
+  }
+  playHaptics = window.GameDeckHaptics.createController({
+    getGamepads: () => navigator.getGamepads?.() || [],
+    AudioContext: window.AudioContext || window.webkitAudioContext,
+    preference: state.hapticPreference,
+    now: () => performance.now(),
+    onStatus: renderPlayHapticStatus
+  });
+  renderPlayHapticStatus(playHaptics.getStatus());
+  return playHaptics;
+}
+
+function resetPlayHapticBinding(mode = 'idle') {
+  playHapticSessionKey = '';
+  playHapticStream = null;
+  playHaptics?.stopAll(mode);
+}
+
+function playHapticPolicy(status = state.playSession, preference = state.hapticPreference) {
+  return window.GameDeckHaptics?.hapticPolicyForSystem?.(status?.systemId, preference) || 'off';
+}
+
+function shouldCaptureHapticAudio(status = state.playSession, preference = state.hapticPreference) {
+  return Boolean(status?.active && status.mode !== 'popout' && playHapticPolicy(status, preference) === 'adaptive');
+}
+
+function syncPlayHaptics(status = state.playSession) {
+  const controller = ensurePlayHaptics();
+  if (!controller) return;
+  if (!status?.active) {
+    if (playHapticSessionKey || controller.getStatus().mode !== 'idle') resetPlayHapticBinding('idle');
+    return;
+  }
+  if (status.mode === 'popout') {
+    if (playHapticSessionKey !== `${status.sessionId}:popout`) {
+      resetPlayHapticBinding('popout');
+      playHapticSessionKey = `${status.sessionId}:popout`;
+    }
+    return;
+  }
+  if (status.phase === 'playing' && playCaptureStream) {
+    const key = `${status.sessionId}:reactive:${status.systemId || 'unknown'}`;
+    if (key !== playHapticSessionKey || playHapticStream !== playCaptureStream) {
+      playHapticSessionKey = key;
+      playHapticStream = playCaptureStream;
+      controller.startReactive(playCaptureStream, status.systemId, state.hapticPreference);
+    }
+    return;
+  }
+  if (LOADING_HAPTIC_PHASES.has(status.phase) || status.phase === 'playing') {
+    const loadingIdentity = state.playFile || status.sessionId || status.title || 'session';
+    const key = `loading:${loadingIdentity}`;
+    if (key !== playHapticSessionKey) {
+      playHapticSessionKey = key;
+      playHapticStream = null;
+      controller.startLoading();
+    }
+    return;
+  }
+  resetPlayHapticBinding(status.phase === 'failed' ? 'idle' : 'idle');
+}
+
 function clampAmbientChannel(value) {
   return Math.max(8, Math.min(235, Math.round(Number(value) || 0)));
 }
@@ -1506,6 +1632,7 @@ function updatePlayAmbientState() {
 
 function stopPlayCapture() {
   stopPlayAmbient(true);
+  resetPlayHapticBinding('idle');
   if (playCaptureStream) {
     for (const track of playCaptureStream.getTracks()) track.stop();
   }
@@ -1654,6 +1781,7 @@ function renderPlaySession(status = {}) {
     document.body.classList.remove('play-session-open');
     stopPlayAmbient(false);
   }
+  syncPlayHaptics(current);
 }
 
 function resetPlaySessionUi() {
@@ -1671,10 +1799,10 @@ function resetPlaySessionUi() {
   state.playGameId = null;
 }
 
-async function requestPlayCapture(sessionId) {
-  const armed = await window.deck.playSessionArmCapture(sessionId, false);
+async function requestPlayCapture(sessionId, includeAudio = false) {
+  const armed = await window.deck.playSessionArmCapture(sessionId, includeAudio);
   if (!armed?.ok) throw Error(armed?.error || 'The game window is not ready for capture.');
-  return navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+  return navigator.mediaDevices.getDisplayMedia({ video: true, audio: includeAudio });
 }
 
 async function acquirePlayCapture(status = state.playSession) {
@@ -1685,8 +1813,8 @@ async function acquirePlayCapture(status = state.playSession) {
     const sessionId = status.sessionId;
     $('#playCaptureError').classList.add('hidden');
     $('#playLoading').classList.remove('ready');
-    const stream = await requestPlayCapture(sessionId);
-    for (const audioTrack of stream.getAudioTracks()) audioTrack.stop();
+    const includeHapticAudio = shouldCaptureHapticAudio(status);
+    const stream = await requestPlayCapture(sessionId, includeHapticAudio);
     if (state.playSession.sessionId !== sessionId || state.playSession.mode === 'popout') {
       for (const track of stream.getTracks()) track.stop();
       return null;
@@ -1705,6 +1833,7 @@ async function acquirePlayCapture(status = state.playSession) {
     });
     await video.play();
     updatePlayAmbientState();
+    syncPlayHaptics(state.playSession);
     await syncPlaySourceAspect(video, sessionId);
     video.onresize = () => schedulePlaySourceAspect(video, sessionId);
     for (const track of stream.getVideoTracks()) {
@@ -3297,6 +3426,24 @@ $$('[data-play-mode]').forEach(button => {
 });
 $('#playClose').onclick = () => stopIntegratedPlay('player_closed');
 $('#playCapturePopout').onclick = () => setPlayMode('popout');
+$('#playHapticsToggle').onclick = async () => {
+  const previousPreference = state.hapticPreference;
+  const nextIndex = (HAPTIC_PREFERENCE_ORDER.indexOf(previousPreference) + 1) % HAPTIC_PREFERENCE_ORDER.length;
+  state.hapticPreference = HAPTIC_PREFERENCE_ORDER[nextIndex];
+  writePreference('haptics', state.hapticPreference);
+  const controller = ensurePlayHaptics();
+  controller?.setPreference(state.hapticPreference);
+  playHapticSessionKey = '';
+  playHapticStream = null;
+  const status = state.playSession;
+  const audioRequirementChanged = shouldCaptureHapticAudio(status, previousPreference) !== shouldCaptureHapticAudio(status, state.hapticPreference);
+  if (status?.active && status.mode !== 'popout' && status.captureReady && audioRequirementChanged) {
+    stopPlayCapture();
+    await acquirePlayCapture(status).catch(() => {});
+  } else {
+    syncPlayHaptics(status);
+  }
+};
 $('#playCaptureRetry').onclick = () => {
   $('#playCaptureError').classList.add('hidden');
   stopPlayCapture();
@@ -3596,10 +3743,13 @@ window.addEventListener('gamepadconnected', () => {
   gamepadState.initialized = false;
   gamepadState.acceptAfter = performance.now() + 1200;
   setControllerStatus();
+  playHapticSessionKey = '';
+  syncPlayHaptics(state.playSession);
 });
 window.addEventListener('gamepaddisconnected', () => {
   gamepadState.initialized = false;
   setControllerStatus();
+  renderPlayHapticStatus(ensurePlayHaptics()?.getStatus() || { enabled: false, mode: 'unsupported' });
 });
 window.deck.onActivity(entry => {
   state.activities = [...state.activities.slice(-399), entry];
@@ -3705,6 +3855,7 @@ async function init() {
   setLoading(true, 'Building the shelves', 'Preparing cover art, descriptions, and console groups.', 72);
   setControllerStatus();
   setLoading(true, 'Couch mode ready', 'Keyboard and controller navigation are lined up.', 94);
+  ensurePlayHaptics();
   const existingPlaySession = await window.deck.playSessionStatus().catch(() => null);
   if (existingPlaySession?.active) await handlePlaySessionUpdate(existingPlaySession);
   setInterval(handleGamepad, 90);

@@ -3982,11 +3982,11 @@ ipcMain.handle('play-session-set-aspect', (event, sessionId, aspectRatio) => {
   if (!isTrustedMainFrameCaller(event, mainWindow)) return { ok: false, error: 'untrusted_caller', status: embeddedPlayManager?.status() };
   return embeddedPlayManager.setAspect(String(sessionId || '').slice(0, 160), Number(aspectRatio));
 });
-ipcMain.handle('play-session-arm-capture', (event, sessionId, includeAudio = true) => {
+ipcMain.handle('play-session-arm-capture', (event, sessionId, includeAudio = false) => {
   if (!isTrustedMainFrameCaller(event, mainWindow)) return { ok: false, error: 'untrusted_caller' };
   const source = embeddedPlayManager.captureSource(String(sessionId || '').slice(0, 160));
   if (!source) return { ok: false, error: 'capture_unavailable', status: embeddedPlayManager.status() };
-  const audio = false;
+  const audio = Boolean(includeAudio && process.platform === 'win32');
   armedPlayCapture = { ...source, audio, expiresAt: Date.now() + 10000 };
   return { ok: true, audio, status: embeddedPlayManager.status() };
 });

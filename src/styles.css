@@ -6530,6 +6530,7 @@ body.modal-open > main {
 }
 
 .play-mode,
+.play-haptics-toggle,
 .play-close,
 .play-capture-error button {
   border: 1px solid rgba(255,255,255,.12);
@@ -6541,7 +6542,8 @@ body.modal-open > main {
   transition: border-color .16s ease, background .16s ease, color .16s ease, transform .16s ease;
 }
 
-.play-mode {
+.play-mode,
+.play-haptics-toggle {
   min-height: 36px;
   padding: 0 13px;
   border-radius: 10px;
@@ -6550,17 +6552,85 @@ body.modal-open > main {
 
 .play-mode:hover,
 .play-mode:focus-visible,
-.play-mode.active {
+.play-mode.active,
+.play-haptics-toggle:hover,
+.play-haptics-toggle:focus-visible,
+.play-haptics-toggle.active {
   color: #fff;
   border-color: rgba(114,231,255,.5);
   background: linear-gradient(135deg, rgba(86,203,255,.2), rgba(139,92,255,.18));
 }
 
 .play-mode:focus-visible,
+.play-haptics-toggle:focus-visible,
 .play-close:focus-visible,
 .play-capture-error button:focus-visible {
   outline: 2px solid #72e7ff;
   outline-offset: 2px;
+}
+
+.play-haptics-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 11px;
+  border-radius: 10px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.play-haptics-toggle span {
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  color: #72e7ff;
+  font-size: 18px;
+  line-height: 1;
+  transform: scale(calc(1 + (var(--haptic-level, 0) * .16)));
+  filter: drop-shadow(0 0 calc(4px + (var(--haptic-level, 0) * 9px)) rgba(114,231,255,.62));
+  transition: transform .12s ease, filter .12s ease, color .16s ease;
+}
+
+.play-haptics-toggle:not(.active) {
+  color: rgba(244,248,255,.46);
+  border-color: rgba(255,255,255,.08);
+  background: rgba(255,255,255,.025);
+}
+
+.play-haptics-toggle:not(.active) span {
+  color: rgba(244,248,255,.34);
+  filter: none;
+}
+
+.play-haptics-toggle.breathing span {
+  animation: haptic-breath 1.75s cubic-bezier(.45,0,.35,1) infinite;
+}
+
+.play-haptics-toggle.reactive span {
+  color: #a8f3ff;
+}
+
+.play-haptics-toggle.enhance {
+  border-color: rgba(255,120,213,.52);
+  background: linear-gradient(135deg, rgba(255,78,177,.2), rgba(139,92,255,.24));
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.025), 0 0 18px rgba(190,82,255,.12);
+}
+
+.play-haptics-toggle.enhance span {
+  color: #ff9fdf;
+  filter: drop-shadow(0 0 calc(5px + (var(--haptic-level, 0) * 10px)) rgba(255,86,196,.62));
+}
+
+.play-surface.haptics-impact .play-stage {
+  box-shadow: inset 0 0 calc(18px + (var(--haptic-level, 0) * 34px)) rgba(114,231,255,calc(.025 + (var(--haptic-level, 0) * .05)));
+}
+
+@keyframes haptic-breath {
+  0%, 100% { transform: scale(.92); opacity: .58; }
+  42% { transform: scale(1.16); opacity: 1; }
+  68% { transform: scale(1.02); opacity: .78; }
 }
 
 .play-close {
@@ -6923,7 +6993,8 @@ body.play-session-open {
   .play-session-copy {
     display: none;
   }
-  .play-mode {
+  .play-mode,
+  .play-haptics-toggle {
     padding: 0 9px;
   }
   .play-footer {
@@ -6936,7 +7007,8 @@ body.play-session-open {
 @media (prefers-reduced-motion: reduce) {
   .play-loading-ring,
   .launch-curtain-glow,
-  .launch-curtain-track i {
+  .launch-curtain-track i,
+  .play-haptics-toggle.breathing span {
     animation: none;
   }
 }

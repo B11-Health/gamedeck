@@ -616,6 +616,7 @@
         <button class="play-mode active" id="playDocked" type="button" data-play-mode="docked" aria-pressed="true" title="Play inside the GameDeck window">Docked</button>
         <button class="play-mode" id="playFullscreen" type="button" data-play-mode="fullscreen" aria-pressed="false" title="Fill the display with GameDeck Play">Fullscreen</button>
         <button class="play-mode" id="playPopout" type="button" data-play-mode="popout" aria-pressed="false" title="Use the native engine window">Pop out</button>
+        <button class="play-haptics-toggle active" id="playHapticsToggle" type="button" aria-pressed="true" aria-label="Haptics Auto. Press to change haptic mode." title="Auto haptics are on"><span aria-hidden="true">≋</span> Haptics Auto</button>
         <button class="play-close" id="playClose" type="button" title="Close game" aria-label="Close game">×</button>
       </div>
     </header>
@@ -636,7 +637,7 @@
     </div>
     <footer class="play-footer">
       <span><i aria-hidden="true"></i><b>Controller input is sent directly to the game.</b></span>
-      <span id="playInputHint">Audio comes directly from the game engine with no duplicate capture. Keyboard players can use Pop out; press F10 to switch.</span>
+      <span id="playInputHint">Auto haptics analyze game sound locally and never record it.</span>
     </footer>
   </section>
 
@@ -701,6 +702,7 @@
   </section>
 
   <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"><span class="toast-icon" aria-hidden="true">i</span><b class="toast-message"></b></div>
+  <script src="game-haptics.js"></script>
   <script src="app.js"></script>
   <script src="streaming.js"></script>
   <script src="netplay.js"></script>
