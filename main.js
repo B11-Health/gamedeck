@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell, screen, dialog, clipboard, desktopCapturer, session } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, screen, dialog, clipboard, desktopCapturer, session, globalShortcut } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
@@ -13,11 +13,13 @@ const { path7za } = require('7zip-bin');
 const { createRuntimeManager, pathsFor: managedRuntimePathsFor, key: managedRuntimeKey } = require('./runtime-manager');
 const { createStreamServer } = require('./stream-server');
 const { createNetplayManager } = require('./netplay-manager');
+const { createEmbeddedPlayManager } = require('./embedded-play-manager');
 const {
   buildCapabilityFailure,
   buildStatusFailure,
   createPlaySessionManager,
   isTrustedMainFrameCaller,
+  rankSourceCandidates,
   resolveCapabilitiesSafely,
   validateCapabilityFileArgument
 } = require('./play-session-manager');
@@ -195,6 +197,7 @@ const ART_CACHE = path.join(app.getPath('userData'), 'artwork');
 const DETAILS_CACHE = path.join(app.getPath('userData'), 'details');
 const ARCADE_AUDIT_FILE = path.join(app.getPath('userData'), 'arcade-audit.json');
 const ARCADE_CONTROLLER_CONFIG = path.join(app.getPath('userData'), 'retroarch-arcade.cfg');
+const EMBEDDED_RETROARCH_CONFIG = path.join(app.getPath('userData'), 'retroarch-embedded.cfg');
 const SPONSORS_FILE = path.join(__dirname, 'sponsors.json');
 const DONATIONS_FILE = path.join(__dirname, 'config', 'donations.json');
 const ART_EXTS = ['.png', '.jpg', '.jpeg', '.webp', '.gif'];
@@ -356,6 +359,8 @@ let mainWindow = null;
 let activity = [];
 const downloads = new Map();
 const downloadProcesses = new Map();
+const gameDeckOpenBorProcesses = new Map();
+const embeddedNativeWindows = new Map();
 const pendingLaunches = new Map();
 const mameLaunchVerificationCache = new Map();
 const artworkRequests = new Map();
@@ -383,6 +388,9 @@ let streamCaptureAudio = true;
 let streamServer = null;
 let netplayManager = null;
 let playSessionManager = null;
+let embeddedPlayManager = null;
+let armedPlayCapture = null;
+let launchCurtainTimer = null;
 let remotePlayProcess = null;
 let remotePlaySession = null;
 let remoteInputSocket = null;
@@ -430,13 +438,22 @@ function configureGameDeckCapture() {
   session.defaultSession.setDisplayMediaRequestHandler(async (_request, callback) => {
     try {
       const sources = await desktopCapturer.getSources({ types: ['window', 'screen'], thumbnailSize: { width: 0, height: 0 } });
-      const selected = sources.find(source => source.id === streamCaptureSourceId)
-        || sources.find(source => source.id.startsWith('screen:'))
-        || sources[0];
-      if (!selected) return callback({});
-      callback(streamCaptureAudio ? { video: selected, audio: 'loopback' } : { video: selected });
+      const playCapture = armedPlayCapture && armedPlayCapture.expiresAt > Date.now() ? armedPlayCapture : null;
+      const selected = playCapture
+        ? sources.find(source => source.id === playCapture.sourceId)
+        : sources.find(source => source.id === streamCaptureSourceId)
+          || sources.find(source => source.id.startsWith('screen:'))
+          || sources[0];
+      if (!selected) {
+        armedPlayCapture = null;
+        return callback({});
+      }
+      const audio = playCapture ? playCapture.audio : streamCaptureAudio;
+      armedPlayCapture = null;
+      callback(audio && process.platform === 'win32' ? { video: selected, audio: 'loopback' } : { video: selected });
     } catch (error) {
-      addActivity('error', 'GameDeck Live capture failed: ' + error.message);
+      armedPlayCapture = null;
+      addActivity('error', 'GameDeck capture failed: ' + error.message);
       callback({});
     }
   }, { useSystemPicker: false });
@@ -777,17 +794,68 @@ function configuredEmulator(system) {
   return null;
 }
 
+function configuredIntegratedEmulator(system) {
+  const corePath = system.core ? path.join(CORES, system.core) : '';
+  const managedCoreReady = Boolean(
+    system.core
+    && fs.existsSync(MANAGED_RUNTIME_PATHS.retroArch)
+    && fs.existsSync(corePath)
+  );
+  if (managedCoreReady) {
+    return {
+      kind: 'libretro',
+      executable: MANAGED_RUNTIME_PATHS.retroArch,
+      corePath,
+      label: system.id === 'arcade'
+        ? 'GameDeck · FinalBurn Neo'
+        : system.id === 'mame'
+          ? 'GameDeck · MAME'
+          : `GameDeck · ${system.name}`,
+      integrated: true
+    };
+  }
+  const standaloneReady = Boolean(system.exe && fs.existsSync(system.exe));
+  if (standaloneReady) {
+    return {
+      kind: system.launchMode || 'standalone',
+      executable: system.exe,
+      label: system.id === 'mame' ? 'MAME standalone' : system.name,
+      integrated: process.platform === 'win32'
+    };
+  }
+  return null;
+}
+
+const SYSTEM_DISPLAY_ASPECT = new Map([
+  ['gb', 10 / 9],
+  ['gba', 3 / 2],
+  ['nds', 2 / 3],
+  ['psp', 16 / 9],
+  ['gamecube', 16 / 9],
+  ['wii', 16 / 9],
+  ['wiiu', 16 / 9],
+  ['openbor', 4 / 3]
+]);
+
+function systemDisplayAspect(system) {
+  const value = Number(SYSTEM_DISPLAY_ASPECT.get(system?.id) || 4 / 3);
+  return Number.isFinite(value) && value > 0.4 && value < 3 ? value : 4 / 3;
+}
+
 function playSessionCapabilityInput(file) {
   const safeFile = safeLibraryFile(file);
   const system = detectSystem(safeFile);
   if (!system || !isPlayableFile(safeFile, system)) throw Error('Could not identify this game system.');
 
-  const emulator = configuredEmulator(system);
+  const emulator = configuredIntegratedEmulator(system);
   const corePath = system.core ? path.join(CORES, system.core) : '';
   const firmwareReady = systemBiosReady(system);
   const dependenciesReady = !isArcadeSystem(system) || arcadeDependencySpecs(safeFile).every(dependency => Boolean(installedArcadeDependency(safeFile, dependency)));
   const managedRetroArch = Boolean(emulator?.kind === 'libretro' && emulator.executable === MANAGED_RUNTIME_PATHS.retroArch);
-  const managedCore = Boolean(corePath && path.relative(MANAGED_RUNTIME_PATHS.cores, corePath) && !path.relative(MANAGED_RUNTIME_PATHS.cores, corePath).startsWith('..') && !path.isAbsolute(path.relative(MANAGED_RUNTIME_PATHS.cores, corePath)));
+  const coreRelative = corePath ? path.relative(MANAGED_RUNTIME_PATHS.cores, corePath) : '';
+  const managedCore = Boolean(corePath && coreRelative && !coreRelative.startsWith('..') && !path.isAbsolute(coreRelative));
+  const openBorRelative = emulator?.executable ? path.relative(MANAGED_RUNTIME_ROOT, emulator.executable) : '';
+  const managedOpenBor = Boolean(emulator?.kind === 'openbor' && openBorRelative && !openBorRelative.startsWith('..') && !path.isAbsolute(openBorRelative));
   const wayland = process.platform === 'linux' && Boolean(process.env.WAYLAND_DISPLAY || String(process.env.XDG_SESSION_TYPE || '').toLowerCase() === 'wayland');
 
   return {
@@ -797,19 +865,19 @@ function playSessionCapabilityInput(file) {
     engine: {
       kind: emulator?.kind || (system.core ? 'libretro' : 'unknown'),
       label: emulator?.label || system.name,
-      managed: managedRetroArch && managedCore,
+      managed: Boolean((managedRetroArch && managedCore) || managedOpenBor),
+      captureEligible: Boolean(emulator?.integrated && process.platform === 'win32'),
       available: Boolean(emulator),
-      coreAvailable: system.core ? Boolean(fs.existsSync(RA) && fs.existsSync(corePath)) : true,
+      coreAvailable: system.core ? Boolean(fs.existsSync(MANAGED_RUNTIME_PATHS.retroArch) && fs.existsSync(corePath)) : true,
       configAvailable: managedRetroArch ? fs.existsSync(MANAGED_RUNTIME_PATHS.config) : true
     },
     dependencies: {
       firmwareReady,
       ready: dependenciesReady
     },
-    certification: 'experimental'
+    certification: system.id === 'openbor' && process.platform === 'win32' ? 'verified' : 'experimental'
   };
 }
-
 function systemSetupIssue(system) {
   if (!configuredEmulator(system)) {
     if (system.preferExe && system.core) return `${system.name} needs standalone MAME or its RetroArch core.`;
@@ -1561,6 +1629,473 @@ function ensureRetroArchArcadeControllerConfig() {
   }
 }
 
+function ensureRetroArchEmbeddedConfig() {
+  const lines = [
+    'video_fullscreen = "false"',
+    'video_windowed_fullscreen = "false"',
+    'video_window_show_decorations = "false"',
+    'video_aspect_ratio_auto = "true"',
+    'aspect_ratio_index = "22"',
+    'video_force_aspect = "true"',
+    'video_scale_integer = "false"',
+    'video_scale = "3.0"',
+    'pause_nonactive = "false"',
+    'menu_show_load_content_animation = "false"',
+    'notification_show_autoconfig = "false"',
+    'notification_show_cheats_applied = "false"',
+    'notification_show_fast_forward = "false"',
+    'notification_show_refresh_rate = "false"',
+    'video_font_enable = "false"'
+  ];
+  const content = `${lines.join('\n')}\n`;
+  fs.mkdirSync(path.dirname(EMBEDDED_RETROARCH_CONFIG), { recursive: true });
+  if (!fs.existsSync(EMBEDDED_RETROARCH_CONFIG) || fs.readFileSync(EMBEDDED_RETROARCH_CONFIG, 'utf8') !== content) {
+    fs.writeFileSync(EMBEDDED_RETROARCH_CONFIG, content);
+  }
+  return EMBEDDED_RETROARCH_CONFIG;
+}
+
+function ensureOpenBorRuntimeConfig(executable = emulatorPaths.openbor) {
+  if (!executable || !fs.existsSync(executable)) return { ready: false, issue: 'OpenBOR is not installed.' };
+  const root = path.dirname(executable);
+  const directories = ['Logs', 'Paks', 'Saves', 'ScreenShots'];
+  for (const folder of directories) fs.mkdirSync(path.join(root, folder), { recursive: true });
+  const profile = {
+    version: 1,
+    engine: 'OpenBOR',
+    compatibilityBuild: 'v3.0 Build 6391',
+    executable,
+    root,
+    directPakLaunch: true,
+    backgroundControllerInput: true,
+    savesDirectory: path.join(root, 'Saves'),
+    logsDirectory: path.join(root, 'Logs'),
+    screenshotsDirectory: path.join(root, 'ScreenShots'),
+    updatedAt: new Date().toISOString()
+  };
+  const profileFile = path.join(app.getPath('userData'), 'openbor-runtime.json');
+  fs.writeFileSync(profileFile, JSON.stringify(profile, null, 2));
+  return { ready: true, root, profileFile, logFile: path.join(root, 'Logs', 'OpenBorLog.txt') };
+}
+
+function openBorGameSessionKey(file) {
+  const identity = process.platform === 'win32' ? path.resolve(file).toLowerCase() : path.resolve(file);
+  return crypto.createHash('sha256').update(identity).digest('hex').slice(0, 20);
+}
+
+function ensureOpenBorGameSession(file, executable = emulatorPaths.openbor) {
+  const runtime = ensureOpenBorRuntimeConfig(executable);
+  if (!runtime.ready) throw Error(runtime.issue || 'OpenBOR runtime setup is incomplete.');
+  const source = safeLibraryFile(file);
+  const sourceStat = fs.statSync(source);
+  const root = path.join(app.getPath('userData'), 'openbor-games', openBorGameSessionKey(source));
+  const paks = path.join(root, 'Paks');
+  for (const folder of [paks, path.join(root, 'Logs'), path.join(root, 'Saves'), path.join(root, 'ScreenShots')]) {
+    fs.mkdirSync(folder, { recursive: true });
+  }
+  const stagedPak = path.join(paks, path.basename(source));
+  const manifestFile = path.join(root, 'gamedeck-session.json');
+  const expected = {
+    version: 1,
+    source,
+    size: sourceStat.size,
+    modified: Math.floor(sourceStat.mtimeMs)
+  };
+  const current = readJson(manifestFile, null);
+  const reusable = Boolean(
+    fs.existsSync(stagedPak)
+    && current?.source === expected.source
+    && Number(current?.size) === expected.size
+    && Number(current?.modified) === expected.modified
+  );
+  if (!reusable) {
+    for (const name of fs.readdirSync(paks)) {
+      const candidate = path.join(paks, name);
+      try { fs.rmSync(candidate, { recursive: true, force: true }); } catch {}
+    }
+    let staging = 'hardlink';
+    try {
+      fs.linkSync(source, stagedPak);
+    } catch {
+      staging = 'copy';
+      fs.copyFileSync(source, stagedPak);
+    }
+    fs.writeFileSync(manifestFile, JSON.stringify({ ...expected, stagedPak, staging, updatedAt: new Date().toISOString() }, null, 2));
+  }
+  return {
+    root,
+    stagedPak,
+    logFile: path.join(root, 'Logs', 'OpenBorLog.txt'),
+    saveDirectory: path.join(root, 'Saves')
+  };
+}
+
+function emitPlaySession(update) {
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('play-session-update', update);
+}
+
+async function embeddedCaptureSources() {
+  const gameDeckSourceId = mainWindow && !mainWindow.isDestroyed() && typeof mainWindow.getMediaSourceId === 'function'
+    ? mainWindow.getMediaSourceId()
+    : '';
+  const sources = await desktopCapturer.getSources({ types: ['window'], thumbnailSize: { width: 0, height: 0 }, fetchWindowIcons: false });
+  return sources.map(source => ({
+    id: source.id,
+    name: source.name,
+    type: 'window',
+    ownedByGameDeck: Boolean(source.id === gameDeckSourceId || /^GameDeck$/i.test(source.name))
+  }));
+}
+
+function restoreGameDeckWindow() {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  clearTimeout(launchCurtainTimer);
+  launchCurtainTimer = null;
+  mainWindow.setAlwaysOnTop(false);
+  if (mainWindow.isFullScreen()) mainWindow.setFullScreen(false);
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.show();
+  mainWindow.focus();
+}
+
+function windowsWindowInteropScript(body) {
+  return `Add-Type @'
+using System;
+using System.Runtime.InteropServices;
+public static class GameDeckWindow {
+  [StructLayout(LayoutKind.Sequential)] public struct RECT { public int Left, Top, Right, Bottom; }
+  [DllImport("user32.dll")] public static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+  [DllImport("user32.dll")] public static extern int SetWindowLong(IntPtr hWnd, int nIndex, int value);
+  [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr hWnd, out RECT rect);
+  [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr hWnd, IntPtr after, int x, int y, int width, int height, uint flags);
+  [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int command);
+  [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
+}
+'@
+${body}`;
+}
+
+function readWindowsEngineWindow(pid) {
+  if (process.platform !== 'win32' || !Number(pid)) return null;
+  const script = windowsWindowInteropScript(`
+$process = Get-Process -Id ${Number(pid)} -ErrorAction Stop
+for ($i = 0; $i -lt 80 -and $process.MainWindowHandle -eq 0; $i++) { Start-Sleep -Milliseconds 100; $process.Refresh() }
+$handle = $process.MainWindowHandle
+if ($handle -eq 0) { throw 'Game window handle was not available.' }
+$rect = New-Object GameDeckWindow+RECT
+[GameDeckWindow]::GetWindowRect($handle, [ref]$rect) | Out-Null
+[pscustomobject]@{
+  handle = [long]$handle
+  style = [GameDeckWindow]::GetWindowLong($handle, -16)
+  exStyle = [GameDeckWindow]::GetWindowLong($handle, -20)
+  x = $rect.Left
+  y = $rect.Top
+  width = $rect.Right - $rect.Left
+  height = $rect.Bottom - $rect.Top
+  title = $process.MainWindowTitle
+} | ConvertTo-Json -Compress
+`);
+  const result = spawnSync('powershell.exe', ['-NoProfile', '-Command', script], { encoding: 'utf8', windowsHide: true, timeout: 15000 });
+  if (result.status !== 0 || !String(result.stdout || '').trim()) return null;
+  try { return JSON.parse(String(result.stdout).trim()); } catch { return null; }
+}
+
+function applyWindowsEngineWindow(pid, config) {
+  if (process.platform !== 'win32' || !Number(pid) || !config) return false;
+  const script = windowsWindowInteropScript(`
+$process = Get-Process -Id ${Number(pid)} -ErrorAction Stop
+$handle = $process.MainWindowHandle
+if ($handle -eq 0) { throw 'Game window handle was not available.' }
+[GameDeckWindow]::SetWindowLong($handle, -16, ${Number(config.style) | 0}) | Out-Null
+[GameDeckWindow]::SetWindowLong($handle, -20, ${Number(config.exStyle) | 0}) | Out-Null
+[GameDeckWindow]::ShowWindow($handle, 9) | Out-Null
+$after = [IntPtr](${config.behind ? 1 : 0})
+$flags = [uint32](0x0020 -bor 0x0040${config.activate ? '' : ' -bor 0x0010'})
+[GameDeckWindow]::SetWindowPos($handle, $after, ${Math.round(config.x)}, ${Math.round(config.y)}, ${Math.max(1, Math.round(config.width))}, ${Math.max(1, Math.round(config.height))}, $flags) | Out-Null
+${config.activate ? '[GameDeckWindow]::SetForegroundWindow($handle) | Out-Null' : ''}
+`);
+  const result = spawnSync('powershell.exe', ['-NoProfile', '-Command', script], { encoding: 'utf8', windowsHide: true, timeout: 15000 });
+  return result.status === 0;
+}
+
+function engineWindowState(session) {
+  const pid = Number(session?.child?.pid || 0);
+  if (!pid || process.platform !== 'win32') return null;
+  let state = embeddedNativeWindows.get(pid);
+  if (!state) {
+    state = readWindowsEngineWindow(pid);
+    if (state) embeddedNativeWindows.set(pid, state);
+  }
+  return state ? { pid, state } : null;
+}
+
+function physicalScreenRect(window, rect) {
+  try {
+    if (typeof screen.dipToScreenRect === 'function') return screen.dipToScreenRect(window, rect);
+  } catch {}
+  const display = screen.getDisplayMatching(rect);
+  const scaleFactor = Number(display?.scaleFactor || 1);
+  return {
+    x: Math.round(rect.x * scaleFactor),
+    y: Math.round(rect.y * scaleFactor),
+    width: Math.round(rect.width * scaleFactor),
+    height: Math.round(rect.height * scaleFactor)
+  };
+}
+
+function setEmbeddedEngineWindowMode(session, mode) {
+  const owned = engineWindowState(session);
+  if (!owned || !mainWindow || mainWindow.isDestroyed()) return false;
+  const { pid, state } = owned;
+  const mainBoundsDip = mainWindow.getBounds();
+  const mainBounds = physicalScreenRect(mainWindow, mainBoundsDip);
+  if (mode === 'popout') {
+    const display = screen.getDisplayMatching(mainBoundsDip);
+    const area = physicalScreenRect(mainWindow, display.workArea);
+    const width = Math.min(Math.max(800, state.width || 960), Math.max(800, area.width - 120));
+    const height = Math.min(Math.max(450, state.height || 544), Math.max(450, area.height - 120));
+    const x = Math.round(area.x + (area.width - width) / 2);
+    const y = Math.round(area.y + (area.height - height) / 2);
+    return applyWindowsEngineWindow(pid, { ...state, x, y, width, height, behind: false, activate: true });
+  }
+
+  const chromeMask = 0x00C00000 | 0x00040000 | 0x00080000 | 0x00020000 | 0x00010000;
+  const style = (Number(state.style) | 0) & ~chromeMask;
+  const exStyle = (((Number(state.exStyle) | 0) | 0x00000080 | 0x08000000) & ~0x00040000);
+  const requestedAspect = Number(session?.aspectRatio || session?.spec?.aspectRatio || 16 / 9);
+  const aspect = Number.isFinite(requestedAspect) && requestedAspect > 0.4 && requestedAspect < 3 ? requestedAspect : 16 / 9;
+  const horizontalMargin = Math.max(96, Math.round(mainBounds.width * 0.08));
+  const verticalMargin = Math.max(96, Math.round(mainBounds.height * 0.11));
+  let width = Math.max(800, mainBounds.width - (horizontalMargin * 2));
+  let height = Math.round(width / aspect);
+  const maxHeight = Math.max(450, mainBounds.height - (verticalMargin * 2));
+  if (height > maxHeight) { height = maxHeight; width = Math.round(height * aspect); }
+  const x = Math.round(mainBounds.x + (mainBounds.width - width) / 2);
+  const y = Math.round(mainBounds.y + (mainBounds.height - height) / 2);
+  const applied = applyWindowsEngineWindow(pid, { style, exStyle, x, y, width, height, behind: true, activate: false });
+  if (applied && mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.setAlwaysOnTop(true, mode === 'fullscreen' ? 'screen-saver' : 'floating');
+    mainWindow.moveTop();
+    mainWindow.focus();
+  }
+  return applied;
+}
+
+const embeddedWindowController = {
+  async prepare() {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    if (mainWindow.isFullScreen()) mainWindow.setFullScreen(false);
+    mainWindow.show();
+    mainWindow.setAlwaysOnTop(true, 'screen-saver');
+    mainWindow.focus();
+  },
+  async integrate(session, _source, requestedMode) {
+    if (process.platform === 'win32') {
+      const owned = engineWindowState(session);
+      if (owned && session?.spec?.engineKind === 'libretro') {
+        const measured = Number(owned.state?.width || 0) / Math.max(1, Number(owned.state?.height || 0));
+        if (Number.isFinite(measured) && measured > 0.4 && measured < 3) session.aspectRatio = measured;
+      }
+      if (requestedMode !== 'popout') setEmbeddedEngineWindowMode(session, requestedMode || 'docked');
+    }
+  },
+  captureStarted(session) {
+    if (process.platform !== 'win32' || !session || session.mode === 'popout') return;
+    const stabilize = delay => setTimeout(() => {
+      const current = embeddedPlayManager?.status();
+      if (!current?.active || current.sessionId !== session.id || current.mode === 'popout') return;
+      setEmbeddedEngineWindowMode(session, current.mode || 'docked');
+    }, delay);
+    setEmbeddedEngineWindowMode(session, session.mode || 'docked');
+    stabilize(350);
+    stabilize(1100);
+  },
+  async setMode(mode, session) {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    if (mode === 'popout') {
+      mainWindow.setAlwaysOnTop(false);
+      if (mainWindow.isFullScreen()) mainWindow.setFullScreen(false);
+      setEmbeddedEngineWindowMode(session, 'popout');
+      mainWindow.minimize();
+      return;
+    }
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.show();
+    mainWindow.setFullScreen(mode === 'fullscreen');
+    mainWindow.setAlwaysOnTop(true, mode === 'fullscreen' ? 'screen-saver' : 'floating');
+    setEmbeddedEngineWindowMode(session, mode);
+    mainWindow.focus();
+  },
+  release(session) {
+    const pid = Number(session?.child?.pid || 0);
+    if (pid) embeddedNativeWindows.delete(pid);
+  },
+  restore: restoreGameDeckWindow
+};
+
+function registerGameDeckOpenBorProcess(child) {
+  if (!child?.pid) return child;
+  gameDeckOpenBorProcesses.set(child.pid, child);
+  const forget = () => gameDeckOpenBorProcesses.delete(child.pid);
+  child.once?.('exit', forget);
+  child.once?.('error', forget);
+  return child;
+}
+
+function stopGameDeckOpenBorProcesses(exceptPid = 0) {
+  for (const [pid, child] of [...gameDeckOpenBorProcesses]) {
+    if (Number(pid) === Number(exceptPid)) continue;
+    try {
+      if (process.platform === 'win32') spawnSync('taskkill.exe', ['/PID', String(pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' });
+      else process.kill(-pid, 'SIGTERM');
+    } catch {
+      try { child?.kill?.('SIGTERM'); } catch {}
+    }
+    gameDeckOpenBorProcesses.delete(pid);
+  }
+}
+
+function terminateEmbeddedProcess(child) {
+  if (!child?.pid) return;
+  if (process.platform === 'win32') {
+    spawnSync('taskkill.exe', ['/PID', String(child.pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' });
+    return;
+  }
+  try { process.kill(-child.pid, 'SIGTERM'); } catch { try { process.kill(child.pid, 'SIGTERM'); } catch {} }
+}
+
+function protectExternalLaunch(duration = 3400) {
+  if (!mainWindow || mainWindow.isDestroyed() || embeddedPlayManager?.status().active) return;
+  clearTimeout(launchCurtainTimer);
+  mainWindow.setAlwaysOnTop(true, 'floating');
+  mainWindow.focus();
+  launchCurtainTimer = setTimeout(() => {
+    launchCurtainTimer = null;
+    if (!embeddedPlayManager?.status().active && mainWindow && !mainWindow.isDestroyed()) mainWindow.setAlwaysOnTop(false);
+  }, duration);
+}
+
+function embeddedLaunchSpec(file) {
+  const safeFile = safeLibraryFile(file);
+  const system = detectSystem(safeFile);
+  if (!system || !isPlayableFile(safeFile, system)) throw Error('Could not identify this game system.');
+  if (!isArcadeSystem(system)) {
+    const archiveIntegrity = playableArchiveIntegrity(safeFile);
+    if (!archiveIntegrity.ok) throw Error(archiveIntegrity.message);
+  }
+  const setupIssue = systemSetupIssue(system);
+  if (setupIssue) throw Error(setupIssue);
+  const dependencyResult = resolveLaunchDependencies(safeFile, system);
+  if (dependencyResult?.queued) return { queued: true, ...dependencyResult };
+  if (!dependencyResult?.ok) throw Error(dependencyResult?.error || 'Required game files could not be prepared.');
+
+  const game = { file: safeFile, system: system.id, shortName: rawGameName(safeFile) };
+  if (isArcadeSystem(system)) {
+    const audit = inspectArcadeArchiveSync(game);
+    if (audit.status === 'damaged' || audit.status === 'incomplete') throw Error(audit.message || 'This arcade set needs repair before integrated play.');
+  }
+  const emulator = configuredIntegratedEmulator(system);
+  if (!emulator) throw Error(system.name + ' emulator is not installed or configured.');
+  const capabilities = playSessionManager.capabilities(safeFile);
+  if (!capabilities?.eligible || !capabilities?.presentation?.embedded) throw Error(capabilities?.fallback?.playerMessage || 'This game uses external play.');
+
+  let args = [];
+  let launchCwd = path.dirname(emulator.executable);
+  let openBorSession = null;
+  if (emulator.kind === 'libretro') {
+    if (emulator.executable !== MANAGED_RUNTIME_PATHS.retroArch) throw Error('Integrated play requires the managed GameDeck RetroArch runtime.');
+    const configs = [ensureRetroArchEmbeddedConfig(), isArcadeSystem(system) ? ensureRetroArchArcadeControllerConfig() : ''].filter(Boolean);
+    args = [
+      ...(fs.existsSync(MANAGED_RUNTIME_PATHS.config) ? ['--config', MANAGED_RUNTIME_PATHS.config] : []),
+      ...(configs.length ? [`--appendconfig=${configs.join('|')}`] : []),
+      '-L', emulator.corePath, safeFile
+    ];
+  } else if (emulator.kind === 'openbor') {
+    openBorSession = ensureOpenBorGameSession(safeFile, emulator.executable);
+    try { fs.unlinkSync(openBorSession.logFile); } catch {}
+    launchCwd = openBorSession.root;
+    args = [];
+  } else if (emulator.kind === 'mame') {
+    args = [
+      game.shortName,
+      '-rompath', mameRomSearchPath(safeFile),
+      '-joystick',
+      ...(process.platform === 'win32' ? ['-joystickprovider', 'winhybrid'] : []),
+      '-skip_gameinfo',
+      '-noconfirm_quit',
+      '-window'
+    ];
+  } else if (emulator.kind === 'standalone') {
+    const windowedArgs = (system.args || []).filter(argument => !['-fullscreen', '--fullscreen', '-f'].includes(String(argument).toLowerCase()));
+    args = [...windowedArgs, safeFile];
+  } else {
+    throw Error('This engine is not enabled for integrated play yet.');
+  }
+
+  const displayName = isArcadeSystem(system) ? arcadeDisplayTitle(game.shortName) : cleanName(safeFile);
+  return {
+    executable: emulator.executable,
+    args,
+    cwd: launchCwd,
+    readiness: openBorSession ? {
+      logFile: openBorSession.logFile,
+      requiredText: `Game Selected: ./Paks/${path.basename(safeFile)}`,
+      timeoutMs: 30000,
+      pollMs: 200,
+      message: 'Loading the selected OpenBOR pack…',
+      failureMessage: 'OpenBOR started, but the selected game pack did not load.'
+    } : null,
+    env: {
+      ...process.env,
+      SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS: '1',
+      SDL_VIDEO_MINIMIZE_ON_FOCUS_LOSS: '0',
+      SDL_VIDEO_CENTERED: '1',
+      SDL_JOYSTICK_HIDAPI: '1',
+      SDL_JOYSTICK_HIDAPI_XBOX: '1',
+      GAMEDECK_EMBEDDED_PLAY: '1'
+    },
+    title: displayName,
+    shortName: game.shortName,
+    systemId: system.id,
+    classification: capabilities.classification,
+    engineLabel: emulator.label,
+    engineKind: emulator.kind,
+    aspectRatio: systemDisplayAspect(system),
+    captureAudio: false,
+    audioMode: 'native_engine',
+    sourceTerms: [
+      displayName,
+      game.shortName,
+      system.name,
+      emulator.kind === 'openbor' ? 'OpenBOR' : '',
+      emulator.kind === 'libretro' ? 'RetroArch' : '',
+      path.basename(emulator.executable, path.extname(emulator.executable))
+    ].filter(Boolean),
+    sourceTimeoutMs: emulator.kind === 'libretro' ? 20000 : 45000,
+    file: safeFile
+  };
+}
+
+async function startEmbeddedPlay(file, options = {}) {
+  const activeStatus = embeddedPlayManager?.status();
+  if (activeStatus?.active) return { ok: false, error: 'A GameDeck Play session is already active.', status: activeStatus };
+  const spec = embeddedLaunchSpec(file);
+  if (spec.systemId === 'openbor') stopGameDeckOpenBorProcesses();
+  if (spec.queued) return { ok: true, queued: true, taskId: spec.taskId, message: spec.message };
+  if (netplayManager?.status().active) netplayManager.stop('Opening integrated play.');
+  const result = await embeddedPlayManager.start(spec, options);
+  if (result.ok) {
+    const store = readStore();
+    store.recent[spec.file] = Date.now();
+    writeStore(store);
+    addActivity('success', `Integrated play ready: ${spec.title} with ${spec.engineLabel}`);
+  } else {
+    addActivity('error', `Integrated play failed: ${result.error}`);
+  }
+  return result;
+}
+
 function arcadeDependencySpecs(file) {
   const folder = path.relative(LIBRARY, file).split(path.sep)[0]?.toLowerCase() || '';
   if (folder === 'neogeo') {
@@ -2045,6 +2580,8 @@ function queueManagedRuntimeLaunch(file, system) {
 }
 
 function launchGame(file, options = {}) {
+  const activePlay = embeddedPlayManager?.status();
+  if (activePlay?.active) throw Error('Close the current GameDeck Play session before opening another game.');
   const safeFile = safeLibraryFile(file);
   const system = detectSystem(safeFile);
   if (!system || !isPlayableFile(safeFile, system)) throw Error('Could not identify this game system.');
@@ -2112,7 +2649,21 @@ function launchGame(file, options = {}) {
     args = [...(system.args || []), safeFile];
   }
 
-  const child = spawn(launchExecutable, args, { cwd: launchCwd, detached: true, stdio: 'ignore' });
+  protectExternalLaunch();
+  const child = spawn(launchExecutable, args, {
+    cwd: launchCwd,
+    env: emulator.kind === 'openbor' ? {
+      ...process.env,
+      SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS: '1',
+      SDL_VIDEO_MINIMIZE_ON_FOCUS_LOSS: '0',
+      SDL_VIDEO_CENTERED: '1',
+      SDL_JOYSTICK_HIDAPI: '1',
+      SDL_JOYSTICK_HIDAPI_XBOX: '1'
+    } : process.env,
+    detached: true,
+    stdio: 'ignore'
+  });
+  if (emulator.kind === 'openbor') registerGameDeckOpenBorProcess(child);
   const nativeHandoff = presentation ? handoffHostWindowForNativeGame({ hostWindow: mainWindow, child }) : null;
   child.once('error', error => {
     addActivity('error', system.name + ' launch failed: ' + error.message);
@@ -3271,6 +3822,14 @@ function createWindow() {
     mainWindow.hide();
     addActivity('info', 'GameDeck automation continues with the window hidden.');
   });
+  mainWindow.on('leave-full-screen', () => {
+    const status = embeddedPlayManager?.status();
+    if (!status?.active || status.mode !== 'fullscreen') return;
+    setTimeout(() => {
+      const current = embeddedPlayManager?.status();
+      if (current?.active && current.mode === 'fullscreen') embeddedPlayManager.setMode(current.sessionId, 'docked').catch(() => {});
+    }, 0);
+  });
   if (captureMode) mainWindow.once('ready-to-show', () => mainWindow.showInactive());
   const captureView = String(process.env.GAMEDECK_CAPTURE_VIEW || '');
   mainWindow.loadFile('src/index.html', captureView ? { query: { captureView } } : undefined);
@@ -3316,7 +3875,10 @@ ipcMain.handle('favorite', (_, file) => {
   writeStore(store);
   return getLibrary();
 });
-ipcMain.handle('launch', (_, file) => {
+ipcMain.handle('launch', (event, file) => {
+  if (!isTrustedMainFrameCaller(event, mainWindow)) return { ok: false, error: 'untrusted_caller' };
+  const activePlay = embeddedPlayManager?.status();
+  if (activePlay?.active) return { ok: false, error: 'Close the current GameDeck Play session before opening another game.' };
   try {
     return launchGame(file);
   } catch (error) {
@@ -3354,7 +3916,42 @@ ipcMain.handle('play-session-capabilities', (event, file) => {
 });
 ipcMain.handle('play-session-status', event => {
   if (!isTrustedMainFrameCaller(event, mainWindow)) return buildStatusFailure('untrusted_caller');
-  return playSessionManager.status();
+  return embeddedPlayManager?.status() || playSessionManager.status();
+});
+ipcMain.handle('play-session-start', async (event, file, options = {}) => {
+  if (!isTrustedMainFrameCaller(event, mainWindow)) return { ok: false, error: 'untrusted_caller', status: embeddedPlayManager?.status() };
+  const validated = validateCapabilityFileArgument(file);
+  if (!validated.ok) return { ok: false, error: validated.reasonCode, status: embeddedPlayManager?.status() };
+  try {
+    return await startEmbeddedPlay(validated.file, { mode: options?.mode });
+  } catch (error) {
+    addActivity('error', `Integrated play could not start: ${error.message}`);
+    return { ok: false, error: error.message, status: embeddedPlayManager?.status() };
+  }
+});
+ipcMain.handle('play-session-set-mode', async (event, sessionId, mode) => {
+  if (!isTrustedMainFrameCaller(event, mainWindow)) return { ok: false, error: 'untrusted_caller', status: embeddedPlayManager?.status() };
+  try {
+    return await embeddedPlayManager.setMode(String(sessionId || '').slice(0, 160), String(mode || '').slice(0, 32));
+  } catch (error) {
+    return { ok: false, error: error.message, status: embeddedPlayManager?.status() };
+  }
+});
+ipcMain.handle('play-session-arm-capture', (event, sessionId, includeAudio = true) => {
+  if (!isTrustedMainFrameCaller(event, mainWindow)) return { ok: false, error: 'untrusted_caller' };
+  const source = embeddedPlayManager.captureSource(String(sessionId || '').slice(0, 160));
+  if (!source) return { ok: false, error: 'capture_unavailable', status: embeddedPlayManager.status() };
+  const audio = false;
+  armedPlayCapture = { ...source, audio, expiresAt: Date.now() + 10000 };
+  return { ok: true, audio, status: embeddedPlayManager.status() };
+});
+ipcMain.handle('play-session-capture-started', (event, sessionId) => {
+  if (!isTrustedMainFrameCaller(event, mainWindow)) return { ok: false, error: 'untrusted_caller' };
+  return embeddedPlayManager.captureStarted(String(sessionId || '').slice(0, 160));
+});
+ipcMain.handle('play-session-stop', async (event, sessionId, reason) => {
+  if (!isTrustedMainFrameCaller(event, mainWindow)) return { ok: false, error: 'untrusted_caller', status: embeddedPlayManager?.status() };
+  return embeddedPlayManager.stop(String(sessionId || '').slice(0, 160), String(reason || 'requested').slice(0, 120));
 });
 ipcMain.handle('ensure-runtime', (_, force) => ensureManagedRuntime({ force: Boolean(force) }));
 ipcMain.handle('stream-status', () => gameDeckStreamStatus());
@@ -3469,10 +4066,16 @@ ipcMain.handle('clear-activity', () => {
 
 app.on('before-quit', () => {
   appIsQuitting = true;
+  clearTimeout(launchCurtainTimer);
+  launchCurtainTimer = null;
+  const playStatus = embeddedPlayManager?.status();
+  if (playStatus?.active) embeddedPlayManager.stop(playStatus.sessionId, 'GameDeck closed.').catch(() => {});
   pauseActiveDownloads();
   stopRemotePlay('GameDeck closed.');
   netplayManager?.stop('GameDeck closed.');
   streamServer?.close().catch(() => {});
+  stopGameDeckOpenBorProcesses();
+  globalShortcut.unregisterAll();
 });
 
 app.whenReady().then(() => {
@@ -3480,7 +4083,43 @@ app.whenReady().then(() => {
   fs.mkdirSync(LIBRARY, { recursive: true });
   primeFirmwareFolders();
   ensureRetroArchArcadeControllerConfig();
+  ensureRetroArchEmbeddedConfig();
+  ensureOpenBorRuntimeConfig();
+  embeddedPlayManager = createEmbeddedPlayManager({
+    listSources: embeddedCaptureSources,
+    rankSources: rankSourceCandidates,
+    spawnProcess: spec => {
+      const child = spawn(spec.executable, spec.args, {
+        cwd: spec.cwd,
+        env: spec.env,
+        detached: false,
+        windowsHide: false,
+        stdio: 'ignore'
+      });
+      return spec.systemId === 'openbor' ? registerGameDeckOpenBorProcess(child) : child;
+    },
+    terminateProcess: terminateEmbeddedProcess,
+    checkReadiness: readiness => {
+      if (!readiness?.logFile || !readiness?.requiredText) return { ready: true };
+      let text = '';
+      try { text = fs.readFileSync(readiness.logFile, 'utf8'); } catch { return { ready: false }; }
+      if (text.includes(readiness.requiredText)) return { ready: true };
+      if (/Unable to load|FATAL|Could not open|No games were found/i.test(text)) {
+        return { ready: false, fatal: true, error: readiness.failureMessage || 'The selected game did not load.' };
+      }
+      return { ready: false };
+    },
+    windowController: embeddedWindowController,
+    onUpdate: emitPlaySession,
+    onLog: addActivity
+  });
   createWindow();
+  globalShortcut.register('F10', async () => {
+    const status = embeddedPlayManager?.status();
+    if (!status?.active) return;
+    const mode = status.mode === 'popout' ? 'docked' : 'popout';
+    await embeddedPlayManager.setMode(status.sessionId, mode).catch(() => {});
+  });
 });
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow();

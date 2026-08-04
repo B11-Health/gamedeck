@@ -82,6 +82,9 @@ const state = {
   diagnostics: null,
   launchingFile: null,
   launchHandoffTimer: null,
+  playSession: { active: false, phase: 'idle', sessionId: '', title: '', mode: 'docked', aspectRatio: 16 / 9, captureReady: false },
+  playFile: '',
+  playGameId: null,
   inputMode: 'pointer',
   shelfMemory: {},
   setupCoachOpen: requestedCaptureView === 'setup' || readPreference('setup-coach', 'auto') === 'open',
@@ -98,6 +101,11 @@ const state = {
   density: 'compact',
   sidebarCollapsed: readPreference('sidebar', 'expanded') === 'collapsed'
 };
+
+let playCaptureStream = null;
+let playCapturePromise = null;
+let launchCurtainTimer = null;
+let fullscreenControlsTimer = null;
 
 const SYSTEM_THEME_BACKGROUNDS = {
   all: { key: 'all', image: '../assets/system-themes/nintendo-polygon.webp', accent: '#72e7ff', glow: '#8b5cff', position: '78% center' },
@@ -1344,16 +1352,341 @@ function setLaunchingState(game, active) {
   }
 }
 
+function showLaunchCurtain(game, title = '', message = '') {
+  clearTimeout(launchCurtainTimer);
+  launchCurtainTimer = null;
+  const curtain = $('#launchCurtain');
+  $('#launchCurtainTitle').textContent = title || `Starting ${game?.title || 'your game'}`;
+  $('#launchCurtainMessage').textContent = message || 'GameDeck is preparing a seamless play session…';
+  curtain.classList.remove('hidden');
+}
+
+function hideLaunchCurtain(delay = 0) {
+  clearTimeout(launchCurtainTimer);
+  const hide = () => {
+    launchCurtainTimer = null;
+    $('#launchCurtain').classList.add('hidden');
+  };
+  if (delay > 0) launchCurtainTimer = setTimeout(hide, delay);
+  else hide();
+}
+
+function playPhaseMessage(status = {}) {
+  if (status.message) return status.message;
+  return {
+    resolving: 'Checking integrated-play compatibility…',
+    spawning: 'Starting the game engine behind GameDeck…',
+    discovering: 'Connecting the live game window…',
+    capture_armed: 'Starting integrated video…',
+    playing: 'Playing inside GameDeck.',
+    external_playing: 'Playing in the engine window. Press F10 to return.',
+    stopping: 'Closing the game…',
+    ended: 'Game closed.',
+    failed: status.error || 'Integrated play needs attention.'
+  }[status.phase] || 'Preparing integrated play…';
+}
+
+function stopPlayCapture() {
+  if (playCaptureStream) {
+    for (const track of playCaptureStream.getTracks()) track.stop();
+  }
+  playCaptureStream = null;
+  playCapturePromise = null;
+  const video = $('#playVideo');
+  if (video) {
+    video.pause();
+    video.srcObject = null;
+  }
+}
+
+function hideFullscreenControls() {
+  clearTimeout(fullscreenControlsTimer);
+  fullscreenControlsTimer = null;
+  const surface = $('#playSurface');
+  if (!surface) return;
+  if (surface.querySelector('.play-header:focus-within')) return;
+  surface.classList.remove('fullscreen-controls-visible');
+}
+
+function showFullscreenControls(duration = 2200) {
+  const surface = $('#playSurface');
+  if (!surface || state.playSession?.mode !== 'fullscreen') return;
+  surface.classList.add('fullscreen-controls-visible');
+  clearTimeout(fullscreenControlsTimer);
+  if (duration > 0) fullscreenControlsTimer = setTimeout(hideFullscreenControls, duration);
+}
+
+function resetFullscreenControls() {
+  clearTimeout(fullscreenControlsTimer);
+  fullscreenControlsTimer = null;
+  $('#playSurface')?.classList.remove('fullscreen-controls-visible');
+}
+
+function normalizedPlayAspect(value) {
+  const aspect = Number(value);
+  return Number.isFinite(aspect) && aspect > 0.4 && aspect < 3 ? aspect : 16 / 9;
+}
+
+function applyPlayGeometry() {
+  const stage = $('#playStage');
+  const video = $('#playVideo');
+  if (!stage || !video || !state.playSession?.active) return;
+  const mode = state.playSession.mode;
+  const aspect = normalizedPlayAspect(state.playSession.aspectRatio);
+  video.style.setProperty('--game-aspect', String(aspect));
+  if (mode === 'fullscreen') {
+    video.style.width = '100%';
+    video.style.height = '100%';
+    video.style.maxWidth = 'none';
+    video.style.maxHeight = 'none';
+    video.style.top = '0';
+    video.style.left = '0';
+    video.style.transform = 'none';
+    video.style.objectFit = 'contain';
+    return;
+  }
+  if (mode !== 'docked') return;
+  const width = stage.clientWidth;
+  const height = stage.clientHeight;
+  if (!width || !height) return;
+  const marginX = Math.max(34, Math.min(78, Math.round(width * 0.048)));
+  const marginY = Math.max(24, Math.min(54, Math.round(height * 0.06)));
+  const maxWidth = Math.max(1, width - marginX * 2);
+  const maxHeight = Math.max(1, height - marginY * 2);
+  const fittedWidth = Math.min(maxWidth, maxHeight * aspect);
+  const fittedHeight = fittedWidth / aspect;
+  video.style.width = Math.floor(fittedWidth) + 'px';
+  video.style.height = Math.floor(fittedHeight) + 'px';
+  video.style.maxWidth = 'none';
+  video.style.maxHeight = 'none';
+  video.style.top = '50%';
+  video.style.left = '50%';
+  video.style.transform = 'translate(-50%, -50%)';
+  video.style.objectFit = 'contain';
+}
+
+function renderPlaySession(status = {}) {
+  const previousMode = state.playSession?.mode;
+  state.playSession = { ...state.playSession, ...status };
+  const current = state.playSession;
+  const surface = $('#playSurface');
+  const active = Boolean(current.active);
+  const mode = ['docked', 'fullscreen', 'popout'].includes(current.mode) ? current.mode : 'docked';
+  surface.classList.remove('mode-docked', 'mode-fullscreen', 'mode-popout');
+  surface.classList.add(`mode-${mode}`);
+  if (mode !== 'fullscreen') resetFullscreenControls();
+  else if (active && previousMode !== 'fullscreen') requestAnimationFrame(() => showFullscreenControls(2400));
+  $('#playTitle').textContent = current.title || 'GameDeck Play';
+  $('#playStatus').textContent = playPhaseMessage(current);
+  $('#playLoadingTitle').textContent = current.title ? `Starting ${current.title}` : 'Starting your game';
+  $('#playLoadingMessage').textContent = playPhaseMessage(current);
+  const playing = current.phase === 'playing' && Boolean(playCaptureStream);
+  $('#playLoading').classList.toggle('ready', playing);
+  $$('[data-play-mode]').forEach(button => {
+    const selected = button.dataset.playMode === mode;
+    button.classList.toggle('active', selected);
+    button.setAttribute('aria-pressed', String(selected));
+  });
+  if (active && mode !== 'popout') {
+    surface.classList.remove('hidden');
+    document.body.classList.add('play-session-open');
+    requestAnimationFrame(applyPlayGeometry);
+  } else {
+    surface.classList.add('hidden');
+    document.body.classList.remove('play-session-open');
+  }
+}
+
+function resetPlaySessionUi() {
+  resetFullscreenControls();
+  stopPlayCapture();
+  $('#playSurface').classList.add('hidden');
+  $('#playCaptureError').classList.add('hidden');
+  $('#playLoading').classList.remove('ready');
+  document.body.classList.remove('play-session-open');
+  const game = state.library.games.find(item => item.id === state.playGameId || item.file === state.playFile);
+  setLaunchingState(game, false);
+  state.playSession = { active: false, phase: 'idle', sessionId: '', title: '', mode: 'docked', aspectRatio: 16 / 9, captureReady: false };
+  state.playFile = '';
+  state.playGameId = null;
+}
+
+async function requestPlayCapture(sessionId) {
+  const armed = await window.deck.playSessionArmCapture(sessionId, false);
+  if (!armed?.ok) throw Error(armed?.error || 'The game window is not ready for capture.');
+  return navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+}
+
+async function acquirePlayCapture(status = state.playSession) {
+  if (!status?.active || status.mode === 'popout' || !status.captureReady || !status.sessionId) return null;
+  if (playCaptureStream && playCaptureStream.getVideoTracks().some(track => track.readyState === 'live')) return playCaptureStream;
+  if (playCapturePromise) return playCapturePromise;
+  playCapturePromise = (async () => {
+    const sessionId = status.sessionId;
+    $('#playCaptureError').classList.add('hidden');
+    $('#playLoading').classList.remove('ready');
+    const stream = await requestPlayCapture(sessionId);
+    for (const audioTrack of stream.getAudioTracks()) audioTrack.stop();
+    if (state.playSession.sessionId !== sessionId || state.playSession.mode === 'popout') {
+      for (const track of stream.getTracks()) track.stop();
+      return null;
+    }
+    playCaptureStream = stream;
+    const video = $('#playVideo');
+    video.srcObject = stream;
+    video.muted = true;
+    await new Promise((resolve, reject) => {
+      if (video.readyState >= 1) return resolve();
+      const timer = setTimeout(() => reject(new Error('The game video did not become ready in time.')), 10000);
+      video.onloadedmetadata = () => { clearTimeout(timer); applyPlayGeometry(); resolve(); };
+      video.onerror = () => { clearTimeout(timer); reject(new Error('The game video could not be opened.')); };
+    });
+    await video.play();
+    for (const track of stream.getVideoTracks()) {
+      track.addEventListener('ended', () => {
+        if (state.playSession.active && state.playSession.mode !== 'popout') {
+          $('#playCaptureErrorMessage').textContent = 'The live game window stopped sharing. The game may still be running in Pop out.';
+          $('#playCaptureError').classList.remove('hidden');
+        }
+      }, { once: true });
+    }
+    const started = await window.deck.playSessionCaptureStarted(sessionId);
+    if (started?.status) renderPlaySession(started.status);
+    $('#playLoading').classList.add('ready');
+    hideLaunchCurtain();
+    return stream;
+  })();
+  try {
+    return await playCapturePromise;
+  } catch (error) {
+    stopPlayCapture();
+    const current = state.playSession;
+    if (!current?.active || current.mode === 'popout') {
+      hideLaunchCurtain();
+      return null;
+    }
+    $('#playLoading').classList.add('ready');
+    $('#playCaptureErrorMessage').textContent = error.message || 'The integrated game video could not start.';
+    $('#playCaptureError').classList.remove('hidden');
+    hideLaunchCurtain();
+    toast('Integrated video needs attention. The game can continue in Pop out.', 'warning');
+    return null;
+  } finally {
+    playCapturePromise = null;
+  }
+}
+
+async function handlePlaySessionUpdate(status = {}) {
+  const previous = state.playSession;
+  renderPlaySession(status);
+  if (status.active && ['docked', 'fullscreen', 'popout'].includes(status.mode)) writePreference('play-mode', status.mode);
+  if (status.active) {
+    if (status.mode === 'popout') {
+      stopPlayCapture();
+      hideLaunchCurtain();
+      return;
+    }
+    if (status.phase === 'playing' && playCaptureStream) hideLaunchCurtain();
+    if (status.captureReady) acquirePlayCapture(status);
+    return;
+  }
+  const wasActive = Boolean(previous?.active || state.playFile);
+  const failed = status.phase === 'failed';
+  const message = status.error || status.message || '';
+  resetPlaySessionUi();
+  hideLaunchCurtain();
+  if (failed && message) toast(message, 'warning');
+  else if (wasActive && status.phase === 'ended') toast('Game closed. Welcome back to your library.', 'success');
+  if (wasActive) loadLibrary(false);
+}
+
+async function setPlayMode(mode) {
+  const status = state.playSession;
+  if (!status?.active || !status.sessionId) return;
+  if (!['docked', 'fullscreen', 'popout'].includes(mode)) return;
+  writePreference('play-mode', mode);
+  if (mode === 'popout') {
+    resetFullscreenControls();
+    stopPlayCapture();
+    hideLaunchCurtain();
+  } else {
+    if (mode === 'fullscreen') showFullscreenControls(2400);
+    showLaunchCurtain({ title: status.title }, `Returning to ${mode === 'fullscreen' ? 'fullscreen' : 'GameDeck Play'}`, 'Reconnecting the live game window…');
+  }
+  const result = await window.deck.playSessionSetMode(status.sessionId, mode);
+  if (!result?.ok) {
+    hideLaunchCurtain();
+    toast(result?.error || 'Could not change the play mode.', 'warning');
+    return;
+  }
+  await handlePlaySessionUpdate(result.status);
+}
+
+async function stopIntegratedPlay(reason = 'player_closed') {
+  const status = state.playSession;
+  if (!status?.sessionId) return;
+  showLaunchCurtain({ title: status.title }, `Closing ${status.title || 'game'}`, 'Saving session state and returning to your library…');
+  const result = await window.deck.playSessionStop(status.sessionId, reason);
+  if (result?.status) await handlePlaySessionUpdate(result.status);
+}
+
+async function startIntegratedPlay(file, game) {
+  const mode = ['docked', 'fullscreen', 'popout'].includes(readPreference('play-mode', 'docked')) ? readPreference('play-mode', 'docked') : 'docked';
+  state.playFile = file;
+  state.playGameId = game?.id || null;
+  renderPlaySession({
+    active: true,
+    phase: 'resolving',
+    sessionId: '',
+    title: game?.title || 'Your game',
+    mode,
+    aspectRatio: normalizedPlayAspect(game?.aspectRatio || 16 / 9),
+    captureReady: false,
+    message: 'Checking the integrated GameDeck route…'
+  });
+  const result = await window.deck.playSessionStart(file, { mode });
+  if (result?.queued) {
+    resetPlaySessionUi();
+    hideLaunchCurtain();
+    return result;
+  }
+  if (!result?.ok) throw Error(result?.error || 'Integrated play could not start.');
+  await handlePlaySessionUpdate(result.status);
+  return result;
+}
+
 async function launch(file) {
-  if (state.launchingFile) return;
+  if (state.launchingFile || state.playSession?.active) return;
   let game = null;
   try {
     game = state.library.games.find(item => item.file === file);
     if (game && gameLaunchBlocked(game)) throw Error(game.archiveHealthMessage || 'This ROM set needs attention before launch');
     setLaunchingState(game, true);
+    showLaunchCurtain(game, `Starting ${game?.title || 'your game'}`, 'Checking the engine, controller profile, and best play route…');
     toast('Opening ' + (game?.title || 'your game') + ' — GameDeck is checking everything automatically…', 'progress');
+
+    let capabilities = null;
+    try { capabilities = await window.deck.playSessionCapabilities(file); } catch {}
+    if (capabilities?.eligible && capabilities?.presentation?.embedded) {
+      try {
+        const integrated = await startIntegratedPlay(file, game);
+        if (integrated?.queued) {
+          setLaunchingState(game, false);
+          state.transferExpanded = true;
+          renderDownloads();
+          toast(integrated.message || 'GameDeck is preparing the required files. The game will open automatically.', 'progress');
+        }
+        return;
+      } catch (embeddedError) {
+        resetPlaySessionUi();
+        toast('Integrated view was unavailable, so GameDeck is opening the normal game window.', 'warning');
+        showLaunchCurtain(game, `Opening ${game?.title || 'your game'}`, 'Switching to the verified external play route…');
+      }
+    }
+
     const result = await window.deck.launch(file);
     if (result?.queued) {
+      hideLaunchCurtain();
       setLaunchingState(game, false);
       state.transferExpanded = true;
       renderDownloads();
@@ -1361,11 +1694,14 @@ async function launch(file) {
       return;
     }
     if (!result?.ok) throw Error(result?.error || 'Could not launch this game');
+    hideLaunchCurtain(2800);
     setTimeout(() => {
       setLaunchingState(game, false);
       loadLibrary(false);
     }, result.presentation ? 1800 : 1100);
   } catch (error) {
+    resetPlaySessionUi();
+    hideLaunchCurtain();
     setLaunchingState(game, false);
     toast(error.message || 'Could not launch this game', 'warning');
     openConsole(true);
@@ -2424,6 +2760,12 @@ function handleGamepad() {
     gamepadState.initialized = false;
     return;
   }
+  if (state.playSession?.active) {
+    gamepadState.buttons = [...pad.buttons].map(button => button.pressed);
+    gamepadState.direction = gamepadDirection(pad);
+    gamepadState.initialized = true;
+    return;
+  }
   if (document.body.classList.contains('modal-open')) {
     gamepadState.buttons = [...pad.buttons].map(button => button.pressed);
     gamepadState.direction = gamepadDirection(pad);
@@ -2787,8 +3129,59 @@ $('#search').oninput = event => {
 
 $('#searchClear').onclick = () => clearSearch({ focus: true });
 
+$$('[data-play-mode]').forEach(button => {
+  button.onclick = () => setPlayMode(button.dataset.playMode);
+});
+$('#playClose').onclick = () => stopIntegratedPlay('player_closed');
+$('#playCapturePopout').onclick = () => setPlayMode('popout');
+$('#playCaptureRetry').onclick = () => {
+  $('#playCaptureError').classList.add('hidden');
+  stopPlayCapture();
+  acquirePlayCapture(state.playSession);
+};
+
+const playSurface = $('#playSurface');
+const playHeader = playSurface.querySelector('.play-header');
+const playStageObserver = typeof ResizeObserver === 'function' ? new ResizeObserver(() => applyPlayGeometry()) : null;
+playStageObserver?.observe($('#playStage'));
+window.addEventListener('resize', () => requestAnimationFrame(applyPlayGeometry));
+playSurface.addEventListener('mousemove', event => {
+  if (state.playSession?.mode !== 'fullscreen') return;
+  if (event.clientY <= 86) showFullscreenControls(2600);
+  else if (!playHeader.matches(':hover') && !playHeader.matches(':focus-within')) {
+    clearTimeout(fullscreenControlsTimer);
+    fullscreenControlsTimer = setTimeout(hideFullscreenControls, 700);
+  }
+});
+playSurface.addEventListener('pointerdown', event => {
+  if (state.playSession?.mode === 'fullscreen' && event.clientY <= 100) showFullscreenControls(2800);
+});
+playHeader.addEventListener('mouseenter', () => showFullscreenControls(0));
+playHeader.addEventListener('mouseleave', () => {
+  if (state.playSession?.mode !== 'fullscreen') return;
+  clearTimeout(fullscreenControlsTimer);
+  fullscreenControlsTimer = setTimeout(hideFullscreenControls, 1000);
+});
+playHeader.addEventListener('focusin', () => showFullscreenControls(0));
+playHeader.addEventListener('focusout', () => {
+  if (state.playSession?.mode !== 'fullscreen') return;
+  clearTimeout(fullscreenControlsTimer);
+  fullscreenControlsTimer = setTimeout(hideFullscreenControls, 900);
+});
+
 document.onkeydown = event => {
   setInputMode('keyboard');
+  if (state.playSession?.active) {
+    if (event.key === 'F11') {
+      event.preventDefault();
+      setPlayMode(state.playSession.mode === 'fullscreen' ? 'docked' : 'fullscreen');
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      if (state.playSession.mode !== 'docked') setPlayMode('docked');
+      else showFullscreenControls(1200);
+    }
+    return;
+  }
   if (document.body.classList.contains('modal-open')) return;
   if (event.key.toLowerCase() === 'm' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) {
     event.preventDefault();
@@ -3057,6 +3450,10 @@ window.deck.onArcadeAudit(progress => {
   if (progress.items) applyArcadeAudit(progress);
   renderArcadeDeck();
 });
+window.deck.onPlaySession(update => {
+  handlePlaySessionUpdate(update);
+});
+
 window.deck.onRuntime(update => {
   state.runtime = update;
   if (['downloading', 'retrying', 'verifying', 'installing', 'preparing'].includes(update.phase)) {
@@ -3142,6 +3539,8 @@ async function init() {
   setLoading(true, 'Building the shelves', 'Preparing cover art, descriptions, and console groups.', 72);
   setControllerStatus();
   setLoading(true, 'Couch mode ready', 'Keyboard and controller navigation are lined up.', 94);
+  const existingPlaySession = await window.deck.playSessionStatus().catch(() => null);
+  if (existingPlaySession?.active) await handlePlaySessionUpdate(existingPlaySession);
   setInterval(handleGamepad, 90);
   setLoading(false);
   refreshArcadeAudit(false);

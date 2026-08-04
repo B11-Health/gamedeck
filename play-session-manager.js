@@ -195,6 +195,7 @@ function buildCapabilityResult(input = {}) {
   const wayland = Boolean(input.wayland);
   const engineKind = String(input.engine?.kind || 'unknown');
   const engineManaged = Boolean(input.engine?.managed);
+  const engineCaptureEligible = Boolean(input.engine?.captureEligible);
   const engineAvailable = input.engine?.available !== false;
   const coreAvailable = input.engine?.coreAvailable !== false;
   const configAvailable = input.engine?.configAvailable !== false;
@@ -211,7 +212,8 @@ function buildCapabilityResult(input = {}) {
     engine: {
       kind: engineKind,
       label: String(input.engine?.label || 'Unavailable engine').slice(0, 120),
-      managed: engineManaged
+      managed: engineManaged,
+      captureEligible: engineCaptureEligible
     },
     environment: {
       platform,
@@ -296,29 +298,38 @@ function buildCapabilityResult(input = {}) {
     });
   }
 
-  if (engineKind === 'libretro' && engineManaged) {
+  if ((engineKind === 'libretro' && engineManaged) || (engineKind === 'openbor' && engineManaged) || engineCaptureEligible) {
     const classification = certification === 'verified' ? 'embedded_verified' : 'embedded_experimental';
+    const engineName = engineKind === 'openbor'
+      ? 'OpenBOR'
+      : engineKind === 'libretro'
+        ? 'managed GameDeck core'
+        : String(input.engine?.label || 'standalone engine');
     return publicRedact({
       ...base,
       classification,
-      availability: 'phase1_candidate',
+      availability: 'embedded',
       eligible: true,
-      presentation: { embedded: true, fullscreen: true, popOut: false },
+      implementation: { phase: 'phase1', availableNow: true, behaviorChanged: true },
+      lifecycle: { processOwned: true, cleanStop: true, restoreLibraryFocus: true },
+      presentation: { embedded: true, fullscreen: true, popOut: true },
       media: {
         windowVideo: true,
-        systemAudio: platform === 'win32',
+        systemAudio: false,
+        nativeEngineAudio: true,
         sourceAutoDiscovery: true
       },
       input: {
-        owner: 'gamedeck_planned',
+        owner: 'engine_background_controller',
         digitalP1: true,
-        duplicateInputPrevented: false,
+        duplicateInputPrevented: true,
         backgroundRelay: false
       },
       fallback: capabilityFallback(
-        'phase0a_external_default',
-        'This managed libretro game is eligible for the Phase 1 embedded prototype. Phase 0A keeps current Play behavior external.',
-        'Continue using external play until the embedded runtime receives Phase 1 approval.'
+        'keyboard_popout_available',
+        `This ${engineName} game can play inside GameDeck with controller input.`,
+        'Use Pop out when you prefer direct keyboard input in the engine window.',
+        'popout'
       )
     });
   }

@@ -1,3 +1,114 @@
+# GameDeck Play Sessions
+
+Status: implemented Windows integration lane
+Branch: `feature/openbor-embedded-play`
+
+## Player experience
+
+Pressing Play opens one GameDeck-owned session surface for every supported console route. The same running process can move among three presentation modes:
+
+- **Docked** — the game is centered inside the GameDeck window at the console's intended display aspect.
+- **Fullscreen** — the game fills the display without reserving space for GameDeck chrome. Move the pointer to the top edge to reveal Docked, Fullscreen, Pop out, and Close controls. Escape returns to Docked without ending the game.
+- **Pop out** — the same engine process is shown in its native window. Press F10 to return to Docked.
+
+Closing the player ends the owned engine process, stops capture, and restores the library. A second launch is rejected while a Play Session is active.
+
+## Seamless launch contract
+
+1. Validate the library file, firmware, archive health, and arcade dependencies.
+2. Resolve the integrated route. GameDeck prefers its managed Libretro core even when a standalone emulator is installed.
+3. Show the GameDeck loading curtain before the engine window can surface.
+4. Spawn and retain the child process.
+5. Snapshot and poll window capture sources, selecting only a stable post-launch candidate.
+6. Remove native title-bar and resize chrome on Windows, keep the engine behind GameDeck, and capture the game window.
+7. Display a local video-only MediaStream inside GameDeck.
+8. Keep audio owned by the game engine. GameDeck never replays loopback audio, preventing echo and doubled volume.
+9. Preserve the same process across Docked, Fullscreen, Pop out, F10 return, and Escape-to-Docked.
+
+GameDeck does not persist frames or thumbnails and does not enable Remote Play merely because a local Play Session is active.
+
+## Console aspect profiles
+
+The native engine window and Docked viewport use a console display profile rather than a universal widescreen canvas:
+
+| Profile | Systems |
+|---|---|
+| 4:3 | Arcade, MAME, NES/FDS, SNES/Satellaview/Sufami, N64, Genesis/32X/Master System/Game Gear/Sega CD, PC Engine, Saturn, Dreamcast, Atari 2600, PS1, PS2, OpenBOR |
+| 10:9 | Game Boy / Game Boy Color |
+| 3:2 | Game Boy Advance |
+| 2:3 | Nintendo DS stacked-screen layout |
+| 16:9 | PSP, GameCube, Wii, Wii U |
+
+RetroArch additionally uses `aspect_ratio_index = 22` and `video_aspect_ratio_auto = true`, so the core-provided geometry remains authoritative inside the profile.
+
+## Engine routing
+
+### Managed core route
+
+When the managed RetroArch executable and required core are present, GameDeck uses that route for integrated play even when DuckStation, PCSX2, PPSSPP, Dolphin, or standalone MAME is also installed. This gives the cartridge, disc, handheld, and arcade shelves the same lifecycle and presentation contract.
+
+Installed routes exercised in the Windows QA profile:
+
+- FinalBurn Neo and MAME
+- Snes9x and Mesen
+- Mupen64Plus-Next
+- SameBoy, mGBA, and melonDS DS
+- Genesis Plus GX and PicoDrive
+- Beetle PCE Fast and Beetle Saturn
+- Flycast and Stella
+- PCSX-ReARMed, Play!, and PPSSPP
+- OpenBOR 3.0 Build 6391
+
+### Standalone capture fallback
+
+When a managed core is unavailable but a known Windows standalone engine exists, GameDeck launches it windowed, owns the process, discovers its game window, and applies the same Docked / Fullscreen / Pop-out surface. This fallback covers configured MAME, DuckStation, PCSX2, PPSSPP, Dolphin, Cemu, and OpenBOR routes. It remains experimental until the exact emulator/game tuple is exercised.
+
+### External fallback
+
+GameDeck falls back to the existing external launch only when the engine cannot be safely captured, firmware or dependencies are missing, source discovery is ambiguous, or the platform cannot expose a safe window source. Wayland remains external-only in this phase.
+
+## OpenBOR launch behavior
+
+Legacy OpenBOR 3.0 does not reliably consume an arbitrary absolute `.pak` command-line argument. GameDeck creates a per-game session directory under user data, stages exactly one pack in its `Paks` folder using a hard link when possible, starts OpenBOR with that session directory as its working directory, and verifies the engine log selected the staged pack. Saves and logs remain isolated per game. The staged pack keeps its original filename so the capture window has a truthful game title.
+
+## Input and audio
+
+- The physical controller remains owned by the engine; GameDeck suppresses its own library navigation while a session is active.
+- Managed RetroArch and OpenBOR are configured not to pause when GameDeck owns focus.
+- Keyboard players can use Pop out for direct engine-window input.
+- Video capture requests `audio: false`; any unexpected audio tracks are stopped immediately and the video element remains muted.
+- Native engine audio continues unchanged in Docked, Fullscreen, and Pop out.
+
+## Reliability and security boundaries
+
+- One active Play Session and one owned game process.
+- Trusted-main-frame IPC checks on launch and session controls.
+- No full-display fallback and no unrelated-window capture.
+- Stable two-poll post-launch source discovery.
+- Capture and process cleanup on End session, process exit, app shutdown, or failed launch.
+- No game, firmware, save, key, frame, or commercial artwork is uploaded.
+- Renderer isolation, navigation denial, and sandboxing remain enabled.
+
+## Windows acceptance evidence
+
+The current QA profile passed:
+
+- Docked center delta of 0 px across tested systems.
+- Console-specific viewport ratios, including 10:9 Game Boy, 3:2 GBA, 2:3 Nintendo DS, 4:3 consoles/arcade, and 16:9 PSP.
+- Exactly one live video track and zero live captured-audio tracks.
+- Fullscreen controls fully hidden at rest and revealed at the top edge.
+- Escape returns Fullscreen to Docked without closing the game.
+- Pop out and F10 return preserve the same process.
+- Clean process termination and return to the library.
+
+Certification remains exact to the tested Windows runtime, core, content, and controller tuple. macOS, Linux X11, Wayland, motion controls, light guns, touch, and Wii pointer behavior require separate evidence.
+
+---
+
+# Historical design record — superseded by the implementation contract above
+
+The material below is retained for decision history. Statements about proposed phases, external-only routes, loopback audio, or implementation blockers are no longer current.
+
 # GameDeck Embedded Play Sessions
 
 Status: architecture proposal

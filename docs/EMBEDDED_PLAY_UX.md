@@ -1,3 +1,55 @@
+# GameDeck Play UX Contract
+
+Status: implemented Windows player surface
+
+## Modes
+
+### Docked
+
+The selected game replaces the library content inside the GameDeck window. The viewport is centered from measured stage bounds and sized to the console display aspect. Stretching is not allowed. The header provides Docked, Fullscreen, Pop out, and Close.
+
+### Fullscreen
+
+The game stage occupies the full display. GameDeck controls reserve no space and remain off-screen while idle. Moving the pointer to the top edge or focusing a player control reveals the header temporarily. Escape returns to Docked and never ends the game. F11 toggles Docked and Fullscreen.
+
+### Pop out
+
+The same engine process appears in a centered native window with its original title. GameDeck is minimized. F10 returns the session to Docked and reacquires the approved game window.
+
+## Loading and branding
+
+GameDeck shows its own loading curtain before launching the engine and keeps the native engine window behind the player surface. Managed RetroArch disables window decorations, menu loading animation, notifications, and on-screen fonts for the session. The live game frame must not expose an emulator logo, menu, title bar, or notification overlay.
+
+## Input
+
+The physical controller remains owned by the game engine. While a session is active, GameDeck suppresses library gamepad navigation to prevent duplicate actions. Keyboard users can Pop out. Close is explicit; carried-over Escape or controller input cannot terminate a game.
+
+## Audio
+
+The engine remains the only audible source. The captured video is muted and contains no live audio track. Mode changes never start a second sound path.
+
+## Recovery
+
+- Capture loss shows Retry and Pop out without killing a healthy engine.
+- Process exit stops tracks and returns to the previous library state.
+- A second Play request is rejected until the active session ends.
+- Fullscreen exit initiated by the operating system is synchronized back to Docked.
+- Pop-out return uses the same process rather than relaunching.
+
+## Accessibility
+
+- Player controls use native buttons and accessible labels.
+- Keyboard focus reveals hidden fullscreen controls.
+- Escape is a safe fullscreen exit.
+- Reduced-motion preferences disable player transition animations.
+- Status text is announced through the player live region.
+
+---
+
+# Historical design record — superseded by the implementation contract above
+
+The material below is retained for decision history. Statements about proposed phases, external-only routes, loopback audio, or implementation blockers are no longer current.
+
 # GameDeck Embedded Play Product and UX Specification
 
 Status: product/UX specification for implementation review
