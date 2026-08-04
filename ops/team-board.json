@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "updatedAt": "2026-08-03T22:18:07-04:00",
+  "updatedAt": "2026-08-04T02:40:00-04:00",
   "northStar": "A friend can receive an invitation, pass readiness checks, and reach responsive gameplay in under ten minutes across the widest truthful set of legally owned games.",
   "productTargets": {
     "inviteToPlayableP95Minutes": 10,
@@ -443,8 +443,8 @@
         "publish marketing",
         "make partner or spending commitments"
       ],
-      "branch": "integration/team-operating-system-v3-current-main",
-      "worktree": "gamedeck-program-ops-v3-integration",
+      "branch": "ops/team-operating-system-v3-cadops",
+      "worktree": "gamedeck-growth-merge/gamedeck-team-os-v3-cadops",
       "scope": {
         "files": [
           "docs/TEAM_OPERATING_SYSTEM.md",
@@ -468,27 +468,24 @@
         "independent review"
       ],
       "exitCriteria": [
-        "board schema v2 validates",
+        "board schema v3 validates",
         "pulse identifies focus and parallel-ready work",
         "WIP, dependency cycles, stale rules, and reviewer independence are enforced",
         "worktree is clean after push"
       ],
       "startedAt": "2026-08-03T21:22:00-04:00",
-      "lastEvidenceAt": "2026-08-03T22:18:07-04:00",
+      "lastEvidenceAt": "2026-08-04T02:40:00-04:00",
       "exactEvidence": [
-        "origin/main history includes Aurora, CADOps, console UIUX, and OpenBOR integration",
-        "No repository commit or canonical board evidence for Runtime contract V1.0.5 was found; V1.0.4 remains the current verified review target",
-        "Full repository check chain passed directly through Node: CADOps 19 scenarios, ledger validate/watch healthy, repository audit, board validation, 14 validator scenarios, 5 pulse scenarios, syntax checks, play-session-manager 28 tests, library classifier, runtime cache stream limit, and smoke test",
-        "origin/main verified at 369fbd9eb26596d224f18bceb51d1963d1a4cb19",
-        "Current main includes the verified Growth UIUX launch kit, safe ChatChain tab lifecycle/custody, and CADOps browser hygiene sequence",
-        "Source commits 2fd2f41c0f0597ee0a46726f26e68c5b14a467e0 and 4dad628b6c315d8216ffed861cd5899a2dbc7b8d independently passed exact source review",
-        "Source re-review verified the unmodified board, four field-specific mutation failures, full npm test, git diff --check, clean worktree, exact scope, and synchronized remote head",
-        "Current-main replay commits bce860f and e5ebc6d preserve both the Program Ops v3 pulse rules and newer ChatChain/browser-hygiene rules"
+        "origin/main verified at 38cff0391185ac3bda7e949157fdc180be06e6e0",
+        "Current main includes Aurora, CADOps, console UIUX, OpenBOR, Growth UIUX, safe tab handoff, browser hygiene, and ledger-bound ChatChain room custody.",
+        "Source commits 2fd2f41c0f0597ee0a46726f26e68c5b14a467e0 and 4dad628b6c315d8216ffed861cd5899a2dbc7b8d independently passed exact source review.",
+        "Current-main replay commits 577578e, f5e3ac0, and 430136f preserve the v3 operating controls on top of ChatChain workflow main.",
+        "Runtime contract V1.0.5 remains unverified in canonical board evidence; V1.0.4 remains the current immutable review target."
       ],
       "blocker": null,
       "unblockOwner": null,
-      "nextAction": "Run the full current-main gate, commit this integration evidence update, push the integration branch, and request an independent current-main integration verdict.",
-      "rollbackPoint": "369fbd9eb26596d224f18bceb51d1963d1a4cb19"
+      "nextAction": "Run the full current-main gate and four adversarial board mutations, freeze the exact implementation commit, and obtain independent Tester, Supervisor, and Watcher receipts before integration.",
+      "rollbackPoint": "38cff0391185ac3bda7e949157fdc180be06e6e0"
     },
     {
       "id": "PLAY-001",
@@ -1148,8 +1145,8 @@
     }
   ],
   "currentGitTruth": {
-    "verifiedAt": "2026-08-03T22:18:07-04:00",
-    "originMain": "369fbd9eb26596d224f18bceb51d1963d1a4cb19",
+    "verifiedAt": "2026-08-04T02:40:00-04:00",
+    "originMain": "38cff0391185ac3bda7e949157fdc180be06e6e0",
     "includedSequences": [
       "Aurora focus integration",
       "CADOps custody foundation",
@@ -1157,7 +1154,9 @@
       "OpenBOR catalog and launch support",
       "verified Growth UIUX launch kit integration",
       "safe ChatChain tab handoff and custody",
-      "CADOps browser hygiene and custody"
+      "CADOps browser hygiene and custody",
+      "ledger-bound ChatChain room registry and browser workflow v2",
+      "corrected absent-predecessor reconciliation with ledger-bound close receipts"
     ],
     "runtimeContract": {
       "currentVerifiedVersion": "V1.0.4",
@@ -1228,11 +1227,11 @@
       ]
     },
     "worktreeEvidence": {
-      "branch": "integration/team-operating-system-v3-current-main",
-      "head": "e5ebc6d4cae6e810703a9b972bfec54728b1ca93",
-      "base": "369fbd9eb26596d224f18bceb51d1963d1a4cb19",
-      "clean": true,
-      "verifiedAt": "2026-08-03T22:18:07-04:00"
+      "branch": "ops/team-operating-system-v3-cadops",
+      "head": "430136f0f34a76b89071ffa6b1f373b85d724d5d",
+      "base": "38cff0391185ac3bda7e949157fdc180be06e6e0",
+      "clean": false,
+      "verifiedAt": "2026-08-04T02:40:00-04:00"
     }
   },
   "communicationReceiptSchema": {
