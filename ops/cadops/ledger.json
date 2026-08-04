@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "project": "GameDeck",
   "createdAt": "2026-08-03T23:44:00.000Z",
-  "updatedAt": "2026-08-04T02:09:27.825Z",
+  "updatedAt": "2026-08-04T02:11:49.155Z",
   "policy": {
     "nonReplay": true,
     "visibleLaunchRequired": true,
@@ -41,10 +41,10 @@
   "counters": {
     "E": 6,
     "T": 6,
-    "M": 5,
-    "W": 5,
+    "M": 6,
+    "W": 6,
     "recovery": 0,
-    "event": 86
+    "event": 97
   },
   "tickets": [
     {
@@ -1243,19 +1243,135 @@
       "objective": "Independently test exact browser-hygiene commit 859d16da1aa163e538d73cdca03b127d445242bb, including fail-closed activity probes, exact stale closure, live CDP behavior, CLI exit states, and full repository compatibility.",
       "assignee": "independent-browser-hygiene-tester-01",
       "authorizedBy": "general-orchestrator",
-      "status": "prepared",
+      "status": "completed",
       "chainId": "E-0006",
       "predecessorTicketId": "E-0006",
       "predecessorReceiptHash": "cb8f643394ae0be28bff04ca0b6296d6f0c4bb74d5101520239d6f85bee720df",
-      "successorTicketId": null,
+      "successorTicketId": "M-0006",
       "recoveryForTicketId": null,
       "recoveryTicketId": null,
       "createdAt": "2026-08-04T02:09:27.825Z",
-      "acceptedAt": null,
-      "startedAt": null,
-      "completedAt": null,
-      "launchEvidence": null,
-      "receipt": null,
+      "acceptedAt": "2026-08-04T02:09:53.894Z",
+      "startedAt": "2026-08-04T02:09:58.652Z",
+      "completedAt": "2026-08-04T02:10:25.704Z",
+      "launchEvidence": "Detached read-only review worktree gamedeck-cadops-browser-hygiene-review at exact Builder commit 859d16da1aa163e538d73cdca03b127d445242bb; independent unit, repository, and live CDP audits started.",
+      "receipt": {
+        "ticketId": "T-0006",
+        "lane": "T",
+        "role": "tester",
+        "actor": "independent-browser-hygiene-tester-01",
+        "objective": "Independently test exact browser-hygiene commit 859d16da1aa163e538d73cdca03b127d445242bb, including fail-closed activity probes, exact stale closure, live CDP behavior, CLI exit states, and full repository compatibility.",
+        "outcome": "pass",
+        "summary": "Independent detached review verified fail-closed activity probes, exact one-tab stale cleanup, protected Room Watch and busy tabs, CLI health states, and full repository compatibility.",
+        "softwareVersion": "859d16da1aa163e538d73cdca03b127d445242bb",
+        "predecessorTicketId": "E-0006",
+        "predecessorReceiptHash": "cb8f643394ae0be28bff04ca0b6296d6f0c4bb74d5101520239d6f85bee720df",
+        "launchEvidence": "Detached read-only review worktree gamedeck-cadops-browser-hygiene-review at exact Builder commit 859d16da1aa163e538d73cdca03b127d445242bb; independent unit, repository, and live CDP audits started.",
+        "startedAt": "2026-08-04T02:09:58.652Z",
+        "completedAt": "2026-08-04T02:10:25.704Z",
+        "artifacts": [],
+        "checks": [
+          "Detached full npm test passed with 19 ChatChain scenarios and all repository gates.",
+          "Live audit detected one newly stale completed tab; exact cleanup closed it and returned 6 open, 1 protected, 5 busy, 0 unknown, 0 stale."
+        ],
+        "nextAuthorizedLanes": [
+          "M"
+        ],
+        "chainDisposition": "handoff-required",
+        "hash": "6c797d5554486fa1e257e06bc2aa9984576c662d48589fab8342bb26466733e0"
+      },
+      "uncertainty": null,
+      "quarantine": null
+    },
+    {
+      "id": "M-0006",
+      "lane": "M",
+      "role": "supervisor",
+      "objective": "Verify Builder and Tester receipt integrity, exact seven-file scope, live-browser safety invariants, rollback to 3d265f1, and readiness for Watcher closure.",
+      "assignee": "browser-hygiene-supervisor-01",
+      "authorizedBy": "general-orchestrator",
+      "status": "completed",
+      "chainId": "E-0006",
+      "predecessorTicketId": "T-0006",
+      "predecessorReceiptHash": "6c797d5554486fa1e257e06bc2aa9984576c662d48589fab8342bb26466733e0",
+      "successorTicketId": "W-0006",
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T02:10:38.563Z",
+      "acceptedAt": "2026-08-04T02:10:46.366Z",
+      "startedAt": "2026-08-04T02:10:51.968Z",
+      "completedAt": "2026-08-04T02:11:06.912Z",
+      "launchEvidence": "Supervisor inspected exact Builder commit 859d16d, detached Tester evidence, seven-file diff scope, artifact hashes, live cleanup receipts, and rollback point 3d265f1.",
+      "receipt": {
+        "ticketId": "M-0006",
+        "lane": "M",
+        "role": "supervisor",
+        "actor": "browser-hygiene-supervisor-01",
+        "objective": "Verify Builder and Tester receipt integrity, exact seven-file scope, live-browser safety invariants, rollback to 3d265f1, and readiness for Watcher closure.",
+        "outcome": "pass",
+        "summary": "Supervisor verified exact scope, immutable receipt links, fail-closed browser safeguards, independent test evidence, clean rollback, and no unrelated product or publication changes.",
+        "softwareVersion": "859d16da1aa163e538d73cdca03b127d445242bb",
+        "predecessorTicketId": "T-0006",
+        "predecessorReceiptHash": "6c797d5554486fa1e257e06bc2aa9984576c662d48589fab8342bb26466733e0",
+        "launchEvidence": "Supervisor inspected exact Builder commit 859d16d, detached Tester evidence, seven-file diff scope, artifact hashes, live cleanup receipts, and rollback point 3d265f1.",
+        "startedAt": "2026-08-04T02:10:51.968Z",
+        "completedAt": "2026-08-04T02:11:06.912Z",
+        "artifacts": [],
+        "checks": [
+          "Ledger validated with intact event and receipt hashes.",
+          "Diff scope is exactly seven CADOps, ChatChain, documentation, test, package, and ledger files; rollback is origin/main 3d265f1."
+        ],
+        "nextAuthorizedLanes": [
+          "W"
+        ],
+        "chainDisposition": "handoff-required",
+        "hash": "161222aab8a0644f06d139bf50a1aabb82751f216c151e2d97bc95e350d79e8f"
+      },
+      "uncertainty": null,
+      "quarantine": null
+    },
+    {
+      "id": "W-0006",
+      "lane": "W",
+      "role": "watcher",
+      "objective": "Confirm browser-hygiene custody continuity, live zero-stale state, no replay or unresolved uncertainty, and authorize bounded integration of exact commit 859d16d.",
+      "assignee": "browser-hygiene-watcher-01",
+      "authorizedBy": "general-orchestrator",
+      "status": "completed",
+      "chainId": "E-0006",
+      "predecessorTicketId": "M-0006",
+      "predecessorReceiptHash": "161222aab8a0644f06d139bf50a1aabb82751f216c151e2d97bc95e350d79e8f",
+      "successorTicketId": null,
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T02:11:15.041Z",
+      "acceptedAt": "2026-08-04T02:11:20.796Z",
+      "startedAt": "2026-08-04T02:11:26.102Z",
+      "completedAt": "2026-08-04T02:11:49.155Z",
+      "launchEvidence": "Watcher is validating the complete E-0006 through M-0006 receipt chain, final live CDP hygiene state, and bounded integration authorization without opening additional browser tabs.",
+      "receipt": {
+        "ticketId": "W-0006",
+        "lane": "W",
+        "role": "watcher",
+        "actor": "browser-hygiene-watcher-01",
+        "objective": "Confirm browser-hygiene custody continuity, live zero-stale state, no replay or unresolved uncertainty, and authorize bounded integration of exact commit 859d16d.",
+        "outcome": "pass",
+        "summary": "Watcher confirmed the complete custody chain, healthy live CDP state with zero stale tabs, no uncertainty or replay, and authorized bounded integration of exact Builder commit 859d16d.",
+        "softwareVersion": "859d16da1aa163e538d73cdca03b127d445242bb",
+        "predecessorTicketId": "M-0006",
+        "predecessorReceiptHash": "161222aab8a0644f06d139bf50a1aabb82751f216c151e2d97bc95e350d79e8f",
+        "launchEvidence": "Watcher is validating the complete E-0006 through M-0006 receipt chain, final live CDP hygiene state, and bounded integration authorization without opening additional browser tabs.",
+        "startedAt": "2026-08-04T02:11:26.102Z",
+        "completedAt": "2026-08-04T02:11:49.155Z",
+        "artifacts": [],
+        "checks": [
+          "CADOps ledger validation and Watcher health passed with zero risks.",
+          "Final live audit: 6 conversation tabs, 1 protected Room Watch, 5 busy, 0 unknown, 0 stale."
+        ],
+        "nextAuthorizedLanes": [],
+        "chainDisposition": "closed",
+        "hash": "f1bf55e72d745314726269430a37d612120c084b8e52132688dc9fddfc347949"
+      },
       "uncertainty": null,
       "quarantine": null
     }
@@ -2401,6 +2517,150 @@
         "assignee": "independent-browser-hygiene-tester-01"
       },
       "hash": "1f7ab45b5efc8990cbb12dd3f60025714bb82b35892ac423ebd575fdb75e2a28"
+    },
+    {
+      "eventId": "EVT-000087",
+      "type": "ticket.accepted",
+      "ticketId": "T-0006",
+      "actor": "independent-browser-hygiene-tester-01",
+      "at": "2026-08-04T02:09:53.894Z",
+      "previousHash": "1f7ab45b5efc8990cbb12dd3f60025714bb82b35892ac423ebd575fdb75e2a28",
+      "payload": {
+        "role": "tester"
+      },
+      "hash": "07ebac3fd2db21cb57f9d2ddf227608e95c65c3848ff76a0ae402ce60606eeae"
+    },
+    {
+      "eventId": "EVT-000088",
+      "type": "ticket.started",
+      "ticketId": "T-0006",
+      "actor": "independent-browser-hygiene-tester-01",
+      "at": "2026-08-04T02:09:58.652Z",
+      "previousHash": "07ebac3fd2db21cb57f9d2ddf227608e95c65c3848ff76a0ae402ce60606eeae",
+      "payload": {
+        "launchEvidence": "Detached read-only review worktree gamedeck-cadops-browser-hygiene-review at exact Builder commit 859d16da1aa163e538d73cdca03b127d445242bb; independent unit, repository, and live CDP audits started."
+      },
+      "hash": "95e43780d3caceda7c1fe20c6ff638c02416a72b30c6e7186ac5afbe17178869"
+    },
+    {
+      "eventId": "EVT-000089",
+      "type": "ticket.completed",
+      "ticketId": "T-0006",
+      "actor": "independent-browser-hygiene-tester-01",
+      "at": "2026-08-04T02:10:25.704Z",
+      "previousHash": "95e43780d3caceda7c1fe20c6ff638c02416a72b30c6e7186ac5afbe17178869",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "6c797d5554486fa1e257e06bc2aa9984576c662d48589fab8342bb26466733e0",
+        "softwareVersion": "859d16da1aa163e538d73cdca03b127d445242bb"
+      },
+      "hash": "f80cdd759cae3b537c9c38582f9d853b8bdd05e1334e3de70fad10bd464c6643"
+    },
+    {
+      "eventId": "EVT-000090",
+      "type": "custody.handed-off",
+      "ticketId": "T-0006",
+      "actor": "general-orchestrator",
+      "at": "2026-08-04T02:10:38.563Z",
+      "previousHash": "f80cdd759cae3b537c9c38582f9d853b8bdd05e1334e3de70fad10bd464c6643",
+      "payload": {
+        "successorTicketId": "M-0006",
+        "successorLane": "M",
+        "predecessorReceiptHash": "6c797d5554486fa1e257e06bc2aa9984576c662d48589fab8342bb26466733e0",
+        "assignee": "browser-hygiene-supervisor-01"
+      },
+      "hash": "336f8ed41c55b7d5eb8d83ceb5b3c398958c8ede887dd2526c3970719bc3debc"
+    },
+    {
+      "eventId": "EVT-000091",
+      "type": "ticket.accepted",
+      "ticketId": "M-0006",
+      "actor": "browser-hygiene-supervisor-01",
+      "at": "2026-08-04T02:10:46.366Z",
+      "previousHash": "336f8ed41c55b7d5eb8d83ceb5b3c398958c8ede887dd2526c3970719bc3debc",
+      "payload": {
+        "role": "supervisor"
+      },
+      "hash": "d86ba226b760f05a52f6b500426146289d12d11d5746fed13e039f1aa8f2e5c3"
+    },
+    {
+      "eventId": "EVT-000092",
+      "type": "ticket.started",
+      "ticketId": "M-0006",
+      "actor": "browser-hygiene-supervisor-01",
+      "at": "2026-08-04T02:10:51.968Z",
+      "previousHash": "d86ba226b760f05a52f6b500426146289d12d11d5746fed13e039f1aa8f2e5c3",
+      "payload": {
+        "launchEvidence": "Supervisor inspected exact Builder commit 859d16d, detached Tester evidence, seven-file diff scope, artifact hashes, live cleanup receipts, and rollback point 3d265f1."
+      },
+      "hash": "699faacddc0169dec57c12455b4593d5c104ac360616e7f73908e4df5fd5cdab"
+    },
+    {
+      "eventId": "EVT-000093",
+      "type": "ticket.completed",
+      "ticketId": "M-0006",
+      "actor": "browser-hygiene-supervisor-01",
+      "at": "2026-08-04T02:11:06.912Z",
+      "previousHash": "699faacddc0169dec57c12455b4593d5c104ac360616e7f73908e4df5fd5cdab",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "161222aab8a0644f06d139bf50a1aabb82751f216c151e2d97bc95e350d79e8f",
+        "softwareVersion": "859d16da1aa163e538d73cdca03b127d445242bb"
+      },
+      "hash": "2ce264caf3435d2f927384e49da9b9411efd94846200f06f1f3d832ff789c5ae"
+    },
+    {
+      "eventId": "EVT-000094",
+      "type": "custody.handed-off",
+      "ticketId": "M-0006",
+      "actor": "general-orchestrator",
+      "at": "2026-08-04T02:11:15.041Z",
+      "previousHash": "2ce264caf3435d2f927384e49da9b9411efd94846200f06f1f3d832ff789c5ae",
+      "payload": {
+        "successorTicketId": "W-0006",
+        "successorLane": "W",
+        "predecessorReceiptHash": "161222aab8a0644f06d139bf50a1aabb82751f216c151e2d97bc95e350d79e8f",
+        "assignee": "browser-hygiene-watcher-01"
+      },
+      "hash": "ae5ee103369dfa9484116dbcc1799433e8d022e8bd430ab66e6818c975257636"
+    },
+    {
+      "eventId": "EVT-000095",
+      "type": "ticket.accepted",
+      "ticketId": "W-0006",
+      "actor": "browser-hygiene-watcher-01",
+      "at": "2026-08-04T02:11:20.796Z",
+      "previousHash": "ae5ee103369dfa9484116dbcc1799433e8d022e8bd430ab66e6818c975257636",
+      "payload": {
+        "role": "watcher"
+      },
+      "hash": "f21cadf53d56d0b810661ecb9a23177200b49fd714455f8a70f1e3d7b73647a1"
+    },
+    {
+      "eventId": "EVT-000096",
+      "type": "ticket.started",
+      "ticketId": "W-0006",
+      "actor": "browser-hygiene-watcher-01",
+      "at": "2026-08-04T02:11:26.102Z",
+      "previousHash": "f21cadf53d56d0b810661ecb9a23177200b49fd714455f8a70f1e3d7b73647a1",
+      "payload": {
+        "launchEvidence": "Watcher is validating the complete E-0006 through M-0006 receipt chain, final live CDP hygiene state, and bounded integration authorization without opening additional browser tabs."
+      },
+      "hash": "2ad5ba115c05b722e42b902c75139319672bc898c7f96fe131b17718b712d212"
+    },
+    {
+      "eventId": "EVT-000097",
+      "type": "ticket.completed",
+      "ticketId": "W-0006",
+      "actor": "browser-hygiene-watcher-01",
+      "at": "2026-08-04T02:11:49.155Z",
+      "previousHash": "2ad5ba115c05b722e42b902c75139319672bc898c7f96fe131b17718b712d212",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "f1bf55e72d745314726269430a37d612120c084b8e52132688dc9fddfc347949",
+        "softwareVersion": "859d16da1aa163e538d73cdca03b127d445242bb"
+      },
+      "hash": "dc1c6bb0e700db79d6aa00f5b517325aa6559cae17cc14b83a948c8be3bf1506"
     }
   ]
 }
