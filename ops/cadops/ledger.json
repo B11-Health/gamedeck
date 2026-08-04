@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "project": "GameDeck",
   "createdAt": "2026-08-03T23:44:00.000Z",
-  "updatedAt": "2026-08-04T06:55:42.473Z",
+  "updatedAt": "2026-08-04T07:00:35.621Z",
   "policy": {
     "nonReplay": true,
     "visibleLaunchRequired": true,
@@ -39,12 +39,12 @@
     }
   },
   "counters": {
-    "E": 10,
+    "E": 11,
     "T": 10,
     "M": 10,
     "W": 10,
     "recovery": 0,
-    "event": 161
+    "event": 164
   },
   "tickets": [
     {
@@ -2262,6 +2262,29 @@
       },
       "uncertainty": null,
       "quarantine": null
+    },
+    {
+      "id": "E-0011",
+      "lane": "E",
+      "role": "builder",
+      "objective": "Add the independently approved least-privilege release workflow regression gate onto current origin/main ca319eb0 without modifying release behavior",
+      "assignee": "builder-release-guard-current-18",
+      "authorizedBy": "general-orchestrator",
+      "status": "active",
+      "chainId": "E-0011",
+      "predecessorTicketId": null,
+      "predecessorReceiptHash": null,
+      "successorTicketId": null,
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T07:00:18.172Z",
+      "acceptedAt": "2026-08-04T07:00:27.379Z",
+      "startedAt": "2026-08-04T07:00:35.621Z",
+      "completedAt": null,
+      "launchEvidence": "Authenticated Shell active in isolated gamedeck-release-guard-v2 worktree at origin/main ca319eb05b99218af083ec86bfdfc99b2b738b8a",
+      "receipt": null,
+      "uncertainty": null,
+      "quarantine": null
     }
   ],
   "events": [
@@ -4397,6 +4420,45 @@
         "softwareVersion": "873865b"
       },
       "hash": "ae78a431f77d0e87f9ff94f8c8f0049151d56c0d52d5cf5309e79399ae954a61"
+    },
+    {
+      "eventId": "EVT-000162",
+      "type": "ticket.issued",
+      "ticketId": "E-0011",
+      "actor": "general-orchestrator",
+      "at": "2026-08-04T07:00:18.172Z",
+      "previousHash": "ae78a431f77d0e87f9ff94f8c8f0049151d56c0d52d5cf5309e79399ae954a61",
+      "payload": {
+        "lane": "E",
+        "role": "builder",
+        "assignee": "builder-release-guard-current-18",
+        "objective": "Add the independently approved least-privilege release workflow regression gate onto current origin/main ca319eb0 without modifying release behavior"
+      },
+      "hash": "92ef28056f0f5072ca0e72bb2ef095e0e0f30156e8106c278931b64d9007e45c"
+    },
+    {
+      "eventId": "EVT-000163",
+      "type": "ticket.accepted",
+      "ticketId": "E-0011",
+      "actor": "builder-release-guard-current-18",
+      "at": "2026-08-04T07:00:27.379Z",
+      "previousHash": "92ef28056f0f5072ca0e72bb2ef095e0e0f30156e8106c278931b64d9007e45c",
+      "payload": {
+        "role": "builder"
+      },
+      "hash": "a9e439b82847a11f54dac152d403388e07e95c6ab5ad3129a0fb710a0ab7080f"
+    },
+    {
+      "eventId": "EVT-000164",
+      "type": "ticket.started",
+      "ticketId": "E-0011",
+      "actor": "builder-release-guard-current-18",
+      "at": "2026-08-04T07:00:35.621Z",
+      "previousHash": "a9e439b82847a11f54dac152d403388e07e95c6ab5ad3129a0fb710a0ab7080f",
+      "payload": {
+        "launchEvidence": "Authenticated Shell active in isolated gamedeck-release-guard-v2 worktree at origin/main ca319eb05b99218af083ec86bfdfc99b2b738b8a"
+      },
+      "hash": "392a3a095ee935ba026a7c0774cbf2b20373abde5c2b35b8a306103d6a148951"
     }
   ]
 }
