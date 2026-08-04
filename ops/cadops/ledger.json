@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "project": "GameDeck",
   "createdAt": "2026-08-03T23:44:00.000Z",
-  "updatedAt": "2026-08-04T01:54:08.915Z",
+  "updatedAt": "2026-08-04T01:58:39.974Z",
   "policy": {
     "nonReplay": true,
     "visibleLaunchRequired": true,
@@ -40,11 +40,11 @@
   },
   "counters": {
     "E": 5,
-    "T": 4,
+    "T": 5,
     "M": 4,
     "W": 4,
     "recovery": 0,
-    "event": 68
+    "event": 70
   },
   "tickets": [
     {
@@ -936,18 +936,102 @@
       "objective": "Implement safe ChatChain browser-tab rotation: verify the successor chat is open and ready, then close exactly one predecessor tab; keep the predecessor open on uncertainty.",
       "assignee": "chatchain-tab-builder-01",
       "authorizedBy": "general-orchestrator",
-      "status": "active",
+      "status": "completed",
       "chainId": "E-0005",
       "predecessorTicketId": null,
       "predecessorReceiptHash": null,
-      "successorTicketId": null,
+      "successorTicketId": "T-0005",
       "recoveryForTicketId": null,
       "recoveryTicketId": null,
       "createdAt": "2026-08-04T01:53:50.357Z",
       "acceptedAt": "2026-08-04T01:54:03.042Z",
       "startedAt": "2026-08-04T01:54:08.915Z",
-      "completedAt": null,
+      "completedAt": "2026-08-04T01:58:31.890Z",
       "launchEvidence": "Authenticated Shell active in dedicated clean worktree gamedeck-chatchain-tabs at main 6af7448; no browser endpoint assumed.",
+      "receipt": {
+        "ticketId": "E-0005",
+        "lane": "E",
+        "role": "builder",
+        "actor": "chatchain-tab-builder-01",
+        "objective": "Implement safe ChatChain browser-tab rotation: verify the successor chat is open and ready, then close exactly one predecessor tab; keep the predecessor open on uncertainty.",
+        "outcome": "pass",
+        "summary": "Implemented safe ChatChain tab rotation with successor-first verification, exact predecessor closure, no-replay uncertainty handling, CLI receipts, documentation, and adversarial coverage.",
+        "softwareVersion": "1c001f32f79d43d2b02997f6912b11604c56e452",
+        "predecessorTicketId": null,
+        "predecessorReceiptHash": null,
+        "launchEvidence": "Authenticated Shell active in dedicated clean worktree gamedeck-chatchain-tabs at main 6af7448; no browser endpoint assumed.",
+        "startedAt": "2026-08-04T01:54:08.915Z",
+        "completedAt": "2026-08-04T01:58:31.890Z",
+        "artifacts": [
+          {
+            "path": "scripts/chatchain-tab-lifecycle.mjs",
+            "source": "git-blob",
+            "commit": "1c001f32f79d43d2b02997f6912b11604c56e452",
+            "objectFormat": "sha1",
+            "objectId": "8b6eb4ec4155599ead3afacb307b17e5c2b72f73",
+            "bytes": 13763,
+            "sha256": "805837cdc219233331d925d679c4dd7abd6ef64634f414bc470a50d0d739e114"
+          },
+          {
+            "path": "scripts/chatchain-tab-lifecycle.test.mjs",
+            "source": "git-blob",
+            "commit": "1c001f32f79d43d2b02997f6912b11604c56e452",
+            "objectFormat": "sha1",
+            "objectId": "bdd0f2a8dbdcc8762577e3ebff15c44af57b6fa3",
+            "bytes": 10551,
+            "sha256": "9056848790ac05ad25a68d3721ef98c344ab8531cd9cd9621d5c5a2874ec75db"
+          },
+          {
+            "path": "docs/CHATCHAINS.md",
+            "source": "git-blob",
+            "commit": "1c001f32f79d43d2b02997f6912b11604c56e452",
+            "objectFormat": "sha1",
+            "objectId": "b6288e7dcfc1c049618f7c24e5edd9395afe394e",
+            "bytes": 4228,
+            "sha256": "e0fa5ce06e9e3d69149f0d7c91c1d49246216c3c7d038701c9d2f93b83f21d78"
+          },
+          {
+            "path": "package.json",
+            "source": "git-blob",
+            "commit": "1c001f32f79d43d2b02997f6912b11604c56e452",
+            "objectFormat": "sha1",
+            "objectId": "5e44e65d0eb2d4166d1a72ef3efb3bf54278e98b",
+            "bytes": 6760,
+            "sha256": "c5c58b9ff19e2c835e2ee13e02dddf6e7da582cb9495819ec7e6390a027b8c60"
+          }
+        ],
+        "checks": [
+          "Full GameDeck npm test passed; ChatChain tab lifecycle 16 scenarios passed.",
+          "Inactive CDP endpoint failed closed and git diff --check passed."
+        ],
+        "nextAuthorizedLanes": [
+          "T"
+        ],
+        "chainDisposition": "handoff-required",
+        "hash": "0ae87ac83786a10be8e6a7360131c71cbfc17f7485b220135936ae0c36a3ed45"
+      },
+      "uncertainty": null,
+      "quarantine": null
+    },
+    {
+      "id": "T-0005",
+      "lane": "T",
+      "role": "tester",
+      "objective": "Independently test exact ChatChain tab lifecycle commit 1c001f32f79d43d2b02997f6912b11604c56e452, including successor-first ordering, no-close failure paths, uncertainty, HTTP CDP behavior, and full repository compatibility.",
+      "assignee": "independent-chatchain-tab-reviewer-01",
+      "authorizedBy": "general-orchestrator",
+      "status": "prepared",
+      "chainId": "E-0005",
+      "predecessorTicketId": "E-0005",
+      "predecessorReceiptHash": "0ae87ac83786a10be8e6a7360131c71cbfc17f7485b220135936ae0c36a3ed45",
+      "successorTicketId": null,
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T01:58:39.974Z",
+      "acceptedAt": null,
+      "startedAt": null,
+      "completedAt": null,
+      "launchEvidence": null,
       "receipt": null,
       "uncertainty": null,
       "quarantine": null
@@ -1853,6 +1937,35 @@
         "launchEvidence": "Authenticated Shell active in dedicated clean worktree gamedeck-chatchain-tabs at main 6af7448; no browser endpoint assumed."
       },
       "hash": "9b36cf68fc71190aac5db53e9e619c9460430c614ecfe7ced95751b881ad2f8f"
+    },
+    {
+      "eventId": "EVT-000069",
+      "type": "ticket.completed",
+      "ticketId": "E-0005",
+      "actor": "chatchain-tab-builder-01",
+      "at": "2026-08-04T01:58:31.890Z",
+      "previousHash": "9b36cf68fc71190aac5db53e9e619c9460430c614ecfe7ced95751b881ad2f8f",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "0ae87ac83786a10be8e6a7360131c71cbfc17f7485b220135936ae0c36a3ed45",
+        "softwareVersion": "1c001f32f79d43d2b02997f6912b11604c56e452"
+      },
+      "hash": "fcabdcec6348219c0dc5adaaab7991636338866bfe5f9accf50b36d29aac8111"
+    },
+    {
+      "eventId": "EVT-000070",
+      "type": "custody.handed-off",
+      "ticketId": "E-0005",
+      "actor": "general-orchestrator",
+      "at": "2026-08-04T01:58:39.974Z",
+      "previousHash": "fcabdcec6348219c0dc5adaaab7991636338866bfe5f9accf50b36d29aac8111",
+      "payload": {
+        "successorTicketId": "T-0005",
+        "successorLane": "T",
+        "predecessorReceiptHash": "0ae87ac83786a10be8e6a7360131c71cbfc17f7485b220135936ae0c36a3ed45",
+        "assignee": "independent-chatchain-tab-reviewer-01"
+      },
+      "hash": "9d01270d54e2e010e3a0a94563873fe8a0c6d87cf6bdf3f17206d3f341e04bcc"
     }
   ]
 }
