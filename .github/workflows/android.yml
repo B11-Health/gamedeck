@@ -122,12 +122,13 @@ jobs:
           adb shell settings put global transition_animation_scale 0
           adb shell settings put global animator_duration_scale 0
           adb install "$APK"
+          adb shell "run-as $PACKAGE sh -c 'mkdir -p files && touch files/renderer-fixture.enabled'"
           adb logcat -c
           adb shell am start -W -n "$PACKAGE/$ACTIVITY" \
             | tee "$OUT/ACTIVITY-START.txt"
 
           renderer_ready=0
-          for attempt in $(seq 1 45); do
+          for attempt in $(seq 1 50); do
             adb logcat -d -v brief \
               | grep -E "GAMEDECK_RENDERER_(READY|ERROR)" \
               | tail -1 \
@@ -156,9 +157,17 @@ jobs:
           ! grep -Eqi "FATAL EXCEPTION.*$PACKAGE_REGEX|Process: $PACKAGE_REGEX.*FATAL EXCEPTION" "$OUT/LOGCAT.txt"
           if [ "$renderer_ready" != "1" ]; then
             cat "$OUT/RENDERER-STATUS.txt"
-            grep -E "GameDeckRenderer|chromium|cr_AwContents" "$OUT/LOGCAT.txt" | tail -120 || true
+            grep -E "GameDeckRenderer|chromium|cr_AwContents" "$OUT/LOGCAT.txt" | tail -160 || true
             exit 1
           fi
+          grep -q '"renderer":"shared-desktop"' "$OUT/RENDERER-STATUS.txt"
+          grep -q '"startupObserved":true' "$OUT/RENDERER-STATUS.txt"
+          grep -q '"fixtureVerified":true' "$OUT/RENDERER-STATUS.txt"
+          grep -q '"gameCards":1' "$OUT/RENDERER-STATUS.txt"
+          grep -q '"firstGameTitle":"Chrono Trigger"' "$OUT/RENDERER-STATUS.txt"
+          grep -q '"artworkKind":"data"' "$OUT/RENDERER-STATUS.txt"
+          grep -q '"descriptionVerified":true' "$OUT/RENDERER-STATUS.txt"
+          grep -q '"factsVerified":true' "$OUT/RENDERER-STATUS.txt"
 
       - name: Upload Android debug and smoke evidence
         if: always()
