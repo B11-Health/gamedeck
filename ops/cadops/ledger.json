@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "project": "GameDeck",
   "createdAt": "2026-08-03T23:44:00.000Z",
-  "updatedAt": "2026-08-04T14:58:47.411Z",
+  "updatedAt": "2026-08-04T15:50:06.841Z",
   "policy": {
     "nonReplay": true,
     "visibleLaunchRequired": true,
@@ -39,12 +39,12 @@
     }
   },
   "counters": {
-    "E": 15,
+    "E": 16,
     "T": 15,
     "M": 15,
     "W": 15,
     "recovery": 2,
-    "event": 251
+    "event": 254
   },
   "tickets": [
     {
@@ -3907,6 +3907,29 @@
       },
       "uncertainty": null,
       "quarantine": null
+    },
+    {
+      "id": "E-0016",
+      "lane": "E",
+      "role": "builder",
+      "objective": "Reconcile GROWTH-001 and collaboration handoff to the exact merged tester recruitment contract without publishing or changing product behavior",
+      "assignee": "builder-growth-truth-40",
+      "authorizedBy": "general-orchestrator",
+      "status": "active",
+      "chainId": "E-0016",
+      "predecessorTicketId": null,
+      "predecessorReceiptHash": null,
+      "successorTicketId": null,
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T15:49:42.142Z",
+      "acceptedAt": "2026-08-04T15:49:54.733Z",
+      "startedAt": "2026-08-04T15:50:06.841Z",
+      "completedAt": null,
+      "launchEvidence": "Authenticated Shell active in isolated gamedeck-ops-growth-reconcile worktree at origin/main 571a3594d8a11a0fee64eade55eb6ab8dcdea5d5",
+      "receipt": null,
+      "uncertainty": null,
+      "quarantine": null
     }
   ],
   "events": [
@@ -7236,6 +7259,45 @@
         "softwareVersion": "b3494c34e142de9e6983bbd5ce513614fbd96dbd"
       },
       "hash": "84ed105f20afc25a5a1665f9dce20abcbb3444b0f6244440b7862ee47a6d1d1a"
+    },
+    {
+      "eventId": "EVT-000252",
+      "type": "ticket.issued",
+      "ticketId": "E-0016",
+      "actor": "general-orchestrator",
+      "at": "2026-08-04T15:49:42.142Z",
+      "previousHash": "84ed105f20afc25a5a1665f9dce20abcbb3444b0f6244440b7862ee47a6d1d1a",
+      "payload": {
+        "lane": "E",
+        "role": "builder",
+        "assignee": "builder-growth-truth-40",
+        "objective": "Reconcile GROWTH-001 and collaboration handoff to the exact merged tester recruitment contract without publishing or changing product behavior"
+      },
+      "hash": "539552e32d38d4119c987ba6228e7df5793d52c615917a392495899b5c0cd4da"
+    },
+    {
+      "eventId": "EVT-000253",
+      "type": "ticket.accepted",
+      "ticketId": "E-0016",
+      "actor": "builder-growth-truth-40",
+      "at": "2026-08-04T15:49:54.733Z",
+      "previousHash": "539552e32d38d4119c987ba6228e7df5793d52c615917a392495899b5c0cd4da",
+      "payload": {
+        "role": "builder"
+      },
+      "hash": "04dfb4ff9e9229b1e16069f9de44794e7233322761b9cf0867aa6675f5d2d6c9"
+    },
+    {
+      "eventId": "EVT-000254",
+      "type": "ticket.started",
+      "ticketId": "E-0016",
+      "actor": "builder-growth-truth-40",
+      "at": "2026-08-04T15:50:06.841Z",
+      "previousHash": "04dfb4ff9e9229b1e16069f9de44794e7233322761b9cf0867aa6675f5d2d6c9",
+      "payload": {
+        "launchEvidence": "Authenticated Shell active in isolated gamedeck-ops-growth-reconcile worktree at origin/main 571a3594d8a11a0fee64eade55eb6ab8dcdea5d5"
+      },
+      "hash": "162b8328aa904ae7014e8241d57a6c75c2c6463cdc454b8e33294059cb8fcd86"
     }
   ]
 }

@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "updatedAt": "2026-08-04T11:49:11.530Z",
+  "updatedAt": "2026-08-04T15:52:33.049Z",
   "northStar": "A friend can receive an invitation, pass readiness checks, and reach responsive gameplay in under ten minutes across the widest truthful set of legally owned games.",
   "productTargets": {
     "inviteToPlayableP95Minutes": 10,
@@ -311,8 +311,8 @@
         "community loops",
         "onboarding content"
       ],
-      "branch": null,
-      "worktree": null,
+      "branch": "growth/multiplayer-tester-recruitment-contract-v1",
+      "worktree": "gamedeck-growth-recruitment-contract-v1",
       "scope": {
         "files": [],
         "surfaces": [
@@ -322,7 +322,10 @@
           "GitHub Discussions",
           "public site"
         ],
-        "artifacts": []
+        "artifacts": [
+          "tester recruitment contract",
+          "draft proof checklist"
+        ]
       },
       "evidenceRequired": [
         "live URLs",
@@ -331,7 +334,7 @@
         "CTA destination",
         "measured results"
       ],
-      "nextAction": "Execute GROWTH-001 without making availability or compatibility claims that QA has not verified."
+      "nextAction": "Prepare a separate reviewed publication task; the merged artifact remains draft-only."
     },
     {
       "id": "monetization",
@@ -969,7 +972,7 @@
       "id": "GROWTH-001",
       "title": "Prepare verified multiplayer tester recruitment",
       "priority": "P1",
-      "status": "ready",
+      "status": "complete",
       "ownerLane": "growth-community",
       "reviewerLane": "qa-observability",
       "approvalLanes": [
@@ -984,41 +987,49 @@
         "depend on Discord",
         "collect unnecessary personal data"
       ],
-      "branch": null,
-      "worktree": null,
+      "branch": "growth/multiplayer-tester-recruitment-contract-v1",
+      "worktree": "gamedeck-growth-recruitment-contract-v1",
       "scope": {
-        "files": [],
-        "surfaces": [
-          "YouTube",
-          "TikTok",
-          "Reddit",
-          "GitHub Discussions",
-          "public site"
+        "files": [
+          "config/multiplayer-tester-recruitment.json",
+          "marketing/MULTIPLAYER_TESTER_RECRUITMENT_DRAFT.md",
+          "scripts/multiplayer-tester-recruitment-contract.test.mjs",
+          "package.json"
         ],
+        "surfaces": [],
         "artifacts": [
-          "tester cohort plan",
-          "proof checklist"
+          "six-dimension cohort contract",
+          "draft-only proof checklist"
         ]
       },
       "evidenceRequired": [
-        "target cohort gaps",
+        "cohort dimensions",
         "CTA destination",
-        "consent and privacy copy",
+        "privacy copy",
         "publication approval gate",
-        "measured response"
+        "unknown response baseline"
       ],
       "exitCriteria": [
         "recruitment asks for exact useful evidence",
         "claims are bounded by QA status",
         "testers have a clear safe reporting path"
       ],
-      "startedAt": null,
-      "lastEvidenceAt": null,
-      "exactEvidence": [],
+      "startedAt": "2026-08-04T14:52:04.767Z",
+      "lastEvidenceAt": "2026-08-04T14:58:47.411Z",
+      "exactEvidence": [
+        "Base origin/main 125f63e7ef5181c0f1848dc506fdc8d5e72dece1.",
+        "Implementation commit b3494c34e142de9e6983bbd5ce513614fbd96dbd defines six evidence dimensions and rejects seven safety mutations.",
+        "Custody closure and merged origin/main commit 571a3594d8a11a0fee64eade55eb6ab8dcdea5d5.",
+        "Recovery Builder receipt 6700c7ac1ee4930c74d24f3412d0632d3b2bdff01cd6391f673d1cbe8bd9ad23.",
+        "Tester receipt 2b0a46a180908c687b19094db09f84c2209079a34292576646582b80ca2217f4.",
+        "Supervisor receipt 890c1b6c5599a5e925484731ce748a05b1eb9c1e86c61cbbb691671b0d466c18.",
+        "Watcher receipt 1037ea725115a0d58dc8029ed7072e2a5f9fa2dd1e1b02273a64bf93f3d608a2.",
+        "Focused contract, disposable telemetry mutation, full npm test, repository audit, CADOps Watcher, and git diff --check passed."
+      ],
       "blocker": null,
       "unblockOwner": null,
-      "nextAction": "Draft the cohort matrix and messages, but hold publication until the General Orchestrator approves the exact proof claim.",
-      "rollbackPoint": "No posts or account changes; retain drafts only."
+      "nextAction": "Keep the artifact draft-only and use a separate custody chain for any publication.",
+      "rollbackPoint": "125f63e7ef5181c0f1848dc506fdc8d5e72dece1"
     },
     {
       "id": "PARTNER-001",
