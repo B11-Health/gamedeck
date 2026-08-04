@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "project": "GameDeck",
   "createdAt": "2026-08-03T23:44:00.000Z",
-  "updatedAt": "2026-08-04T15:59:37.588Z",
+  "updatedAt": "2026-08-04T16:52:35.894Z",
   "policy": {
     "nonReplay": true,
     "visibleLaunchRequired": true,
@@ -39,12 +39,12 @@
     }
   },
   "counters": {
-    "E": 16,
+    "E": 17,
     "T": 16,
     "M": 16,
     "W": 16,
-    "recovery": 2,
-    "event": 267
+    "recovery": 3,
+    "event": 275
   },
   "tickets": [
     {
@@ -4210,6 +4210,61 @@
       },
       "uncertainty": null,
       "quarantine": null
+    },
+    {
+      "id": "E-0017",
+      "lane": "E",
+      "role": "builder",
+      "objective": "Create a machine-checked design-only ethical supporter sponsor and optional relay economics model with explicit assumptions unknowns trust boundaries and stop-loss criteria",
+      "assignee": "builder-monetization-model-44",
+      "authorizedBy": "general-orchestrator",
+      "status": "quarantined",
+      "chainId": "E-0017",
+      "predecessorTicketId": null,
+      "predecessorReceiptHash": null,
+      "successorTicketId": null,
+      "recoveryForTicketId": null,
+      "recoveryTicketId": "E-0017-RECOVERY-BUILDER-MONETIZATION-MODEL-RECOV-0003",
+      "createdAt": "2026-08-04T16:48:42.084Z",
+      "acceptedAt": "2026-08-04T16:48:53.691Z",
+      "startedAt": "2026-08-04T16:49:01.067Z",
+      "completedAt": null,
+      "launchEvidence": "Authenticated Shell active in isolated gamedeck/gamedeck-monetization-model-v1 worktree at origin/main 0c98c5038e6fa85af28941983cdbbf8bf92304eb",
+      "receipt": null,
+      "uncertainty": {
+        "priorStatus": "active",
+        "reason": "Focused contract test detected stale scenario outputs caused by a factor-of-ten egress calculation error; no commit or external side effect occurred.",
+        "markedBy": "builder-monetization-model-44",
+        "at": "2026-08-04T16:51:52.258Z"
+      },
+      "quarantine": {
+        "reason": "Retire the failed calculation identity and require a distinct recovery Builder for correction and retest.",
+        "quarantinedBy": "builder-monetization-model-44",
+        "at": "2026-08-04T16:52:04.120Z"
+      }
+    },
+    {
+      "id": "E-0017-RECOVERY-BUILDER-MONETIZATION-MODEL-RECOV-0003",
+      "lane": "E",
+      "role": "builder",
+      "objective": "Correct the relay scenario arithmetic, re-run focused and full gates, and publish only a verified design-only economics model",
+      "assignee": "builder-monetization-model-recovery-45",
+      "authorizedBy": "watcher-recovery-authority-17",
+      "status": "active",
+      "chainId": "E-0017",
+      "predecessorTicketId": null,
+      "predecessorReceiptHash": null,
+      "successorTicketId": null,
+      "recoveryForTicketId": "E-0017",
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T16:52:13.742Z",
+      "acceptedAt": "2026-08-04T16:52:24.785Z",
+      "startedAt": "2026-08-04T16:52:35.894Z",
+      "completedAt": null,
+      "launchEvidence": "Distinct recovery Builder correcting pre-commit arithmetic in isolated monetization worktree; no external side effects",
+      "receipt": null,
+      "uncertainty": null,
+      "quarantine": null
     }
   ],
   "events": [
@@ -7751,6 +7806,112 @@
         "softwareVersion": "8c043b0a74a12225eee14f5506262b9a365149a8"
       },
       "hash": "2c43fc0186fed8cccdcf5ba73014c882b5d3ff1b549c0d6461e0a737a754e668"
+    },
+    {
+      "eventId": "EVT-000268",
+      "type": "ticket.issued",
+      "ticketId": "E-0017",
+      "actor": "general-orchestrator",
+      "at": "2026-08-04T16:48:42.084Z",
+      "previousHash": "2c43fc0186fed8cccdcf5ba73014c882b5d3ff1b549c0d6461e0a737a754e668",
+      "payload": {
+        "lane": "E",
+        "role": "builder",
+        "assignee": "builder-monetization-model-44",
+        "objective": "Create a machine-checked design-only ethical supporter sponsor and optional relay economics model with explicit assumptions unknowns trust boundaries and stop-loss criteria"
+      },
+      "hash": "163e4644d91aa5d69056486dbe752f7f3ef45eedca1f08005d186bff42b9e357"
+    },
+    {
+      "eventId": "EVT-000269",
+      "type": "ticket.accepted",
+      "ticketId": "E-0017",
+      "actor": "builder-monetization-model-44",
+      "at": "2026-08-04T16:48:53.691Z",
+      "previousHash": "163e4644d91aa5d69056486dbe752f7f3ef45eedca1f08005d186bff42b9e357",
+      "payload": {
+        "role": "builder"
+      },
+      "hash": "a0d13d5f8d0123940ed704dc426d34f9ea0a84e33ae5b2e018b39f7e362fed7b"
+    },
+    {
+      "eventId": "EVT-000270",
+      "type": "ticket.started",
+      "ticketId": "E-0017",
+      "actor": "builder-monetization-model-44",
+      "at": "2026-08-04T16:49:01.067Z",
+      "previousHash": "a0d13d5f8d0123940ed704dc426d34f9ea0a84e33ae5b2e018b39f7e362fed7b",
+      "payload": {
+        "launchEvidence": "Authenticated Shell active in isolated gamedeck/gamedeck-monetization-model-v1 worktree at origin/main 0c98c5038e6fa85af28941983cdbbf8bf92304eb"
+      },
+      "hash": "17178c2c0eae39636d60c0ceaca4f1cb09af935580b7332d9a72a38fab802404"
+    },
+    {
+      "eventId": "EVT-000271",
+      "type": "ticket.uncertain",
+      "ticketId": "E-0017",
+      "actor": "builder-monetization-model-44",
+      "at": "2026-08-04T16:51:52.258Z",
+      "previousHash": "17178c2c0eae39636d60c0ceaca4f1cb09af935580b7332d9a72a38fab802404",
+      "payload": {
+        "priorStatus": "active",
+        "reason": "Focused contract test detected stale scenario outputs caused by a factor-of-ten egress calculation error; no commit or external side effect occurred.",
+        "markedBy": "builder-monetization-model-44",
+        "at": "2026-08-04T16:51:52.258Z"
+      },
+      "hash": "1a6e490e6c63ea0e0645b796935e2b92b4e49c60cf073962c90649ca3b62a688"
+    },
+    {
+      "eventId": "EVT-000272",
+      "type": "ticket.quarantined",
+      "ticketId": "E-0017",
+      "actor": "builder-monetization-model-44",
+      "at": "2026-08-04T16:52:04.120Z",
+      "previousHash": "1a6e490e6c63ea0e0645b796935e2b92b4e49c60cf073962c90649ca3b62a688",
+      "payload": {
+        "reason": "Retire the failed calculation identity and require a distinct recovery Builder for correction and retest.",
+        "quarantinedBy": "builder-monetization-model-44",
+        "at": "2026-08-04T16:52:04.120Z"
+      },
+      "hash": "f63325d6c499540a5233d909deadbeafccaf48a505fc494d11f5a0111f688e7c"
+    },
+    {
+      "eventId": "EVT-000273",
+      "type": "recovery.issued",
+      "ticketId": "E-0017-RECOVERY-BUILDER-MONETIZATION-MODEL-RECOV-0003",
+      "actor": "watcher-recovery-authority-17",
+      "at": "2026-08-04T16:52:13.742Z",
+      "previousHash": "f63325d6c499540a5233d909deadbeafccaf48a505fc494d11f5a0111f688e7c",
+      "payload": {
+        "originalTicketId": "E-0017",
+        "originalStatus": "quarantined",
+        "operator": "builder-monetization-model-recovery-45"
+      },
+      "hash": "cc1347440a55e59e9eb3c72a9a7f891d4acbf2d4e9d7429702fce516872ba769"
+    },
+    {
+      "eventId": "EVT-000274",
+      "type": "ticket.accepted",
+      "ticketId": "E-0017-RECOVERY-BUILDER-MONETIZATION-MODEL-RECOV-0003",
+      "actor": "builder-monetization-model-recovery-45",
+      "at": "2026-08-04T16:52:24.785Z",
+      "previousHash": "cc1347440a55e59e9eb3c72a9a7f891d4acbf2d4e9d7429702fce516872ba769",
+      "payload": {
+        "role": "builder"
+      },
+      "hash": "56c66dda3b9108e8408bc9e46474db29c7f94766cd329ea2016eb9cbbf809fb0"
+    },
+    {
+      "eventId": "EVT-000275",
+      "type": "ticket.started",
+      "ticketId": "E-0017-RECOVERY-BUILDER-MONETIZATION-MODEL-RECOV-0003",
+      "actor": "builder-monetization-model-recovery-45",
+      "at": "2026-08-04T16:52:35.894Z",
+      "previousHash": "56c66dda3b9108e8408bc9e46474db29c7f94766cd329ea2016eb9cbbf809fb0",
+      "payload": {
+        "launchEvidence": "Distinct recovery Builder correcting pre-commit arithmetic in isolated monetization worktree; no external side effects"
+      },
+      "hash": "bf6705fecb0f7f2a8c11688083ccdadb9a135ce82cf837dbb60f487f38cf7c75"
     }
   ]
 }

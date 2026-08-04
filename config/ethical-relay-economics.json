@@ -1,0 +1,219 @@
+{
+  "schemaVersion": 1,
+  "status": "design-only",
+  "title": "GameDeck ethical supporter, sponsor, and optional relay economics model",
+  "currency": "USD",
+  "decisionBoundary": {
+    "spendingAuthorized": false,
+    "pricingAuthorized": false,
+    "paymentAccountAuthorized": false,
+    "sponsorCommitmentAuthorized": false,
+    "publicationAuthorized": false,
+    "telemetryImplemented": false,
+    "ownerApprovalRequired": true
+  },
+  "trustConstraints": {
+    "freeRoutesProtected": [
+      "local-couch-play",
+      "direct-peer-to-peer-play",
+      "user-owned-network-remote-play"
+    ],
+    "prohibitedPractices": [
+      "sell or license user data",
+      "personalized advertising or targeting",
+      "paywall local play or user-owned libraries",
+      "degrade or throttle the free direct route",
+      "sell compatibility rankings, reviews, or default emulator placement",
+      "promise availability, latency, compatibility, or sponsor outcomes"
+    ],
+    "dataBoundary": "Aggregate operational evidence only; no player identity, IP address, invitation token, library inventory, file path, raw input, or gameplay content."
+  },
+  "evidencePolicy": {
+    "classes": [
+      "verified",
+      "assumption",
+      "unknown"
+    ],
+    "verifiedRequires": [
+      "dated provider quote or invoice",
+      "exact unit and region",
+      "tax and fee treatment",
+      "evidence owner and capture date"
+    ],
+    "rule": "Assumptions and unknowns must never be presented as verified cost, demand, pricing, or traction."
+  },
+  "formula": {
+    "relayEgressGb": "relayedMinutes * 60 * averageBitrateMbps / 8 / 1000",
+    "relayComputeHours": "relayedMinutes / 60",
+    "monthlyRelayCostUsd": "relayEgressGb * egressUsdPerGb + relayComputeHours * computeUsdPerHour + fixedMonthlyUsd",
+    "monthlyHypotheticalRevenueUsd": "supporterCount * supporterMonthlyUsd + sponsorCount * sponsorMonthlyUsd + grantMonthlyEquivalentUsd",
+    "monthlyGapUsd": "monthlyHypotheticalRevenueUsd - monthlyRelayCostUsd",
+    "rounding": "USD outputs rounded to two decimals"
+  },
+  "scenarios": [
+    {
+      "id": "low",
+      "evidenceClass": "assumption",
+      "inputs": {
+        "relayedMinutes": 6000,
+        "averageBitrateMbps": 6,
+        "egressUsdPerGb": 0.03,
+        "computeUsdPerHour": 0.04,
+        "fixedMonthlyUsd": 10,
+        "supporterCount": 20,
+        "supporterMonthlyUsd": 5,
+        "sponsorCount": 0,
+        "sponsorMonthlyUsd": 0,
+        "grantMonthlyEquivalentUsd": 0
+      },
+      "outputs": {
+        "relayEgressGb": 270,
+        "relayComputeHours": 100,
+        "monthlyRelayCostUsd": 22.1,
+        "monthlyHypotheticalRevenueUsd": 100,
+        "monthlyGapUsd": 77.9
+      }
+    },
+    {
+      "id": "base",
+      "evidenceClass": "assumption",
+      "inputs": {
+        "relayedMinutes": 30000,
+        "averageBitrateMbps": 8,
+        "egressUsdPerGb": 0.08,
+        "computeUsdPerHour": 0.1,
+        "fixedMonthlyUsd": 50,
+        "supporterCount": 100,
+        "supporterMonthlyUsd": 8,
+        "sponsorCount": 1,
+        "sponsorMonthlyUsd": 500,
+        "grantMonthlyEquivalentUsd": 0
+      },
+      "outputs": {
+        "relayEgressGb": 1800,
+        "relayComputeHours": 500,
+        "monthlyRelayCostUsd": 244,
+        "monthlyHypotheticalRevenueUsd": 1300,
+        "monthlyGapUsd": 1056
+      }
+    },
+    {
+      "id": "high",
+      "evidenceClass": "assumption",
+      "inputs": {
+        "relayedMinutes": 120000,
+        "averageBitrateMbps": 10,
+        "egressUsdPerGb": 0.15,
+        "computeUsdPerHour": 0.25,
+        "fixedMonthlyUsd": 200,
+        "supporterCount": 500,
+        "supporterMonthlyUsd": 10,
+        "sponsorCount": 2,
+        "sponsorMonthlyUsd": 1000,
+        "grantMonthlyEquivalentUsd": 5000
+      },
+      "outputs": {
+        "relayEgressGb": 9000,
+        "relayComputeHours": 2000,
+        "monthlyRelayCostUsd": 2050,
+        "monthlyHypotheticalRevenueUsd": 12000,
+        "monthlyGapUsd": 9950
+      }
+    }
+  ],
+  "revenueHypotheses": [
+    {
+      "id": "individual-support",
+      "status": "hypothesis",
+      "valueExchange": "Voluntary support for open development with no product advantage, priority, identity disclosure, or roadmap control."
+    },
+    {
+      "id": "fixed-deliverable-underwriting",
+      "status": "hypothesis",
+      "valueExchange": "Clearly scoped open-source QA, accessibility, signing, documentation, or infrastructure work with no outcome guarantee."
+    },
+    {
+      "id": "optional-hosted-relay",
+      "status": "hypothesis",
+      "valueExchange": "Optional capacity may be funded separately only after costs, abuse controls, privacy, and a free direct fallback are proven."
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "provider-unit-costs",
+      "status": "unknown",
+      "measuredValue": "unknown",
+      "measurement": "Obtain dated, region-specific quotes including egress, compute, taxes, support, and abuse charges."
+    },
+    {
+      "id": "relay-route-share",
+      "status": "unknown",
+      "measuredValue": "unknown",
+      "measurement": "Use local aggregate route counters or explicit opt-in diagnostic exports; never persistent player identity."
+    },
+    {
+      "id": "sustained-bitrate",
+      "status": "unknown",
+      "measuredValue": "unknown",
+      "measurement": "Measure bounded QA sessions by platform and route with aggregate evidence versions."
+    },
+    {
+      "id": "concurrency-and-abuse",
+      "status": "unknown",
+      "measuredValue": "unknown",
+      "measurement": "Run a capped internal load and abuse test before any hosted pilot."
+    },
+    {
+      "id": "supporter-and-sponsor-demand",
+      "status": "unknown",
+      "measuredValue": "unknown",
+      "measurement": "Use approved aggregate inquiry and supporter counts; do not infer demand from views alone."
+    },
+    {
+      "id": "fees-tax-and-operations",
+      "status": "unknown",
+      "measuredValue": "unknown",
+      "measurement": "Owner obtains legal, tax, refund, payment, and bookkeeping requirements before accepting commitments."
+    }
+  ],
+  "decisionGates": {
+    "minimumQualifiedDemandSignals": 20,
+    "requiredApprovals": [
+      "General Orchestrator",
+      "Trust and Product Reviewer",
+      "Privacy Reviewer",
+      "Owner financial authority"
+    ],
+    "requiredEvidence": [
+      "current provider quote or invoice",
+      "measured relay minutes and bitrate ranges",
+      "abuse and privacy review",
+      "free direct-route regression evidence",
+      "written pilot cap and rollback owner"
+    ],
+    "forbiddenBeforeApproval": [
+      "publish binding prices",
+      "purchase relay capacity",
+      "open or alter payment accounts",
+      "promise sponsor inventory or results",
+      "collect personal or behavioral telemetry"
+    ]
+  },
+  "stopLoss": {
+    "pilotSpendCapUsd": "unknown",
+    "activationRule": "No paid pilot until the cap, funding source, term, provider, owner, and rollback are written and approved.",
+    "haltTriggers": [
+      "actual or forecast cost exceeds the approved cap",
+      "privacy, security, abuse, or billing anomaly",
+      "free local or direct route is degraded",
+      "provider terms or region coverage change materially",
+      "owner withdraws authorization"
+    ],
+    "rollback": [
+      "disable only the optional hosted relay route",
+      "preserve local couch, direct peer-to-peer, and user-owned-network routes",
+      "retain no player-level relay history",
+      "publish no unsupported demand, savings, or reliability claim"
+    ]
+  }
+}
