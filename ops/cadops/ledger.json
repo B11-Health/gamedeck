@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "project": "GameDeck",
   "createdAt": "2026-08-03T23:44:00.000Z",
-  "updatedAt": "2026-08-04T12:59:58.045Z",
+  "updatedAt": "2026-08-04T14:52:04.767Z",
   "policy": {
     "nonReplay": true,
     "visibleLaunchRequired": true,
@@ -39,12 +39,12 @@
     }
   },
   "counters": {
-    "E": 14,
+    "E": 15,
     "T": 14,
     "M": 14,
     "W": 14,
-    "recovery": 1,
-    "event": 230
+    "recovery": 2,
+    "event": 238
   },
   "tickets": [
     {
@@ -3537,6 +3537,61 @@
       },
       "uncertainty": null,
       "quarantine": null
+    },
+    {
+      "id": "E-0015",
+      "lane": "E",
+      "role": "builder",
+      "objective": "Create a machine-checked privacy-safe multiplayer tester recruitment contract and draft proof-capture plan without publishing or collecting data",
+      "assignee": "builder-growth-recruitment-35",
+      "authorizedBy": "general-orchestrator",
+      "status": "quarantined",
+      "chainId": "E-0015",
+      "predecessorTicketId": null,
+      "predecessorReceiptHash": null,
+      "successorTicketId": null,
+      "recoveryForTicketId": null,
+      "recoveryTicketId": "E-0015-RECOVERY-BUILDER-GROWTH-RECRUITMENT-RECOV-0002",
+      "createdAt": "2026-08-04T14:48:10.760Z",
+      "acceptedAt": "2026-08-04T14:48:34.728Z",
+      "startedAt": "2026-08-04T14:48:47.478Z",
+      "completedAt": null,
+      "launchEvidence": "Authenticated Shell active in isolated gamedeck-growth-recruitment-contract-v1 at origin/main 125f63e7ef5181c0f1848dc506fdc8d5e72dece1",
+      "receipt": null,
+      "uncertainty": {
+        "priorStatus": "active",
+        "reason": "Initial test file contains a malformed CRLF-normalization regular expression; no commit exists and this Builder identity will not be reused for correction.",
+        "markedBy": "builder-growth-recruitment-35",
+        "at": "2026-08-04T14:51:23.937Z"
+      },
+      "quarantine": {
+        "reason": "Retire malformed pre-commit Builder execution and preserve it for audit; correction requires a distinct recovery identity.",
+        "quarantinedBy": "builder-growth-recruitment-35",
+        "at": "2026-08-04T14:51:35.295Z"
+      }
+    },
+    {
+      "id": "E-0015-RECOVERY-BUILDER-GROWTH-RECRUITMENT-RECOV-0002",
+      "lane": "E",
+      "role": "builder",
+      "objective": "Correct the pre-commit recruitment contract test syntax and complete the bounded draft artifact",
+      "assignee": "builder-growth-recruitment-recovery-36",
+      "authorizedBy": "watcher-recovery-authority-15",
+      "status": "active",
+      "chainId": "E-0015",
+      "predecessorTicketId": null,
+      "predecessorReceiptHash": null,
+      "successorTicketId": null,
+      "recoveryForTicketId": "E-0015",
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T14:51:45.736Z",
+      "acceptedAt": "2026-08-04T14:51:57.534Z",
+      "startedAt": "2026-08-04T14:52:04.767Z",
+      "completedAt": null,
+      "launchEvidence": "Fresh recovery Builder correcting only the uncommitted recruitment contract test syntax in isolated worktree",
+      "receipt": null,
+      "uncertainty": null,
+      "quarantine": null
     }
   ],
   "events": [
@@ -6587,6 +6642,112 @@
         "softwareVersion": "e9072039932c9252620ba69fc06fd8d45eeb6d3b"
       },
       "hash": "d22c4e95efd90e5c825c4805e0bd4b31ac92fedb02228264d85b336d76c93562"
+    },
+    {
+      "eventId": "EVT-000231",
+      "type": "ticket.issued",
+      "ticketId": "E-0015",
+      "actor": "general-orchestrator",
+      "at": "2026-08-04T14:48:10.760Z",
+      "previousHash": "d22c4e95efd90e5c825c4805e0bd4b31ac92fedb02228264d85b336d76c93562",
+      "payload": {
+        "lane": "E",
+        "role": "builder",
+        "assignee": "builder-growth-recruitment-35",
+        "objective": "Create a machine-checked privacy-safe multiplayer tester recruitment contract and draft proof-capture plan without publishing or collecting data"
+      },
+      "hash": "1db9c2a384654a8af94dd92d03bd2e3143762a23d364ee530a46de5027e5128e"
+    },
+    {
+      "eventId": "EVT-000232",
+      "type": "ticket.accepted",
+      "ticketId": "E-0015",
+      "actor": "builder-growth-recruitment-35",
+      "at": "2026-08-04T14:48:34.728Z",
+      "previousHash": "1db9c2a384654a8af94dd92d03bd2e3143762a23d364ee530a46de5027e5128e",
+      "payload": {
+        "role": "builder"
+      },
+      "hash": "9c2cdbf531e8983bf6f3031b077a93032a1d20f1f1af36c71643c6aeadf1ef2a"
+    },
+    {
+      "eventId": "EVT-000233",
+      "type": "ticket.started",
+      "ticketId": "E-0015",
+      "actor": "builder-growth-recruitment-35",
+      "at": "2026-08-04T14:48:47.478Z",
+      "previousHash": "9c2cdbf531e8983bf6f3031b077a93032a1d20f1f1af36c71643c6aeadf1ef2a",
+      "payload": {
+        "launchEvidence": "Authenticated Shell active in isolated gamedeck-growth-recruitment-contract-v1 at origin/main 125f63e7ef5181c0f1848dc506fdc8d5e72dece1"
+      },
+      "hash": "db8bea1f25b7f48700f5db7ebf06e3b677217f46418d81d991bcc8ff3a005d2f"
+    },
+    {
+      "eventId": "EVT-000234",
+      "type": "ticket.uncertain",
+      "ticketId": "E-0015",
+      "actor": "builder-growth-recruitment-35",
+      "at": "2026-08-04T14:51:23.937Z",
+      "previousHash": "db8bea1f25b7f48700f5db7ebf06e3b677217f46418d81d991bcc8ff3a005d2f",
+      "payload": {
+        "priorStatus": "active",
+        "reason": "Initial test file contains a malformed CRLF-normalization regular expression; no commit exists and this Builder identity will not be reused for correction.",
+        "markedBy": "builder-growth-recruitment-35",
+        "at": "2026-08-04T14:51:23.937Z"
+      },
+      "hash": "5eafdabff647ae3c946becebd80463e2e3efd71ddb6933ee0c7813ddfbaea9f4"
+    },
+    {
+      "eventId": "EVT-000235",
+      "type": "ticket.quarantined",
+      "ticketId": "E-0015",
+      "actor": "builder-growth-recruitment-35",
+      "at": "2026-08-04T14:51:35.295Z",
+      "previousHash": "5eafdabff647ae3c946becebd80463e2e3efd71ddb6933ee0c7813ddfbaea9f4",
+      "payload": {
+        "reason": "Retire malformed pre-commit Builder execution and preserve it for audit; correction requires a distinct recovery identity.",
+        "quarantinedBy": "builder-growth-recruitment-35",
+        "at": "2026-08-04T14:51:35.295Z"
+      },
+      "hash": "959bfe8b6c5e4eb2fbe5e86d7d1c7008e3089ee8f2d2cf557cb6122120d24d47"
+    },
+    {
+      "eventId": "EVT-000236",
+      "type": "recovery.issued",
+      "ticketId": "E-0015-RECOVERY-BUILDER-GROWTH-RECRUITMENT-RECOV-0002",
+      "actor": "watcher-recovery-authority-15",
+      "at": "2026-08-04T14:51:45.736Z",
+      "previousHash": "959bfe8b6c5e4eb2fbe5e86d7d1c7008e3089ee8f2d2cf557cb6122120d24d47",
+      "payload": {
+        "originalTicketId": "E-0015",
+        "originalStatus": "quarantined",
+        "operator": "builder-growth-recruitment-recovery-36"
+      },
+      "hash": "f5b01c30d87d7ce065ffeea5458346a45b21eb1ed81b44958002ccf81c2142e7"
+    },
+    {
+      "eventId": "EVT-000237",
+      "type": "ticket.accepted",
+      "ticketId": "E-0015-RECOVERY-BUILDER-GROWTH-RECRUITMENT-RECOV-0002",
+      "actor": "builder-growth-recruitment-recovery-36",
+      "at": "2026-08-04T14:51:57.534Z",
+      "previousHash": "f5b01c30d87d7ce065ffeea5458346a45b21eb1ed81b44958002ccf81c2142e7",
+      "payload": {
+        "role": "builder"
+      },
+      "hash": "ef3481934715ba14995d4bd415995fe6365da9b5bac7909b943141114ef09c8d"
+    },
+    {
+      "eventId": "EVT-000238",
+      "type": "ticket.started",
+      "ticketId": "E-0015-RECOVERY-BUILDER-GROWTH-RECRUITMENT-RECOV-0002",
+      "actor": "builder-growth-recruitment-recovery-36",
+      "at": "2026-08-04T14:52:04.767Z",
+      "previousHash": "ef3481934715ba14995d4bd415995fe6365da9b5bac7909b943141114ef09c8d",
+      "payload": {
+        "launchEvidence": "Fresh recovery Builder correcting only the uncommitted recruitment contract test syntax in isolated worktree"
+      },
+      "hash": "ae8a8c21319eb562c3a5a6b5f4c6a17e785eefb44cffcf51cc56275950e5f07e"
     }
   ]
 }
