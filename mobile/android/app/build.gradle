@@ -31,7 +31,7 @@ tasks.register('prepareSharedRenderer') {
         )
         index = index.replace(
             '<script src="app.js"></script>',
-            '<script src="platform-android.js"></script>\n  <script src="app.js"></script>\n  <script src="renderer-probe.js"></script>'
+            '<script src="platform-android.js"></script>\n  <script src="debug-fixture.js"></script>\n  <script src="app.js"></script>\n  <script src="renderer-probe.js"></script>'
         )
         indexFile.write(index, 'UTF-8')
     }
