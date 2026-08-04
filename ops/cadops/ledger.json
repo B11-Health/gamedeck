@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "project": "GameDeck",
   "createdAt": "2026-08-03T23:44:00.000Z",
-  "updatedAt": "2026-08-04T06:51:37.645Z",
+  "updatedAt": "2026-08-04T06:55:42.473Z",
   "policy": {
     "nonReplay": true,
     "visibleLaunchRequired": true,
@@ -41,10 +41,10 @@
   "counters": {
     "E": 10,
     "T": 10,
-    "M": 9,
-    "W": 9,
+    "M": 10,
+    "W": 10,
     "recovery": 0,
-    "event": 150
+    "event": 161
   },
   "tickets": [
     {
@@ -2128,19 +2128,138 @@
       "objective": "Independently verify correction 06b8ac0 fixes closure-state-dependent validator and pulse tests without weakening production logic, canonical receipts, exact scope, or full GameDeck gates.",
       "assignee": "independent-team-os-v3-reviewer-02",
       "authorizedBy": "team-os-v3-watcher-01",
-      "status": "prepared",
+      "status": "completed",
       "chainId": "E-0010",
       "predecessorTicketId": "E-0010",
       "predecessorReceiptHash": "1a1bca229c7f7dc12c9be518e41e6a8addac4cf316adbe9e588d920bfd25803c",
-      "successorTicketId": null,
+      "successorTicketId": "M-0010",
       "recoveryForTicketId": null,
       "recoveryTicketId": null,
       "createdAt": "2026-08-04T06:51:37.645Z",
-      "acceptedAt": null,
-      "startedAt": null,
-      "completedAt": null,
-      "launchEvidence": null,
-      "receipt": null,
+      "acceptedAt": "2026-08-04T06:52:11.704Z",
+      "startedAt": "2026-08-04T06:52:20.254Z",
+      "completedAt": "2026-08-04T06:54:04.146Z",
+      "launchEvidence": "Detached review of 873865b with full gates, canonical test-artifact hashes, exact correction scope, and reproduction of the prior closure-state failures.",
+      "receipt": {
+        "ticketId": "T-0010",
+        "lane": "T",
+        "role": "tester",
+        "actor": "independent-team-os-v3-reviewer-02",
+        "objective": "Independently verify correction 06b8ac0 fixes closure-state-dependent validator and pulse tests without weakening production logic, canonical receipts, exact scope, or full GameDeck gates.",
+        "outcome": "pass",
+        "summary": "Correction 06b8ac0 passes independent detached review: full gates pass, canonical test blobs match, and scope is limited to state-independent test fixtures plus custody evidence.",
+        "softwareVersion": "873865b",
+        "predecessorTicketId": "E-0010",
+        "predecessorReceiptHash": "1a1bca229c7f7dc12c9be518e41e6a8addac4cf316adbe9e588d920bfd25803c",
+        "launchEvidence": "Detached review of 873865b with full gates, canonical test-artifact hashes, exact correction scope, and reproduction of the prior closure-state failures.",
+        "startedAt": "2026-08-04T06:52:20.254Z",
+        "completedAt": "2026-08-04T06:54:04.146Z",
+        "artifacts": [],
+        "checks": [
+          "Detached full repository check chain passed after OPS-001 completion.",
+          "Both E-0010 artifact object IDs, byte counts, and SHA-256 digests match canonical Git blobs.",
+          "Diff from a26869e to 06b8ac0 changes only two test files and the CADOps ledger; production validator and pulse logic are unchanged."
+        ],
+        "nextAuthorizedLanes": [
+          "M"
+        ],
+        "chainDisposition": "handoff-required",
+        "hash": "2412ec810827741da403e5bab3efa0d94d8652159f5f52304fd247f52f172dab"
+      },
+      "uncertainty": null,
+      "quarantine": null
+    },
+    {
+      "id": "M-0010",
+      "lane": "M",
+      "role": "supervisor",
+      "objective": "Verify the closure-state test correction is exact, independently approved, production-neutral, and safe to integrate with the previously approved Team Operating System v3 sequence.",
+      "assignee": "team-os-v3-supervisor-02",
+      "authorizedBy": "team-os-v3-watcher-01",
+      "status": "completed",
+      "chainId": "E-0010",
+      "predecessorTicketId": "T-0010",
+      "predecessorReceiptHash": "2412ec810827741da403e5bab3efa0d94d8652159f5f52304fd247f52f172dab",
+      "successorTicketId": "W-0010",
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T06:54:11.470Z",
+      "acceptedAt": "2026-08-04T06:54:20.146Z",
+      "startedAt": "2026-08-04T06:54:51.481Z",
+      "completedAt": "2026-08-04T06:55:02.971Z",
+      "launchEvidence": "Supervisor reviewed correction scope, independent Tester receipt, canonical artifacts, and unchanged production validator and pulse logic.",
+      "receipt": {
+        "ticketId": "M-0010",
+        "lane": "M",
+        "role": "supervisor",
+        "actor": "team-os-v3-supervisor-02",
+        "objective": "Verify the closure-state test correction is exact, independently approved, production-neutral, and safe to integrate with the previously approved Team Operating System v3 sequence.",
+        "outcome": "pass",
+        "summary": "Verified the correction is independently approved, limited to test fixtures and custody evidence, preserves production logic, and restores exact-tree gate stability after OPS-001 closure.",
+        "softwareVersion": "873865b",
+        "predecessorTicketId": "T-0010",
+        "predecessorReceiptHash": "2412ec810827741da403e5bab3efa0d94d8652159f5f52304fd247f52f172dab",
+        "launchEvidence": "Supervisor reviewed correction scope, independent Tester receipt, canonical artifacts, and unchanged production validator and pulse logic.",
+        "startedAt": "2026-08-04T06:54:51.481Z",
+        "completedAt": "2026-08-04T06:55:02.971Z",
+        "artifacts": [],
+        "checks": [
+          "Tester receipt 2412ec validates the full corrected tree and canonical test blobs.",
+          "Production validator and orchestrator pulse implementation files are unchanged by 06b8ac0.",
+          "Correction is safe to integrate only with the already approved Team Operating System v3 sequence."
+        ],
+        "nextAuthorizedLanes": [
+          "W"
+        ],
+        "chainDisposition": "handoff-required",
+        "hash": "a167c9372b4c5f1a162da2526101383e66a52c687a4414af1a4565b27f427c52"
+      },
+      "uncertainty": null,
+      "quarantine": null
+    },
+    {
+      "id": "W-0010",
+      "lane": "W",
+      "role": "watcher",
+      "objective": "Verify the state-independent test correction closes all final-gate regressions, preserves the approved Team Operating System v3 sequence, and authorize exact integration with no unresolved custody risk.",
+      "assignee": "team-os-v3-watcher-02",
+      "authorizedBy": "team-os-v3-watcher-01",
+      "status": "completed",
+      "chainId": "E-0010",
+      "predecessorTicketId": "M-0010",
+      "predecessorReceiptHash": "a167c9372b4c5f1a162da2526101383e66a52c687a4414af1a4565b27f427c52",
+      "successorTicketId": null,
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T06:55:16.670Z",
+      "acceptedAt": "2026-08-04T06:55:27.896Z",
+      "startedAt": "2026-08-04T06:55:35.523Z",
+      "completedAt": "2026-08-04T06:55:42.473Z",
+      "launchEvidence": "Watcher verified the full E-0010, T-0010, and M-0010 correction chain, exact scope, passing full gates, and unchanged production logic.",
+      "receipt": {
+        "ticketId": "W-0010",
+        "lane": "W",
+        "role": "watcher",
+        "actor": "team-os-v3-watcher-02",
+        "objective": "Verify the state-independent test correction closes all final-gate regressions, preserves the approved Team Operating System v3 sequence, and authorize exact integration with no unresolved custody risk.",
+        "outcome": "pass",
+        "summary": "Closed the state-independent test correction after independent review proved the final Team Operating System v3 tree passes all gates without production-logic changes.",
+        "softwareVersion": "873865b",
+        "predecessorTicketId": "M-0010",
+        "predecessorReceiptHash": "a167c9372b4c5f1a162da2526101383e66a52c687a4414af1a4565b27f427c52",
+        "launchEvidence": "Watcher verified the full E-0010, T-0010, and M-0010 correction chain, exact scope, passing full gates, and unchanged production logic.",
+        "startedAt": "2026-08-04T06:55:35.523Z",
+        "completedAt": "2026-08-04T06:55:42.473Z",
+        "artifacts": [],
+        "checks": [
+          "Correction chain E-0010 through M-0010 validates with immutable receipts and no replay.",
+          "Full detached repository gate passes with OPS-001 complete and pulse focused on PLAY-001.",
+          "No uncertain execution, stale custody, missing successor, or unresolved recovery remains."
+        ],
+        "nextAuthorizedLanes": [],
+        "chainDisposition": "closed",
+        "hash": "fd0e53fc80e9530f151ec798316ab3350e9795c30bc66cb7968b8c87187c95e1"
+      },
       "uncertainty": null,
       "quarantine": null
     }
@@ -4134,6 +4253,150 @@
         "assignee": "independent-team-os-v3-reviewer-02"
       },
       "hash": "e0570f7248d9a5ccb5bbd696df2e27165335171d1de855764d4b434c88a5fd56"
+    },
+    {
+      "eventId": "EVT-000151",
+      "type": "ticket.accepted",
+      "ticketId": "T-0010",
+      "actor": "independent-team-os-v3-reviewer-02",
+      "at": "2026-08-04T06:52:11.704Z",
+      "previousHash": "e0570f7248d9a5ccb5bbd696df2e27165335171d1de855764d4b434c88a5fd56",
+      "payload": {
+        "role": "tester"
+      },
+      "hash": "de01b2222401232634a9be4cd0969a11a710b2e040501a74edce876a6ce2f9f2"
+    },
+    {
+      "eventId": "EVT-000152",
+      "type": "ticket.started",
+      "ticketId": "T-0010",
+      "actor": "independent-team-os-v3-reviewer-02",
+      "at": "2026-08-04T06:52:20.254Z",
+      "previousHash": "de01b2222401232634a9be4cd0969a11a710b2e040501a74edce876a6ce2f9f2",
+      "payload": {
+        "launchEvidence": "Detached review of 873865b with full gates, canonical test-artifact hashes, exact correction scope, and reproduction of the prior closure-state failures."
+      },
+      "hash": "87235b748f177775d005b69511764260e05edf13060e25a033f54ede88c0f36e"
+    },
+    {
+      "eventId": "EVT-000153",
+      "type": "ticket.completed",
+      "ticketId": "T-0010",
+      "actor": "independent-team-os-v3-reviewer-02",
+      "at": "2026-08-04T06:54:04.146Z",
+      "previousHash": "87235b748f177775d005b69511764260e05edf13060e25a033f54ede88c0f36e",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "2412ec810827741da403e5bab3efa0d94d8652159f5f52304fd247f52f172dab",
+        "softwareVersion": "873865b"
+      },
+      "hash": "d4d2a49d2a7306e3600f2fd78d156301ee273c47f3a93e3307dad10d3c886422"
+    },
+    {
+      "eventId": "EVT-000154",
+      "type": "custody.handed-off",
+      "ticketId": "T-0010",
+      "actor": "team-os-v3-watcher-01",
+      "at": "2026-08-04T06:54:11.470Z",
+      "previousHash": "d4d2a49d2a7306e3600f2fd78d156301ee273c47f3a93e3307dad10d3c886422",
+      "payload": {
+        "successorTicketId": "M-0010",
+        "successorLane": "M",
+        "predecessorReceiptHash": "2412ec810827741da403e5bab3efa0d94d8652159f5f52304fd247f52f172dab",
+        "assignee": "team-os-v3-supervisor-02"
+      },
+      "hash": "35f37b73b6be0e0d99a08808a4d39996f638c9e89df4dc8ed9d659501af57ac2"
+    },
+    {
+      "eventId": "EVT-000155",
+      "type": "ticket.accepted",
+      "ticketId": "M-0010",
+      "actor": "team-os-v3-supervisor-02",
+      "at": "2026-08-04T06:54:20.146Z",
+      "previousHash": "35f37b73b6be0e0d99a08808a4d39996f638c9e89df4dc8ed9d659501af57ac2",
+      "payload": {
+        "role": "supervisor"
+      },
+      "hash": "3770a3e20a2e7488745fb919f78124026ab103d7995beb76ab4157188c6c86a7"
+    },
+    {
+      "eventId": "EVT-000156",
+      "type": "ticket.started",
+      "ticketId": "M-0010",
+      "actor": "team-os-v3-supervisor-02",
+      "at": "2026-08-04T06:54:51.481Z",
+      "previousHash": "3770a3e20a2e7488745fb919f78124026ab103d7995beb76ab4157188c6c86a7",
+      "payload": {
+        "launchEvidence": "Supervisor reviewed correction scope, independent Tester receipt, canonical artifacts, and unchanged production validator and pulse logic."
+      },
+      "hash": "c0cc7a10800f93a7a0e7e2ff21d4dd91cccbbd3de3d0bf9cc9ee416946e43330"
+    },
+    {
+      "eventId": "EVT-000157",
+      "type": "ticket.completed",
+      "ticketId": "M-0010",
+      "actor": "team-os-v3-supervisor-02",
+      "at": "2026-08-04T06:55:02.971Z",
+      "previousHash": "c0cc7a10800f93a7a0e7e2ff21d4dd91cccbbd3de3d0bf9cc9ee416946e43330",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "a167c9372b4c5f1a162da2526101383e66a52c687a4414af1a4565b27f427c52",
+        "softwareVersion": "873865b"
+      },
+      "hash": "9851d2ad625f2c2c965ee70d49b0ec52a57c6454187da294bf0b3f4328a65577"
+    },
+    {
+      "eventId": "EVT-000158",
+      "type": "custody.handed-off",
+      "ticketId": "M-0010",
+      "actor": "team-os-v3-watcher-01",
+      "at": "2026-08-04T06:55:16.670Z",
+      "previousHash": "9851d2ad625f2c2c965ee70d49b0ec52a57c6454187da294bf0b3f4328a65577",
+      "payload": {
+        "successorTicketId": "W-0010",
+        "successorLane": "W",
+        "predecessorReceiptHash": "a167c9372b4c5f1a162da2526101383e66a52c687a4414af1a4565b27f427c52",
+        "assignee": "team-os-v3-watcher-02"
+      },
+      "hash": "5956ef33f2dc933c0ca335487fa8194d4525aa0e80321b180534fd080619408d"
+    },
+    {
+      "eventId": "EVT-000159",
+      "type": "ticket.accepted",
+      "ticketId": "W-0010",
+      "actor": "team-os-v3-watcher-02",
+      "at": "2026-08-04T06:55:27.896Z",
+      "previousHash": "5956ef33f2dc933c0ca335487fa8194d4525aa0e80321b180534fd080619408d",
+      "payload": {
+        "role": "watcher"
+      },
+      "hash": "b2797af004f39de3e42b0de0f375a95de6984c20167ba41361e62899ae03995b"
+    },
+    {
+      "eventId": "EVT-000160",
+      "type": "ticket.started",
+      "ticketId": "W-0010",
+      "actor": "team-os-v3-watcher-02",
+      "at": "2026-08-04T06:55:35.523Z",
+      "previousHash": "b2797af004f39de3e42b0de0f375a95de6984c20167ba41361e62899ae03995b",
+      "payload": {
+        "launchEvidence": "Watcher verified the full E-0010, T-0010, and M-0010 correction chain, exact scope, passing full gates, and unchanged production logic."
+      },
+      "hash": "e016ee8150769dd1ce233f74c334aed34bf71cf8769580dde337cc0f93b71042"
+    },
+    {
+      "eventId": "EVT-000161",
+      "type": "ticket.completed",
+      "ticketId": "W-0010",
+      "actor": "team-os-v3-watcher-02",
+      "at": "2026-08-04T06:55:42.473Z",
+      "previousHash": "e016ee8150769dd1ce233f74c334aed34bf71cf8769580dde337cc0f93b71042",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "fd0e53fc80e9530f151ec798316ab3350e9795c30bc66cb7968b8c87187c95e1",
+        "softwareVersion": "873865b"
+      },
+      "hash": "ae78a431f77d0e87f9ff94f8c8f0049151d56c0d52d5cf5309e79399ae954a61"
     }
   ]
 }
