@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "project": "GameDeck",
   "createdAt": "2026-08-03T23:44:00.000Z",
-  "updatedAt": "2026-08-04T02:41:45.030Z",
+  "updatedAt": "2026-08-04T06:34:50.296Z",
   "policy": {
     "nonReplay": true,
     "visibleLaunchRequired": true,
@@ -39,12 +39,12 @@
     }
   },
   "counters": {
-    "E": 8,
+    "E": 9,
     "T": 8,
     "M": 8,
     "W": 8,
     "recovery": 0,
-    "event": 129
+    "event": 132
   },
   "tickets": [
     {
@@ -1826,6 +1826,29 @@
       },
       "uncertainty": null,
       "quarantine": null
+    },
+    {
+      "id": "E-0009",
+      "lane": "E",
+      "role": "builder",
+      "objective": "Add a regression gate that preserves least-privilege GitHub release permissions without changing release behavior",
+      "assignee": "builder-release-guard-09",
+      "authorizedBy": "general-orchestrator",
+      "status": "active",
+      "chainId": "E-0009",
+      "predecessorTicketId": null,
+      "predecessorReceiptHash": null,
+      "successorTicketId": null,
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T06:34:36.034Z",
+      "acceptedAt": "2026-08-04T06:34:42.819Z",
+      "startedAt": "2026-08-04T06:34:50.296Z",
+      "completedAt": null,
+      "launchEvidence": "Authenticated Shell active in isolated gamedeck/gamedeck-release-guard-cadops worktree at origin/main 38cff0391185ac3bda7e949157fdc180be06e6e0",
+      "receipt": null,
+      "uncertainty": null,
+      "quarantine": null
     }
   ],
   "events": [
@@ -3537,6 +3560,45 @@
         "softwareVersion": "6cdacd1"
       },
       "hash": "3fc6423e2420e967056f03fdadd3461e94a757ccee6f4610f8cb7bd5b69004db"
+    },
+    {
+      "eventId": "EVT-000130",
+      "type": "ticket.issued",
+      "ticketId": "E-0009",
+      "actor": "general-orchestrator",
+      "at": "2026-08-04T06:34:36.034Z",
+      "previousHash": "3fc6423e2420e967056f03fdadd3461e94a757ccee6f4610f8cb7bd5b69004db",
+      "payload": {
+        "lane": "E",
+        "role": "builder",
+        "assignee": "builder-release-guard-09",
+        "objective": "Add a regression gate that preserves least-privilege GitHub release permissions without changing release behavior"
+      },
+      "hash": "4532ca8d89360c123104017624e60aa1b128653853a1206d3b62682216565464"
+    },
+    {
+      "eventId": "EVT-000131",
+      "type": "ticket.accepted",
+      "ticketId": "E-0009",
+      "actor": "builder-release-guard-09",
+      "at": "2026-08-04T06:34:42.819Z",
+      "previousHash": "4532ca8d89360c123104017624e60aa1b128653853a1206d3b62682216565464",
+      "payload": {
+        "role": "builder"
+      },
+      "hash": "9fc6a673c4cfdfa073571b3cceb0c70098c29495491509e8faf7d100e13e84c3"
+    },
+    {
+      "eventId": "EVT-000132",
+      "type": "ticket.started",
+      "ticketId": "E-0009",
+      "actor": "builder-release-guard-09",
+      "at": "2026-08-04T06:34:50.296Z",
+      "previousHash": "9fc6a673c4cfdfa073571b3cceb0c70098c29495491509e8faf7d100e13e84c3",
+      "payload": {
+        "launchEvidence": "Authenticated Shell active in isolated gamedeck/gamedeck-release-guard-cadops worktree at origin/main 38cff0391185ac3bda7e949157fdc180be06e6e0"
+      },
+      "hash": "594e0f736285edceb813ece68fd023eebccaf2a0ff8d88b0b2a4b8554feaf98b"
     }
   ]
 }
