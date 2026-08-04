@@ -121,3 +121,7 @@ Track useful outcomes: unique testers, completed arcade scans, verified launches
 - [GitHub Discussions overview](https://docs.github.com/en/discussions/collaborating-with-your-community-using-discussions/about-discussions)
 - [Medium AI content policy](https://help.medium.com/hc/en-us/articles/22576852947223-Artificial-Intelligence-AI-content-policy)
 - [Medium distribution guidelines](https://help.medium.com/hc/en-us/articles/360006362473-Medium-s-Distribution-Guidelines-How-curators-review-stories-for-Boost-General-and-Network-Distribution)
+
+## Multiplayer recruitment boundary
+
+This arcade launch kit is not a multiplayer compatibility claim. Use [GROWTH-001](GROWTH_001_TESTER_RECRUITMENT.md) for multiplayer cohort recruitment, privacy/consent language, structured session reports, and proof publication. Coordinate in [Discussion #8](https://github.com/B11-Health/gamedeck/discussions/8), exchange active codes privately, and report completed sessions through the multiplayer issue form.

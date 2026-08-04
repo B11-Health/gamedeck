@@ -78,3 +78,11 @@ GameDeck includes no ROMs, BIOS files, encryption keys, or commercial artwork. P
 5. Disclose creator affiliation.
 6. Answer technical criticism directly and log reproducible issues.
 7. Track weekly: landing visits, release downloads, stars, issues opened, first-run success, and seven-day retention once privacy-preserving telemetry exists.
+
+## Multiplayer tester recruitment
+
+Use [GROWTH-001](../docs/GROWTH_001_TESTER_RECRUITMENT.md) for every multiplayer recruitment or proof post. The canonical CTA is GitHub Discussion #8; completed sessions use the structured multiplayer issue form.
+
+Current proof is limited to Windows-heavy, FinalBurn Neo arcade sessions, one New York synchronized relay run, and one two-profile Remote Play run. Recruit the missing OS, region, controller, network/NAT, accessibility, player-count, and route cohorts without representing them as already supported. Exchange active session codes privately.
+
+Ready-to-review drafts live in [GROWTH_001_CHANNEL_DRAFTS.md](growth/GROWTH_001_CHANNEL_DRAFTS.md), and the 30-day plan lives in [GROWTH_001_30_DAY_CALENDAR.md](growth/GROWTH_001_30_DAY_CALENDAR.md).

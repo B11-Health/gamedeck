@@ -1,75 +1,125 @@
 # GameDeck growth playbook
 
-GameDeck should grow through proof, community participation, and visible product quality—not spam or manufactured engagement.
+GameDeck grows through verified product proof, useful tester recruitment, and public learning—not spam, manufactured engagement, or claims that exceed QA evidence.
 
-## Verified launch state — August 2, 2026
+## Verified public state — August 3, 2026
+
+This is a point-in-time evidence snapshot, not traction.
 
 - Public website: https://b11-health.github.io/gamedeck/
-- Official v1.2.0 release: https://github.com/B11-Health/gamedeck/releases/tag/v1.2.0
-- YouTube channel: https://www.youtube.com/@PlayGameDeck
-- Start Here playlist: https://www.youtube.com/playlist?list=PLG-ejeCsa-AI
-- Shorts playlist: https://www.youtube.com/playlist?list=PLCbffYifS8R8
-- Public Shorts: https://youtube.com/shorts/ndETcPuCOyE, https://youtube.com/shorts/dOEuy8g8Bmw, and https://youtube.com/shorts/-jxqMc0z2yg
-- Scheduled Short: https://youtube.com/shorts/ZZ-hHyyj5Lw — August 3, 2026 at 12:00 PM Eastern
-- YouTube branding: GameDeck banner and avatar are public; the video watermark is configured for the entire video.
-- Discord distribution: the v1.2 release is in #announcements and the Shorts campaign is in #showcase.
-- GitHub discussion: https://github.com/B11-Health/gamedeck/discussions/7
+- Latest release: https://github.com/B11-Health/gamedeck/releases/tag/v1.2.0
+- Multiplayer tester hub: https://github.com/B11-Health/gamedeck/discussions/8
+- Release feedback: https://github.com/B11-Health/gamedeck/discussions/7
+- Open community playtest issue: https://github.com/B11-Health/gamedeck/issues/9
+- YouTube: https://www.youtube.com/@PlayGameDeck — six public videos observed; current view counts are small and directional, not adoption evidence
+- TikTok: https://www.tiktok.com/@playgamedeck — two posts, zero followers, and zero likes observed; the profile page also presented a puzzle/load error
+- Reddit profile: https://www.reddit.com/user/Apprehensive-Roll303/ — branded as GameDeck; the SideProject launch post was removed by Reddit filters
+- GitHub repository snapshot: zero stars, one fork, zero watchers, and one open non-PR issue observed through the public API
+- Release-download counters are near zero and may include maintainers, CI, blockmap/update metadata, or repeat requests; do not frame them as users
 
-Current blockers are explicit: Reddit remains unauthenticated behind a humanity challenge; TikTok requires manual completion of its age gate; YouTube requires one-time channel verification before external description links and related-video controls become clickable. Do not bypass these gates or invent completed posts.
+The canonical GROWTH-001 program is [Verified multiplayer tester recruitment and proof capture](GROWTH_001_TESTER_RECRUITMENT.md). The execution calendar is [GROWTH-001 — 30-day content and community calendar](../marketing/growth/GROWTH_001_30_DAY_CALENDAR.md).
 
-## The growth loop
+## Current evidence boundary
 
-1. A player sees a native 15–30 second clip showing the interface immediately.
-2. The post asks one concrete feedback question.
-3. The viewer reaches the GitHub README, where the tutorial, CI status, legal-use statement, screenshots, and installation path are obvious.
-4. The player joins Discord for support or Remote Play matchmaking.
-5. Their issue, compatibility report, or showcase becomes the next product improvement or piece of community proof.
+Published multiplayer evidence is concentrated in one Windows environment, FinalBurn Neo arcade titles, one New York synchronized relay run, and two isolated GameDeck profiles. macOS/Linux live multiplayer, physical cross-OS pairs, different regions, restrictive NAT, non-Xbox controllers, assistive-technology use, and real three/four-player online sessions remain evidence gaps.
 
-## Seven-day launch cadence
+Use exact language:
 
-| Day | Primary action | Conversion goal |
-| --- | --- | --- |
-| 1 | Publish the 30-second vertical clip as a YouTube Short | Tutorial and GitHub visits |
-| 2 | Post a native-video, feedback-first launch in one rule-compatible Reddit community | Detailed product feedback |
-| 3 | Run **Remote Play Friday** in Discord `#remote-play` | First community-hosted sessions |
-| 4 | Publish a UI teardown: before, design decision, after | Design and open-source audiences |
-| 5 | Invite five small retro-gaming or open-source creators with a personalized note and press kit | Authentic creator coverage |
-| 6 | Share one solved compatibility case with evidence | Trust and search visibility |
-| 7 | Publish a changelog recap crediting community contributors | Retention and contribution |
+- **Say:** “A Windows Metal Slug 3 synchronized run reached the New York relay at 2/2 players.”
+- **Do not say:** “Synchronized netplay works everywhere.”
+- **Say:** “macOS and Linux release artifacts are available; live multiplayer testers are needed.”
+- **Do not say:** “Multiplayer is verified on macOS and Linux.”
+- **Say:** “The four-player lobby and selectors were validated.”
+- **Do not say:** “Four-player online play is verified.”
 
-Do not cross-post identical copy on the same day. Respond to every substantive comment before opening another launch thread.
+## Growth loop
+
+1. A player sees a real GameDeck UI clip, screenshot, release artifact, or reviewed tester result.
+2. The post states the exact verified scope and one important unknown.
+3. The viewer reaches the release, Discussion #8, or a structured issue form.
+4. A tester chooses one missing cohort cell and coordinates publicly without sharing active codes.
+5. Session codes are exchanged privately.
+6. A sanitized session report becomes product evidence.
+7. QA, Privacy/Security, Brand, and Program Operations approve any public proof.
+8. The approved result becomes the next content asset and the next bounded tester ask.
+
+## Canonical destinations
+
+| Need | Destination |
+| --- | --- |
+| Find a host/guest or choose a cohort | https://github.com/B11-Health/gamedeck/discussions/8 |
+| Report a completed multiplayer session | https://github.com/B11-Health/gamedeck/issues/new?template=multiplayer_session.yml |
+| Report a reproducible compatibility problem | https://github.com/B11-Health/gamedeck/issues/new?template=compatibility_report.yml |
+| General release feedback | https://github.com/B11-Health/gamedeck/discussions/7 |
+| Download and verify artifacts | https://github.com/B11-Health/gamedeck/releases/latest |
+| Private security or accidental-secret exposure | https://github.com/B11-Health/gamedeck/security/advisories/new |
+
+Active invitations, response codes, session tokens, addresses, and private paths never belong in a public Discussion, Issue, comment, screenshot, or video.
 
 ## Platform approach
 
-### Reddit
+### GitHub Discussions and Issues
 
-Use native video or a gallery, disclose the builder relationship, read the current subreddit rules, and ask for one form of feedback. Good fits change over time; verify rules immediately before posting. Avoid communities that prohibit self-promotion or require weekly megathreads unless the post is placed exactly there.
+GitHub is the canonical community and evidence system. Discussion #8 handles recruitment and broad availability. The multiplayer issue form handles completed-session evidence. Issues should capture the first failing step and cohort details without personal data. Close the loop by linking fixes or bounded follow-up tasks back to the report.
 
 ### YouTube
 
-Use the Start Here playlist as the long-form conversion path and the Shorts playlist as discovery. Each video description should link to both internal playlists. Pin a feedback question only when the authenticated comments composer is available; never claim a comment was posted when YouTube exposes a signed-out or partial comments state. Turn common questions into follow-up videos rather than repeating promotional comments on unrelated channels.
+Use the real tutorial, trailer, and Shorts as proof surfaces. Every description or pinned comment should link to the current release, Discussion #8, and the relevant report form. Current view counts are directional only. Do not claim channel growth, product adoption, or performance from a small view snapshot.
 
-### TikTok and Reels
+### TikTok
 
-Lead with the interface in the first second. Keep captions burned in, use the vertical master, and make the call to action “open source on GitHub,” not “link in bio” unless the profile link is actually configured. Reply to technical questions with video responses when possible.
+Use existing vertical masters and captions burned into the video. The profile currently has no established audience. Make the CTA searchable and explicit—“B11-Health GameDeck Discussion 8”—when a clickable profile link is unavailable. Do not use “link in bio” unless the link is visibly configured.
 
-### GitHub
+### Reddit
 
-Keep CI green, releases current, issue forms precise, and the README visual. Label newcomer-friendly work honestly. Never create fake stars, forks, watchers, contributors, or issue activity.
+Read current subreddit rules immediately before posting. Disclose that the poster maintains GameDeck. Use native media and ask for one specific form of feedback. The prior SideProject post was removed by filters; do not repeatedly repost, evade filters, or create replacement accounts.
 
-### Discord
+### Public site
 
-Use `#announcements` sparingly. Drive repeat participation through Remote Play sessions, setup clinics, and showcase prompts. Promote helpful members into moderators only after consistent behavior.
+The public site should keep one primary tester CTA to Discussion #8 and one completed-session CTA to the issue form. Keep release-signing warnings visible and avoid behavior-tracking scripts.
 
-## Out-of-the-box campaigns
+### Creator and community outreach
 
-- **Library Makeover:** invite players to post a before/after library screenshot in `#showcase`; feature one weekly with permission.
-- **Remote Play Friday:** one scheduled session, one featured game category, and a post-session compatibility note.
-- **Setup Rescue:** turn a real support issue into a 45-second fix video and documentation patch.
-- **Compatibility Bounty:** tag small, reproducible compatibility issues that a first-time contributor can solve.
-- **Build in Public, Not Loud:** publish one concrete design or engineering decision per week with evidence.
-- **Creator Micro-Kit:** send small creators a personalized 3-sentence pitch, the 30-second clip, the tutorial, legal-use language, and a direct support contact.
+Prepare personalized drafts for small creators only after their current contact rules are verified. Do not mass-DM, scrape contact lists, promise sponsorship, offer payment, or imply an existing user base. A creator pitch should contain one verified feature, one known limitation, and one concrete test request.
+
+## Content pillars
+
+1. **Verified multiplayer proof:** exact run, platform, mode, route, player count, and limitation
+2. **Evidence-gap recruitment:** one cohort dimension per post
+3. **Setup and diagnostics:** ready check, Status Center, checksums, and first-failure reporting
+4. **Local-first trust:** no ROM transfer, no library upload, no cloud account requirement for core use
+5. **Controller-first product craft:** real UI footage and accessible navigation evidence
+6. **Transparent limitations:** unsigned artifacts, restrictive-NAT limitation, native-platform gaps, and small sample sizes
+7. **Community contribution:** sanitized reports, fixes, and approved proof recaps
+
+## Publishing rules
+
+- Use only the official GameDeck emblem, wordmark, avatar, open-graph image, or an approved sanitized UI capture.
+- State the evidence scope in the post itself.
+- Publish no tester quote, username, screenshot, clip, or outcome summary without the GROWTH-001 approval gate.
+- Do not use commercial game art, console logos, trademarked controller silhouettes, ROM imagery, or fabricated player quotes.
+- Do not buy ads, followers, votes, reviews, comments, downloads, or stars.
+- Do not cross-post identical copy to many communities.
+- Answer substantive feedback before opening another outreach thread.
+- Preserve failures and unknowns; they are product evidence.
 
 ## Metrics without invasive telemetry
 
-Track only public or platform-provided signals: GitHub clones, unique visitors, stars, release downloads, issue quality, Discord joins, tutorial retention, Short completion rate, and the number of support conversations resolved. Do not add cross-app behavioral tracking to GameDeck.
+Track only platform-provided aggregates and public GitHub evidence until Analytics approves a data contract. Separate hard evidence, directional signals, estimates, and unknowns.
+
+Useful metrics include external Discussion participants, qualified session reports, completed attempts, first-failure reasons, cohort coverage, report completeness, consent choices, approved proof assets, response time, public issue quality, release counters with caveats, video views/watch time/comments, and time from recruitment reply to a session report.
+
+Do not collect precise location, IP addresses, device fingerprints, personal identity graphs, game-library inventories, cross-app click histories, or advertising profiles.
+
+## Operating cadence
+
+- Review cohort gaps weekly.
+- Run no more than one primary tester ask per cohort dimension at a time.
+- Review reports within one business day when possible.
+- Escalate security/privacy exposure immediately.
+- Publish a recap only after QA and Program Operations approve the exact wording.
+- Every completed task creates or unblocks the next bounded test or evidence task.
+
+## Rollback
+
+If a claim is rejected, consent is unclear, sensitive data appears, or a platform blocks the post, stop publication. Revert to the official open-graph image and a plain recruitment link—or publish nothing. Do not compensate by broadening claims, reposting repeatedly, creating accounts, or spending money.

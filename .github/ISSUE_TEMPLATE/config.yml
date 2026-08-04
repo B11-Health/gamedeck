@@ -1,5 +1,11 @@
 blank_issues_enabled: false
 contact_links:
+  - name: Multiplayer tester coordination
+    url: https://github.com/B11-Health/gamedeck/discussions/8
+    about: Find a host or guest, choose a test cohort, and coordinate publicly without sharing session codes.
+  - name: General release feedback and community
+    url: https://github.com/B11-Health/gamedeck/discussions/7
+    about: Ask questions, suggest improvements, and discuss the current release.
   - name: Private security report
     url: https://github.com/B11-Health/gamedeck/security/advisories/new
-    about: Report vulnerabilities and accidental secret exposure privately.
+    about: Report vulnerabilities, active invitation exposure, or accidental secret exposure privately.

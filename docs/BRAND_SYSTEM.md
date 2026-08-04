@@ -28,7 +28,7 @@ All production exports live in `assets/branding/brand-kit/`.
 
 - Avatars: 256, 400, 512, and 1024 px
 - Transparent wordmarks: dark-background and light-background variants
-- Social headers: GitHub, Open Graph, X, LinkedIn, Discord, and YouTube
+- Social headers: GitHub, Open Graph, X, LinkedIn, and YouTube; the former Discord banner remains a legacy archive and must not be deployed
 - App splash art: 1920×1080
 - Monochrome marks: white and dark
 - Machine-readable manifest: `manifest.json`
@@ -50,7 +50,7 @@ All production exports live in `assets/branding/brand-kit/`.
 | Website / Open Graph | `gamedeck-open-graph.jpg` |
 | X header | `gamedeck-x-header.jpg` |
 | LinkedIn cover | `gamedeck-linkedin-cover.jpg` |
-| Discord banner | `gamedeck-discord-banner.jpg` |
+| Legacy Discord archive — do not deploy | `gamedeck-discord-banner.jpg` |
 | YouTube banner | `gamedeck-youtube-banner.jpg` |
 | Universal avatar | `gamedeck-avatar-1024.jpg` |
 | App splash | `gamedeck-splash-1920x1080.jpg` |

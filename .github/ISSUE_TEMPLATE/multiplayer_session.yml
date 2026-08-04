@@ -1,12 +1,26 @@
 name: Multiplayer session report
-description: Share the result of a real Couch Co-op, Remote Play Together, or synchronized netplay session
+description: Share a sanitized result from a real Couch Co-op, Remote Play Together, or synchronized netplay session
 title: "[Multiplayer session]: "
 labels: ["compatibility", "needs-triage"]
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for testing GameDeck with another player. Report the session outcome without attaching ROMs, BIOS files, keys, credentials, save files, or copyrighted game assets.
+        Thanks for testing GameDeck with another player. This issue is public.
+
+        Share only broad environment details. Do not attach or paste ROMs, BIOS files, keys, credentials, saves, copyrighted game assets, precise locations, IP addresses, private paths, invitation codes, session tokens, peer identifiers, or account information. Exchange short-lived multiplayer codes through a private channel you already trust.
+
+        A failed connection is useful evidence when the first failing step is clear. This form does not promise public credit, compensation, or promotional use.
+
+  - type: input
+    id: build
+    attributes:
+      label: GameDeck release or exact commit
+      description: Use a release tag such as 1.2.0 or an exact Git commit. Do not write only “latest.”
+      placeholder: GameDeck 1.2.0 or 1cbec11d13ee923cdaa0825748aac5e88965a903
+    validations:
+      required: true
+
   - type: dropdown
     id: mode
     attributes:
@@ -17,6 +31,7 @@ body:
         - Synchronized Netplay
     validations:
       required: true
+
   - type: dropdown
     id: role
     attributes:
@@ -24,69 +39,223 @@ body:
       options:
         - Host
         - Guest
-        - Tested both sides
+        - Tested both host and guest
         - Same-device Couch Co-op player
     validations:
       required: true
+
   - type: input
-    id: platform
+    id: host_platform
     attributes:
-      label: Platform and GameDeck version
-      placeholder: Windows 11 x64, GameDeck 1.2.0
+      label: Host platform
+      description: Include OS version and architecture when known.
+      placeholder: Windows 11 x64, macOS 15 arm64, Ubuntu 26.04 x64
     validations:
       required: true
+
+  - type: textarea
+    id: other_platforms
+    attributes:
+      label: Other player platforms
+      description: List guest or additional local-player platforms. Do not include usernames or device names.
+      placeholder: Player 2 — macOS 15 arm64; Player 3 — Windows 11 x64
+
+  - type: dropdown
+    id: broad_region
+    attributes:
+      label: Broad host region
+      description: Do not provide a city, address, precise location, or IP address.
+      options:
+        - Prefer not to say
+        - North America East
+        - North America Central
+        - North America West
+        - Latin America / Caribbean
+        - Europe
+        - Middle East / Africa
+        - South Asia
+        - East / Southeast Asia
+        - Oceania
+        - Other broad region
+    validations:
+      required: true
+
+  - type: dropdown
+    id: network_route
+    attributes:
+      label: Network route
+      description: Choose the closest non-identifying description.
+      options:
+        - Same computer / isolated profiles
+        - Two devices on the same local network
+        - Separate residential networks
+        - Mobile hotspot or carrier network
+        - Corporate, school, or managed network
+        - VPN was active
+        - Mixed or other route
+        - Unknown / not checked
+    validations:
+      required: true
+
+  - type: dropdown
+    id: nat_context
+    attributes:
+      label: NAT or connectivity context
+      description: Optional self-report. Do not paste addresses, router logs, or credentials.
+      options:
+        - Unknown / not checked
+        - Direct path succeeded
+        - Typical home router / UPnP
+        - Double NAT suspected or known
+        - Carrier-grade NAT or mobile network
+        - Strict or symmetric NAT suspected
+        - Manual port forwarding was configured
+        - Managed firewall or VPN may have affected the path
+        - Other
+
   - type: input
     id: game_system
     attributes:
-      label: Game system and emulator/core
-      placeholder: Arcade / FinalBurn Neo, SNES / Snes9x, etc.
+      label: Game, system, and emulator/core
+      description: A title and route label are enough. Never attach game files or firmware.
+      placeholder: Metal Slug 3 — Arcade / FinalBurn Neo
     validations:
       required: true
+
+  - type: dropdown
+    id: launch_route
+    attributes:
+      label: Launch route
+      description: This records the observed route; selecting it does not imply that every multiplayer mode is supported.
+      options:
+        - Managed RetroArch — arcade / FinalBurn Neo
+        - Managed RetroArch — non-arcade core
+        - Existing RetroArch installation
+        - Standalone MAME or other standalone emulator
+        - OpenBOR direct engine
+        - Other or unknown
+    validations:
+      required: true
+
   - type: input
+    id: player_topology
+    attributes:
+      label: Player topology
+      placeholder: 2 players; host P1 + remote P2; four local controllers; etc.
+    validations:
+      required: true
+
+  - type: textarea
     id: controllers
     attributes:
-      label: Controllers used
-      placeholder: Xbox Series controller, DualSense, keyboard fallback, etc.
+      label: Controllers and connection types
+      description: Include model/class, wired/Bluetooth/USB, keyboard fallback, and player slot when useful.
+      placeholder: P1 Xbox Wireless Controller over Bluetooth; P2 DualSense over USB
     validations:
       required: true
+
+  - type: textarea
+    id: accessibility
+    attributes:
+      label: Accessibility or display settings
+      description: Optional. Examples include keyboard-only use, reduced motion, 150–200% scaling, high contrast/color filters, or assistive technology during setup/reporting.
+      placeholder: Reduced motion enabled; 150% scaling; keyboard-only navigation
+
   - type: dropdown
     id: outcome
     attributes:
       label: Session outcome
       options:
         - Completed a playable session
+        - Connected with minor issues
         - Connected but gameplay was not usable
         - Invitation or handshake failed
+        - Relay room or synchronized join failed
         - Game/core match validation failed
-        - Controller mapping failed
+        - Controller input or player-slot mapping failed
+        - Video or audio failed
+        - Game launch or setup failed before connection
+        - Route was unsupported or blocked truthfully
         - Other
     validations:
       required: true
+
+  - type: dropdown
+    id: time_to_play
+    attributes:
+      label: Approximate time from starting multiplayer setup to playable state
+      description: Use a coarse bucket. Do not infer product-wide performance from one report.
+      options:
+        - Under 2 minutes
+        - 2–5 minutes
+        - 5–10 minutes
+        - More than 10 minutes
+        - Never reached playable state
+        - Not measured / Couch Co-op not timed
+    validations:
+      required: true
+
+  - type: dropdown
+    id: responsiveness
+    attributes:
+      label: Subjective responsiveness
+      description: Optional impression, not a measured latency result.
+      options:
+        - Not applicable / not observed
+        - Responsive for the tested game
+        - Mostly playable with noticeable delay
+        - Connected but difficult to play
+        - Unusable
+
+  - type: dropdown
+    id: reconnect
+    attributes:
+      label: Reconnect result
+      options:
+        - Not attempted
+        - Reconnected successfully
+        - Reconnect failed
+        - Session did not connect initially
+
   - type: textarea
     id: experience
     attributes:
       label: What happened?
-      description: Include the successful path or the first failing step, connection impression, and anything confusing.
-      placeholder: We connected in under a minute. Guest input worked, but the player-slot language was unclear...
+      description: Describe the successful path or the first failing step, visible player count, input/video/audio result, and anything confusing.
+      placeholder: We reached 2/2 players. Guest video appeared and P2 input worked, but the response-code step was unclear...
     validations:
       required: true
+
   - type: textarea
     id: diagnostics
     attributes:
       label: Sanitized diagnostics
-      description: Paste relevant GameDeck Status Center output after removing personal paths, addresses, tokens, and identifiers.
+      description: Paste only relevant GameDeck Status Center output after removing private paths, addresses, codes, tokens, peer/session identifiers, device names, and account information.
+
+  - type: textarea
+    id: proof
+    attributes:
+      label: Optional sanitized proof links
+      description: Link only to media you own or may share. Do not attach unauthorized game footage or expose another person without permission. Media is not approved for promotional reuse merely because it is linked here.
+
   - type: checkboxes
     id: safety
     attributes:
       label: Safety and privacy
       options:
-        - label: I did not attach ROMs, BIOS files, keys, credentials, save files, or copyrighted game assets.
+        - label: I did not attach or paste ROMs, BIOS files, keys, credentials, save files, or copyrighted game assets.
           required: true
-        - label: I removed personal paths, IP addresses, invite codes, session tokens, and account identifiers.
+        - label: I removed precise locations, IP addresses, private paths, invitation codes, session tokens, peer identifiers, account information, and unrelated notifications.
           required: true
+        - label: I understand this issue and its comments are public and may remain in Git history, mirrors, or third-party caches.
+          required: true
+
   - type: checkboxes
-    id: credit
+    id: publication_permission
     attributes:
-      label: Community credit
+      label: Optional publication permission
+      description: Leave every box unchecked if this report should be used only for product triage and aggregate coverage counts.
       options:
-        - label: GameDeck may credit this test result in a public community recap using my GitHub username.
+        - label: GameDeck may summarize this report publicly without naming my GitHub username.
+        - label: GameDeck may credit my GitHub username in an approved community recap.
+        - label: GameDeck may request separate approval to reuse a specific sanitized screenshot, clip, or quote; this box alone is not media permission.

@@ -25,7 +25,17 @@ This produces two additional native-video angles in `dist/social/`: **Your colle
 - Prefer native video and a real question over link-only promotion.
 - Never buy votes, comments, followers, reviews, or fake testimonials.
 - Do not post the same copy into many communities at once.
-- Use the permanent GitHub, tutorial, and Discord links; avoid opaque tracking links.
+- Use the permanent release, GitHub Discussion #8, structured report, and tutorial links; avoid opaque tracking links.
+
+## Tester-program links
+
+- Coordination: https://github.com/B11-Health/gamedeck/discussions/8
+- Completed-session report: https://github.com/B11-Health/gamedeck/issues/new?template=multiplayer_session.yml
+- GROWTH-001 program: ../../docs/GROWTH_001_TESTER_RECRUITMENT.md
+- 30-day calendar: ../growth/GROWTH_001_30_DAY_CALENDAR.md
+- Owned-channel drafts: ../growth/GROWTH_001_CHANNEL_DRAFTS.md
+
+Active invitation codes must be exchanged privately and must never appear in a public post, comment, screenshot, or video.
 
 ## Published playlists
 

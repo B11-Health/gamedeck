@@ -41,7 +41,7 @@ Remote transitions travel over an ordered WebRTC data channel. The host validate
 
 - Video/audio: encrypted WebRTC peer connection using GameDeck Live capture.
 - Input: encrypted WebRTC data channel, then localhost-only UDP from GameDeck to RetroArch.
-- Signaling: manual invitation and response codes exchanged through Discord or another private channel.
+- Signaling: manual invitation and response codes exchanged through a private channel participants already trust. Active codes must never be posted in public GitHub Discussions, Issues, comments, screenshots, or videos.
 - NAT discovery: public STUN services; no GameDeck account or cloud signaling database.
 - Third-party runtime dependencies: none beyond the Chromium WebRTC and RetroArch components already included with GameDeck.
 

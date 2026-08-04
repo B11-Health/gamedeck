@@ -94,7 +94,7 @@ Select a game and choose **Multiplayer**, press **M**, or press **Start** on a s
 
 The command center recommends the best route for the current setup, shows every player slot before launch, copies game/core match IDs, and can read a pasted `GDREMOTE2`, `GDREMOTEANSWER2`, or `GDPLAY1` code from the clipboard and route it to the correct join screen. Once a room is live, setup controls collapse into a focused lobby that remains fully visible at standard desktop sizes.
 
-For Remote Play Together, select a supported local multiplayer game and choose **Remote Play**. GameDeck launches the host game with RetroArch's native Remote RetroPad input enabled, starts the GameDeck Live capture pipeline, and creates a short-lived `GDREMOTE2` invitation for a selected player slot. Send that invitation through Discord or another private channel. The friend pastes it into **Join a friend**, creates a `GDREMOTEANSWER2` response, and sends the response back to the host. Once the host accepts it, encrypted WebRTC video/audio and controller input connect directly between the two computers.
+For Remote Play Together, select a supported local multiplayer game and choose **Remote Play**. GameDeck launches the host game with RetroArch's native Remote RetroPad input enabled, starts the GameDeck Live capture pipeline, and creates a short-lived `GDREMOTE2` invitation for a selected player slot. Send that invitation through a private channel you already trust. Never paste an active invitation into a public Discussion, Issue, comment, screenshot, or video. The friend pastes it into **Join a friend**, creates a `GDREMOTEANSWER2` response, and sends the response back to the host. Once the host accepts it, encrypted WebRTC video/audio and controller input connect directly between the two computers.
 
 Only the host needs the game. GameDeck does not transfer the ROM, BIOS, save files, or game metadata to the guest. Standard browser gamepads are mapped to RetroPad buttons; keyboard fallback uses arrows, `Z`, `X`, `A`, `S`, `Enter`, and `Shift`. Each invitation expires after 20 minutes and is bound to one player slot and session token.
 
@@ -160,15 +160,17 @@ Environment overrides are also supported: `GAMEDECK_LIBRARY`, `GAMEDECK_RGSX_ROO
 
 ## Community
 
-- Join the official [GameDeck Discord community](https://discord.gg/eS7d4VqTT) for Remote Play sessions, support, announcements, and showcases.
-- Use the [growth playbook](docs/GROWTH_PLAYBOOK.md) and [platform-ready social kit](marketing/social/README.md) for respectful, evidence-led community outreach.
-- GameDeck links directly to `#remote-play`, `#support`, `#announcements`, and `#showcase` from the Community screen. See the [Discord community playbook](docs/DISCORD_COMMUNITY.md).
-- Remote Play can prepare a Discord-safe, paste-ready invite or response and open `#remote-play` without exposing ROMs, firmware, or save files.
+- Coordinate multiplayer testing in [Discussion #8](https://github.com/B11-Health/gamedeck/discussions/8). Share only broad availability and environment details; exchange active session codes privately.
+- Submit a completed, sanitized session through the [multiplayer session report](https://github.com/B11-Health/gamedeck/issues/new?template=multiplayer_session.yml).
+- Use the [compatibility report](https://github.com/B11-Health/gamedeck/issues/new?template=compatibility_report.yml) for reproducible launch, controller, artwork, setup, or multiplayer problems.
+- Read the [GROWTH-001 tester program](docs/GROWTH_001_TESTER_RECRUITMENT.md), [30-day calendar](marketing/growth/GROWTH_001_30_DAY_CALENDAR.md), and [platform-ready social kit](marketing/social/README.md) for respectful, evidence-led outreach.
 - Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
-- Check the [roadmap](ROADMAP.md) and [open issues](https://github.com/B11-Health/gamedeck/issues).
-- Use the [arcade community launch kit](docs/COMMUNITY_LAUNCH.md) for evidence, screenshots, channel rules, and outreach sequencing.
-- Report security problems privately using [SECURITY.md](SECURITY.md).
+- Check the [roadmap](ROADMAP.md), [Discussions](https://github.com/B11-Health/gamedeck/discussions), and [open issues](https://github.com/B11-Health/gamedeck/issues).
+- Use the [arcade community launch kit](docs/COMMUNITY_LAUNCH.md) for bounded arcade evidence, screenshots, channel rules, and outreach sequencing.
+- Report security problems or accidental active-code exposure privately using [SECURITY.md](SECURITY.md).
 - See [FUNDING.md](FUNDING.md) and the transparent [sponsorship policy](docs/SPONSORSHIP.md).
+
+GameDeck does not require a community account or collect multiplayer reports automatically. Public GitHub reports must exclude precise locations, IP addresses, private paths, invitation codes, session tokens, credentials, game files, firmware, keys, saves, and unnecessary identity data.
 
 GameDeck is not affiliated with Nintendo, Sony, Microsoft, Sega, Valve, RetroArch, or emulator projects referenced for compatibility. Product names belong to their respective owners.
 

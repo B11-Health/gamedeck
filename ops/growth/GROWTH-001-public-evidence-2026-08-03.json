@@ -1,0 +1,123 @@
+{
+  "schemaVersion": 1,
+  "workItem": "GROWTH-001",
+  "observedAt": "2026-08-03T21:42:56-04:00",
+  "git": {
+    "repository": "B11-Health/gamedeck",
+    "base": "1cbec11d13ee923cdaa0825748aac5e88965a903"
+  },
+  "publicSurfaces": {
+    "site": {
+      "url": "https://b11-health.github.io/gamedeck/",
+      "status": "live",
+      "primaryTesterCta": "https://github.com/B11-Health/gamedeck/discussions/8",
+      "sessionReportCta": "https://github.com/B11-Health/gamedeck/issues/new?template=multiplayer_session.yml"
+    },
+    "github": {
+      "repositoryUrl": "https://github.com/B11-Health/gamedeck",
+      "stars": 0,
+      "forks": 1,
+      "watchers": 0,
+      "openNonPrIssues": 1,
+      "testerDiscussion": {
+        "url": "https://github.com/B11-Health/gamedeck/discussions/8",
+        "pinned": true,
+        "participantsObserved": 1,
+        "commentsObserved": 2,
+        "note": "Observed participants/comments were maintainer-authored; not external adoption evidence."
+      },
+      "communityIssue": {
+        "url": "https://github.com/B11-Health/gamedeck/issues/9",
+        "commentsObserved": 0
+      },
+      "latestRelease": {
+        "url": "https://github.com/B11-Health/gamedeck/releases/tag/v1.2.0",
+        "tag": "v1.2.0",
+        "publishedAt": "2026-08-02T19:23:55Z",
+        "uploadedAssets": 15,
+        "primaryInstallerDownloadsObserved": {
+          "windowsSetup": 1,
+          "windowsPortable": 0,
+          "macDmg": 0,
+          "macZip": 0,
+          "linuxAppImage": 0,
+          "linuxDeb": 0
+        },
+        "note": "Download counters are directional and may include maintainers, CI, retries, update metadata, or automated requests."
+      }
+    },
+    "youtube": {
+      "url": "https://www.youtube.com/@PlayGameDeck",
+      "videosObserved": 6,
+      "viewsObservedByTitle": {
+        "GameDeck — Open-Source RetroArch Frontend & Game Launcher": 36,
+        "GameDeck 1.2 Tutorial — One Install, Remote Play Together & GameDeck Live": 15,
+        "GameDeck in 30 Seconds — One Beautiful Game Library #Shorts": 10,
+        "RetroArch Setup Should Explain Itself — GameDeck #Shorts": 2,
+        "Three Ways to Play Together in GameDeck #Shorts": 1,
+        "Your Game Collection Deserves Better Than Folders #Shorts": 0
+      },
+      "note": "View counts are a point-in-time platform display and are not traction or conversion evidence."
+    },
+    "tiktok": {
+      "url": "https://www.tiktok.com/@playgamedeck",
+      "videosObserved": 2,
+      "followersObserved": 0,
+      "likesObserved": 0,
+      "profile": "GameDeck",
+      "blocker": "Profile content showed a puzzle/load error during the audit."
+    },
+    "reddit": {
+      "profileUrl": "https://www.reddit.com/user/Apprehensive-Roll303/",
+      "displayName": "GameDeck",
+      "postsObserved": 1,
+      "launchPostUrl": "https://www.reddit.com/r/SideProject/comments/1vduuxm/gamedeck_opensource_controllerfirst_home_for/",
+      "launchPostStatus": "removed by Reddit filters"
+    }
+  },
+  "proofBaseline": {
+    "remotePlay": {
+      "platform": "Windows 11 x64",
+      "route": "FinalBurn Neo / Street Fighter II",
+      "profiles": 2,
+      "separatePhysicalMachines": false,
+      "guestVideo": "1152x720",
+      "player2InputTransitions": 18
+    },
+    "synchronized": {
+      "platform": "Windows",
+      "route": "FinalBurn Neo / Metal Slug 3",
+      "relay": "New York",
+      "inviteCharacters": 760,
+      "players": "2/2"
+    },
+    "fourPlayer": {
+      "route": "FinalBurn Neo / Dungeons & Dragons: Shadow over Mystara",
+      "verified": "lobby capacity and selectors",
+      "completedThreeOrFourHumanOnlineSession": false
+    },
+    "nativeMacosMultiplayer": false,
+    "nativeLinuxMultiplayer": false,
+    "restrictiveNatFallback": false
+  },
+  "classification": {
+    "hardEvidence": [
+      "immutable repository QA artifacts",
+      "live public URLs",
+      "public GitHub API snapshot",
+      "visible platform counts"
+    ],
+    "directionalOnly": [
+      "video views",
+      "release downloads",
+      "profile follower/like counts"
+    ],
+    "unknown": [
+      "unique human downloads",
+      "first-run success",
+      "external multiplayer success rate",
+      "retention",
+      "cross-platform multiplayer coverage"
+    ]
+  }
+}

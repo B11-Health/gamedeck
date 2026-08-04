@@ -15,7 +15,7 @@ Source: https://github.com/B11-Health/gamedeck
 
 ## YouTube pinned comment
 
-GameDeck is open source and built for legally owned game libraries. What should we improve first: setup clarity, controller navigation, artwork matching, or Remote Play? Source, downloads, and issue tracker: https://github.com/B11-Health/gamedeck — community: https://discord.gg/eS7d4VqTT
+GameDeck is open source and built for legally owned game libraries. What should we improve first: setup clarity, controller navigation, artwork matching, or Remote Play? Source and downloads: https://github.com/B11-Health/gamedeck — multiplayer testers: https://github.com/B11-Health/gamedeck/discussions/8 — report a session: https://github.com/B11-Health/gamedeck/issues/new?template=multiplayer_session.yml
 
 ## Shorts / TikTok / Reels
 
@@ -57,7 +57,8 @@ I built a free, open-source launcher called GameDeck for people who already main
 I am looking for a few players to test a real multiplayer session and report where setup is confusing. No ROMs or firmware are included.
 
 Download: https://b11-health.github.io/gamedeck/
-Community: https://discord.gg/eS7d4VqTT
+Tester coordination: https://github.com/B11-Health/gamedeck/discussions/8
+Session report: https://github.com/B11-Health/gamedeck/issues/new?template=multiplayer_session.yml
 
 ## Looking for players tonight
 
@@ -70,4 +71,5 @@ Start window: [TIME]
 
 Only the host needs the game for Remote Play. For synchronized netplay, both players need matching game and core IDs.
 
-Matchmaking: https://discord.gg/uv2G7QPX4K
+Tester coordination: https://github.com/B11-Health/gamedeck/discussions/8
+Exchange active invitation codes privately.
