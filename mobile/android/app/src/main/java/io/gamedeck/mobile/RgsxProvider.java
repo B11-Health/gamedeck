@@ -59,35 +59,42 @@ final class RgsxProvider {
     String status() {
         Uri root = root();
         JSONObject result = new JSONObject();
-        boolean catalogDetected = false;
-        int systems = 0;
+        int systems = SystemRegistry.all().size();
+        boolean managedCatalogDetected = false;
+        String source = "bundled";
         String error = "";
+
         if (root != null) {
             try {
                 Uri catalog = findSystemsList(root);
                 if (catalog != null) {
                     JSONArray rows = new JSONArray(readText(catalog));
-                    systems = rows.length();
-                    catalogDetected = systems > 0;
+                    if (rows.length() > 0) {
+                        systems = rows.length();
+                        managedCatalogDetected = true;
+                        source = "managed";
+                    }
                 }
             } catch (Exception issue) {
-                error = issue.getMessage() == null ? "The selected RGSX catalog could not be read." : issue.getMessage();
+                error = issue.getMessage() == null ? "Managed catalog metadata could not be read." : issue.getMessage();
             }
         }
+
         try {
-            result.put("configured", root != null);
+            result.put("configured", true);
             result.put("rootUri", root == null ? "" : root.toString());
-            result.put("role", "optional-provider");
-            result.put("catalogDetected", catalogDetected);
+            result.put("role", "internal-discovery-provider");
+            result.put("providerAbstracted", true);
+            result.put("catalogDetected", true);
+            result.put("managedCatalogDetected", managedCatalogDetected);
+            result.put("catalogSource", source);
             result.put("systemCount", systems);
             result.put("transferAdapterReady", false);
             result.put("firmwareRepairReady", false);
             result.put("error", error);
-            result.put("message", catalogDetected
-                ? "RGSX catalog detected. Android can inspect provider metadata; downloads and repairs remain disabled until the native transfer adapter is verified."
-                : root == null
-                    ? "RGSX is optional. Choose an existing RGSX folder only when you want Discover or managed repair metadata."
-                    : "The selected folder does not contain a readable RGSX systems_list.json catalog.");
+            result.put("message", error.isEmpty()
+                ? "Discover is ready. GameDeck connected its catalog automatically."
+                : "Discover is ready using the built-in GameDeck catalog.");
         } catch (Exception ignored) {}
         return result.toString();
     }
@@ -124,13 +131,13 @@ final class RgsxProvider {
     private String readText(Uri uri) throws Exception {
         try (InputStream input = context.getContentResolver().openInputStream(uri);
              ByteArrayOutputStream output = new ByteArrayOutputStream()) {
-            if (input == null) throw new IllegalStateException("RGSX catalog could not be opened.");
+            if (input == null) throw new IllegalStateException("Managed catalog could not be opened.");
             byte[] buffer = new byte[8192];
             int total = 0;
             int read;
             while ((read = input.read(buffer)) >= 0) {
                 total += read;
-                if (total > MAX_CATALOG_BYTES) throw new IllegalStateException("RGSX systems catalog is unexpectedly large.");
+                if (total > MAX_CATALOG_BYTES) throw new IllegalStateException("Managed systems catalog is unexpectedly large.");
                 output.write(buffer, 0, read);
             }
             return output.toString("UTF-8");
