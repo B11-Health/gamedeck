@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "project": "GameDeck",
   "createdAt": "2026-08-03T23:44:00.000Z",
-  "updatedAt": "2026-08-04T01:58:39.974Z",
+  "updatedAt": "2026-08-04T02:01:14.618Z",
   "policy": {
     "nonReplay": true,
     "visibleLaunchRequired": true,
@@ -41,10 +41,10 @@
   "counters": {
     "E": 5,
     "T": 5,
-    "M": 4,
-    "W": 4,
+    "M": 5,
+    "W": 5,
     "recovery": 0,
-    "event": 70
+    "event": 81
   },
   "tickets": [
     {
@@ -1020,19 +1020,135 @@
       "objective": "Independently test exact ChatChain tab lifecycle commit 1c001f32f79d43d2b02997f6912b11604c56e452, including successor-first ordering, no-close failure paths, uncertainty, HTTP CDP behavior, and full repository compatibility.",
       "assignee": "independent-chatchain-tab-reviewer-01",
       "authorizedBy": "general-orchestrator",
-      "status": "prepared",
+      "status": "completed",
       "chainId": "E-0005",
       "predecessorTicketId": "E-0005",
       "predecessorReceiptHash": "0ae87ac83786a10be8e6a7360131c71cbfc17f7485b220135936ae0c36a3ed45",
-      "successorTicketId": null,
+      "successorTicketId": "M-0005",
       "recoveryForTicketId": null,
       "recoveryTicketId": null,
       "createdAt": "2026-08-04T01:58:39.974Z",
-      "acceptedAt": null,
-      "startedAt": null,
-      "completedAt": null,
-      "launchEvidence": null,
-      "receipt": null,
+      "acceptedAt": "2026-08-04T01:59:39.433Z",
+      "startedAt": "2026-08-04T01:59:47.653Z",
+      "completedAt": "2026-08-04T01:59:56.263Z",
+      "launchEvidence": "Detached clean worktree gamedeck-chatchain-tabs-review at 42fae5c; full repository gate and HTTP CDP lifecycle simulation executed.",
+      "receipt": {
+        "ticketId": "T-0005",
+        "lane": "T",
+        "role": "tester",
+        "actor": "independent-chatchain-tab-reviewer-01",
+        "objective": "Independently test exact ChatChain tab lifecycle commit 1c001f32f79d43d2b02997f6912b11604c56e452, including successor-first ordering, no-close failure paths, uncertainty, HTTP CDP behavior, and full repository compatibility.",
+        "outcome": "pass",
+        "summary": "Independent review verified successor-first ordering, strict identity checks, exact one-tab closure, no-close failure paths, no-replay uncertainty, atomic receipts, and repository compatibility.",
+        "softwareVersion": "42fae5c",
+        "predecessorTicketId": "E-0005",
+        "predecessorReceiptHash": "0ae87ac83786a10be8e6a7360131c71cbfc17f7485b220135936ae0c36a3ed45",
+        "launchEvidence": "Detached clean worktree gamedeck-chatchain-tabs-review at 42fae5c; full repository gate and HTTP CDP lifecycle simulation executed.",
+        "startedAt": "2026-08-04T01:59:47.653Z",
+        "completedAt": "2026-08-04T01:59:56.263Z",
+        "artifacts": [],
+        "checks": [
+          "Detached full npm test passed; ChatChain lifecycle 16 scenarios passed.",
+          "HTTP CDP simulation closed only the predecessor after successor activation and verification."
+        ],
+        "nextAuthorizedLanes": [
+          "M"
+        ],
+        "chainDisposition": "handoff-required",
+        "hash": "a7a0ee36eb5a9c387d7c3a3fb2f12f13d6c4ea18adfd192139d02a4d894faf98"
+      },
+      "uncertainty": null,
+      "quarantine": null
+    },
+    {
+      "id": "M-0005",
+      "lane": "M",
+      "role": "supervisor",
+      "objective": "Verify exact ChatChain tab lifecycle scope, receipt integrity, no-replay semantics, detached test evidence, and integration readiness.",
+      "assignee": "chatchain-tab-supervisor-01",
+      "authorizedBy": "general-orchestrator",
+      "status": "completed",
+      "chainId": "E-0005",
+      "predecessorTicketId": "T-0005",
+      "predecessorReceiptHash": "a7a0ee36eb5a9c387d7c3a3fb2f12f13d6c4ea18adfd192139d02a4d894faf98",
+      "successorTicketId": "W-0005",
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T02:00:14.184Z",
+      "acceptedAt": "2026-08-04T02:00:22.714Z",
+      "startedAt": "2026-08-04T02:00:29.629Z",
+      "completedAt": "2026-08-04T02:00:42.568Z",
+      "launchEvidence": "Supervisor reviewed canonical Builder artifact hashes, independent Tester receipt, exact changed scope, failure behavior, and rollback point 6af7448.",
+      "receipt": {
+        "ticketId": "M-0005",
+        "lane": "M",
+        "role": "supervisor",
+        "actor": "chatchain-tab-supervisor-01",
+        "objective": "Verify exact ChatChain tab lifecycle scope, receipt integrity, no-replay semantics, detached test evidence, and integration readiness.",
+        "outcome": "pass",
+        "summary": "ChatChain tab lifecycle is correctly scoped, receipt-bound, independently verified, fail-closed, and ready for Watcher closure and main integration.",
+        "softwareVersion": "42fae5c",
+        "predecessorTicketId": "T-0005",
+        "predecessorReceiptHash": "a7a0ee36eb5a9c387d7c3a3fb2f12f13d6c4ea18adfd192139d02a4d894faf98",
+        "launchEvidence": "Supervisor reviewed canonical Builder artifact hashes, independent Tester receipt, exact changed scope, failure behavior, and rollback point 6af7448.",
+        "startedAt": "2026-08-04T02:00:29.629Z",
+        "completedAt": "2026-08-04T02:00:42.568Z",
+        "artifacts": [],
+        "checks": [
+          "Canonical Builder artifacts and Tester receipt validate.",
+          "No GameDeck runtime, player UI, network, marketing, or authenticated publication behavior changed."
+        ],
+        "nextAuthorizedLanes": [
+          "W"
+        ],
+        "chainDisposition": "handoff-required",
+        "hash": "2e8cfa57560d9b82d135fa2279c7794ceefd96323862930616ba6761e6e98f8b"
+      },
+      "uncertainty": null,
+      "quarantine": null
+    },
+    {
+      "id": "W-0005",
+      "lane": "W",
+      "role": "watcher",
+      "objective": "Confirm ChatChain tab lifecycle custody continuity, no replay, no unresolved risk, and authorize exact integration to main.",
+      "assignee": "chatchain-tab-watcher-01",
+      "authorizedBy": "general-orchestrator",
+      "status": "completed",
+      "chainId": "E-0005",
+      "predecessorTicketId": "M-0005",
+      "predecessorReceiptHash": "2e8cfa57560d9b82d135fa2279c7794ceefd96323862930616ba6761e6e98f8b",
+      "successorTicketId": null,
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T02:00:50.779Z",
+      "acceptedAt": "2026-08-04T02:00:56.998Z",
+      "startedAt": "2026-08-04T02:01:02.606Z",
+      "completedAt": "2026-08-04T02:01:14.618Z",
+      "launchEvidence": "Watcher verified E-0005, T-0005, and M-0005 receipt links, exact commit identities, one-close semantics, and no unresolved critical risk.",
+      "receipt": {
+        "ticketId": "W-0005",
+        "lane": "W",
+        "role": "watcher",
+        "actor": "chatchain-tab-watcher-01",
+        "objective": "Confirm ChatChain tab lifecycle custody continuity, no replay, no unresolved risk, and authorize exact integration to main.",
+        "outcome": "pass",
+        "summary": "ChatChain tab lifecycle custody is complete and closed; exact integration to main is authorized.",
+        "softwareVersion": "42fae5c",
+        "predecessorTicketId": "M-0005",
+        "predecessorReceiptHash": "2e8cfa57560d9b82d135fa2279c7794ceefd96323862930616ba6761e6e98f8b",
+        "launchEvidence": "Watcher verified E-0005, T-0005, and M-0005 receipt links, exact commit identities, one-close semantics, and no unresolved critical risk.",
+        "startedAt": "2026-08-04T02:01:02.606Z",
+        "completedAt": "2026-08-04T02:01:14.618Z",
+        "artifacts": [],
+        "checks": [
+          "All E-0005 through W-0005 receipt and event hashes validate.",
+          "No close replay, missing successor, or unresolved critical risk remains."
+        ],
+        "nextAuthorizedLanes": [],
+        "chainDisposition": "closed",
+        "hash": "331cabcd3ad3c2836916b5d727c39b1c4b4bd80e822f0b6ccec5de4262810b3a"
+      },
       "uncertainty": null,
       "quarantine": null
     }
@@ -1966,6 +2082,150 @@
         "assignee": "independent-chatchain-tab-reviewer-01"
       },
       "hash": "9d01270d54e2e010e3a0a94563873fe8a0c6d87cf6bdf3f17206d3f341e04bcc"
+    },
+    {
+      "eventId": "EVT-000071",
+      "type": "ticket.accepted",
+      "ticketId": "T-0005",
+      "actor": "independent-chatchain-tab-reviewer-01",
+      "at": "2026-08-04T01:59:39.433Z",
+      "previousHash": "9d01270d54e2e010e3a0a94563873fe8a0c6d87cf6bdf3f17206d3f341e04bcc",
+      "payload": {
+        "role": "tester"
+      },
+      "hash": "279a249c4057a199762b4af4649af43bb111ebb8d924f7c28c5be51e375b1532"
+    },
+    {
+      "eventId": "EVT-000072",
+      "type": "ticket.started",
+      "ticketId": "T-0005",
+      "actor": "independent-chatchain-tab-reviewer-01",
+      "at": "2026-08-04T01:59:47.653Z",
+      "previousHash": "279a249c4057a199762b4af4649af43bb111ebb8d924f7c28c5be51e375b1532",
+      "payload": {
+        "launchEvidence": "Detached clean worktree gamedeck-chatchain-tabs-review at 42fae5c; full repository gate and HTTP CDP lifecycle simulation executed."
+      },
+      "hash": "6a9e6d63c4e3e8921b8546b491395ba9d7dc8ff5d71725d739adea4943c5ebc6"
+    },
+    {
+      "eventId": "EVT-000073",
+      "type": "ticket.completed",
+      "ticketId": "T-0005",
+      "actor": "independent-chatchain-tab-reviewer-01",
+      "at": "2026-08-04T01:59:56.263Z",
+      "previousHash": "6a9e6d63c4e3e8921b8546b491395ba9d7dc8ff5d71725d739adea4943c5ebc6",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "a7a0ee36eb5a9c387d7c3a3fb2f12f13d6c4ea18adfd192139d02a4d894faf98",
+        "softwareVersion": "42fae5c"
+      },
+      "hash": "6638ddf3db534b72fab5afb9934584396f36a6c03dffd089e9505884a3084b5e"
+    },
+    {
+      "eventId": "EVT-000074",
+      "type": "custody.handed-off",
+      "ticketId": "T-0005",
+      "actor": "general-orchestrator",
+      "at": "2026-08-04T02:00:14.184Z",
+      "previousHash": "6638ddf3db534b72fab5afb9934584396f36a6c03dffd089e9505884a3084b5e",
+      "payload": {
+        "successorTicketId": "M-0005",
+        "successorLane": "M",
+        "predecessorReceiptHash": "a7a0ee36eb5a9c387d7c3a3fb2f12f13d6c4ea18adfd192139d02a4d894faf98",
+        "assignee": "chatchain-tab-supervisor-01"
+      },
+      "hash": "f912eeb0d66a5449732de8d7654d739ffd9ba9d93c104f7cd567cf8a0271459c"
+    },
+    {
+      "eventId": "EVT-000075",
+      "type": "ticket.accepted",
+      "ticketId": "M-0005",
+      "actor": "chatchain-tab-supervisor-01",
+      "at": "2026-08-04T02:00:22.714Z",
+      "previousHash": "f912eeb0d66a5449732de8d7654d739ffd9ba9d93c104f7cd567cf8a0271459c",
+      "payload": {
+        "role": "supervisor"
+      },
+      "hash": "222df51f8fd1f8cc3f5ba5f05f60cc79668f1e639cf185599b536eab1562f1da"
+    },
+    {
+      "eventId": "EVT-000076",
+      "type": "ticket.started",
+      "ticketId": "M-0005",
+      "actor": "chatchain-tab-supervisor-01",
+      "at": "2026-08-04T02:00:29.629Z",
+      "previousHash": "222df51f8fd1f8cc3f5ba5f05f60cc79668f1e639cf185599b536eab1562f1da",
+      "payload": {
+        "launchEvidence": "Supervisor reviewed canonical Builder artifact hashes, independent Tester receipt, exact changed scope, failure behavior, and rollback point 6af7448."
+      },
+      "hash": "73964bf20b80f2772d9716967aa515d8c89648513a52515dcc1b3c9fbe6c7197"
+    },
+    {
+      "eventId": "EVT-000077",
+      "type": "ticket.completed",
+      "ticketId": "M-0005",
+      "actor": "chatchain-tab-supervisor-01",
+      "at": "2026-08-04T02:00:42.568Z",
+      "previousHash": "73964bf20b80f2772d9716967aa515d8c89648513a52515dcc1b3c9fbe6c7197",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "2e8cfa57560d9b82d135fa2279c7794ceefd96323862930616ba6761e6e98f8b",
+        "softwareVersion": "42fae5c"
+      },
+      "hash": "bce8732e0125e8245d214cbbd97bd9ab2f7a0c186dce3bb8bdd8a6b9acff34aa"
+    },
+    {
+      "eventId": "EVT-000078",
+      "type": "custody.handed-off",
+      "ticketId": "M-0005",
+      "actor": "general-orchestrator",
+      "at": "2026-08-04T02:00:50.779Z",
+      "previousHash": "bce8732e0125e8245d214cbbd97bd9ab2f7a0c186dce3bb8bdd8a6b9acff34aa",
+      "payload": {
+        "successorTicketId": "W-0005",
+        "successorLane": "W",
+        "predecessorReceiptHash": "2e8cfa57560d9b82d135fa2279c7794ceefd96323862930616ba6761e6e98f8b",
+        "assignee": "chatchain-tab-watcher-01"
+      },
+      "hash": "4dffa9c77e440ee1ffcd97a0edebf54b3cacf21e0cf478581c42e83ee89271a1"
+    },
+    {
+      "eventId": "EVT-000079",
+      "type": "ticket.accepted",
+      "ticketId": "W-0005",
+      "actor": "chatchain-tab-watcher-01",
+      "at": "2026-08-04T02:00:56.998Z",
+      "previousHash": "4dffa9c77e440ee1ffcd97a0edebf54b3cacf21e0cf478581c42e83ee89271a1",
+      "payload": {
+        "role": "watcher"
+      },
+      "hash": "0afec1acd4788dbe8e96bdb3962a7b9a827914f5fddc191bfcc503193f7845bf"
+    },
+    {
+      "eventId": "EVT-000080",
+      "type": "ticket.started",
+      "ticketId": "W-0005",
+      "actor": "chatchain-tab-watcher-01",
+      "at": "2026-08-04T02:01:02.606Z",
+      "previousHash": "0afec1acd4788dbe8e96bdb3962a7b9a827914f5fddc191bfcc503193f7845bf",
+      "payload": {
+        "launchEvidence": "Watcher verified E-0005, T-0005, and M-0005 receipt links, exact commit identities, one-close semantics, and no unresolved critical risk."
+      },
+      "hash": "7460d2aca2f8afcc1c50562163620d5dbb916a1cb0a46c778edf897a5156632e"
+    },
+    {
+      "eventId": "EVT-000081",
+      "type": "ticket.completed",
+      "ticketId": "W-0005",
+      "actor": "chatchain-tab-watcher-01",
+      "at": "2026-08-04T02:01:14.618Z",
+      "previousHash": "7460d2aca2f8afcc1c50562163620d5dbb916a1cb0a46c778edf897a5156632e",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "331cabcd3ad3c2836916b5d727c39b1c4b4bd80e822f0b6ccec5de4262810b3a",
+        "softwareVersion": "42fae5c"
+      },
+      "hash": "cf8f3e800737f97828707865f166d212174659018634c81f99cf6d68894485a9"
     }
   ]
 }
