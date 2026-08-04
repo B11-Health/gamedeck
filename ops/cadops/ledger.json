@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "project": "GameDeck",
+  "createdAt": "2026-08-03T23:44:00.000Z",
+  "updatedAt": "2026-08-03T23:44:00.000Z",
+  "policy": {
+    "nonReplay": true,
+    "visibleLaunchRequired": true,
+    "oldestFirst": true,
+    "maxOpenPerLane": 1,
+    "launchGraceHours": 1,
+    "staleHours": {
+      "prepared": 24,
+      "accepted": 2,
+      "active": 8
+    },
+    "roles": {
+      "E": "builder",
+      "T": "tester",
+      "M": "supervisor",
+      "W": "watcher"
+    },
+    "allowedSuccessors": {
+      "E": [
+        "T"
+      ],
+      "T": [
+        "M"
+      ],
+      "M": [
+        "W"
+      ],
+      "W": [
+        "E",
+        "T",
+        "M",
+        "W"
+      ]
+    }
+  },
+  "counters": {
+    "E": 0,
+    "T": 0,
+    "M": 0,
+    "W": 0,
+    "recovery": 0,
+    "event": 1
+  },
+  "tickets": [],
+  "events": [
+    {
+      "eventId": "EVT-000001",
+      "type": "ledger.initialized",
+      "ticketId": null,
+      "actor": "cadops-system",
+      "at": "2026-08-03T23:44:00.000Z",
+      "previousHash": null,
+      "payload": {
+        "project": "GameDeck",
+        "schemaVersion": 1
+      },
+      "hash": "dd748d4509fd07fd12ca19527ec8694030cb86894628ba4c68a340b5f1d9ad33"
+    }
+  ]
+}

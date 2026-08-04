@@ -201,3 +201,7 @@ For machine-readable output:
 ```bash
 npm run team:pulse:json
 ```
+
+## CADOps checkpoint
+
+Before dispatch, issue the lane ticket and record the assignee. After the teammate visibly accepts and starts, record launch evidence. On completion, record the exact version, checks, and artifact hashes, then create exactly one authorized successor. When dispatch or completion is uncertain, do not retry the ticket: mark it uncertain, quarantine it, and issue a distinct recovery identity. Run `npm run cadops:watch` with every orchestrator pulse.

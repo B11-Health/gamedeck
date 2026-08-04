@@ -254,3 +254,7 @@ npm test
 ```
 
 `team:board` validates the operating contract. `team:pulse` prints focus, executable work, newly unblocked work, stale tasks, and P0 risks.
+
+## CADOps custody ledger
+
+All agent-executed bounded work should be mirrored in `ops/cadops/ledger.json` through `npm run cadops -- ...`. The ledger enforces Builder, Tester, Supervisor, and Watcher separation; exact receipt-linked custody; visible launch evidence; non-replay; quarantine; and distinct recovery identities. `docs/CADOPS.md` is the operating reference. The team board selects and bounds work; CADOps proves who held custody and whether it passed safely.
