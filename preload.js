@@ -26,6 +26,7 @@ contextBridge.exposeInMainWorld('deck', {
   playSessionStatus: () => ipcRenderer.invoke('play-session-status'),
   playSessionStart: (file, options) => ipcRenderer.invoke('play-session-start', file, options || {}),
   playSessionSetMode: (sessionId, mode) => ipcRenderer.invoke('play-session-set-mode', sessionId, mode),
+  playSessionSetAspect: (sessionId, aspectRatio) => ipcRenderer.invoke('play-session-set-aspect', sessionId, aspectRatio),
   playSessionArmCapture: (sessionId, includeAudio = true) => ipcRenderer.invoke('play-session-arm-capture', sessionId, includeAudio !== false),
   playSessionCaptureStarted: sessionId => ipcRenderer.invoke('play-session-capture-started', sessionId),
   playSessionStop: (sessionId, reason) => ipcRenderer.invoke('play-session-stop', sessionId, reason || 'requested'),

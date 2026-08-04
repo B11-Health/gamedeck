@@ -224,6 +224,8 @@ if (!html.includes('class="app-shell-header"') || !html.includes('class="header-
 if (!preload.includes('platform: process.platform') || !renderer.includes('document.documentElement.dataset.platform')) fail('renderer platform contract for native caption-safe layout is missing');
 if (!styles.includes('Keep GameDeck play controls clear of Windows caption buttons') || !styles.includes('padding-right: 174px')) fail('Windows caption-button safe area is missing from GameDeck Play');
 if (!main.includes('GetClientRect') || !main.includes('GetMenu') || !main.includes('SetMenu') || !main.includes('DrawMenuBar')) fail('native game client geometry and menu suppression are incomplete');
+if (main.includes("owned && session?.spec?.engineKind === 'libretro'")) fail('measured client aspect must apply to OpenBOR and every embedded engine');
+if (!main.includes("'play-session-set-aspect'") || !preload.includes('playSessionSetAspect') || !renderer.includes('syncPlaySourceAspect')) fail('source-driven embedded aspect synchronization is incomplete');
 if (!styles.includes('.play-surface.play-pointer-hidden') || !renderer.includes('function hidePlayPointer')) fail('idle play pointer concealment is missing');
 if (!html.includes('id="headerMenu"') || !html.includes('id="headerMenuToggle"')) fail('secondary header controls must live in an overflow menu');
 if (!renderer.includes('function toggleHeaderMenu') || !renderer.includes('function closeHeaderMenu')) fail('header overflow accessibility behavior is missing');
