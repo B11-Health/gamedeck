@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "project": "GameDeck",
   "createdAt": "2026-08-03T23:44:00.000Z",
-  "updatedAt": "2026-08-04T00:18:51.284Z",
+  "updatedAt": "2026-08-04T00:21:18.577Z",
   "policy": {
     "nonReplay": true,
     "visibleLaunchRequired": true,
@@ -41,10 +41,10 @@
   "counters": {
     "E": 2,
     "T": 2,
-    "M": 1,
-    "W": 1,
+    "M": 2,
+    "W": 2,
     "recovery": 0,
-    "event": 22
+    "event": 33
   },
   "tickets": [
     {
@@ -346,19 +346,138 @@
       "objective": "Independently verify canonical Git-blob receipt stability across worktrees and rerun the full GameDeck gate at commit 974dd720ac55770a1f63476fbdc767b381407417.",
       "assignee": "independent-cadops-reviewer-02",
       "authorizedBy": "general-orchestrator",
-      "status": "prepared",
+      "status": "completed",
       "chainId": "E-0001",
       "predecessorTicketId": "E-0002",
       "predecessorReceiptHash": "619998f9296f3efafadc75077e86e33297b691b16ca898ff6c74fc02233d12c7",
-      "successorTicketId": null,
+      "successorTicketId": "M-0002",
       "recoveryForTicketId": null,
       "recoveryTicketId": null,
       "createdAt": "2026-08-04T00:18:51.284Z",
-      "acceptedAt": null,
-      "startedAt": null,
-      "completedAt": null,
-      "launchEvidence": null,
-      "receipt": null,
+      "acceptedAt": "2026-08-04T00:20:00.474Z",
+      "startedAt": "2026-08-04T00:20:05.848Z",
+      "completedAt": "2026-08-04T00:20:15.808Z",
+      "launchEvidence": "Detached clean worktree gamedeck-cadops-review2 at e36b617; canonical Git blob digests compared against checkout-transformed files and full npm test executed.",
+      "receipt": {
+        "ticketId": "T-0002",
+        "lane": "T",
+        "role": "tester",
+        "actor": "independent-cadops-reviewer-02",
+        "objective": "Independently verify canonical Git-blob receipt stability across worktrees and rerun the full GameDeck gate at commit 974dd720ac55770a1f63476fbdc767b381407417.",
+        "outcome": "pass",
+        "summary": "Canonical Git-blob artifact evidence is stable across checkout line-ending transformations and the full GameDeck gate passes in a detached review worktree.",
+        "softwareVersion": "e36b6177d96145fd8808a21ac10ac7cc9fb7cf59",
+        "predecessorTicketId": "E-0002",
+        "predecessorReceiptHash": "619998f9296f3efafadc75077e86e33297b691b16ca898ff6c74fc02233d12c7",
+        "launchEvidence": "Detached clean worktree gamedeck-cadops-review2 at e36b617; canonical Git blob digests compared against checkout-transformed files and full npm test executed.",
+        "startedAt": "2026-08-04T00:20:05.848Z",
+        "completedAt": "2026-08-04T00:20:15.808Z",
+        "artifacts": [],
+        "checks": [
+          "All three E-0002 artifact receipt byte counts and SHA-256 values matched git cat-file blob output exactly.",
+          "Working-tree bytes differed under CRLF checkout, proving the regression test exercises the original defect.",
+          "Full npm test and git diff --check passed."
+        ],
+        "nextAuthorizedLanes": [
+          "M"
+        ],
+        "chainDisposition": "handoff-required",
+        "hash": "308b89bc282027de6aa6cee572d220ebe7baee57c0a773a078b722f2aa33ffb6"
+      },
+      "uncertainty": null,
+      "quarantine": null
+    },
+    {
+      "id": "M-0002",
+      "lane": "M",
+      "role": "supervisor",
+      "objective": "Verify the remediation receipt, exact review evidence, branch scope, and integration readiness.",
+      "assignee": "cadops-supervisor-02",
+      "authorizedBy": "general-orchestrator",
+      "status": "completed",
+      "chainId": "E-0001",
+      "predecessorTicketId": "T-0002",
+      "predecessorReceiptHash": "308b89bc282027de6aa6cee572d220ebe7baee57c0a773a078b722f2aa33ffb6",
+      "successorTicketId": "W-0002",
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T00:20:21.306Z",
+      "acceptedAt": "2026-08-04T00:20:27.188Z",
+      "startedAt": "2026-08-04T00:20:33.954Z",
+      "completedAt": "2026-08-04T00:20:43.621Z",
+      "launchEvidence": "Reviewed exact remediation commit 974dd720ac55770a1f63476fbdc767b381407417, handoff commit e36b617, detached test evidence, and changed-file boundary.",
+      "receipt": {
+        "ticketId": "M-0002",
+        "lane": "M",
+        "role": "supervisor",
+        "actor": "cadops-supervisor-02",
+        "objective": "Verify the remediation receipt, exact review evidence, branch scope, and integration readiness.",
+        "outcome": "pass",
+        "summary": "The remediation is correctly scoped, independently reproduced, and ready for Watcher closure and integration review.",
+        "softwareVersion": "e36b6177d96145fd8808a21ac10ac7cc9fb7cf59",
+        "predecessorTicketId": "T-0002",
+        "predecessorReceiptHash": "308b89bc282027de6aa6cee572d220ebe7baee57c0a773a078b722f2aa33ffb6",
+        "launchEvidence": "Reviewed exact remediation commit 974dd720ac55770a1f63476fbdc767b381407417, handoff commit e36b617, detached test evidence, and changed-file boundary.",
+        "startedAt": "2026-08-04T00:20:33.954Z",
+        "completedAt": "2026-08-04T00:20:43.621Z",
+        "artifacts": [],
+        "checks": [
+          "Canonical receipt object IDs, byte counts, and SHA-256 digests are internally consistent.",
+          "No product runtime, UI, network, release, or authenticated community surfaces changed.",
+          "Branch ancestry is linear from bf33469 and full tests pass."
+        ],
+        "nextAuthorizedLanes": [
+          "W"
+        ],
+        "chainDisposition": "handoff-required",
+        "hash": "3931b05f1a5f9e872b509992fadaa500d6bc96134ba3218ca049e189842d6d1a"
+      },
+      "uncertainty": null,
+      "quarantine": null
+    },
+    {
+      "id": "W-0002",
+      "lane": "W",
+      "role": "watcher",
+      "objective": "Confirm final continuity, close the CADOps foundation chain, and authorize integration without replay.",
+      "assignee": "cadops-watcher-02",
+      "authorizedBy": "general-orchestrator",
+      "status": "completed",
+      "chainId": "E-0001",
+      "predecessorTicketId": "M-0002",
+      "predecessorReceiptHash": "3931b05f1a5f9e872b509992fadaa500d6bc96134ba3218ca049e189842d6d1a",
+      "successorTicketId": null,
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T00:20:53.684Z",
+      "acceptedAt": "2026-08-04T00:21:00.746Z",
+      "startedAt": "2026-08-04T00:21:07.607Z",
+      "completedAt": "2026-08-04T00:21:18.577Z",
+      "launchEvidence": "Watcher verified E-0001, failed T-0001, M-0001, W-0001, corrective E-0002, passing T-0002, and M-0002 form one intact non-replayed chain.",
+      "receipt": {
+        "ticketId": "W-0002",
+        "lane": "W",
+        "role": "watcher",
+        "actor": "cadops-watcher-02",
+        "objective": "Confirm final continuity, close the CADOps foundation chain, and authorize integration without replay.",
+        "outcome": "pass",
+        "summary": "CADOps foundation custody is complete, the release-blocking defect was corrected without replay, and the chain is authorized for integration.",
+        "softwareVersion": "e36b6177d96145fd8808a21ac10ac7cc9fb7cf59",
+        "predecessorTicketId": "M-0002",
+        "predecessorReceiptHash": "3931b05f1a5f9e872b509992fadaa500d6bc96134ba3218ca049e189842d6d1a",
+        "launchEvidence": "Watcher verified E-0001, failed T-0001, M-0001, W-0001, corrective E-0002, passing T-0002, and M-0002 form one intact non-replayed chain.",
+        "startedAt": "2026-08-04T00:21:07.607Z",
+        "completedAt": "2026-08-04T00:21:18.577Z",
+        "artifacts": [],
+        "checks": [
+          "All receipts and event hashes validate.",
+          "Watcher reports no stale custody, missing recovery, duplicate successor, or critical risk.",
+          "Integration rollback remains bf33469b1708667194ff46a7c3d4edc7d51cd774."
+        ],
+        "nextAuthorizedLanes": [],
+        "chainDisposition": "closed",
+        "hash": "86261362ed0f87a9284fea198e89abcf936e76582ac2ede3d5e89138a73236be"
+      },
       "uncertainty": null,
       "quarantine": null
     }
@@ -656,6 +775,150 @@
         "assignee": "independent-cadops-reviewer-02"
       },
       "hash": "63a8da0491411a34a8c68ae0e99484c8c31997dc88ca3d48fb883707340e9255"
+    },
+    {
+      "eventId": "EVT-000023",
+      "type": "ticket.accepted",
+      "ticketId": "T-0002",
+      "actor": "independent-cadops-reviewer-02",
+      "at": "2026-08-04T00:20:00.474Z",
+      "previousHash": "63a8da0491411a34a8c68ae0e99484c8c31997dc88ca3d48fb883707340e9255",
+      "payload": {
+        "role": "tester"
+      },
+      "hash": "089181fa62a55726fe023a19b744e483416979669870128eca13bbe630f51d3a"
+    },
+    {
+      "eventId": "EVT-000024",
+      "type": "ticket.started",
+      "ticketId": "T-0002",
+      "actor": "independent-cadops-reviewer-02",
+      "at": "2026-08-04T00:20:05.848Z",
+      "previousHash": "089181fa62a55726fe023a19b744e483416979669870128eca13bbe630f51d3a",
+      "payload": {
+        "launchEvidence": "Detached clean worktree gamedeck-cadops-review2 at e36b617; canonical Git blob digests compared against checkout-transformed files and full npm test executed."
+      },
+      "hash": "775d23826fd795d3a7d2d09c81fbcef3c9131dc150dbac21da3a0b40061bb969"
+    },
+    {
+      "eventId": "EVT-000025",
+      "type": "ticket.completed",
+      "ticketId": "T-0002",
+      "actor": "independent-cadops-reviewer-02",
+      "at": "2026-08-04T00:20:15.808Z",
+      "previousHash": "775d23826fd795d3a7d2d09c81fbcef3c9131dc150dbac21da3a0b40061bb969",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "308b89bc282027de6aa6cee572d220ebe7baee57c0a773a078b722f2aa33ffb6",
+        "softwareVersion": "e36b6177d96145fd8808a21ac10ac7cc9fb7cf59"
+      },
+      "hash": "2a6e0c9f33f5d2b17818e83d31df2d15eace0a27bee2f14e096a8e55728f2ffe"
+    },
+    {
+      "eventId": "EVT-000026",
+      "type": "custody.handed-off",
+      "ticketId": "T-0002",
+      "actor": "general-orchestrator",
+      "at": "2026-08-04T00:20:21.306Z",
+      "previousHash": "2a6e0c9f33f5d2b17818e83d31df2d15eace0a27bee2f14e096a8e55728f2ffe",
+      "payload": {
+        "successorTicketId": "M-0002",
+        "successorLane": "M",
+        "predecessorReceiptHash": "308b89bc282027de6aa6cee572d220ebe7baee57c0a773a078b722f2aa33ffb6",
+        "assignee": "cadops-supervisor-02"
+      },
+      "hash": "1ced0b11ce58823cc6fb8d831ba60da2e6dfab522e9d8bad337a074c9eebdbfe"
+    },
+    {
+      "eventId": "EVT-000027",
+      "type": "ticket.accepted",
+      "ticketId": "M-0002",
+      "actor": "cadops-supervisor-02",
+      "at": "2026-08-04T00:20:27.188Z",
+      "previousHash": "1ced0b11ce58823cc6fb8d831ba60da2e6dfab522e9d8bad337a074c9eebdbfe",
+      "payload": {
+        "role": "supervisor"
+      },
+      "hash": "792d24664f4f1faad626222ccdc032a0a595c9aa4c3bab99be84adac21e06a0a"
+    },
+    {
+      "eventId": "EVT-000028",
+      "type": "ticket.started",
+      "ticketId": "M-0002",
+      "actor": "cadops-supervisor-02",
+      "at": "2026-08-04T00:20:33.954Z",
+      "previousHash": "792d24664f4f1faad626222ccdc032a0a595c9aa4c3bab99be84adac21e06a0a",
+      "payload": {
+        "launchEvidence": "Reviewed exact remediation commit 974dd720ac55770a1f63476fbdc767b381407417, handoff commit e36b617, detached test evidence, and changed-file boundary."
+      },
+      "hash": "8d1c73dffbe7a3f4877ce8b459e4cd6e12a4b850b54ad22f2b16a6adbf73c7bc"
+    },
+    {
+      "eventId": "EVT-000029",
+      "type": "ticket.completed",
+      "ticketId": "M-0002",
+      "actor": "cadops-supervisor-02",
+      "at": "2026-08-04T00:20:43.621Z",
+      "previousHash": "8d1c73dffbe7a3f4877ce8b459e4cd6e12a4b850b54ad22f2b16a6adbf73c7bc",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "3931b05f1a5f9e872b509992fadaa500d6bc96134ba3218ca049e189842d6d1a",
+        "softwareVersion": "e36b6177d96145fd8808a21ac10ac7cc9fb7cf59"
+      },
+      "hash": "94c00f24e3415d3a6c8c6dd168451292e2f5dbea2f574389af91663496ec1f4c"
+    },
+    {
+      "eventId": "EVT-000030",
+      "type": "custody.handed-off",
+      "ticketId": "M-0002",
+      "actor": "general-orchestrator",
+      "at": "2026-08-04T00:20:53.684Z",
+      "previousHash": "94c00f24e3415d3a6c8c6dd168451292e2f5dbea2f574389af91663496ec1f4c",
+      "payload": {
+        "successorTicketId": "W-0002",
+        "successorLane": "W",
+        "predecessorReceiptHash": "3931b05f1a5f9e872b509992fadaa500d6bc96134ba3218ca049e189842d6d1a",
+        "assignee": "cadops-watcher-02"
+      },
+      "hash": "c0c86a9f29f733f86b61b898a53b1dd4a5f58d229ab4506f05a5435a9546095a"
+    },
+    {
+      "eventId": "EVT-000031",
+      "type": "ticket.accepted",
+      "ticketId": "W-0002",
+      "actor": "cadops-watcher-02",
+      "at": "2026-08-04T00:21:00.746Z",
+      "previousHash": "c0c86a9f29f733f86b61b898a53b1dd4a5f58d229ab4506f05a5435a9546095a",
+      "payload": {
+        "role": "watcher"
+      },
+      "hash": "d57f1748b714be090090b8a604157374b2a19a0b54e830c27ffc52f73b87f7f4"
+    },
+    {
+      "eventId": "EVT-000032",
+      "type": "ticket.started",
+      "ticketId": "W-0002",
+      "actor": "cadops-watcher-02",
+      "at": "2026-08-04T00:21:07.607Z",
+      "previousHash": "d57f1748b714be090090b8a604157374b2a19a0b54e830c27ffc52f73b87f7f4",
+      "payload": {
+        "launchEvidence": "Watcher verified E-0001, failed T-0001, M-0001, W-0001, corrective E-0002, passing T-0002, and M-0002 form one intact non-replayed chain."
+      },
+      "hash": "c18195f8a18d3d8285d8046ff5d754f9a3a0601ff9d50c118b93917536d27320"
+    },
+    {
+      "eventId": "EVT-000033",
+      "type": "ticket.completed",
+      "ticketId": "W-0002",
+      "actor": "cadops-watcher-02",
+      "at": "2026-08-04T00:21:18.577Z",
+      "previousHash": "c18195f8a18d3d8285d8046ff5d754f9a3a0601ff9d50c118b93917536d27320",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "86261362ed0f87a9284fea198e89abcf936e76582ac2ede3d5e89138a73236be",
+        "softwareVersion": "e36b6177d96145fd8808a21ac10ac7cc9fb7cf59"
+      },
+      "hash": "983e39486ddc71c095a764f23bc8458e1ac23b53e8ecaeda7c22d65846268352"
     }
   ]
 }
