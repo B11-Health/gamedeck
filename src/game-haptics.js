@@ -109,7 +109,7 @@
   }
 
   function initialAnalysisState() {
-    return { low: 0, mid: 0, broad: 0, noiseFloor: 0.045, lastPulseAt: -Infinity, gateOpen: true, score: 0 };
+    return { initialized: false, low: 0, mid: 0, broad: 0, noiseFloor: 0.045, lastPulseAt: -Infinity, gateOpen: true, score: 0, lastKind: '' };
   }
 
   function analyzeFrequencyData(data, previous = initialAnalysisState(), now = 0) {
@@ -120,42 +120,89 @@
     const low = averageBand(data, 1, lowEnd);
     const mid = averageBand(data, lowEnd, midEnd);
     const broad = averageBand(data, 1, broadEnd);
-    const lowRise = Math.max(0, low - Number(previous.low || 0));
-    const midRise = Math.max(0, mid - Number(previous.mid || 0));
-    const broadRise = Math.max(0, broad - Number(previous.broad || 0));
-    const transient = lowRise + (midRise * 0.42) + (broadRise * 0.18);
-    const floorTarget = Math.min(0.24, broad);
-    const floorRate = floorTarget < Number(previous.noiseFloor || 0.045) ? 0.055 : 0.008;
+    const previousLow = Number(previous.low || 0);
+    const previousMid = Number(previous.mid || 0);
+    const previousBroad = Number(previous.broad || 0);
+    const initialized = previous.initialized !== false;
+    const lowRise = initialized ? Math.max(0, low - previousLow) : 0;
+    const midRise = initialized ? Math.max(0, mid - previousMid) : 0;
+    const broadRise = initialized ? Math.max(0, broad - previousBroad) : 0;
+    const spectralFlux = lowRise * 1.45 + midRise * 1.05 + broadRise * 0.55;
+    const floorTarget = Math.min(0.26, broad);
+    const floorRate = floorTarget < Number(previous.noiseFloor || 0.045) ? 0.065 : 0.009;
     const noiseFloor = Number(previous.noiseFloor || 0.045) + ((floorTarget - Number(previous.noiseFloor || 0.045)) * floorRate);
-    const bassAboveFloor = Math.max(0, low - Math.max(0.055, noiseFloor * 1.28));
-    const score = bassAboveFloor * 1.55 + transient * 1.9 + Math.max(0, broad - 0.52) * 0.18;
+    const bassAboveFloor = Math.max(0, low - Math.max(0.06, noiseFloor * 1.26));
+    const score = bassAboveFloor * 1.35 + spectralFlux * 1.75;
     const previousPulseAt = Number.isFinite(Number(previous.lastPulseAt)) ? Number(previous.lastPulseAt) : -Infinity;
-    const cooldownReady = Number(now) - previousPulseAt >= 240;
-    const released = transient < 0.014 && score < 0.06;
-    const gateOpen = previous.gateOpen !== false || released;
-    const impact = gateOpen && (
-      transient >= 0.042
-      || (low >= 0.72 && transient >= 0.018)
-      || (broadRise >= 0.055 && low >= 0.36)
-    );
-    const intensity = clamp(score * 0.72, 0, 0.34);
-    const effect = cooldownReady && impact && intensity >= 0.08 ? {
-      duration: Math.round(52 + intensity * 130),
-      strongMagnitude: clamp(intensity * 0.4, 0.02, 0.14),
-      weakMagnitude: clamp(intensity, 0.05, 0.34)
-    } : null;
+    const sincePulse = Number(now) - previousPulseAt;
+    const lowDominance = low / Math.max(0.045, mid);
+    const explosivePeak = lowRise >= 0.038
+      && broadRise >= 0.036
+      && midRise >= 0.026
+      && mid >= 0.24
+      && broad >= 0.31
+      && low >= Math.max(0.22, noiseFloor * 1.32);
+    const bassPunch = lowRise >= 0.036
+      && low >= Math.max(0.31, noiseFloor * 1.52)
+      && lowDominance >= 1.55;
+    const shotCrack = midRise >= 0.038
+      && broadRise >= 0.022
+      && midRise >= lowRise * 0.68
+      && mid >= 0.22
+      && broad >= Math.max(0.19, noiseFloor * 1.24);
+    const rumbleTexture = sincePulse >= 1200
+      && low >= Math.max(0.31, noiseFloor * 1.55)
+      && lowDominance >= 1.72
+      && spectralFlux < 0.04;
+    let effect = null;
+    if (sincePulse >= 260 && explosivePeak) {
+      const strength = clamp((lowRise + broadRise) * 2.4 + bassAboveFloor * 0.65, 0.12, 0.52);
+      effect = {
+        kind: 'explosion',
+        duration: Math.round(100 + strength * 165),
+        strongMagnitude: clamp(strength * 0.78, 0.16, 0.44),
+        weakMagnitude: clamp(strength * 0.9, 0.18, 0.5)
+      };
+    } else if (sincePulse >= 400 && bassPunch) {
+      const strength = clamp(lowRise * 3.4 + bassAboveFloor * 0.5, 0.1, 0.42);
+      effect = {
+        kind: 'bass',
+        duration: Math.round(68 + strength * 120),
+        strongMagnitude: clamp(strength * 0.72, 0.12, 0.32),
+        weakMagnitude: clamp(strength * 0.56, 0.09, 0.24)
+      };
+    } else if (sincePulse >= 140 && shotCrack) {
+      const strength = clamp(midRise * 3.2 + broadRise * 1.7, 0.09, 0.46);
+      effect = {
+        kind: 'shot',
+        duration: Math.round(42 + strength * 95),
+        strongMagnitude: clamp(strength * 0.24, 0.025, 0.1),
+        weakMagnitude: clamp(strength * 0.88, 0.12, 0.42)
+      };
+    } else if (rumbleTexture) {
+      const strength = clamp((low - Math.max(0.2, noiseFloor)) * 0.55, 0.08, 0.24);
+      effect = {
+        kind: 'rumble',
+        duration: Math.round(130 + strength * 210),
+        strongMagnitude: clamp(strength * 0.82, 0.07, 0.19),
+        weakMagnitude: clamp(strength * 0.42, 0.035, 0.1)
+      };
+    }
+    const level = clamp(Math.max(score * 0.72, effect ? Math.max(effect.strongMagnitude, effect.weakMagnitude) : 0), 0, 0.52);
     return {
       state: {
+        initialized: true,
         low,
         mid,
         broad,
         noiseFloor,
         lastPulseAt: effect ? Number(now) : previousPulseAt,
-        gateOpen: effect ? false : gateOpen,
-        score
+        gateOpen: true,
+        score,
+        lastKind: effect?.kind || String(previous.lastKind || '')
       },
       effect,
-      level: clamp(intensity / 0.34)
+      level: clamp(level / 0.52)
     };
   }
 
@@ -183,9 +230,14 @@
     let padName = '';
     let pulses = 0;
     let level = 0;
+    let audioAttached = false;
+    let analysisTicks = 0;
+    let lastEffectAt = 0;
+    let lastKind = '';
+    let effectCounts = { shot: 0, bass: 0, explosion: 0, rumble: 0 };
 
     function status() {
-      return { enabled, preference, mode, policy, padName, pulses, level };
+      return { enabled, preference, mode, policy, padName, pulses, level, audioAttached, analysisTicks, lastEffectAt, lastKind, effectCounts: { ...effectCounts }, audioContextState: String(audioContext?.state || '') };
     }
 
     function publish(nextMode = mode) {
@@ -207,7 +259,14 @@
         return false;
       }
       const ok = await pulsePad(found, effect);
-      if (ok) pulses += 1;
+      if (ok) {
+        pulses += 1;
+        const kind = String(effect?.kind || '');
+        if (kind && Object.prototype.hasOwnProperty.call(effectCounts, kind)) {
+          lastKind = kind;
+          effectCounts[kind] += 1;
+        }
+      }
       onStatus(status());
       return ok;
     }
@@ -219,7 +278,18 @@
       loadingExhaleTimer = null;
     }
 
-    function stopAnalysis() {
+    function primeAudio() {
+      if (!enabled || !AudioContextCtor) return false;
+      try {
+        if (!audioContext || audioContext.state === 'closed') audioContext = new AudioContextCtor({ latencyHint: 'interactive' });
+        audioContext.resume?.().catch?.(() => {});
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
+    function stopAnalysis(closeContext = true) {
       if (analysisTimer) clearIntervalFn(analysisTimer);
       analysisTimer = null;
       try { sourceNode?.disconnect?.(); } catch {}
@@ -229,6 +299,10 @@
       frequencyData = null;
       analysisState = initialAnalysisState();
       level = 0;
+      audioAttached = false;
+      analysisTicks = 0;
+      lastEffectAt = 0;
+      lastKind = '';
       if (audioContext) audioContext.close?.().catch?.(() => {});
       audioContext = null;
     }
@@ -243,9 +317,9 @@
     function loadingBreath() {
       if (!enabled) return;
       publish('loading');
-      issue({ duration: 360, strongMagnitude: 0.025, weakMagnitude: 0.14 });
+      issue({ duration: 380, strongMagnitude: 0.07, weakMagnitude: 0.22 });
       if (loadingExhaleTimer) clearTimeoutFn(loadingExhaleTimer);
-      loadingExhaleTimer = setTimeoutFn(() => issue({ duration: 220, strongMagnitude: 0.012, weakMagnitude: 0.075 }), 520);
+      loadingExhaleTimer = setTimeoutFn(() => issue({ duration: 240, strongMagnitude: 0.035, weakMagnitude: 0.12 }), 520);
     }
 
     function startLoading() {
@@ -278,20 +352,28 @@
         sourceNode = audioContext.createMediaStreamSource(audioStream);
         analyser = audioContext.createAnalyser();
         analyser.fftSize = 256;
-        analyser.smoothingTimeConstant = 0.7;
+        analyser.smoothingTimeConstant = 0.46;
         analyser.minDecibels = -82;
         analyser.maxDecibels = -12;
         sourceNode.connect(analyser);
+        audioAttached = true;
+        analysisTicks = 0;
+        lastEffectAt = 0;
         frequencyData = new Uint8Array(analyser.frequencyBinCount);
         audioContext.resume?.().catch?.(() => {});
         publish('adaptive');
         analysisTimer = setIntervalFn(() => {
           if (!enabled || !analyser || !frequencyData) return;
           analyser.getByteFrequencyData(frequencyData);
-          const analyzed = analyzeFrequencyData(frequencyData, analysisState, now());
+          analysisTicks += 1;
+          const tickAt = now();
+          const analyzed = analyzeFrequencyData(frequencyData, analysisState, tickAt);
           analysisState = analyzed.state;
           level = analyzed.level;
-          if (analyzed.effect) issue(analyzed.effect);
+          if (analyzed.effect) {
+            lastEffectAt = tickAt;
+            issue(analyzed.effect);
+          }
           else onStatus(status());
         }, 86);
       } catch {
@@ -312,7 +394,7 @@
       return setPreference(value ? 'auto' : 'off');
     }
 
-    return { getStatus: status, setEnabled, setPreference, startLoading, startReactive, stopAll, pulse: issue };
+    return { getStatus: status, setEnabled, setPreference, primeAudio, startLoading, startReactive, stopAll, pulse: issue };
   }
 
   return {

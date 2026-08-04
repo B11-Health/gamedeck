@@ -609,16 +609,14 @@
     <div class="play-ambient" id="playAmbient" aria-hidden="true">
       <video id="playAmbientVideo" autoplay muted playsinline tabindex="-1"></video>
     </div>
-    <header class="play-header">
-      <div class="play-brand"><span><img src="../assets/branding/gamedeck-mark-source.png" alt=""></span><div><small>GAMEDECK PLAY</small><b id="playTitle">Preparing game</b></div></div>
-      <div class="play-session-copy"><span class="play-live-dot" aria-hidden="true"></span><span id="playStatus">Connecting the game window…</span></div>
-      <div class="play-actions" role="group" aria-label="Player presentation">
-        <button class="play-mode active" id="playDocked" type="button" data-play-mode="docked" aria-pressed="true" title="Play inside the GameDeck window">Docked</button>
-        <button class="play-mode" id="playFullscreen" type="button" data-play-mode="fullscreen" aria-pressed="false" title="Fill the display with GameDeck Play">Fullscreen</button>
-        <button class="play-mode" id="playPopout" type="button" data-play-mode="popout" aria-pressed="false" title="Use the native engine window">Pop out</button>
-        <button class="play-haptics-toggle active" id="playHapticsToggle" type="button" aria-pressed="true" aria-label="Haptics Auto. Press to change haptic mode." title="Auto haptics are on"><span aria-hidden="true">≋</span> Haptics Auto</button>
-        <button class="play-close" id="playClose" type="button" title="Close game" aria-label="Close game">×</button>
+    <header class="play-header" aria-label="GameDeck Play controls">
+      <div class="play-brand play-title-chip">
+        <span class="play-title-mark"><img src="../assets/branding/gamedeck-mark-source.png" alt=""></span>
+        <span class="play-title-copy"><small id="playStatus">STARTING</small><b id="playTitle">Preparing game</b></span>
       </div>
+      <button class="play-close" id="playClose" type="button" title="End game" aria-label="End game">
+        <svg class="play-control-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>
+      </button>
     </header>
     <div class="play-stage" id="playStage">
       <video id="playVideo" autoplay playsinline aria-label="Live game video"></video>
@@ -635,11 +633,14 @@
         <div class="play-capture-actions"><button type="button" id="playCaptureRetry">Retry integrated video</button><button type="button" id="playCapturePopout">Continue in Pop out</button></div>
       </div>
     </div>
-    <footer class="play-footer">
-      <span><i aria-hidden="true"></i><b>Controller input is sent directly to the game.</b></span>
-      <span id="playInputHint">Auto haptics analyze game sound locally and never record it.</span>
-    </footer>
-  </section>
+    <footer class="play-footer" aria-label="GameDeck Play options">
+      <div class="play-actions" role="group" aria-label="Player presentation">
+        <button class="play-mode active" id="playDocked" type="button" data-play-mode="docked" aria-pressed="true" title="Play inside GameDeck"><svg class="play-control-svg" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"></rect><rect x="7" y="8" width="10" height="8" rx="1.5"></rect></svg><span>GameDeck</span></button>
+        <button class="play-mode" id="playFullscreen" type="button" data-play-mode="fullscreen" aria-pressed="false" title="Fill the display"><svg class="play-control-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5"></path></svg><span>Full screen</span></button>
+        <button class="play-mode" id="playPopout" type="button" data-play-mode="popout" aria-pressed="false" title="Open the native game window"><svg class="play-control-svg" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="7" width="13" height="12" rx="2"></rect><path d="M11 4h9v9M20 4l-9 9"></path></svg><span>Window</span></button>
+        <button class="play-haptics-toggle active" id="playHapticsToggle" type="button" aria-pressed="true" aria-label="Haptics Auto. Press to change haptic mode." title="Auto haptics are on"><svg class="play-control-svg" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="6" width="8" height="12" rx="3"></rect><path d="M5 8c-1.4 2.7-1.4 5.3 0 8M19 8c1.4 2.7 1.4 5.3 0 8"></path></svg><span class="play-control-copy"><small>Haptics</small><b>Auto</b></span></button>
+      </div>
+    </footer></section>
 
   <section class="launch-curtain hidden" id="launchCurtain" aria-live="polite" aria-label="Game loading">
     <div class="launch-curtain-glow" aria-hidden="true"></div>

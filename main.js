@@ -32,6 +32,8 @@ const {
 } = require('./library-system-classifier');
 
 if (process.platform === 'win32') app.setAppUserModelId('io.gamedeck.launcher');
+const hasSingleInstanceLock = app.requestSingleInstanceLock();
+if (!hasSingleInstanceLock) app.quit();
 
 const HOME_DIR = os.homedir();
 const DOCUMENTS_DIR = app.getPath('documents');
@@ -355,12 +357,24 @@ const tgdbPlatforms = {
 };
 
 const AUTOMATION_MODE = process.argv.some(argument => String(argument).startsWith('--remote-debugging-port'));
+const AUTOMATION_KEEPALIVE = process.env.GAMEDECK_AUTOMATION_KEEPALIVE === '1';
 let appIsQuitting = false;
+let closeCleanupStarted = false;
 let mainWindow = null;
+if (hasSingleInstanceLock) {
+  app.on('second-instance', () => {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.show();
+    mainWindow.moveTop();
+    mainWindow.focus();
+  });
+}
 let activity = [];
 const downloads = new Map();
 const downloadProcesses = new Map();
 const gameDeckOpenBorProcesses = new Map();
+const managedEmbeddedProcesses = new Map();
 const embeddedNativeWindows = new Map();
 const pendingLaunches = new Map();
 const mameLaunchVerificationCache = new Map();
@@ -1677,6 +1691,8 @@ function ensureRetroArchEmbeddedConfig() {
     'aspect_ratio_index = "22"',
     'video_force_aspect = "true"',
     'video_scale_integer = "false"',
+    'video_smooth = "false"',
+    'video_shader_enable = "false"',
     'video_scale = "3.0"',
     'pause_nonactive = "false"',
     'menu_show_load_content_animation = "false"',
@@ -1786,8 +1802,11 @@ public static class GameDeckWindow {
   [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr hWnd, IntPtr after, int x, int y, int width, int height, uint flags);
   [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int command);
   [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
+  [DllImport("user32.dll")] public static extern bool SetProcessDPIAware();
+  [DllImport("user32.dll")] public static extern bool SetProcessDpiAwarenessContext(IntPtr value);
 }
 '@
+try { [GameDeckWindow]::SetProcessDpiAwarenessContext([IntPtr](-4)) | Out-Null } catch { [GameDeckWindow]::SetProcessDPIAware() | Out-Null }
 ${body}`;
 }
 
@@ -1899,7 +1918,8 @@ function setEmbeddedEngineWindowMode(session, mode) {
   const y = Math.round(mainBounds.y + (mainBounds.height - height) / 2);
   const applied = applyWindowsEngineWindow(pid, { style, exStyle, menu: 0, hideMenu: true, x, y, width, height, behind: true, activate: false });
   if (applied && mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.setAlwaysOnTop(false);
+    if (session?.phase === 'playing') mainWindow.setAlwaysOnTop(false);
+    else mainWindow.setAlwaysOnTop(true, 'screen-saver');
     mainWindow.show();
     mainWindow.moveTop();
     mainWindow.focus();
@@ -1913,8 +1933,12 @@ const embeddedWindowController = {
     if (mainWindow.isMinimized()) mainWindow.restore();
     if (mainWindow.isFullScreen()) mainWindow.setFullScreen(false);
     mainWindow.show();
-    mainWindow.setAlwaysOnTop(false);
+    mainWindow.setAlwaysOnTop(true, 'screen-saver');
+    mainWindow.moveTop();
     mainWindow.focus();
+  },
+  async processStarted(session) {
+    if (process.platform === 'win32' && session) setEmbeddedEngineWindowMode(session, 'docked');
   },
   async integrate(session, _source, requestedMode) {
     if (process.platform === 'win32') {
@@ -1928,6 +1952,12 @@ const embeddedWindowController = {
   },
   captureStarted(session) {
     if (process.platform !== 'win32' || !session || session.mode === 'popout') return;
+    setEmbeddedEngineWindowMode(session, session.mode || 'docked');
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.setAlwaysOnTop(false);
+      mainWindow.moveTop();
+      mainWindow.focus();
+    }
     const stabilize = delay => setTimeout(() => {
       const current = embeddedPlayManager?.status();
       if (!current?.active || current.sessionId !== session.id || current.mode === 'popout') return;
@@ -1957,7 +1987,8 @@ const embeddedWindowController = {
     if (mainWindow.isMinimized()) mainWindow.restore();
     mainWindow.show();
     mainWindow.setFullScreen(mode === 'fullscreen');
-    mainWindow.setAlwaysOnTop(false);
+    if (session?.phase === 'playing') mainWindow.setAlwaysOnTop(false);
+    else mainWindow.setAlwaysOnTop(true, 'screen-saver');
     setEmbeddedEngineWindowMode(session, mode);
     mainWindow.moveTop();
     mainWindow.focus();
@@ -1968,6 +1999,28 @@ const embeddedWindowController = {
   },
   restore: restoreGameDeckWindow
 };
+
+function registerManagedEmbeddedProcess(child) {
+  if (!child?.pid) return child;
+  managedEmbeddedProcesses.set(Number(child.pid), child);
+  const forget = () => managedEmbeddedProcesses.delete(Number(child.pid));
+  child.once?.('exit', forget);
+  child.once?.('error', forget);
+  return child;
+}
+
+function stopManagedEmbeddedProcesses(exceptPid = 0) {
+  for (const [pid, child] of [...managedEmbeddedProcesses]) {
+    if (Number(pid) === Number(exceptPid)) continue;
+    try {
+      if (process.platform === 'win32') spawnSync('taskkill.exe', ['/PID', String(pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' });
+      else process.kill(-pid, 'SIGTERM');
+    } catch {
+      try { child?.kill?.('SIGTERM'); } catch {}
+    }
+    managedEmbeddedProcesses.delete(pid);
+  }
+}
 
 function registerGameDeckOpenBorProcess(child) {
   if (!child?.pid) return child;
@@ -1993,11 +2046,14 @@ function stopGameDeckOpenBorProcesses(exceptPid = 0) {
 
 function terminateEmbeddedProcess(child) {
   if (!child?.pid) return;
+  const pid = Number(child.pid);
   if (process.platform === 'win32') {
-    spawnSync('taskkill.exe', ['/PID', String(child.pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' });
+    spawnSync('taskkill.exe', ['/PID', String(pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' });
+    managedEmbeddedProcesses.delete(pid);
     return;
   }
-  try { process.kill(-child.pid, 'SIGTERM'); } catch { try { process.kill(child.pid, 'SIGTERM'); } catch {} }
+  try { process.kill(-pid, 'SIGTERM'); } catch { try { process.kill(pid, 'SIGTERM'); } catch {} }
+  managedEmbeddedProcesses.delete(pid);
 }
 
 function protectExternalLaunch(duration = 3400) {
@@ -3865,10 +3921,26 @@ function createWindow() {
   });
   mainWindow.center();
   mainWindow.on('close', event => {
-    if (!AUTOMATION_MODE || appIsQuitting) return;
+    if (appIsQuitting) return;
+    if (AUTOMATION_MODE && AUTOMATION_KEEPALIVE) {
+      event.preventDefault();
+      mainWindow.hide();
+      addActivity('info', 'GameDeck automation continues with the window hidden.');
+      return;
+    }
+    const playStatus = embeddedPlayManager?.status();
+    if (!playStatus?.active || closeCleanupStarted) return;
     event.preventDefault();
-    mainWindow.hide();
-    addActivity('info', 'GameDeck automation continues with the window hidden.');
+    closeCleanupStarted = true;
+    addActivity('info', `Closing ${playStatus.title || 'the active game'} with GameDeck.`);
+    stopManagedEmbeddedProcesses();
+    Promise.resolve(embeddedPlayManager.stop(playStatus.sessionId, 'GameDeck window closed.'))
+      .catch(error => addActivity('info', `Integrated play close cleanup: ${error.message}`))
+      .finally(() => {
+        appIsQuitting = true;
+        if (mainWindow && !mainWindow.isDestroyed()) mainWindow.destroy();
+        app.quit();
+      });
   });
   mainWindow.on('leave-full-screen', () => {
     const status = embeddedPlayManager?.status();
@@ -4121,6 +4193,7 @@ app.on('before-quit', () => {
   clearTimeout(launchCurtainTimer);
   launchCurtainTimer = null;
   const playStatus = embeddedPlayManager?.status();
+  stopManagedEmbeddedProcesses();
   if (playStatus?.active) embeddedPlayManager.stop(playStatus.sessionId, 'GameDeck closed.').catch(() => {});
   pauseActiveDownloads();
   stopRemotePlay('GameDeck closed.');
@@ -4130,7 +4203,7 @@ app.on('before-quit', () => {
   globalShortcut.unregisterAll();
 });
 
-app.whenReady().then(() => {
+if (hasSingleInstanceLock) app.whenReady().then(() => {
   configureGameDeckCapture();
   fs.mkdirSync(LIBRARY, { recursive: true });
   primeFirmwareFolders();
@@ -4141,13 +4214,13 @@ app.whenReady().then(() => {
     listSources: embeddedCaptureSources,
     rankSources: rankSourceCandidates,
     spawnProcess: spec => {
-      const child = spawn(spec.executable, spec.args, {
+      const child = registerManagedEmbeddedProcess(spawn(spec.executable, spec.args, {
         cwd: spec.cwd,
         env: spec.env,
         detached: false,
         windowsHide: false,
         stdio: 'ignore'
-      });
+      }));
       return spec.systemId === 'openbor' ? registerGameDeckOpenBorProcess(child) : child;
     },
     terminateProcess: terminateEmbeddedProcess,
@@ -4173,7 +4246,7 @@ app.whenReady().then(() => {
     await embeddedPlayManager.setMode(status.sessionId, mode).catch(() => {});
   });
 });
-app.on('activate', () => {
+if (hasSingleInstanceLock) app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow();
 });
 app.on('window-all-closed', () => {

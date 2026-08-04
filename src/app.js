@@ -110,6 +110,8 @@ let playCaptureStream = null;
 let playCapturePromise = null;
 let playCaptureGeneration = 0;
 let playCaptureFallbackPending = false;
+let playFrameReady = false;
+let playFrameReadySessionId = '';
 let playAmbientTimer = null;
 let playAmbientCanvas = null;
 let playAmbientContext = null;
@@ -1450,7 +1452,8 @@ function renderPlayHapticStatus(status = {}) {
   if (mode !== playHapticRenderedMode || preference !== playHapticRenderedPreference) {
     playHapticRenderedMode = mode;
     playHapticRenderedPreference = preference;
-    button.innerHTML = `<span aria-hidden="true">≋</span> ${label}`;
+    const compactLabel = preference === 'enhance' ? 'Boost' : preference === 'off' ? 'Off' : 'Auto';
+    button.innerHTML = `<svg class="play-control-svg" viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="6" width="8" height="12" rx="3"></rect><path d="M5 8c-1.4 2.7-1.4 5.3 0 8M19 8c1.4 2.7 1.4 5.3 0 8"></path></svg><span class="play-control-copy"><small>Haptics</small><b>${compactLabel}</b></span>`;
     if (hint) hint.textContent = playHapticStatusCopy({ ...status, preference });
   }
 }
@@ -1634,6 +1637,8 @@ function updatePlayAmbientState() {
 
 function stopPlayCapture() {
   playCaptureGeneration += 1;
+  playFrameReady = false;
+  playFrameReadySessionId = '';
   stopPlayAmbient(true);
   resetPlayHapticBinding('idle');
   if (playCaptureStream) {
@@ -1652,27 +1657,47 @@ function stopPlayCapture() {
   }
 }
 
-function hideFullscreenControls() {
+function hideFullscreenControls(force = false) {
   clearTimeout(fullscreenControlsTimer);
   fullscreenControlsTimer = null;
   const surface = $('#playSurface');
-  if (!surface) return;
-  if (surface.querySelector('.play-header:focus-within')) return;
+  if (!surface || !state.playSession?.active || state.playSession.mode === 'popout') return;
+  if (!playFrameReady || playFrameReadySessionId !== state.playSession.sessionId) return;
+  if (!force && surface.querySelector('.play-header:focus-within, .play-footer:focus-within')) return;
+  surface.classList.add('play-chrome-hidden');
   surface.classList.remove('fullscreen-controls-visible');
+  requestAnimationFrame(applyPlayGeometry);
 }
 
 function showFullscreenControls(duration = 2200) {
   const surface = $('#playSurface');
-  if (!surface || state.playSession?.mode !== 'fullscreen') return;
-  surface.classList.add('fullscreen-controls-visible');
+  if (!surface || !state.playSession?.active || state.playSession.mode === 'popout') return;
+  surface.classList.remove('play-chrome-hidden');
+  surface.classList.toggle('fullscreen-controls-visible', state.playSession.mode === 'fullscreen');
   clearTimeout(fullscreenControlsTimer);
-  if (duration > 0) fullscreenControlsTimer = setTimeout(hideFullscreenControls, duration);
+  fullscreenControlsTimer = null;
+  requestAnimationFrame(applyPlayGeometry);
+  if (duration > 0 && playFrameReady && playFrameReadySessionId === state.playSession.sessionId) {
+    fullscreenControlsTimer = setTimeout(hideFullscreenControls, duration);
+  }
 }
 
 function resetFullscreenControls() {
   clearTimeout(fullscreenControlsTimer);
   fullscreenControlsTimer = null;
-  $('#playSurface')?.classList.remove('fullscreen-controls-visible');
+  const surface = $('#playSurface');
+  surface?.classList.remove('fullscreen-controls-visible', 'play-chrome-hidden');
+  requestAnimationFrame(applyPlayGeometry);
+}
+
+function settlePlayChrome(delay = 720) {
+  const surface = $('#playSurface');
+  if (!surface || !state.playSession?.active || state.playSession.mode === 'popout') return;
+  const active = document.activeElement;
+  if (active && surface.contains(active) && typeof active.blur === 'function') active.blur();
+  clearTimeout(fullscreenControlsTimer);
+  fullscreenControlsTimer = setTimeout(() => hideFullscreenControls(true), Math.max(240, Number(delay) || 720));
+  showPlayPointer(Math.max(500, Number(delay) || 720));
 }
 
 function hidePlayPointer() {
@@ -1715,41 +1740,96 @@ function schedulePlaySourceAspect(video, sessionId, delay = 120) {
 }
 
 function applyPlayGeometry() {
+  const surface = $('#playSurface');
   const stage = $('#playStage');
   const video = $('#playVideo');
-  if (!stage || !video || !state.playSession?.active) return;
+  if (!surface || !stage || !video || !state.playSession?.active || state.playSession.mode === 'popout') return;
   const mode = state.playSession.mode;
-  const aspect = normalizedPlayAspect(state.playSession.aspectRatio);
-  video.style.setProperty('--game-aspect', String(aspect));
-  if (mode === 'fullscreen') {
-    video.style.width = '100%';
-    video.style.height = '100%';
-    video.style.maxWidth = 'none';
-    video.style.maxHeight = 'none';
-    video.style.top = '0';
-    video.style.left = '0';
-    video.style.transform = 'none';
-    video.style.objectFit = 'contain';
-    return;
+  const aspect = normalizedPlayAspect(video.videoWidth > 0 && video.videoHeight > 0 ? video.videoWidth / video.videoHeight : state.playSession.aspectRatio);
+  const stageWidth = stage.clientWidth;
+  const stageHeight = stage.clientHeight;
+  if (!stageWidth || !stageHeight) return;
+  const immersive = surface.classList.contains('play-chrome-hidden') || mode === 'fullscreen';
+  const marginX = mode === 'fullscreen' ? 0 : (immersive ? 4 : Math.max(28, Math.min(64, Math.round(stageWidth * 0.04))));
+  const marginY = mode === 'fullscreen' ? 0 : (immersive ? 4 : Math.max(20, Math.min(46, Math.round(stageHeight * 0.052))));
+  const dpr = Math.max(1, Number(window.devicePixelRatio || 1));
+  const stagePixelWidth = Math.max(1, Math.round(stageWidth * dpr));
+  const stagePixelHeight = Math.max(1, Math.round(stageHeight * dpr));
+  const maxPixelWidth = Math.max(1, Math.floor((stageWidth - marginX * 2) * dpr));
+  const maxPixelHeight = Math.max(1, Math.floor((stageHeight - marginY * 2) * dpr));
+  const sourcePixelWidth = Math.max(1, Math.round(Number(video.videoWidth) || maxPixelWidth));
+  const sourcePixelHeight = Math.max(1, Math.round(Number(video.videoHeight) || (sourcePixelWidth / aspect)));
+  const integerScale = Math.floor(Math.min(maxPixelWidth / sourcePixelWidth, maxPixelHeight / sourcePixelHeight));
+  let outputPixelWidth;
+  let outputPixelHeight;
+  let renderScale;
+  if (integerScale >= 1) {
+    renderScale = integerScale;
+    outputPixelWidth = sourcePixelWidth * integerScale;
+    outputPixelHeight = sourcePixelHeight * integerScale;
+  } else {
+    renderScale = Math.min(maxPixelWidth / sourcePixelWidth, maxPixelHeight / sourcePixelHeight);
+    outputPixelWidth = Math.max(1, Math.floor(sourcePixelWidth * renderScale));
+    outputPixelHeight = Math.max(1, Math.floor(sourcePixelHeight * renderScale));
   }
-  if (mode !== 'docked') return;
-  const width = stage.clientWidth;
-  const height = stage.clientHeight;
-  if (!width || !height) return;
-  const marginX = Math.max(34, Math.min(78, Math.round(width * 0.048)));
-  const marginY = Math.max(24, Math.min(54, Math.round(height * 0.06)));
-  const maxWidth = Math.max(1, width - marginX * 2);
-  const maxHeight = Math.max(1, height - marginY * 2);
-  const fittedWidth = Math.min(maxWidth, maxHeight * aspect);
-  const fittedHeight = fittedWidth / aspect;
-  video.style.width = Math.floor(fittedWidth) + 'px';
-  video.style.height = Math.floor(fittedHeight) + 'px';
+  const leftPixel = Math.round((stagePixelWidth - outputPixelWidth) / 2);
+  const topPixel = Math.round((stagePixelHeight - outputPixelHeight) / 2);
+  video.style.setProperty('--game-aspect', String(aspect));
+  video.style.width = (outputPixelWidth / dpr) + 'px';
+  video.style.height = (outputPixelHeight / dpr) + 'px';
   video.style.maxWidth = 'none';
   video.style.maxHeight = 'none';
-  video.style.top = '50%';
-  video.style.left = '50%';
-  video.style.transform = 'translate(-50%, -50%)';
-  video.style.objectFit = 'contain';
+  video.style.left = (leftPixel / dpr) + 'px';
+  video.style.top = (topPixel / dpr) + 'px';
+  video.style.transform = 'none';
+  video.style.objectFit = 'fill';
+  video.style.imageRendering = integerScale > 1 ? 'pixelated' : 'auto';
+  video.dataset.renderScale = String(renderScale);
+  video.dataset.renderPixels = outputPixelWidth + 'x' + outputPixelHeight;
+  video.dataset.renderMode = integerScale >= 1 ? 'integer' : 'downsample';
+}
+
+function markPlayFrameReady(sessionId) {
+  const id = String(sessionId || '');
+  if (!id || state.playSession?.sessionId !== id || state.playSession?.mode === 'popout') return false;
+  playFrameReadySessionId = id;
+  playFrameReady = true;
+  $('#playLoading')?.classList.add('ready');
+  hideLaunchCurtain();
+  setLaunchingState(state.library.games.find(item => item.id === state.playGameId || item.file === state.playFile), false);
+  requestAnimationFrame(() => { applyPlayGeometry(); updatePlayAmbientState(); showPlayPointer(1400); showFullscreenControls(1800); });
+  return true;
+}
+
+async function waitForDecodedPlayFrame(video, sessionId) {
+  if (!video) throw Error('The integrated game video element is unavailable.');
+  if (video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0) {
+    markPlayFrameReady(sessionId);
+    return;
+  }
+  await new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = error => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      video.removeEventListener('playing', onFrame);
+      video.removeEventListener('loadeddata', onFrame);
+      video.removeEventListener('timeupdate', onFrame);
+      if (error) reject(error); else resolve();
+    };
+    const onFrame = () => {
+      if (video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0) finish();
+    };
+    const timer = setTimeout(() => finish(new Error('The game produced no decoded video frame in time.')), 5000);
+    video.addEventListener('playing', onFrame);
+    video.addEventListener('loadeddata', onFrame);
+    video.addEventListener('timeupdate', onFrame);
+    if (typeof video.requestVideoFrameCallback === 'function') {
+      video.requestVideoFrameCallback(() => finish());
+    }
+  });
+  markPlayFrameReady(sessionId);
 }
 
 function renderPlaySession(status = {}) {
@@ -1761,15 +1841,19 @@ function renderPlaySession(status = {}) {
   const mode = ['docked', 'fullscreen', 'popout'].includes(current.mode) ? current.mode : 'docked';
   surface.classList.remove('mode-docked', 'mode-fullscreen', 'mode-popout');
   surface.classList.add(`mode-${mode}`);
-  if (mode !== 'fullscreen') resetFullscreenControls();
-  else if (active && previousMode !== 'fullscreen') requestAnimationFrame(() => showFullscreenControls(2400));
   $('#playTitle').textContent = current.title || 'GameDeck Play';
   $('#playStatus').textContent = playPhaseMessage(current);
   $('#playLoadingTitle').textContent = current.title ? `Starting ${current.title}` : 'Starting your game';
   $('#playLoadingMessage').textContent = playPhaseMessage(current);
-  const playing = current.phase === 'playing' && Boolean(playCaptureStream);
+  const playing = Boolean(current.active && mode !== 'popout' && playFrameReady && playFrameReadySessionId === current.sessionId);
   $('#playLoading').classList.toggle('ready', playing);
-  if (playing && mode !== 'popout') requestAnimationFrame(() => showPlayPointer(1400));
+  if (!playing) {
+    resetFullscreenControls();
+  } else if (mode === 'fullscreen' && previousMode !== 'fullscreen') {
+    requestAnimationFrame(() => showFullscreenControls(2400));
+  } else if (previousMode === 'fullscreen' && mode !== 'fullscreen') {
+    surface.classList.remove('fullscreen-controls-visible');
+  }
   $$('[data-play-mode]').forEach(button => {
     const selected = button.dataset.playMode === mode;
     button.classList.toggle('active', selected);
@@ -1798,6 +1882,8 @@ function resetPlaySessionUi() {
   const game = state.library.games.find(item => item.id === state.playGameId || item.file === state.playFile);
   setLaunchingState(game, false);
   playCaptureFallbackPending = false;
+  playFrameReady = false;
+  playFrameReadySessionId = '';
   state.playSession = { active: false, phase: 'idle', sessionId: '', title: '', mode: 'docked', aspectRatio: 16 / 9, captureReady: false };
   state.playFile = '';
   state.playGameId = null;
@@ -1815,8 +1901,9 @@ async function acquirePlayCapture(status = state.playSession) {
   if (playCapturePromise) return playCapturePromise;
   playCapturePromise = (async () => {
     const sessionId = status.sessionId;
+    if (playFrameReadySessionId !== sessionId) { playFrameReady = false; playFrameReadySessionId = ''; }
     $('#playCaptureError').classList.add('hidden');
-    $('#playLoading').classList.remove('ready');
+    $('#playLoading').classList.toggle('ready', playFrameReady && playFrameReadySessionId === sessionId);
     const includeHapticAudio = shouldCaptureHapticAudio(status);
     const stream = await requestPlayCapture(sessionId, includeHapticAudio);
     if (state.playSession.sessionId !== sessionId || state.playSession.mode === 'popout') {
@@ -1837,6 +1924,7 @@ async function acquirePlayCapture(status = state.playSession) {
       video.onerror = () => { clearTimeout(timer); reject(new Error('The game video could not be opened.')); };
     });
     await video.play();
+    await waitForDecodedPlayFrame(video, sessionId);
     updatePlayAmbientState();
     syncPlayHaptics(state.playSession);
     await syncPlaySourceAspect(video, sessionId);
@@ -1849,8 +1937,7 @@ async function acquirePlayCapture(status = state.playSession) {
     }
     const started = await window.deck.playSessionCaptureStarted(sessionId);
     if (started?.status) renderPlaySession(started.status);
-    $('#playLoading').classList.add('ready');
-    hideLaunchCurtain();
+    markPlayFrameReady(sessionId);
     return stream;
   })();
   try {
@@ -1965,6 +2052,7 @@ async function startIntegratedPlay(file, game) {
 
 async function launch(file) {
   if (state.launchingFile || state.playSession?.active) return;
+  ensurePlayHaptics()?.primeAudio?.();
   let game = null;
   try {
     game = state.library.games.find(item => item.file === file);
@@ -3069,8 +3157,13 @@ function handleGamepad() {
     return;
   }
   if (state.playSession?.active) {
-    gamepadState.buttons = [...pad.buttons].map(button => button.pressed);
-    gamepadState.direction = gamepadDirection(pad);
+    const buttons = [...pad.buttons].map(button => button.pressed);
+    const direction = gamepadDirection(pad);
+    const changed = direction !== gamepadState.direction
+      || buttons.some((pressed, index) => pressed && !gamepadState.buttons[index]);
+    if (changed) setInputMode('controller');
+    gamepadState.buttons = buttons;
+    gamepadState.direction = direction;
     gamepadState.initialized = true;
     return;
   }
@@ -3438,7 +3531,10 @@ $('#search').oninput = event => {
 $('#searchClear').onclick = () => clearSearch({ focus: true });
 
 $$('[data-play-mode]').forEach(button => {
-  button.onclick = () => setPlayMode(button.dataset.playMode);
+  button.onclick = async () => {
+    await setPlayMode(button.dataset.playMode);
+    settlePlayChrome(720);
+  };
 });
 $('#playClose').onclick = () => stopIntegratedPlay('player_closed');
 $('#playCapturePopout').onclick = () => setPlayMode('popout');
@@ -3459,6 +3555,7 @@ $('#playHapticsToggle').onclick = async () => {
   } else {
     syncPlayHaptics(status);
   }
+  settlePlayChrome(720);
 };
 $('#playCaptureRetry').onclick = () => {
   $('#playCaptureError').classList.add('hidden');
@@ -3468,35 +3565,18 @@ $('#playCaptureRetry').onclick = () => {
 
 const playSurface = $('#playSurface');
 const playHeader = playSurface.querySelector('.play-header');
+const playFooter = playSurface.querySelector('.play-footer');
 const playStageObserver = typeof ResizeObserver === 'function' ? new ResizeObserver(() => applyPlayGeometry()) : null;
 playStageObserver?.observe($('#playStage'));
 window.addEventListener('resize', () => requestAnimationFrame(applyPlayGeometry));
-playSurface.addEventListener('mousemove', event => {
-  showPlayPointer(1600);
-  if (state.playSession?.mode !== 'fullscreen') return;
-  if (event.clientY <= 86) showFullscreenControls(2600);
-  else if (!playHeader.matches(':hover') && !playHeader.matches(':focus-within')) {
-    clearTimeout(fullscreenControlsTimer);
-    fullscreenControlsTimer = setTimeout(hideFullscreenControls, 700);
-  }
+playSurface.addEventListener('mousemove', () => {
+  showPlayPointer(1800);
+  showFullscreenControls(2200);
 });
-playSurface.addEventListener('pointerdown', event => {
-  showPlayPointer(2200);
-  if (state.playSession?.mode === 'fullscreen' && event.clientY <= 100) showFullscreenControls(2800);
-});
-playHeader.addEventListener('mouseenter', () => { showPlayPointer(0); showFullscreenControls(0); });
-playHeader.addEventListener('mouseleave', () => {
-  showPlayPointer(1200);
-  if (state.playSession?.mode !== 'fullscreen') return;
-  clearTimeout(fullscreenControlsTimer);
-  fullscreenControlsTimer = setTimeout(hideFullscreenControls, 1000);
-});
-playHeader.addEventListener('focusin', () => showFullscreenControls(0));
-playHeader.addEventListener('focusout', () => {
-  if (state.playSession?.mode !== 'fullscreen') return;
-  clearTimeout(fullscreenControlsTimer);
-  fullscreenControlsTimer = setTimeout(hideFullscreenControls, 900);
-});
+for (const chrome of [playHeader, playFooter]) {
+  chrome?.addEventListener('focusin', () => { showPlayPointer(0); showFullscreenControls(0); });
+  chrome?.addEventListener('focusout', () => settlePlayChrome(600));
+}
 
 document.onkeydown = event => {
   setInputMode('keyboard');
@@ -3506,8 +3586,14 @@ document.onkeydown = event => {
       setPlayMode(state.playSession.mode === 'fullscreen' ? 'docked' : 'fullscreen');
     } else if (event.key === 'Escape') {
       event.preventDefault();
-      if (state.playSession.mode !== 'docked') setPlayMode('docked');
-      else showFullscreenControls(1200);
+      const surface = $('#playSurface');
+      if (surface?.classList.contains('play-chrome-hidden')) {
+        showPlayPointer(2200);
+        showFullscreenControls(2200);
+      } else {
+        hideFullscreenControls(true);
+        hidePlayPointer();
+      }
     }
     return;
   }

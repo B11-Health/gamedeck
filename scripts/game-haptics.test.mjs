@@ -65,24 +65,44 @@ const quiet = new Uint8Array(128).fill(5);
 const quietAnalysis = analyzeFrequencyData(quiet, initialAnalysisState(), 1000);
 assert.equal(quietAnalysis.effect, null);
 assert.ok(quietAnalysis.level < 0.14);
+assert.equal(quietAnalysis.state.initialized, true);
 
-const impact = new Uint8Array(128).fill(15);
-for (let index = 1; index < 12; index += 1) impact[index] = 220;
-const impactAnalysis = analyzeFrequencyData(impact, quietAnalysis.state, 1200);
-assert.ok(impactAnalysis.effect, 'A strong low-frequency transient must produce a haptic effect.');
-assert.ok(impactAnalysis.effect.weakMagnitude > impactAnalysis.effect.strongMagnitude);
-assert.ok(impactAnalysis.effect.weakMagnitude <= 0.34);
-assert.ok(impactAnalysis.effect.strongMagnitude <= 0.14);
-const cooled = analyzeFrequencyData(impact, impactAnalysis.state, 1240);
-assert.equal(cooled.effect, null, 'Cooldown must prevent vibration chatter.');
-const sustained = analyzeFrequencyData(impact, impactAnalysis.state, 1450);
-assert.equal(sustained.effect, null, 'Sustained bass without a fresh transient must not become continuous buzzing.');
-assert.equal(sustained.state.gateOpen, false);
-const released = analyzeFrequencyData(quiet, sustained.state, 1750);
+const bassHit = new Uint8Array(128).fill(15);
+for (let index = 1; index < 12; index += 1) bassHit[index] = 220;
+const bassAnalysis = analyzeFrequencyData(bassHit, quietAnalysis.state, 1200);
+assert.equal(bassAnalysis.effect?.kind, 'bass');
+assert.ok(bassAnalysis.effect.strongMagnitude > bassAnalysis.effect.weakMagnitude);
+assert.ok(bassAnalysis.effect.strongMagnitude <= 0.32);
+assert.ok(bassAnalysis.effect.weakMagnitude <= 0.24);
+const bassCooldown = analyzeFrequencyData(bassHit, bassAnalysis.state, 1260);
+assert.equal(bassCooldown.effect, null, 'Bass cooldown must prevent chatter.');
+const rumbleTexture = analyzeFrequencyData(bassHit, bassCooldown.state, 2500);
+assert.equal(rumbleTexture.effect?.kind, 'rumble');
+assert.ok(rumbleTexture.effect.strongMagnitude <= 0.19);
+assert.ok(rumbleTexture.effect.weakMagnitude <= 0.1);
+
+const shotFrame = new Uint8Array(128).fill(12);
+for (let index = 10; index < 32; index += 1) shotFrame[index] = 210;
+for (let index = 32; index < 70; index += 1) shotFrame[index] = 110;
+const shotAnalysis = analyzeFrequencyData(shotFrame, quietAnalysis.state, 1400);
+assert.equal(shotAnalysis.effect?.kind, 'shot');
+assert.ok(shotAnalysis.effect.weakMagnitude > shotAnalysis.effect.strongMagnitude);
+assert.ok(shotAnalysis.effect.duration < 100);
+assert.ok(shotAnalysis.effect.weakMagnitude <= 0.42);
+
+const explosionFrame = new Uint8Array(128).fill(80);
+for (let index = 1; index < 12; index += 1) explosionFrame[index] = 220;
+for (let index = 12; index < 40; index += 1) explosionFrame[index] = 180;
+const explosionAnalysis = analyzeFrequencyData(explosionFrame, quietAnalysis.state, 1600);
+assert.equal(explosionAnalysis.effect?.kind, 'explosion');
+assert.ok(explosionAnalysis.effect.duration >= 105);
+assert.ok(explosionAnalysis.effect.strongMagnitude <= 0.44);
+assert.ok(explosionAnalysis.effect.weakMagnitude <= 0.5);
+
+const released = analyzeFrequencyData(quiet, explosionAnalysis.state, 2050);
 assert.equal(released.effect, null);
-assert.equal(released.state.gateOpen, true, 'A quiet interval must re-arm the impact gate.');
-const secondImpact = analyzeFrequencyData(impact, released.state, 2050);
-assert.ok(secondImpact.effect, 'A fresh onset after release must produce another effect.');
+const secondShot = analyzeFrequencyData(shotFrame, released.state, 2300);
+assert.equal(secondShot.effect?.kind, 'shot', 'A later shot peak must create a fresh short pulse.');
 
 const intervals = [];
 const timeouts = [];
@@ -111,7 +131,9 @@ assert.equal(loadingController.getStatus().mode, 'loading');
 assert.equal(intervals[0].ms, 1750);
 assert.equal(timeouts[0].ms, 520);
 assert.equal(loadingEffects.length, 1);
-assert.ok(loadingEffects[0].effect.weakMagnitude <= 0.14);
+assert.ok(loadingEffects[0].effect.weakMagnitude <= 0.22);
+assert.ok(loadingEffects[0].effect.strongMagnitude >= 0.06);
+assert.ok(loadingEffects[0].effect.strongMagnitude >= 0.06);
 await timeouts[0].fn();
 await new Promise(resolve => setTimeout(resolve, 0));
 assert.equal(loadingEffects.length, 2);
@@ -120,7 +142,7 @@ loadingController.stopAll();
 assert.equal(loadingController.getStatus().mode, 'idle');
 assert.equal(intervals[0].cleared, true);
 
-let frequencyFrame = impact;
+let frequencyFrame = bassHit;
 class FakeAnalyser {
   constructor() {
     this.frequencyBinCount = 128;
@@ -156,15 +178,19 @@ const reactiveController = createController({
 const audioStream = { getAudioTracks: () => [{ readyState: 'live' }] };
 reactiveController.startReactive(audioStream, 'arcade');
 assert.equal(reactiveController.getStatus().mode, 'adaptive');
+assert.equal(reactiveController.getStatus().audioAttached, true);
+assert.equal(reactiveController.getStatus().analysisTicks, 0);
 assert.equal(reactiveIntervals[0].ms, 86);
 frequencyFrame = quiet;
 reactiveIntervals[0].fn();
 clock += 150;
-frequencyFrame = impact;
+frequencyFrame = bassHit;
 reactiveIntervals[0].fn();
 await new Promise(resolve => setTimeout(resolve, 0));
 assert.ok(reactiveEffects.length >= 1, 'Adaptive analysis must drive a rumble effect after a transient.');
 assert.ok(reactiveController.getStatus().level > 0);
+assert.ok(reactiveController.getStatus().analysisTicks >= 2);
+assert.equal(reactiveController.getStatus().lastEffectAt, clock);
 reactiveController.stopAll();
 
 const nativeController = createController({ getGamepads: () => [controllerPad], AudioContext: FakeAudioContext });
@@ -187,4 +213,4 @@ assert.equal(disabledController.getStatus().enabled, true);
 disabledController.setPreference('off');
 assert.equal(disabledController.getStatus().mode, 'off');
 
-console.log('GameDeck adaptive haptics: 57 scenarios passed');
+console.log('GameDeck adaptive haptics: 75 scenarios passed');
