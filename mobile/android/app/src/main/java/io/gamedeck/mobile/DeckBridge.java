@@ -4,11 +4,13 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.net.Uri;
+import android.util.Log;
 import android.webkit.JavascriptInterface;
 
 import org.json.JSONObject;
 
 final class DeckBridge {
+    private static final String RENDERER_TAG = "GameDeckRenderer";
     private final MainActivity activity;
     private final AndroidRuntimeManager runtime;
     private final LibraryRepository library;
@@ -27,7 +29,7 @@ final class DeckBridge {
         try {
             value.put("platform", "android");
             value.put("platformKey", AndroidRuntimeManager.PLATFORM_KEY);
-            value.put("version", "0.2.0-alpha");
+            value.put("version", "0.3.0-parity-preview");
             value.put("localFirst", true);
             value.put("accountRequired", false);
             value.put("embeddedRuntimeReady", false);
@@ -109,6 +111,21 @@ final class DeckBridge {
         ClipboardManager clipboard = (ClipboardManager) activity.getSystemService(Context.CLIPBOARD_SERVICE);
         if (clipboard != null) clipboard.setPrimaryClip(ClipData.newPlainText("GameDeck", value == null ? "" : value));
         return "{\"ok\":true}";
+    }
+
+    @JavascriptInterface
+    public void reportRendererReady(String payload) {
+        Log.i(RENDERER_TAG, "GAMEDECK_RENDERER_READY " + safeLog(payload));
+    }
+
+    @JavascriptInterface
+    public void reportRendererError(String payload) {
+        Log.e(RENDERER_TAG, "GAMEDECK_RENDERER_ERROR " + safeLog(payload));
+    }
+
+    private String safeLog(String value) {
+        String cleaned = value == null ? "" : value.replace('\n', ' ').replace('\r', ' ').trim();
+        return cleaned.length() > 1200 ? cleaned.substring(0, 1200) : cleaned;
     }
 
     void setLibraryRoot(Uri uri) {
