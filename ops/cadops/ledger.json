@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "project": "GameDeck",
   "createdAt": "2026-08-03T23:44:00.000Z",
-  "updatedAt": "2026-08-04T02:34:59.381Z",
+  "updatedAt": "2026-08-04T02:38:44.748Z",
   "policy": {
     "nonReplay": true,
     "visibleLaunchRequired": true,
@@ -40,11 +40,11 @@
   },
   "counters": {
     "E": 8,
-    "T": 7,
+    "T": 8,
     "M": 7,
     "W": 7,
     "recovery": 0,
-    "event": 116
+    "event": 118
   },
   "tickets": [
     {
@@ -1610,18 +1610,102 @@
       "objective": "Correct the already-absent predecessor path: verify the successor before reporting success, return reconcilable predecessor identity, bind room-close receipts to the exact ledger snapshot, and add deterministic regressions.",
       "assignee": "cadops-chatchain-correction-builder-01",
       "authorizedBy": "general-orchestrator",
-      "status": "active",
+      "status": "completed",
       "chainId": "E-0007",
       "predecessorTicketId": "W-0007",
       "predecessorReceiptHash": "011c7ab142a8c92c8d59f1e274c5182f3b44c82a7b4fe9f7ed6a9401483b05ad",
-      "successorTicketId": null,
+      "successorTicketId": "T-0008",
       "recoveryForTicketId": null,
       "recoveryTicketId": null,
       "createdAt": "2026-08-04T02:34:39.269Z",
       "acceptedAt": "2026-08-04T02:34:49.590Z",
       "startedAt": "2026-08-04T02:34:59.381Z",
-      "completedAt": null,
+      "completedAt": "2026-08-04T02:38:29.794Z",
       "launchEvidence": "Authenticated Shell corrective work active in gamedeck-cadops-workflow-v2 after immutable T-0007 rejection and W-0007 authorization.",
+      "receipt": {
+        "ticketId": "E-0008",
+        "lane": "E",
+        "role": "builder",
+        "actor": "cadops-chatchain-correction-builder-01",
+        "objective": "Correct the already-absent predecessor path: verify the successor before reporting success, return reconcilable predecessor identity, bind room-close receipts to the exact ledger snapshot, and add deterministic regressions.",
+        "outcome": "pass",
+        "summary": "Corrected already-absent predecessor reconciliation by requiring successor activation and readiness verification, returning stable predecessor identity, using safe absence evidence, and binding close receipts to the exact ledger event and ticket receipt.",
+        "softwareVersion": "08a950692cfb06d541359fb7047aa2bb63af2db9",
+        "predecessorTicketId": "W-0007",
+        "predecessorReceiptHash": "011c7ab142a8c92c8d59f1e274c5182f3b44c82a7b4fe9f7ed6a9401483b05ad",
+        "launchEvidence": "Authenticated Shell corrective work active in gamedeck-cadops-workflow-v2 after immutable T-0007 rejection and W-0007 authorization.",
+        "startedAt": "2026-08-04T02:34:59.381Z",
+        "completedAt": "2026-08-04T02:38:29.794Z",
+        "artifacts": [
+          {
+            "path": "scripts/chatchain-room-registry.mjs",
+            "source": "git-blob",
+            "commit": "08a950692cfb06d541359fb7047aa2bb63af2db9",
+            "objectFormat": "sha1",
+            "objectId": "5742f343c336fea8f0b0f9217f444466b6935b7b",
+            "bytes": 16066,
+            "sha256": "ab622b9322ab1f2ff5a66ebf35dcc97e1e7ea4421a96b12daf3f8d04cb7ab42f"
+          },
+          {
+            "path": "scripts/chatchain-tab-lifecycle.mjs",
+            "source": "git-blob",
+            "commit": "08a950692cfb06d541359fb7047aa2bb63af2db9",
+            "objectFormat": "sha1",
+            "objectId": "9011a5095da4b88e3aa99dff997011c934b3b85e",
+            "bytes": 34984,
+            "sha256": "3353fac7dd969c1788d3fd82c7f7b6e6317211fa7277954e3c1f34cee261b5ee"
+          },
+          {
+            "path": "scripts/chatchain-room-registry.test.mjs",
+            "source": "git-blob",
+            "commit": "08a950692cfb06d541359fb7047aa2bb63af2db9",
+            "objectFormat": "sha1",
+            "objectId": "7fe3681ae35c6f34737108021629436fa99eb78f",
+            "bytes": 7137,
+            "sha256": "76b58ed8629431da46a6650beedcdf4f9d70ac4d93113c47a7a18ef468f85ab0"
+          },
+          {
+            "path": "scripts/chatchain-tab-lifecycle.test.mjs",
+            "source": "git-blob",
+            "commit": "08a950692cfb06d541359fb7047aa2bb63af2db9",
+            "objectFormat": "sha1",
+            "objectId": "010076b5608e6c627425ec1b168a9d0f62c4216c",
+            "bytes": 20709,
+            "sha256": "f4d6b789274be53d5f539af8b36595c9f71c191474a39a997c2ac6f7aa241ef1"
+          }
+        ],
+        "checks": [
+          "Full GameDeck npm test passed; room registry 12 scenarios and browser lifecycle 28 scenarios passed.",
+          "Original T-0007 deterministic failure path now requires activate and probe and no longer dereferences a missing predecessor."
+        ],
+        "nextAuthorizedLanes": [
+          "T"
+        ],
+        "chainDisposition": "handoff-required",
+        "hash": "b477eeaa54666b826e4896871f9f57da2971e72f1233e7eadbdf3d5750ceba1e"
+      },
+      "uncertainty": null,
+      "quarantine": null
+    },
+    {
+      "id": "T-0008",
+      "lane": "T",
+      "role": "tester",
+      "objective": "Independently retest corrected commit 08a950692cfb06d541359fb7047aa2bb63af2db9, reproduce the former already-absent predecessor defect, verify ledger-bound close receipts, and rerun all ChatChain and GameDeck gates.",
+      "assignee": "independent-cadops-chatchain-reviewer-02",
+      "authorizedBy": "general-orchestrator",
+      "status": "prepared",
+      "chainId": "E-0007",
+      "predecessorTicketId": "E-0008",
+      "predecessorReceiptHash": "b477eeaa54666b826e4896871f9f57da2971e72f1233e7eadbdf3d5750ceba1e",
+      "successorTicketId": null,
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T02:38:44.748Z",
+      "acceptedAt": null,
+      "startedAt": null,
+      "completedAt": null,
+      "launchEvidence": null,
       "receipt": null,
       "uncertainty": null,
       "quarantine": null
@@ -3163,6 +3247,35 @@
         "launchEvidence": "Authenticated Shell corrective work active in gamedeck-cadops-workflow-v2 after immutable T-0007 rejection and W-0007 authorization."
       },
       "hash": "6a935bb5a7b97ad495397f88fb4db854a34dbaaa49f7d36fe10369c3652d02ee"
+    },
+    {
+      "eventId": "EVT-000117",
+      "type": "ticket.completed",
+      "ticketId": "E-0008",
+      "actor": "cadops-chatchain-correction-builder-01",
+      "at": "2026-08-04T02:38:29.794Z",
+      "previousHash": "6a935bb5a7b97ad495397f88fb4db854a34dbaaa49f7d36fe10369c3652d02ee",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "b477eeaa54666b826e4896871f9f57da2971e72f1233e7eadbdf3d5750ceba1e",
+        "softwareVersion": "08a950692cfb06d541359fb7047aa2bb63af2db9"
+      },
+      "hash": "7cb9ed4e06941d88c8691637dd7fa0799c52dea79026e56d1d8fe5e91e6933dc"
+    },
+    {
+      "eventId": "EVT-000118",
+      "type": "custody.handed-off",
+      "ticketId": "E-0008",
+      "actor": "general-orchestrator",
+      "at": "2026-08-04T02:38:44.748Z",
+      "previousHash": "7cb9ed4e06941d88c8691637dd7fa0799c52dea79026e56d1d8fe5e91e6933dc",
+      "payload": {
+        "successorTicketId": "T-0008",
+        "successorLane": "T",
+        "predecessorReceiptHash": "b477eeaa54666b826e4896871f9f57da2971e72f1233e7eadbdf3d5750ceba1e",
+        "assignee": "independent-cadops-chatchain-reviewer-02"
+      },
+      "hash": "4d5ec3c45d743d53c35863f092afba976e0d00c85eff0736e85f3b211013f00d"
     }
   ]
 }
