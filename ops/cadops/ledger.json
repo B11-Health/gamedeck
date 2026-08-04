@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "project": "GameDeck",
   "createdAt": "2026-08-03T23:44:00.000Z",
-  "updatedAt": "2026-08-04T06:38:07.988Z",
+  "updatedAt": "2026-08-04T06:59:14.007Z",
   "policy": {
     "nonReplay": true,
     "visibleLaunchRequired": true,
@@ -39,12 +39,12 @@
     }
   },
   "counters": {
-    "E": 9,
-    "T": 9,
-    "M": 9,
-    "W": 9,
+    "E": 10,
+    "T": 10,
+    "M": 10,
+    "W": 10,
     "recovery": 1,
-    "event": 150
+    "event": 166
   },
   "tickets": [
     {
@@ -2123,6 +2123,233 @@
       },
       "uncertainty": null,
       "quarantine": null
+    },
+    {
+      "id": "E-0010",
+      "lane": "E",
+      "role": "builder",
+      "objective": "Integrate exact independently approved release permission regression guard onto current origin/main without source drift",
+      "assignee": "builder-release-integration-14",
+      "authorizedBy": "general-orchestrator",
+      "status": "completed",
+      "chainId": "E-0010",
+      "predecessorTicketId": null,
+      "predecessorReceiptHash": null,
+      "successorTicketId": "T-0010",
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T06:55:11.305Z",
+      "acceptedAt": "2026-08-04T06:55:22.371Z",
+      "startedAt": "2026-08-04T06:55:30.416Z",
+      "completedAt": "2026-08-04T06:56:31.685Z",
+      "launchEvidence": "Authenticated Shell active in isolated integration worktree at exact approved source 3f6f1e0775173ab40db2066aae6b9b017260f18d and current origin/main 38cff0391185ac3bda7e949157fdc180be06e6e0",
+      "receipt": {
+        "ticketId": "E-0010",
+        "lane": "E",
+        "role": "builder",
+        "actor": "builder-release-integration-14",
+        "objective": "Integrate exact independently approved release permission regression guard onto current origin/main without source drift",
+        "outcome": "pass",
+        "summary": "Verified exact approved release permission guard is a clean fast-forward of current origin/main with no source drift.",
+        "softwareVersion": "3f6f1e0775173ab40db2066aae6b9b017260f18d",
+        "predecessorTicketId": null,
+        "predecessorReceiptHash": null,
+        "launchEvidence": "Authenticated Shell active in isolated integration worktree at exact approved source 3f6f1e0775173ab40db2066aae6b9b017260f18d and current origin/main 38cff0391185ac3bda7e949157fdc180be06e6e0",
+        "startedAt": "2026-08-04T06:55:30.416Z",
+        "completedAt": "2026-08-04T06:56:31.685Z",
+        "artifacts": [
+          {
+            "path": "package.json",
+            "source": "git-blob",
+            "commit": "3f6f1e0775173ab40db2066aae6b9b017260f18d",
+            "objectFormat": "sha1",
+            "objectId": "fda9501d128ad08e8924ceaae45b23bfc7592479",
+            "bytes": 7688,
+            "sha256": "e98708311bd5af0d1618d5d655ed24b25678f543b1dafc8dcca4833f2f12e1c1"
+          },
+          {
+            "path": "scripts/release-workflow-permissions.test.mjs",
+            "source": "git-blob",
+            "commit": "3f6f1e0775173ab40db2066aae6b9b017260f18d",
+            "objectFormat": "sha1",
+            "objectId": "907df2c51a16465f681ac274e773068a263fd697",
+            "bytes": 2143,
+            "sha256": "3c88de0038302ba1bdbf1861e22f3eb733f82a1d56920dccf5df8ecbf2c8d694"
+          }
+        ],
+        "checks": [
+          "exact source branch identity and ancestry verified",
+          "focused release permission test passed",
+          "full npm test passed",
+          "git diff --check passed with line-ending warning only"
+        ],
+        "nextAuthorizedLanes": [
+          "T"
+        ],
+        "chainDisposition": "handoff-required",
+        "hash": "b044a8d0114a9880c7e901c33b563d393a92ace6ccb14eb17522bd1f48e39677"
+      },
+      "uncertainty": null,
+      "quarantine": null
+    },
+    {
+      "id": "T-0010",
+      "lane": "T",
+      "role": "tester",
+      "objective": "Independently verify exact fast-forward integration scope, release permission gate, and negative mutation rejection",
+      "assignee": "tester-release-integration-15",
+      "authorizedBy": "general-orchestrator",
+      "status": "completed",
+      "chainId": "E-0010",
+      "predecessorTicketId": "E-0010",
+      "predecessorReceiptHash": "b044a8d0114a9880c7e901c33b563d393a92ace6ccb14eb17522bd1f48e39677",
+      "successorTicketId": "M-0010",
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T06:56:48.975Z",
+      "acceptedAt": "2026-08-04T06:56:55.165Z",
+      "startedAt": "2026-08-04T06:57:00.321Z",
+      "completedAt": "2026-08-04T06:57:43.656Z",
+      "launchEvidence": "Independent exact-commit review of 3f6f1e0775173ab40db2066aae6b9b017260f18d in isolated integration worktree; no source edits",
+      "receipt": {
+        "ticketId": "T-0010",
+        "lane": "T",
+        "role": "tester",
+        "actor": "tester-release-integration-15",
+        "objective": "Independently verify exact fast-forward integration scope, release permission gate, and negative mutation rejection",
+        "outcome": "pass",
+        "summary": "Exact approved source branch equals integration HEAD; focused, negative mutation, and full repository gates passed independently.",
+        "softwareVersion": "3f6f1e0775173ab40db2066aae6b9b017260f18d",
+        "predecessorTicketId": "E-0010",
+        "predecessorReceiptHash": "b044a8d0114a9880c7e901c33b563d393a92ace6ccb14eb17522bd1f48e39677",
+        "launchEvidence": "Independent exact-commit review of 3f6f1e0775173ab40db2066aae6b9b017260f18d in isolated integration worktree; no source edits",
+        "startedAt": "2026-08-04T06:57:00.321Z",
+        "completedAt": "2026-08-04T06:57:43.656Z",
+        "artifacts": [
+          {
+            "path": "package.json",
+            "source": "git-blob",
+            "commit": "3f6f1e0775173ab40db2066aae6b9b017260f18d",
+            "objectFormat": "sha1",
+            "objectId": "fda9501d128ad08e8924ceaae45b23bfc7592479",
+            "bytes": 7688,
+            "sha256": "e98708311bd5af0d1618d5d655ed24b25678f543b1dafc8dcca4833f2f12e1c1"
+          },
+          {
+            "path": "scripts/release-workflow-permissions.test.mjs",
+            "source": "git-blob",
+            "commit": "3f6f1e0775173ab40db2066aae6b9b017260f18d",
+            "objectFormat": "sha1",
+            "objectId": "907df2c51a16465f681ac274e773068a263fd697",
+            "bytes": 2143,
+            "sha256": "3c88de0038302ba1bdbf1861e22f3eb733f82a1d56920dccf5df8ecbf2c8d694"
+          }
+        ],
+        "checks": [
+          "integration HEAD exactly equals approved remote source branch",
+          "workflow-level contents write mutation rejected",
+          "independent full npm test passed"
+        ],
+        "nextAuthorizedLanes": [
+          "M"
+        ],
+        "chainDisposition": "handoff-required",
+        "hash": "303c31302c98354fb140040658d3a4d5faf629976daccfdeb50e5836f0d78c67"
+      },
+      "uncertainty": null,
+      "quarantine": null
+    },
+    {
+      "id": "M-0010",
+      "lane": "M",
+      "role": "supervisor",
+      "objective": "Verify integration identities, receipts, exact source scope, current remote ancestry, and merge authorization",
+      "assignee": "supervisor-release-integration-16",
+      "authorizedBy": "general-orchestrator",
+      "status": "completed",
+      "chainId": "E-0010",
+      "predecessorTicketId": "T-0010",
+      "predecessorReceiptHash": "303c31302c98354fb140040658d3a4d5faf629976daccfdeb50e5836f0d78c67",
+      "successorTicketId": "W-0010",
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T06:57:53.272Z",
+      "acceptedAt": "2026-08-04T06:58:00.443Z",
+      "startedAt": "2026-08-04T06:58:06.426Z",
+      "completedAt": "2026-08-04T06:58:42.047Z",
+      "launchEvidence": "Supervisor independently rechecking current origin/main, exact approved source hash, receipts, scope, and non-force fast-forward conditions",
+      "receipt": {
+        "ticketId": "M-0010",
+        "lane": "M",
+        "role": "supervisor",
+        "actor": "supervisor-release-integration-16",
+        "objective": "Verify integration identities, receipts, exact source scope, current remote ancestry, and merge authorization",
+        "outcome": "blocked",
+        "summary": "Integration approval withheld because origin/main advanced from 38cff039 to ca319eb0 during review; old-base fast-forward is no longer authorized.",
+        "softwareVersion": "3f6f1e0775173ab40db2066aae6b9b017260f18d",
+        "predecessorTicketId": "T-0010",
+        "predecessorReceiptHash": "303c31302c98354fb140040658d3a4d5faf629976daccfdeb50e5836f0d78c67",
+        "launchEvidence": "Supervisor independently rechecking current origin/main, exact approved source hash, receipts, scope, and non-force fast-forward conditions",
+        "startedAt": "2026-08-04T06:58:06.426Z",
+        "completedAt": "2026-08-04T06:58:42.047Z",
+        "artifacts": [],
+        "checks": [
+          "origin/main changed during review",
+          "no merge or push to main attempted"
+        ],
+        "nextAuthorizedLanes": [
+          "W"
+        ],
+        "chainDisposition": "handoff-required",
+        "hash": "0b25b2c5745f56327ed35e0586d2e3ad19c18b3449c8561acf744d5d51142b3c"
+      },
+      "uncertainty": null,
+      "quarantine": null
+    },
+    {
+      "id": "W-0010",
+      "lane": "W",
+      "role": "watcher",
+      "objective": "Close obsolete-base integration custody and authorize a fresh builder on current origin/main",
+      "assignee": "watcher-release-integration-17",
+      "authorizedBy": "general-orchestrator",
+      "status": "completed",
+      "chainId": "E-0010",
+      "predecessorTicketId": "M-0010",
+      "predecessorReceiptHash": "0b25b2c5745f56327ed35e0586d2e3ad19c18b3449c8561acf744d5d51142b3c",
+      "successorTicketId": null,
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T06:58:47.539Z",
+      "acceptedAt": "2026-08-04T06:58:55.031Z",
+      "startedAt": "2026-08-04T06:59:02.491Z",
+      "completedAt": "2026-08-04T06:59:14.007Z",
+      "launchEvidence": "Watcher confirmed old-base integration is obsolete after origin/main advanced; no main mutation occurred",
+      "receipt": {
+        "ticketId": "W-0010",
+        "lane": "W",
+        "role": "watcher",
+        "actor": "watcher-release-integration-17",
+        "objective": "Close obsolete-base integration custody and authorize a fresh builder on current origin/main",
+        "outcome": "pass",
+        "summary": "Closed obsolete-base integration chain without merging; fresh work must restart from origin/main ca319eb0 under a new Builder identity.",
+        "softwareVersion": "3f6f1e0775173ab40db2066aae6b9b017260f18d",
+        "predecessorTicketId": "M-0010",
+        "predecessorReceiptHash": "0b25b2c5745f56327ed35e0586d2e3ad19c18b3449c8561acf744d5d51142b3c",
+        "launchEvidence": "Watcher confirmed old-base integration is obsolete after origin/main advanced; no main mutation occurred",
+        "startedAt": "2026-08-04T06:59:02.491Z",
+        "completedAt": "2026-08-04T06:59:14.007Z",
+        "artifacts": [],
+        "checks": [
+          "old-base merge blocked before side effect",
+          "fresh builder required on current origin/main"
+        ],
+        "nextAuthorizedLanes": [],
+        "chainDisposition": "closed",
+        "hash": "c1310d962f900a94315b08b4e15d47ebc457d767154ecd1dee64e04035407985"
+      },
+      "uncertainty": null,
+      "quarantine": null
     }
   ],
   "events": [
@@ -4113,6 +4340,218 @@
         "softwareVersion": "ede4d06fe3c6252521d6462c5f044dcb5907a28c"
       },
       "hash": "c1f34189d10de26f90c0c6d30cfab6d90f8ccb995361669fa49969a59f7eadb0"
+    },
+    {
+      "eventId": "EVT-000151",
+      "type": "ticket.issued",
+      "ticketId": "E-0010",
+      "actor": "general-orchestrator",
+      "at": "2026-08-04T06:55:11.305Z",
+      "previousHash": "c1f34189d10de26f90c0c6d30cfab6d90f8ccb995361669fa49969a59f7eadb0",
+      "payload": {
+        "lane": "E",
+        "role": "builder",
+        "assignee": "builder-release-integration-14",
+        "objective": "Integrate exact independently approved release permission regression guard onto current origin/main without source drift"
+      },
+      "hash": "3fb796c395255c5d8f56bdc9ecf862342d377d6d1105ea1e9d25ed2f2488823d"
+    },
+    {
+      "eventId": "EVT-000152",
+      "type": "ticket.accepted",
+      "ticketId": "E-0010",
+      "actor": "builder-release-integration-14",
+      "at": "2026-08-04T06:55:22.371Z",
+      "previousHash": "3fb796c395255c5d8f56bdc9ecf862342d377d6d1105ea1e9d25ed2f2488823d",
+      "payload": {
+        "role": "builder"
+      },
+      "hash": "47db69ca70b13ee3be590f57952396298ecc4888dee9b8226c86cf96e740fda9"
+    },
+    {
+      "eventId": "EVT-000153",
+      "type": "ticket.started",
+      "ticketId": "E-0010",
+      "actor": "builder-release-integration-14",
+      "at": "2026-08-04T06:55:30.416Z",
+      "previousHash": "47db69ca70b13ee3be590f57952396298ecc4888dee9b8226c86cf96e740fda9",
+      "payload": {
+        "launchEvidence": "Authenticated Shell active in isolated integration worktree at exact approved source 3f6f1e0775173ab40db2066aae6b9b017260f18d and current origin/main 38cff0391185ac3bda7e949157fdc180be06e6e0"
+      },
+      "hash": "9eb941b36a0880a1a0e8b980e48391f08bde6f8a5e80595a34b442329d4190ff"
+    },
+    {
+      "eventId": "EVT-000154",
+      "type": "ticket.completed",
+      "ticketId": "E-0010",
+      "actor": "builder-release-integration-14",
+      "at": "2026-08-04T06:56:31.685Z",
+      "previousHash": "9eb941b36a0880a1a0e8b980e48391f08bde6f8a5e80595a34b442329d4190ff",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "b044a8d0114a9880c7e901c33b563d393a92ace6ccb14eb17522bd1f48e39677",
+        "softwareVersion": "3f6f1e0775173ab40db2066aae6b9b017260f18d"
+      },
+      "hash": "3d1da81372bb9f40bbd230608d169c837eece38b47b4d758b11aff34838566ed"
+    },
+    {
+      "eventId": "EVT-000155",
+      "type": "custody.handed-off",
+      "ticketId": "E-0010",
+      "actor": "general-orchestrator",
+      "at": "2026-08-04T06:56:48.975Z",
+      "previousHash": "3d1da81372bb9f40bbd230608d169c837eece38b47b4d758b11aff34838566ed",
+      "payload": {
+        "successorTicketId": "T-0010",
+        "successorLane": "T",
+        "predecessorReceiptHash": "b044a8d0114a9880c7e901c33b563d393a92ace6ccb14eb17522bd1f48e39677",
+        "assignee": "tester-release-integration-15"
+      },
+      "hash": "df886883ffa0833fd365663b0e252bac4acdfb571f779bb20db2aadf9d196833"
+    },
+    {
+      "eventId": "EVT-000156",
+      "type": "ticket.accepted",
+      "ticketId": "T-0010",
+      "actor": "tester-release-integration-15",
+      "at": "2026-08-04T06:56:55.165Z",
+      "previousHash": "df886883ffa0833fd365663b0e252bac4acdfb571f779bb20db2aadf9d196833",
+      "payload": {
+        "role": "tester"
+      },
+      "hash": "cd13b1929d092af84e5b4f133a9cfc3b779f3036123c0c8491ac75be64ba22c8"
+    },
+    {
+      "eventId": "EVT-000157",
+      "type": "ticket.started",
+      "ticketId": "T-0010",
+      "actor": "tester-release-integration-15",
+      "at": "2026-08-04T06:57:00.321Z",
+      "previousHash": "cd13b1929d092af84e5b4f133a9cfc3b779f3036123c0c8491ac75be64ba22c8",
+      "payload": {
+        "launchEvidence": "Independent exact-commit review of 3f6f1e0775173ab40db2066aae6b9b017260f18d in isolated integration worktree; no source edits"
+      },
+      "hash": "6f6a7329f9cf6f8339aae2a391ea2f5ae705151bfad72ca55a291277ca4c2f15"
+    },
+    {
+      "eventId": "EVT-000158",
+      "type": "ticket.completed",
+      "ticketId": "T-0010",
+      "actor": "tester-release-integration-15",
+      "at": "2026-08-04T06:57:43.656Z",
+      "previousHash": "6f6a7329f9cf6f8339aae2a391ea2f5ae705151bfad72ca55a291277ca4c2f15",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "303c31302c98354fb140040658d3a4d5faf629976daccfdeb50e5836f0d78c67",
+        "softwareVersion": "3f6f1e0775173ab40db2066aae6b9b017260f18d"
+      },
+      "hash": "08e072cd4f47e855f5c45013e18e8fc65343b297389c0a2f1279658dd1bf63cb"
+    },
+    {
+      "eventId": "EVT-000159",
+      "type": "custody.handed-off",
+      "ticketId": "T-0010",
+      "actor": "general-orchestrator",
+      "at": "2026-08-04T06:57:53.272Z",
+      "previousHash": "08e072cd4f47e855f5c45013e18e8fc65343b297389c0a2f1279658dd1bf63cb",
+      "payload": {
+        "successorTicketId": "M-0010",
+        "successorLane": "M",
+        "predecessorReceiptHash": "303c31302c98354fb140040658d3a4d5faf629976daccfdeb50e5836f0d78c67",
+        "assignee": "supervisor-release-integration-16"
+      },
+      "hash": "0a0f0f7b6a827d453094eb203a314163ed83b3e9ae734f1315d73961f98bf1ae"
+    },
+    {
+      "eventId": "EVT-000160",
+      "type": "ticket.accepted",
+      "ticketId": "M-0010",
+      "actor": "supervisor-release-integration-16",
+      "at": "2026-08-04T06:58:00.443Z",
+      "previousHash": "0a0f0f7b6a827d453094eb203a314163ed83b3e9ae734f1315d73961f98bf1ae",
+      "payload": {
+        "role": "supervisor"
+      },
+      "hash": "b666c517aab1e165150464dceb51d1a97ec7583cc3429514b6e49e3ee552868a"
+    },
+    {
+      "eventId": "EVT-000161",
+      "type": "ticket.started",
+      "ticketId": "M-0010",
+      "actor": "supervisor-release-integration-16",
+      "at": "2026-08-04T06:58:06.426Z",
+      "previousHash": "b666c517aab1e165150464dceb51d1a97ec7583cc3429514b6e49e3ee552868a",
+      "payload": {
+        "launchEvidence": "Supervisor independently rechecking current origin/main, exact approved source hash, receipts, scope, and non-force fast-forward conditions"
+      },
+      "hash": "45da63f524834f195d93495e5356afdc4e27be14c5df50120e52dbfc3f592b10"
+    },
+    {
+      "eventId": "EVT-000162",
+      "type": "ticket.completed",
+      "ticketId": "M-0010",
+      "actor": "supervisor-release-integration-16",
+      "at": "2026-08-04T06:58:42.047Z",
+      "previousHash": "45da63f524834f195d93495e5356afdc4e27be14c5df50120e52dbfc3f592b10",
+      "payload": {
+        "outcome": "blocked",
+        "receiptHash": "0b25b2c5745f56327ed35e0586d2e3ad19c18b3449c8561acf744d5d51142b3c",
+        "softwareVersion": "3f6f1e0775173ab40db2066aae6b9b017260f18d"
+      },
+      "hash": "a902e2dffb6839d0d88de0e4a8fdca69d663af2c5bee9ff0020991edab294364"
+    },
+    {
+      "eventId": "EVT-000163",
+      "type": "custody.handed-off",
+      "ticketId": "M-0010",
+      "actor": "general-orchestrator",
+      "at": "2026-08-04T06:58:47.539Z",
+      "previousHash": "a902e2dffb6839d0d88de0e4a8fdca69d663af2c5bee9ff0020991edab294364",
+      "payload": {
+        "successorTicketId": "W-0010",
+        "successorLane": "W",
+        "predecessorReceiptHash": "0b25b2c5745f56327ed35e0586d2e3ad19c18b3449c8561acf744d5d51142b3c",
+        "assignee": "watcher-release-integration-17"
+      },
+      "hash": "6c5d5bb0eeb63870b6502b386e8339bd11ae82c25ab2365160d57944a662a386"
+    },
+    {
+      "eventId": "EVT-000164",
+      "type": "ticket.accepted",
+      "ticketId": "W-0010",
+      "actor": "watcher-release-integration-17",
+      "at": "2026-08-04T06:58:55.031Z",
+      "previousHash": "6c5d5bb0eeb63870b6502b386e8339bd11ae82c25ab2365160d57944a662a386",
+      "payload": {
+        "role": "watcher"
+      },
+      "hash": "1d2a5ab44298ea1c8a45b93a8f625fb47d08d57c64a079b40d03a8e76f859328"
+    },
+    {
+      "eventId": "EVT-000165",
+      "type": "ticket.started",
+      "ticketId": "W-0010",
+      "actor": "watcher-release-integration-17",
+      "at": "2026-08-04T06:59:02.491Z",
+      "previousHash": "1d2a5ab44298ea1c8a45b93a8f625fb47d08d57c64a079b40d03a8e76f859328",
+      "payload": {
+        "launchEvidence": "Watcher confirmed old-base integration is obsolete after origin/main advanced; no main mutation occurred"
+      },
+      "hash": "3b846c2b79e1e33a2c0def961b0dc45fd241bef49eaff2e48ba2f6c28525be70"
+    },
+    {
+      "eventId": "EVT-000166",
+      "type": "ticket.completed",
+      "ticketId": "W-0010",
+      "actor": "watcher-release-integration-17",
+      "at": "2026-08-04T06:59:14.007Z",
+      "previousHash": "3b846c2b79e1e33a2c0def961b0dc45fd241bef49eaff2e48ba2f6c28525be70",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "c1310d962f900a94315b08b4e15d47ebc457d767154ecd1dee64e04035407985",
+        "softwareVersion": "3f6f1e0775173ab40db2066aae6b9b017260f18d"
+      },
+      "hash": "225245f685f0674394ee7d30b483f6c38740450ce6477a9994e41c0a4d68019f"
     }
   ]
 }
