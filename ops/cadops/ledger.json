@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "project": "GameDeck",
   "createdAt": "2026-08-03T23:44:00.000Z",
-  "updatedAt": "2026-08-04T02:38:44.748Z",
+  "updatedAt": "2026-08-04T02:41:45.030Z",
   "policy": {
     "nonReplay": true,
     "visibleLaunchRequired": true,
@@ -41,10 +41,10 @@
   "counters": {
     "E": 8,
     "T": 8,
-    "M": 7,
-    "W": 7,
+    "M": 8,
+    "W": 8,
     "recovery": 0,
-    "event": 118
+    "event": 129
   },
   "tickets": [
     {
@@ -1694,19 +1694,136 @@
       "objective": "Independently retest corrected commit 08a950692cfb06d541359fb7047aa2bb63af2db9, reproduce the former already-absent predecessor defect, verify ledger-bound close receipts, and rerun all ChatChain and GameDeck gates.",
       "assignee": "independent-cadops-chatchain-reviewer-02",
       "authorizedBy": "general-orchestrator",
-      "status": "prepared",
+      "status": "completed",
       "chainId": "E-0007",
       "predecessorTicketId": "E-0008",
       "predecessorReceiptHash": "b477eeaa54666b826e4896871f9f57da2971e72f1233e7eadbdf3d5750ceba1e",
-      "successorTicketId": null,
+      "successorTicketId": "M-0008",
       "recoveryForTicketId": null,
       "recoveryTicketId": null,
       "createdAt": "2026-08-04T02:38:44.748Z",
-      "acceptedAt": null,
-      "startedAt": null,
-      "completedAt": null,
-      "launchEvidence": null,
-      "receipt": null,
+      "acceptedAt": "2026-08-04T02:39:59.982Z",
+      "startedAt": "2026-08-04T02:40:09.727Z",
+      "completedAt": "2026-08-04T02:40:16.923Z",
+      "launchEvidence": "Detached clean worktree gamedeck-cadops-workflow-v2-review2 at 6cdacd1; full gate, corrected former-failure probe, and canonical Git-blob receipt verification executed.",
+      "receipt": {
+        "ticketId": "T-0008",
+        "lane": "T",
+        "role": "tester",
+        "actor": "independent-cadops-chatchain-reviewer-02",
+        "objective": "Independently retest corrected commit 08a950692cfb06d541359fb7047aa2bb63af2db9, reproduce the former already-absent predecessor defect, verify ledger-bound close receipts, and rerun all ChatChain and GameDeck gates.",
+        "outcome": "pass",
+        "summary": "Corrected ChatChain workflow passes independent retest. The former already-absent predecessor defect is fixed, close receipts are ledger-bound, and all full repository gates pass.",
+        "softwareVersion": "6cdacd1",
+        "predecessorTicketId": "E-0008",
+        "predecessorReceiptHash": "b477eeaa54666b826e4896871f9f57da2971e72f1233e7eadbdf3d5750ceba1e",
+        "launchEvidence": "Detached clean worktree gamedeck-cadops-workflow-v2-review2 at 6cdacd1; full gate, corrected former-failure probe, and canonical Git-blob receipt verification executed.",
+        "startedAt": "2026-08-04T02:40:09.727Z",
+        "completedAt": "2026-08-04T02:40:16.923Z",
+        "artifacts": [],
+        "checks": [
+          "Detached full npm test passed: room registry 12 scenarios, browser lifecycle 28 scenarios, and all GameDeck gates.",
+          "Former failure now performs successor activation and readiness probe and returns stable predecessor identity without sending a close.",
+          "All E-0008 artifact Git blobs match receipt byte counts, object IDs, and SHA-256 digests."
+        ],
+        "nextAuthorizedLanes": [
+          "M"
+        ],
+        "chainDisposition": "handoff-required",
+        "hash": "af425afa48816be734e5c763b0e9bb4a2865155fe46209015807eb096650d276"
+      },
+      "uncertainty": null,
+      "quarantine": null
+    },
+    {
+      "id": "M-0008",
+      "lane": "M",
+      "role": "supervisor",
+      "objective": "Verify corrected implementation identity, original rejection closure, independent retest evidence, ledger-bound receipt semantics, and integration readiness.",
+      "assignee": "cadops-chatchain-supervisor-02",
+      "authorizedBy": "general-orchestrator",
+      "status": "completed",
+      "chainId": "E-0007",
+      "predecessorTicketId": "T-0008",
+      "predecessorReceiptHash": "af425afa48816be734e5c763b0e9bb4a2865155fe46209015807eb096650d276",
+      "successorTicketId": "W-0008",
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T02:40:26.270Z",
+      "acceptedAt": "2026-08-04T02:40:36.710Z",
+      "startedAt": "2026-08-04T02:40:44.175Z",
+      "completedAt": "2026-08-04T02:40:55.032Z",
+      "launchEvidence": "Supervisor reviewed rejected T-0007 evidence, corrective E-0008 receipt, passing T-0008 detached retest, canonical artifact hashes, and exact branch ancestry.",
+      "receipt": {
+        "ticketId": "M-0008",
+        "lane": "M",
+        "role": "supervisor",
+        "actor": "cadops-chatchain-supervisor-02",
+        "objective": "Verify corrected implementation identity, original rejection closure, independent retest evidence, ledger-bound receipt semantics, and integration readiness.",
+        "outcome": "pass",
+        "summary": "Corrective sequence is exact, independently verified, and resolves the immutable T-0007 rejection. Room close receipts are bound to authorizing ledger evidence and integration is ready for Watcher closure.",
+        "softwareVersion": "6cdacd1",
+        "predecessorTicketId": "T-0008",
+        "predecessorReceiptHash": "af425afa48816be734e5c763b0e9bb4a2865155fe46209015807eb096650d276",
+        "launchEvidence": "Supervisor reviewed rejected T-0007 evidence, corrective E-0008 receipt, passing T-0008 detached retest, canonical artifact hashes, and exact branch ancestry.",
+        "startedAt": "2026-08-04T02:40:44.175Z",
+        "completedAt": "2026-08-04T02:40:55.032Z",
+        "artifacts": [],
+        "checks": [
+          "Branch is linear from main 369fbd9 through rejected implementation, immutable rejection custody, corrective commit, and passing retest handoff.",
+          "No GameDeck player runtime, UI, network, marketing, or external publication behavior changed."
+        ],
+        "nextAuthorizedLanes": [
+          "W"
+        ],
+        "chainDisposition": "handoff-required",
+        "hash": "4df1e90e8bf69e501f44395f01dec766a59693c84522f27ccb6df46c3f194082"
+      },
+      "uncertainty": null,
+      "quarantine": null
+    },
+    {
+      "id": "W-0008",
+      "lane": "W",
+      "role": "watcher",
+      "objective": "Verify complete rejection-to-correction continuity, confirm no replay or unresolved risk, close the E-0007 ChatChain workflow upgrade, and authorize exact integration to main.",
+      "assignee": "cadops-chatchain-watcher-02",
+      "authorizedBy": "general-orchestrator",
+      "status": "completed",
+      "chainId": "E-0007",
+      "predecessorTicketId": "M-0008",
+      "predecessorReceiptHash": "4df1e90e8bf69e501f44395f01dec766a59693c84522f27ccb6df46c3f194082",
+      "successorTicketId": null,
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T02:41:04.536Z",
+      "acceptedAt": "2026-08-04T02:41:16.542Z",
+      "startedAt": "2026-08-04T02:41:26.804Z",
+      "completedAt": "2026-08-04T02:41:45.030Z",
+      "launchEvidence": "Watcher verified E-0007 through W-0007 rejection chain and corrective E-0008 through M-0008 passing chain, with immutable receipts and no replay.",
+      "receipt": {
+        "ticketId": "W-0008",
+        "lane": "W",
+        "role": "watcher",
+        "actor": "cadops-chatchain-watcher-02",
+        "objective": "Verify complete rejection-to-correction continuity, confirm no replay or unresolved risk, close the E-0007 ChatChain workflow upgrade, and authorize exact integration to main.",
+        "outcome": "pass",
+        "summary": "CADOps ChatChain workflow upgrade is complete. The independent rejection was corrected under a new identity, retested, supervised, and closed with no replay or unresolved critical risk.",
+        "softwareVersion": "6cdacd1",
+        "predecessorTicketId": "M-0008",
+        "predecessorReceiptHash": "4df1e90e8bf69e501f44395f01dec766a59693c84522f27ccb6df46c3f194082",
+        "launchEvidence": "Watcher verified E-0007 through W-0007 rejection chain and corrective E-0008 through M-0008 passing chain, with immutable receipts and no replay.",
+        "startedAt": "2026-08-04T02:41:26.804Z",
+        "completedAt": "2026-08-04T02:41:45.030Z",
+        "artifacts": [],
+        "checks": [
+          "All rejection and corrective receipt links and event hashes validate.",
+          "Watcher reports no stale custody, missing successor, uncertainty, duplicate handoff, or unresolved recovery."
+        ],
+        "nextAuthorizedLanes": [],
+        "chainDisposition": "closed",
+        "hash": "b5e5f3abe7a9a0729018ee8b7d0f2cda7324249b4639421865eeda2745fc4459"
+      },
       "uncertainty": null,
       "quarantine": null
     }
@@ -3276,6 +3393,150 @@
         "assignee": "independent-cadops-chatchain-reviewer-02"
       },
       "hash": "4d5ec3c45d743d53c35863f092afba976e0d00c85eff0736e85f3b211013f00d"
+    },
+    {
+      "eventId": "EVT-000119",
+      "type": "ticket.accepted",
+      "ticketId": "T-0008",
+      "actor": "independent-cadops-chatchain-reviewer-02",
+      "at": "2026-08-04T02:39:59.982Z",
+      "previousHash": "4d5ec3c45d743d53c35863f092afba976e0d00c85eff0736e85f3b211013f00d",
+      "payload": {
+        "role": "tester"
+      },
+      "hash": "edd9af6239600a69f4e587c6ede9f85ff60dea70c4796022ada3afae217535d5"
+    },
+    {
+      "eventId": "EVT-000120",
+      "type": "ticket.started",
+      "ticketId": "T-0008",
+      "actor": "independent-cadops-chatchain-reviewer-02",
+      "at": "2026-08-04T02:40:09.727Z",
+      "previousHash": "edd9af6239600a69f4e587c6ede9f85ff60dea70c4796022ada3afae217535d5",
+      "payload": {
+        "launchEvidence": "Detached clean worktree gamedeck-cadops-workflow-v2-review2 at 6cdacd1; full gate, corrected former-failure probe, and canonical Git-blob receipt verification executed."
+      },
+      "hash": "dc8be4fa628783f41c31dcccb1ff0cafcab720af7948f1cca560ee988b2043f0"
+    },
+    {
+      "eventId": "EVT-000121",
+      "type": "ticket.completed",
+      "ticketId": "T-0008",
+      "actor": "independent-cadops-chatchain-reviewer-02",
+      "at": "2026-08-04T02:40:16.923Z",
+      "previousHash": "dc8be4fa628783f41c31dcccb1ff0cafcab720af7948f1cca560ee988b2043f0",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "af425afa48816be734e5c763b0e9bb4a2865155fe46209015807eb096650d276",
+        "softwareVersion": "6cdacd1"
+      },
+      "hash": "4d68d274df25eab9c4cb0cf8d4e9d939e0683bfa8e6d6737d09e73279532c06a"
+    },
+    {
+      "eventId": "EVT-000122",
+      "type": "custody.handed-off",
+      "ticketId": "T-0008",
+      "actor": "general-orchestrator",
+      "at": "2026-08-04T02:40:26.270Z",
+      "previousHash": "4d68d274df25eab9c4cb0cf8d4e9d939e0683bfa8e6d6737d09e73279532c06a",
+      "payload": {
+        "successorTicketId": "M-0008",
+        "successorLane": "M",
+        "predecessorReceiptHash": "af425afa48816be734e5c763b0e9bb4a2865155fe46209015807eb096650d276",
+        "assignee": "cadops-chatchain-supervisor-02"
+      },
+      "hash": "a6352c9398843221e3226ad7b2c39a209b2b69d70da60a19e12f59b58462fece"
+    },
+    {
+      "eventId": "EVT-000123",
+      "type": "ticket.accepted",
+      "ticketId": "M-0008",
+      "actor": "cadops-chatchain-supervisor-02",
+      "at": "2026-08-04T02:40:36.710Z",
+      "previousHash": "a6352c9398843221e3226ad7b2c39a209b2b69d70da60a19e12f59b58462fece",
+      "payload": {
+        "role": "supervisor"
+      },
+      "hash": "17454f4810c9fbd0018e7a89a6fd45d6d7fa3b8582d5fa458f56880b8d8a64b5"
+    },
+    {
+      "eventId": "EVT-000124",
+      "type": "ticket.started",
+      "ticketId": "M-0008",
+      "actor": "cadops-chatchain-supervisor-02",
+      "at": "2026-08-04T02:40:44.175Z",
+      "previousHash": "17454f4810c9fbd0018e7a89a6fd45d6d7fa3b8582d5fa458f56880b8d8a64b5",
+      "payload": {
+        "launchEvidence": "Supervisor reviewed rejected T-0007 evidence, corrective E-0008 receipt, passing T-0008 detached retest, canonical artifact hashes, and exact branch ancestry."
+      },
+      "hash": "e3089bdf05282fcb3b769de5da7676cf49fc65a51446f342368ed9709fe42d61"
+    },
+    {
+      "eventId": "EVT-000125",
+      "type": "ticket.completed",
+      "ticketId": "M-0008",
+      "actor": "cadops-chatchain-supervisor-02",
+      "at": "2026-08-04T02:40:55.032Z",
+      "previousHash": "e3089bdf05282fcb3b769de5da7676cf49fc65a51446f342368ed9709fe42d61",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "4df1e90e8bf69e501f44395f01dec766a59693c84522f27ccb6df46c3f194082",
+        "softwareVersion": "6cdacd1"
+      },
+      "hash": "26aed9e8aa81227ea0472742d9003eb1e7d8ca968234505da7d5c0af59d771a2"
+    },
+    {
+      "eventId": "EVT-000126",
+      "type": "custody.handed-off",
+      "ticketId": "M-0008",
+      "actor": "general-orchestrator",
+      "at": "2026-08-04T02:41:04.536Z",
+      "previousHash": "26aed9e8aa81227ea0472742d9003eb1e7d8ca968234505da7d5c0af59d771a2",
+      "payload": {
+        "successorTicketId": "W-0008",
+        "successorLane": "W",
+        "predecessorReceiptHash": "4df1e90e8bf69e501f44395f01dec766a59693c84522f27ccb6df46c3f194082",
+        "assignee": "cadops-chatchain-watcher-02"
+      },
+      "hash": "88181629a6ca9ba85101053c6a739848ae645b1eb2cd19dd989fb79b5a2cbcaf"
+    },
+    {
+      "eventId": "EVT-000127",
+      "type": "ticket.accepted",
+      "ticketId": "W-0008",
+      "actor": "cadops-chatchain-watcher-02",
+      "at": "2026-08-04T02:41:16.542Z",
+      "previousHash": "88181629a6ca9ba85101053c6a739848ae645b1eb2cd19dd989fb79b5a2cbcaf",
+      "payload": {
+        "role": "watcher"
+      },
+      "hash": "78cc8bd15642170e21b6b39dbe327cca5abc86c4175c983dc554562212439eb5"
+    },
+    {
+      "eventId": "EVT-000128",
+      "type": "ticket.started",
+      "ticketId": "W-0008",
+      "actor": "cadops-chatchain-watcher-02",
+      "at": "2026-08-04T02:41:26.804Z",
+      "previousHash": "78cc8bd15642170e21b6b39dbe327cca5abc86c4175c983dc554562212439eb5",
+      "payload": {
+        "launchEvidence": "Watcher verified E-0007 through W-0007 rejection chain and corrective E-0008 through M-0008 passing chain, with immutable receipts and no replay."
+      },
+      "hash": "d9a12a2f718fa0ec455c7767f9f50df2f9c91de1d20dc4181348f74729331323"
+    },
+    {
+      "eventId": "EVT-000129",
+      "type": "ticket.completed",
+      "ticketId": "W-0008",
+      "actor": "cadops-chatchain-watcher-02",
+      "at": "2026-08-04T02:41:45.030Z",
+      "previousHash": "d9a12a2f718fa0ec455c7767f9f50df2f9c91de1d20dc4181348f74729331323",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "b5e5f3abe7a9a0729018ee8b7d0f2cda7324249b4639421865eeda2745fc4459",
+        "softwareVersion": "6cdacd1"
+      },
+      "hash": "3fc6423e2420e967056f03fdadd3461e94a757ccee6f4610f8cb7bd5b69004db"
     }
   ]
 }
