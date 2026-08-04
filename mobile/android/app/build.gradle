@@ -22,6 +22,10 @@ tasks.register('prepareSharedRenderer') {
         File indexFile = new File(sharedRendererAssets, 'desktop/index.html')
         String index = indexFile.getText('UTF-8')
         index = index.replace(
+            "img-src 'self' data: file:; connect-src 'self' http:;",
+            "img-src 'self' data: file: content: blob: https:; connect-src 'self' http: https:;"
+        )
+        index = index.replace(
             '<link rel="stylesheet" href="styles.css">',
             '<link rel="stylesheet" href="styles.css">\n  <link rel="stylesheet" href="android-overrides.css">'
         )
@@ -41,8 +45,8 @@ android {
         applicationId 'io.gamedeck.mobile.desktoppreview'
         minSdk 26
         targetSdk 36
-        versionCode 4
-        versionName '0.3.0-parity-preview'
+        versionCode 5
+        versionName '0.3.1-parity-preview'
     }
 
     sourceSets {
