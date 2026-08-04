@@ -38,7 +38,7 @@ android {
     compileSdk 36
 
     defaultConfig {
-        applicationId 'io.gamedeck.mobile.preview'
+        applicationId 'io.gamedeck.mobile.desktoppreview'
         minSdk 26
         targetSdk 36
         versionCode 4
