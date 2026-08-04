@@ -1,0 +1,63 @@
+name: Android
+
+on:
+  pull_request:
+    paths:
+      - "mobile/android/**"
+      - ".github/workflows/android.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build debug APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: mobile/android
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v7
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: "9.6.1"
+
+      - name: Build debug APK
+        run: gradle :app:assembleDebug --no-daemon --stacktrace
+
+      - name: Inspect and checksum APK
+        run: |
+          APK=app/build/outputs/apk/debug/app-debug.apk
+          test -f "$APK"
+          sha256sum "$APK" | tee app/build/outputs/apk/debug/SHA256SUMS-android-debug.txt
+          unzip -l "$APK" > app/build/outputs/apk/debug/APK-CONTENTS.txt
+          "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump badging "$APK" > app/build/outputs/apk/debug/APK-BADGING.txt
+
+      - name: Upload Android debug artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: gamedeck-android-debug-${{ github.sha }}
+          path: |
+            mobile/android/app/build/outputs/apk/debug/app-debug.apk
+            mobile/android/app/build/outputs/apk/debug/SHA256SUMS-android-debug.txt
+            mobile/android/app/build/outputs/apk/debug/APK-CONTENTS.txt
+            mobile/android/app/build/outputs/apk/debug/APK-BADGING.txt
+          if-no-files-found: error
+          retention-days: 14
