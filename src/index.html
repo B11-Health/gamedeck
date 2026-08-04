@@ -605,6 +605,50 @@
     </div>
   </section>
 
+  <section class="play-surface hidden mode-docked" id="playSurface" aria-label="Integrated game player" aria-live="polite">
+    <div class="play-ambient" id="playAmbient" aria-hidden="true"></div>
+    <header class="play-header">
+      <div class="play-brand"><span><img src="../assets/branding/gamedeck-mark-source.png" alt=""></span><div><small>GAMEDECK PLAY</small><b id="playTitle">Preparing game</b></div></div>
+      <div class="play-session-copy"><span class="play-live-dot" aria-hidden="true"></span><span id="playStatus">Connecting the game window…</span></div>
+      <div class="play-actions" role="group" aria-label="Player presentation">
+        <button class="play-mode active" id="playDocked" type="button" data-play-mode="docked" aria-pressed="true" title="Play inside the GameDeck window">Docked</button>
+        <button class="play-mode" id="playFullscreen" type="button" data-play-mode="fullscreen" aria-pressed="false" title="Fill the display with GameDeck Play">Fullscreen</button>
+        <button class="play-mode" id="playPopout" type="button" data-play-mode="popout" aria-pressed="false" title="Use the native engine window">Pop out</button>
+        <button class="play-close" id="playClose" type="button" title="Close game" aria-label="Close game">×</button>
+      </div>
+    </header>
+    <div class="play-stage" id="playStage">
+      <video id="playVideo" autoplay playsinline aria-label="Live game video"></video>
+      <div class="play-loading" id="playLoading">
+        <div class="play-loading-mark"><img src="../assets/branding/gamedeck-mark-source.png" alt=""></div>
+        <span class="play-loading-ring" aria-hidden="true"></span>
+        <small>GAMEDECK PLAY</small>
+        <b id="playLoadingTitle">Starting your game</b>
+        <p id="playLoadingMessage">GameDeck is configuring the engine and connecting its live window.</p>
+      </div>
+      <div class="play-capture-error hidden" id="playCaptureError">
+        <b>Integrated video needs attention</b>
+        <span id="playCaptureErrorMessage">The game is still running. Pop out to continue in its native window.</span>
+        <div class="play-capture-actions"><button type="button" id="playCaptureRetry">Retry integrated video</button><button type="button" id="playCapturePopout">Continue in Pop out</button></div>
+      </div>
+    </div>
+    <footer class="play-footer">
+      <span><i aria-hidden="true"></i><b>Controller input is sent directly to the game.</b></span>
+      <span id="playInputHint">Audio comes directly from the game engine with no duplicate capture. Keyboard players can use Pop out; press F10 to switch.</span>
+    </footer>
+  </section>
+
+  <section class="launch-curtain hidden" id="launchCurtain" aria-live="polite" aria-label="Game loading">
+    <div class="launch-curtain-glow" aria-hidden="true"></div>
+    <div class="launch-curtain-card">
+      <div class="launch-curtain-mark"><img src="../assets/branding/gamedeck-mark-source.png" alt=""></div>
+      <small>GAMEDECK</small>
+      <b id="launchCurtainTitle">Starting game</b>
+      <span id="launchCurtainMessage">Preparing a seamless play session…</span>
+      <div class="launch-curtain-track" aria-hidden="true"><i></i></div>
+    </div>
+  </section>
+
   <aside class="debug-console hidden" id="debugConsole" aria-label="GameDeck status center">
     <div class="debug-head">
       <div><span>SYSTEM STATUS</span><b>Status center</b></div>

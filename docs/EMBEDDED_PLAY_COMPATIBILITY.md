@@ -1,3 +1,83 @@
+# GameDeck Play Compatibility Matrix
+
+Status: Windows integration evidence for `feature/openbor-embedded-play`
+
+Compatibility is certified per exact engine/core, content, OS, controller, and presentation tuple. An untested tuple remains experimental.
+
+## Current route policy
+
+1. Prefer the managed GameDeck Libretro core when it exists, even when a standalone emulator is installed.
+2. Use the GameDeck Play surface with Docked, Fullscreen, and Pop-out presentation.
+3. Capture the owned game window as video only. The engine remains the single audio source.
+4. Preserve console display aspect and center the Docked viewport.
+5. Use a known standalone Windows engine as an experimental capture fallback when no managed core exists.
+6. Use external play when a safe source cannot be discovered or the platform does not expose one.
+
+## Windows evidence
+
+| System / route | Engine | Aspect | Result |
+|---|---|---:|---|
+| FinalBurn Neo | FBNeo 1.0.0.03 | 4:3 | Pass |
+| MAME | MAME Libretro 0.282 | 4:3 | Pass |
+| SNES / Satellaview | Snes9x 1.63 | 4:3 | Pass |
+| NES / FDS | Mesen 0.9.9 | 4:3 | Pass |
+| Nintendo 64 | Mupen64Plus-Next | 4:3 | Pass |
+| Game Boy / Color | SameBoy 1.0.2 | 10:9 | Pass |
+| Game Boy Advance | mGBA 0.11-dev | 3:2 | Pass |
+| Nintendo DS | melonDS DS 1.2.0 | 2:3 | Pass |
+| Genesis / Master System / Game Gear / Sega CD | Genesis Plus GX 1.7.4 | 4:3 | Pass |
+| Sega 32X | PicoDrive 2.05 | 4:3 | Pass |
+| PC Engine | Beetle PCE Fast 1.31 | 4:3 | Pass |
+| Sega Saturn | Beetle Saturn 1.29 | 4:3 | Pass |
+| Dreamcast | Flycast | 4:3 | Pass |
+| Atari 2600 | Stella 8.0-pre | 4:3 | Pass |
+| PlayStation | PCSX-ReARMed r25 | 4:3 | Pass |
+| PlayStation 2 | Play! 0.71 | 4:3 | Pass |
+| PSP | PPSSPP Libretro | 16:9 | Pass |
+| OpenBOR | OpenBOR 3.0 Build 6391 | 4:3 | Pass |
+
+Every pass required:
+
+- a retained owned process;
+- stable post-launch source discovery;
+- one live video track;
+- zero live captured-audio tracks;
+- no visible capture error;
+- exact Docked center delta of 0 px;
+- clean stop and process exit.
+
+FDS, Sega CD, and Satellaview were exercised separately to validate their firmware-dependent routes.
+
+## Presentation evidence
+
+- Fullscreen reserves no layout space for GameDeck controls.
+- The control bar is outside the viewport while idle and appears at the top edge on pointer movement.
+- Escape returns Fullscreen to Docked without ending the session.
+- Pop out restores the native game window.
+- F10 returns the same process to Docked and reacquires a video-only stream.
+- A second launch is rejected while the session is active.
+
+## Audio evidence
+
+The engine is the authoritative audio source in every mode. GameDeck requests `audio: false`, stops any unexpected audio track, and mutes the capture video element. This avoids echo and doubled volume while preserving normal engine audio.
+
+## Current unknowns
+
+- macOS capture and permission behavior;
+- Linux X11 capture and native audio;
+- Wayland safe window discovery (currently external-only);
+- Wii motion/pointer, light guns, touch, microphones, cameras, and other non-standard inputs;
+- standalone fallback tuples not exercised in the current library;
+- GameCube, Wii, and Wii U content, because no owned title for those shelves was installed in this QA profile.
+
+Unknown does not imply broken or verified.
+
+---
+
+# Historical design record — superseded by the implementation contract above
+
+The material below is retained for decision history. Statements about proposed phases, external-only routes, loopback audio, or implementation blockers are no longer current.
+
 # GameDeck Embedded Play Compatibility Certification Matrix
 
 Status: Phase 1 certification plan

@@ -40,7 +40,8 @@ GameDeck does **not** include ROMs, BIOS files, encryption keys, or commercial g
 - One-click installers with a bundled, verified RetroArch runtime and compatible core set; no separate emulator installer for supported systems
 - Validated multi-disc Saturn `.m3u` playlists that reject missing disc members before launch
 - Dedicated MAME and FinalBurn Neo catalog handling with pre-launch ROM-set health checks
-- First-class OpenBOR catalog discovery and direct `.pak` launching with portable engine detection and active-transfer launch protection
+- Unified GameDeck Play sessions across managed console cores and OpenBOR, with centered console-native aspect ratios, Docked / Fullscreen / Pop-out modes, top-edge fullscreen controls, native single-path audio, and active-session ownership
+- First-class OpenBOR catalog discovery with per-game pack staging, portable engine detection, isolated saves/logs, and active-transfer launch protection
 - One-click launch doctor that resolves shared BIOS/parent files, validates the best available arcade route, and resumes launch automatically
 - Managed repair-on-play for damaged RGSX arcade archives with no manual file handling
 - Full arcade names and local year, manufacturer, player, button, and control metadata from installed MAME

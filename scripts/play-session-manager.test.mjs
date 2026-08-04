@@ -56,13 +56,29 @@ test('illegal transitions are rejected', () => {
   assert.equal(canTransition('unknown', 'idle'), false);
 });
 
-test('managed RetroArch is an embedded verified candidate', () => {
+test('managed RetroArch is available for verified embedded play', () => {
   const result = buildCapabilityResult(managed);
   assert.equal(result.classification, 'embedded_verified');
   assert.equal(result.eligible, true);
   assert.equal(result.engine.managed, true);
-  assert.equal(result.media.systemAudio, true);
-  assert.equal(result.implementation.availableNow, false);
+  assert.equal(result.media.systemAudio, false);
+  assert.equal(result.media.nativeEngineAudio, true);
+  assert.equal(result.implementation.availableNow, true);
+  assert.equal(result.presentation.popOut, true);
+  assert.equal(result.lifecycle.processOwned, true);
+});
+
+test('managed OpenBOR is available for embedded play', () => {
+  const result = buildCapabilityResult({
+    ...managed,
+    system: { id: 'openbor', name: 'OpenBOR' },
+    engine: { kind: 'openbor', label: 'OpenBOR', managed: true, available: true },
+    certification: 'verified'
+  });
+  assert.equal(result.classification, 'embedded_verified');
+  assert.equal(result.eligible, true);
+  assert.deepEqual(result.presentation, { embedded: true, fullscreen: true, popOut: true });
+  assert.equal(result.fallback.mode, 'popout');
 });
 
 test('managed uncertified RetroArch is experimental', () => {
@@ -81,11 +97,25 @@ test('user RetroArch remains integrated external', () => {
   assert.equal(result.fallback.reasonCode, 'unmanaged_retroarch');
 });
 
-test('standalone MAME and other emulators remain external', () => {
+test('capture-eligible standalone engines use the same GameDeck player contract', () => {
   for (const kind of ['mame', 'standalone']) {
     const result = buildCapabilityResult({
       ...managed,
-      engine: { kind, label: kind === 'mame' ? 'MAME standalone' : 'Standalone emulator', managed: false, available: true }
+      engine: { kind, label: kind === 'mame' ? 'MAME standalone' : 'Standalone emulator', managed: false, captureEligible: true, available: true }
+    });
+    assert.equal(result.classification, 'embedded_verified');
+    assert.equal(result.eligible, true);
+    assert.equal(result.presentation.embedded, true);
+    assert.equal(result.media.systemAudio, false);
+    assert.equal(result.media.nativeEngineAudio, true);
+  }
+});
+
+test('unmanaged engines without capture eligibility remain external', () => {
+  for (const kind of ['mame', 'standalone']) {
+    const result = buildCapabilityResult({
+      ...managed,
+      engine: { kind, label: 'External engine', managed: false, captureEligible: false, available: true }
     });
     assert.equal(result.classification, 'integrated_external');
     assert.equal(result.eligible, false);

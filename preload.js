@@ -23,6 +23,11 @@ contextBridge.exposeInMainWorld('deck', {
   runtimeStatus: () => ipcRenderer.invoke('runtime-status'),
   playSessionCapabilities: file => ipcRenderer.invoke('play-session-capabilities', file),
   playSessionStatus: () => ipcRenderer.invoke('play-session-status'),
+  playSessionStart: (file, options) => ipcRenderer.invoke('play-session-start', file, options || {}),
+  playSessionSetMode: (sessionId, mode) => ipcRenderer.invoke('play-session-set-mode', sessionId, mode),
+  playSessionArmCapture: (sessionId, includeAudio = true) => ipcRenderer.invoke('play-session-arm-capture', sessionId, includeAudio !== false),
+  playSessionCaptureStarted: sessionId => ipcRenderer.invoke('play-session-capture-started', sessionId),
+  playSessionStop: (sessionId, reason) => ipcRenderer.invoke('play-session-stop', sessionId, reason || 'requested'),
   ensureRuntime: force => ipcRenderer.invoke('ensure-runtime', Boolean(force)),
   streamStatus: () => ipcRenderer.invoke('stream-status'),
   streamSources: () => ipcRenderer.invoke('stream-sources'),
@@ -55,6 +60,11 @@ contextBridge.exposeInMainWorld('deck', {
   openExternal: target => ipcRenderer.invoke('open-external', target),
   restartApp: () => ipcRenderer.invoke('restart-app'),
   clearActivity: () => ipcRenderer.invoke('clear-activity'),
+  onPlaySession: callback => {
+    const listener = (_, update) => callback(update);
+    ipcRenderer.on('play-session-update', listener);
+    return () => ipcRenderer.removeListener('play-session-update', listener);
+  },
   onRuntime: callback => {
     const listener = (_, update) => callback(update);
     ipcRenderer.on('runtime-update', listener);

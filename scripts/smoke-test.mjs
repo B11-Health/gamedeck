@@ -197,6 +197,16 @@ for (const id of [
   'openArcadeFeedback',
   'spotlightArtwork',
   'spotlightDetails',
+  'playSurface',
+  'playVideo',
+  'playLoading',
+  'playDocked',
+  'playFullscreen',
+  'playPopout',
+  'playClose',
+  'playCaptureRetry',
+  'playCapturePopout',
+  'launchCurtain',
   'arcadeControllerState',
   'settingMame'
 ]) {
