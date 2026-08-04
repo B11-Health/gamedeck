@@ -2,7 +2,7 @@
 
 **Status:** Review draft. Do not publish recruitment or proof claims until the approval gate in this document is complete.
 
-**Evidence base:** `origin/main` at `1cbec11d13ee923cdaa0825748aac5e88965a903` plus the live public surfaces observed on August 3, 2026.
+**Source baseline commit:** `1cbec11d13ee923cdaa0825748aac5e88965a903`, plus the live public surfaces observed on August 3, 2026. This document does not describe a moving `main` branch.
 
 ## Objective
 
@@ -21,7 +21,7 @@ This program measures where GameDeck works, where it fails, and what remains unk
 | Release artifacts | Windows installer/portable, universal macOS DMG/ZIP, Linux AppImage/DEB, and checksum manifests are public | Fresh native macOS/Linux multiplayer execution or signed/notarized distribution |
 | Accessibility/UI checks | Keyboard focus, minimum desktop viewports, reduced-motion behavior, and responsive event UI were checked | Assistive-technology coverage across all multiplayer states |
 | Direct WebRTC | A direct test path worked in the recorded Windows run | TURN fallback or success on symmetric, carrier, corporate, school, or otherwise restrictive NATs |
-| OpenBOR in current `main` | Catalog discovery and direct `.pak` launch support are present | Any online-play or multiplayer compatibility claim for OpenBOR |
+| OpenBOR at source baseline `1cbec11d13ee923cdaa0825748aac5e88965a903` | Local catalog discovery and direct `.pak` launch support are present | Any online-play or multiplayer compatibility claim for OpenBOR |
 
 ## Live CTA hierarchy
 

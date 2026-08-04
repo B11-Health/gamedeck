@@ -35,12 +35,17 @@ Create a truthful multiplayer recruitment and proof-capture program covering OS,
 - Aligned README, growth playbook, Remote Play guidance, brand-system guidance, launch kit, and social copy with the GitHub-first flow.
 - Retained the old Discord guide only as an archive/migration notice; no replacement account or server is proposed.
 
+## Independent source-review correction
+
+Fresh Growth QA rejected `8c847e1ac0de34898a3b48dbea2a046d10801945` for two bounded documentation defects: moving-branch language around the immutable source baseline/OpenBOR calendar item, and omission of `docs/COMMUNITY_LAUNCH.md` from this declared scope. The successor correction anchors claims to exact commits or integrated releases, replaces the moving OpenBOR post with a route-boundary education item, and makes the declared 17-file scope exact. Source approval still requires integration replay on the then-current integration baseline before merge or publication.
+
 ## Changed scope
 
 - `.github/ISSUE_TEMPLATE/config.yml`
 - `.github/ISSUE_TEMPLATE/multiplayer_session.yml`
 - `README.md`
 - `docs/BRAND_SYSTEM.md`
+- `docs/COMMUNITY_LAUNCH.md`
 - `docs/DISCORD_COMMUNITY.md`
 - `docs/GROWTH_001_TESTER_RECRUITMENT.md`
 - `docs/GROWTH_PLAYBOOK.md`
