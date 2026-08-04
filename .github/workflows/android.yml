@@ -65,13 +65,18 @@ jobs:
           OUT=app/build/outputs/apk/debug
           AVD=gamedeck_api36
           EMULATOR="$ANDROID_HOME/emulator/emulator"
+          export ANDROID_AVD_HOME="$RUNNER_TEMP/android-avd"
+          mkdir -p "$ANDROID_AVD_HOME"
           test -f "$APK"
           test -x "$EMULATOR"
           echo no | avdmanager create avd \
             --force \
             --name "$AVD" \
+            --path "$ANDROID_AVD_HOME/$AVD.avd" \
             --package "system-images;android-36;google_apis;x86_64" \
             --device pixel_6
+          "$EMULATOR" -list-avds | tee "$OUT/AVD-LIST.txt"
+          grep -qx "$AVD" "$OUT/AVD-LIST.txt"
           ACCEL=off
           if [ -e /dev/kvm ]; then
             sudo chmod 666 /dev/kvm
@@ -138,6 +143,7 @@ jobs:
             mobile/android/app/build/outputs/apk/debug/SHA256SUMS-android-debug.txt
             mobile/android/app/build/outputs/apk/debug/APK-CONTENTS.txt
             mobile/android/app/build/outputs/apk/debug/APK-BADGING.txt
+            mobile/android/app/build/outputs/apk/debug/AVD-LIST.txt
             mobile/android/app/build/outputs/apk/debug/ACTIVITY-START.txt
             mobile/android/app/build/outputs/apk/debug/WINDOW-FOCUS.txt
             mobile/android/app/build/outputs/apk/debug/UI-HIERARCHY.xml
