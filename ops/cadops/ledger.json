@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "project": "GameDeck",
   "createdAt": "2026-08-03T23:44:00.000Z",
-  "updatedAt": "2026-08-04T06:46:47.221Z",
+  "updatedAt": "2026-08-04T06:48:23.184Z",
   "policy": {
     "nonReplay": true,
     "visibleLaunchRequired": true,
@@ -39,12 +39,12 @@
     }
   },
   "counters": {
-    "E": 9,
+    "E": 10,
     "T": 9,
     "M": 9,
     "W": 9,
     "recovery": 0,
-    "event": 145
+    "event": 148
   },
   "tickets": [
     {
@@ -2053,6 +2053,29 @@
       },
       "uncertainty": null,
       "quarantine": null
+    },
+    {
+      "id": "E-0010",
+      "lane": "E",
+      "role": "builder",
+      "objective": "Correct state-dependent Team Operating System v3 negative tests so closure-state transitions cannot silently disable validator coverage, then rerun the full repository gate.",
+      "assignee": "team-os-v3-test-correction-builder-01",
+      "authorizedBy": "team-os-v3-watcher-01",
+      "status": "active",
+      "chainId": "E-0010",
+      "predecessorTicketId": null,
+      "predecessorReceiptHash": null,
+      "successorTicketId": null,
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T06:48:05.367Z",
+      "acceptedAt": "2026-08-04T06:48:15.855Z",
+      "startedAt": "2026-08-04T06:48:23.184Z",
+      "completedAt": null,
+      "launchEvidence": "Final exact-tree gate reproduced the ownership-collision fixture failure after OPS-001 transitioned to complete; bounded test correction started.",
+      "receipt": null,
+      "uncertainty": null,
+      "quarantine": null
     }
   ],
   "events": [
@@ -3976,6 +3999,45 @@
         "softwareVersion": "70bdc2e"
       },
       "hash": "9e10dedb43f17ee2cbd6c57735e484e7c6cb1a0d8b772b6ee6cf98569a70174a"
+    },
+    {
+      "eventId": "EVT-000146",
+      "type": "ticket.issued",
+      "ticketId": "E-0010",
+      "actor": "team-os-v3-watcher-01",
+      "at": "2026-08-04T06:48:05.367Z",
+      "previousHash": "9e10dedb43f17ee2cbd6c57735e484e7c6cb1a0d8b772b6ee6cf98569a70174a",
+      "payload": {
+        "lane": "E",
+        "role": "builder",
+        "assignee": "team-os-v3-test-correction-builder-01",
+        "objective": "Correct state-dependent Team Operating System v3 negative tests so closure-state transitions cannot silently disable validator coverage, then rerun the full repository gate."
+      },
+      "hash": "7716c95be5dece1941e68ec3dcf6bbd7166d1d3ac725adaea265a7779b13dcb3"
+    },
+    {
+      "eventId": "EVT-000147",
+      "type": "ticket.accepted",
+      "ticketId": "E-0010",
+      "actor": "team-os-v3-test-correction-builder-01",
+      "at": "2026-08-04T06:48:15.855Z",
+      "previousHash": "7716c95be5dece1941e68ec3dcf6bbd7166d1d3ac725adaea265a7779b13dcb3",
+      "payload": {
+        "role": "builder"
+      },
+      "hash": "7878ed1b289d95c31c148088da6dbfd3b64ac3e435fda743f4674d3dbe089e29"
+    },
+    {
+      "eventId": "EVT-000148",
+      "type": "ticket.started",
+      "ticketId": "E-0010",
+      "actor": "team-os-v3-test-correction-builder-01",
+      "at": "2026-08-04T06:48:23.184Z",
+      "previousHash": "7878ed1b289d95c31c148088da6dbfd3b64ac3e435fda743f4674d3dbe089e29",
+      "payload": {
+        "launchEvidence": "Final exact-tree gate reproduced the ownership-collision fixture failure after OPS-001 transitioned to complete; bounded test correction started."
+      },
+      "hash": "18872a596b3c24c6b9546e9cc717589043542b7bba5cfe507b59b8600c39db38"
     }
   ]
 }

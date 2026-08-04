@@ -40,6 +40,8 @@ assert.deepEqual(validateBoard(original), [], 'canonical board must validate');
 
 {
   const board = clone();
+  board.workItems[0].status = 'active';
+  board.workItems[1].status = 'active';
   board.workItems[1].scope.files = ['package.json'];
   board.workItems[1].scope.artifacts = [];
   board.workItems[0].scope.files.push('package.json');
@@ -67,6 +69,7 @@ assert.deepEqual(validateBoard(original), [], 'canonical board must validate');
 
 {
   const board = clone();
+  board.workItems[0].status = 'active';
   board.workItems[0].scope = { files: [], surfaces: [], artifacts: [] };
   expectError(board, 'owns no files, surfaces, or artifacts');
 }
