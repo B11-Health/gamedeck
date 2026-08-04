@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "project": "GameDeck",
   "createdAt": "2026-08-03T23:44:00.000Z",
-  "updatedAt": "2026-08-04T00:16:30.180Z",
+  "updatedAt": "2026-08-04T00:18:51.284Z",
   "policy": {
     "nonReplay": true,
     "visibleLaunchRequired": true,
@@ -40,11 +40,11 @@
   },
   "counters": {
     "E": 2,
-    "T": 1,
+    "T": 2,
     "M": 1,
     "W": 1,
     "recovery": 0,
-    "event": 20
+    "event": 22
   },
   "tickets": [
     {
@@ -271,18 +271,93 @@
       "objective": "Replace checkout-byte artifact hashing with canonical Git blob hashing, record object identity and algorithm, and add cross-worktree regression coverage.",
       "assignee": "cadops-builder-02",
       "authorizedBy": "general-orchestrator",
-      "status": "active",
+      "status": "completed",
       "chainId": "E-0001",
       "predecessorTicketId": "W-0001",
       "predecessorReceiptHash": "dc5e25459b112ce7a043063cd453c8cf2fd2a6aca6e6c3d16eba15c8711291f1",
-      "successorTicketId": null,
+      "successorTicketId": "T-0002",
       "recoveryForTicketId": null,
       "recoveryTicketId": null,
       "createdAt": "2026-08-04T00:11:50.000Z",
       "acceptedAt": "2026-08-04T00:16:24.977Z",
       "startedAt": "2026-08-04T00:16:30.180Z",
-      "completedAt": null,
+      "completedAt": "2026-08-04T00:18:41.777Z",
       "launchEvidence": "Authenticated Shell correction active in dedicated branch ops/cadops-foundation after independent Tester, Supervisor, and Watcher receipts.",
+      "receipt": {
+        "ticketId": "E-0002",
+        "lane": "E",
+        "role": "builder",
+        "actor": "cadops-builder-02",
+        "objective": "Replace checkout-byte artifact hashing with canonical Git blob hashing, record object identity and algorithm, and add cross-worktree regression coverage.",
+        "outcome": "pass",
+        "summary": "Replaced checkout-byte receipt hashing with canonical Git blob evidence and added line-ending portability regression coverage.",
+        "softwareVersion": "974dd720ac55770a1f63476fbdc767b381407417",
+        "predecessorTicketId": "W-0001",
+        "predecessorReceiptHash": "dc5e25459b112ce7a043063cd453c8cf2fd2a6aca6e6c3d16eba15c8711291f1",
+        "launchEvidence": "Authenticated Shell correction active in dedicated branch ops/cadops-foundation after independent Tester, Supervisor, and Watcher receipts.",
+        "startedAt": "2026-08-04T00:16:30.180Z",
+        "completedAt": "2026-08-04T00:18:41.777Z",
+        "artifacts": [
+          {
+            "path": "scripts/cadops-core.mjs",
+            "source": "git-blob",
+            "commit": "974dd720ac55770a1f63476fbdc767b381407417",
+            "objectFormat": "sha1",
+            "objectId": "460b75c4797de915e558da95c1f828e4e27e6b78",
+            "bytes": 19841,
+            "sha256": "04b36fb716069d30744e77425cb07f0295720468fc2639e1f28153d091771283"
+          },
+          {
+            "path": "scripts/cadops.test.mjs",
+            "source": "git-blob",
+            "commit": "974dd720ac55770a1f63476fbdc767b381407417",
+            "objectFormat": "sha1",
+            "objectId": "5fd36b913854c041f29e87240dd7643655d8b245",
+            "bytes": 7897,
+            "sha256": "eb580caa464fa7b6ef1e1cc9924f6e8395c111e0406a2192223dc740a2b18983"
+          },
+          {
+            "path": "docs/CADOPS.md",
+            "source": "git-blob",
+            "commit": "974dd720ac55770a1f63476fbdc767b381407417",
+            "objectFormat": "sha1",
+            "objectId": "da74f6d87bb97d1139d33beb84657779b2f23238",
+            "bytes": 5511,
+            "sha256": "c6e7adfd9d9cc57466cf8b1f9d152e48c69231a9c3c8a73be68249738e1e15a2"
+          }
+        ],
+        "checks": [
+          "CADOps suite passed 19 scenarios including CRLF/LF portability.",
+          "Full GameDeck npm test and git diff --check passed."
+        ],
+        "nextAuthorizedLanes": [
+          "T"
+        ],
+        "chainDisposition": "handoff-required",
+        "hash": "619998f9296f3efafadc75077e86e33297b691b16ca898ff6c74fc02233d12c7"
+      },
+      "uncertainty": null,
+      "quarantine": null
+    },
+    {
+      "id": "T-0002",
+      "lane": "T",
+      "role": "tester",
+      "objective": "Independently verify canonical Git-blob receipt stability across worktrees and rerun the full GameDeck gate at commit 974dd720ac55770a1f63476fbdc767b381407417.",
+      "assignee": "independent-cadops-reviewer-02",
+      "authorizedBy": "general-orchestrator",
+      "status": "prepared",
+      "chainId": "E-0001",
+      "predecessorTicketId": "E-0002",
+      "predecessorReceiptHash": "619998f9296f3efafadc75077e86e33297b691b16ca898ff6c74fc02233d12c7",
+      "successorTicketId": null,
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T00:18:51.284Z",
+      "acceptedAt": null,
+      "startedAt": null,
+      "completedAt": null,
+      "launchEvidence": null,
       "receipt": null,
       "uncertainty": null,
       "quarantine": null
@@ -552,6 +627,35 @@
         "launchEvidence": "Authenticated Shell correction active in dedicated branch ops/cadops-foundation after independent Tester, Supervisor, and Watcher receipts."
       },
       "hash": "b67bbbe564175cd1fc26c2acc94c2ac1abdb47b793c456c4b6fd3b6f3804096e"
+    },
+    {
+      "eventId": "EVT-000021",
+      "type": "ticket.completed",
+      "ticketId": "E-0002",
+      "actor": "cadops-builder-02",
+      "at": "2026-08-04T00:18:41.777Z",
+      "previousHash": "b67bbbe564175cd1fc26c2acc94c2ac1abdb47b793c456c4b6fd3b6f3804096e",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "619998f9296f3efafadc75077e86e33297b691b16ca898ff6c74fc02233d12c7",
+        "softwareVersion": "974dd720ac55770a1f63476fbdc767b381407417"
+      },
+      "hash": "ccbcaa31fc2065ba2b3e23e84797f3284ed0ced37c46bf9e0472a48babf12cb5"
+    },
+    {
+      "eventId": "EVT-000022",
+      "type": "custody.handed-off",
+      "ticketId": "E-0002",
+      "actor": "general-orchestrator",
+      "at": "2026-08-04T00:18:51.284Z",
+      "previousHash": "ccbcaa31fc2065ba2b3e23e84797f3284ed0ced37c46bf9e0472a48babf12cb5",
+      "payload": {
+        "successorTicketId": "T-0002",
+        "successorLane": "T",
+        "predecessorReceiptHash": "619998f9296f3efafadc75077e86e33297b691b16ca898ff6c74fc02233d12c7",
+        "assignee": "independent-cadops-reviewer-02"
+      },
+      "hash": "63a8da0491411a34a8c68ae0e99484c8c31997dc88ca3d48fb883707340e9255"
     }
   ]
 }
