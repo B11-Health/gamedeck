@@ -27,11 +27,11 @@ tasks.register('prepareSharedRenderer') {
         )
         index = index.replace(
             '<link rel="stylesheet" href="styles.css">',
-            '<link rel="stylesheet" href="styles.css">\n  <link rel="stylesheet" href="android-overrides.css">'
+            '<link rel="stylesheet" href="styles.css">\n  <link rel="stylesheet" href="android-overrides.css">\n  <link rel="stylesheet" href="android-polish.css">'
         )
         index = index.replace(
             '<script src="app.js"></script>',
-            '<script src="platform-android.js"></script>\n  <script src="debug-fixture.js"></script>\n  <script src="app.js"></script>\n  <script src="renderer-probe.js"></script>'
+            '<script src="platform-android.js"></script>\n  <script src="debug-fixture.js"></script>\n  <script src="app.js"></script>\n  <script src="renderer-probe.js"></script>\n  <script src="android-qa-probe.js"></script>'
         )
         indexFile.write(index, 'UTF-8')
     }
@@ -45,8 +45,8 @@ android {
         applicationId 'io.gamedeck.mobile.desktoppreview'
         minSdk 26
         targetSdk 36
-        versionCode 5
-        versionName '0.3.1-parity-preview'
+        versionCode 6
+        versionName '0.3.3-orientation-polish'
     }
 
     sourceSets {
