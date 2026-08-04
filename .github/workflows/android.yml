@@ -149,6 +149,85 @@ jobs:
           grep -Fq "$PACKAGE" "$OUT/WINDOW-FOCUS.txt"
           adb exec-out screencap -p > "$OUT/EMULATOR-SCREENSHOT.png"
           test -s "$OUT/EMULATOR-SCREENSHOT.png"
+
+          SCREENSHOT="$OUT/EMULATOR-SCREENSHOT.png" python3 - <<'PY'
+          import os, struct, zlib
+
+          path = os.environ['SCREENSHOT']
+          data = open(path, 'rb').read()
+          if data[:8] != b'\x89PNG\r\n\x1a\n':
+              raise SystemExit('screenshot is not PNG')
+
+          position = 8
+          width = height = color_type = bit_depth = None
+          compressed = bytearray()
+          while position < len(data):
+              length = struct.unpack('>I', data[position:position + 4])[0]
+              kind = data[position + 4:position + 8]
+              payload = data[position + 8:position + 8 + length]
+              position += 12 + length
+              if kind == b'IHDR':
+                  width, height, bit_depth, color_type, _, _, _ = struct.unpack('>IIBBBBB', payload)
+              elif kind == b'IDAT':
+                  compressed.extend(payload)
+              elif kind == b'IEND':
+                  break
+
+          if bit_depth != 8 or color_type not in (2, 6):
+              raise SystemExit(f'unsupported screenshot PNG mode depth={bit_depth} color={color_type}')
+          channels = 3 if color_type == 2 else 4
+          stride = width * channels
+          raw = zlib.decompress(bytes(compressed))
+          rows = []
+          offset = 0
+          previous = bytearray(stride)
+          for _ in range(height):
+              filter_type = raw[offset]
+              offset += 1
+              current = bytearray(raw[offset:offset + stride])
+              offset += stride
+              for index in range(stride):
+                  left = current[index - channels] if index >= channels else 0
+                  up = previous[index]
+                  upper_left = previous[index - channels] if index >= channels else 0
+                  if filter_type == 1:
+                      current[index] = (current[index] + left) & 255
+                  elif filter_type == 2:
+                      current[index] = (current[index] + up) & 255
+                  elif filter_type == 3:
+                      current[index] = (current[index] + ((left + up) // 2)) & 255
+                  elif filter_type == 4:
+                      prediction = left + up - upper_left
+                      pa, pb, pc = abs(prediction - left), abs(prediction - up), abs(prediction - upper_left)
+                      predictor = left if pa <= pb and pa <= pc else up if pb <= pc else upper_left
+                      current[index] = (current[index] + predictor) & 255
+                  elif filter_type != 0:
+                      raise SystemExit(f'unsupported PNG filter {filter_type}')
+              rows.append(current)
+              previous = current
+
+          top = max(0, int(height * 0.04))
+          bottom = min(height, int(height * 0.96))
+          sample_step = max(1, min(width, height) // 360)
+          colors = set()
+          non_background = 0
+          background = (9, 11, 16)
+          for y in range(top, bottom, sample_step):
+              row = rows[y]
+              for x in range(0, width, sample_step):
+                  start = x * channels
+                  rgb = tuple(row[start:start + 3])
+                  colors.add(rgb)
+                  if sum(abs(rgb[i] - background[i]) for i in range(3)) > 18:
+                      non_background += 1
+
+          report = f'width={width} height={height} sampled_colors={len(colors)} non_background_samples={non_background}'
+          open(os.path.join(os.path.dirname(path), 'SCREENSHOT-ANALYSIS.txt'), 'w').write(report + '\n')
+          print(report)
+          if len(colors) < 80 or non_background < 900:
+              raise SystemExit('renderer screenshot is blank or effectively monochrome')
+          PY
+
           if adb shell uiautomator dump /sdcard/gamedeck-window.xml; then
             adb pull /sdcard/gamedeck-window.xml "$OUT/UI-HIERARCHY.xml" || true
           fi
@@ -162,6 +241,7 @@ jobs:
           fi
           grep -q '"renderer":"shared-desktop"' "$OUT/RENDERER-STATUS.txt"
           grep -q '"startupObserved":true' "$OUT/RENDERER-STATUS.txt"
+          grep -q '"viewportVerified":true' "$OUT/RENDERER-STATUS.txt"
           grep -q '"fixtureVerified":true' "$OUT/RENDERER-STATUS.txt"
           grep -q '"gameCards":1' "$OUT/RENDERER-STATUS.txt"
           grep -q '"firstGameTitle":"Chrono Trigger"' "$OUT/RENDERER-STATUS.txt"
@@ -183,6 +263,7 @@ jobs:
             mobile/android/app/build/outputs/apk/debug/ACTIVITY-START.txt
             mobile/android/app/build/outputs/apk/debug/WINDOW-FOCUS.txt
             mobile/android/app/build/outputs/apk/debug/RENDERER-STATUS.txt
+            mobile/android/app/build/outputs/apk/debug/SCREENSHOT-ANALYSIS.txt
             mobile/android/app/build/outputs/apk/debug/UI-HIERARCHY.xml
             mobile/android/app/build/outputs/apk/debug/EMULATOR-SCREENSHOT.png
             mobile/android/app/build/outputs/apk/debug/EMULATOR-LOG.txt
