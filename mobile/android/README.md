@@ -1,55 +1,54 @@
-# GameDeck Android standalone foundation
+# GameDeck Android desktop-parity preview
 
-This module is the Android platform adapter for GameDeck. It is intentionally built around the repository's existing product contracts rather than as an unrelated mobile launcher.
+This module is the Android platform adapter for GameDeck. Android packages the repository's shared desktop renderer (`src/index.html`, `src/app.js`, `src/styles.css`, streaming, netplay, branding, and system-theme assets) rather than maintaining a separate reduced product UI.
 
-## Current vertical slice
+## Current preview
 
-The `0.2.0-alpha` foundation provides:
+The `0.3.1-parity-preview` provides:
 
-- a bundled, local-first GameDeck shell that opens without a desktop host;
+- the same Library, Discover, Multiplayer, Activity, and System renderer used by desktop GameDeck;
 - Android Storage Access Framework folder selection with persisted, folder-scoped access;
-- an on-device library scanner using the same GameDeck system IDs, folder aliases, file extensions, and core labels as desktop;
-- controller-first navigation for D-pad, analog stick, A/B/X/Y, Start, Select, and shoulder buttons;
-- the existing GameDeck Live LAN receiver as a separate Remote surface;
-- truthful runtime classification: `integrated_external` when an installed RetroArch package is detected, otherwise `blocked` with `android_embedded_runtime_pending`;
-- optional, read-only RGSX catalog detection without making RGSX a dependency for normal library browsing.
+- local scanning with the same system IDs, aliases, extensions, labels, favorites, and recent-play model;
+- local cover-art discovery from adjacent files and common `images`, `artwork`, `boxart`, `covers`, and `media` folders;
+- local JSON metadata sidecars for descriptions, release dates, years, genres, players, ratings, developers, publishers, regions, and editions;
+- automatic artwork and Discover catalog lookup through GameDeck's internal Libretro-thumbnail provider mapping, without exposing provider setup to users;
+- responsive phone, tablet, landscape, touch, keyboard, and controller presentation around the shared desktop renderer;
+- the existing GameDeck Live LAN receiver as a separate Remote route;
+- truthful runtime classification: `integrated_external` when a compatible RetroArch package is detected, otherwise `blocked` with `android_embedded_runtime_pending`.
 
-This slice does **not** claim that Android has reached desktop parity. The APK does not yet bundle an embedded libretro host, verified core set, firmware repair adapter, RGSX transfer process, or direct `GDREMOTE2` guest adapter.
+## Desktop contract mapping
 
-## Contract mapping
+Android supplies a native-backed `window.deck` platform adapter to the shared renderer:
 
-The WebView exposes an Android-backed subset of the desktop `window.deck` interface:
-
-| Contract | Android foundation |
+| Desktop contract | Android implementation |
 | --- | --- |
-| `library()` / `rescan()` | Secure document-tree scan and GameDeck system classification |
-| `favorite()` | Local Android preferences |
-| `launch()` | Truthful experimental external route or a stable blocked reason |
-| `runtimeStatus()` | Android platform/runtime components and reason code |
-| `chooseDirectory()` | Storage Access Framework picker |
-| RGSX status | Optional local catalog inspection only |
+| `library()` / `rescan()` | Secure document-tree scan, system classification, artwork, metadata, favorites, and recents |
+| `artwork()` | Local artwork first, then automatic provider lookup |
+| `gameDetails()` | Local sidecar metadata with truthful local fallback copy |
+| `catalogSystems()` / `catalogGames()` | Automatic Discover catalog and installed-title matching |
+| `favorite()` | Android preferences with full-library refresh |
+| `launch()` | Truthful experimental external route or stable blocked reason |
+| `runtimeStatus()` | Android runtime components and reason code |
+| `chooseDirectory()` | Android system folder picker |
 | GameDeck Live | Existing LAN host URL loaded in the receiver WebView |
 
-No game, BIOS, save, key, library inventory, or private path is uploaded by this module.
+No game, BIOS, save, key, library inventory, or private path is uploaded by this module. Online artwork/catalog requests contain only public system/title identifiers.
 
-## Architecture boundaries
+## Explicit limitations
 
-- `SystemRegistry` mirrors desktop IDs and routes but does not guess when a file extension is ambiguous.
-- `LibraryRepository` reads only the user-selected tree URI and caps one scan at 5,000 recognized files and 16 directory levels.
-- `AndroidRuntimeManager` distinguishes embedded, external, and blocked routes. An installed external app is never reported as verified embedded support.
-- `RgsxProvider` inspects `systems_list.json` from a user-selected RGSX tree. Downloads, BIOS restoration, and repair remain disabled until a native adapter has independent evidence.
-- `MainActivity` owns Android intents, lifecycle, controller input, and switching between the local shell and GameDeck Live receiver.
-- `DeckBridge` is the narrow platform boundary presented to bundled JavaScript.
+Shared renderer parity does not imply runtime parity. This preview does not yet bundle:
 
-## Planned bounded slices
+- an embedded libretro host or signed Android core set;
+- firmware provisioning or managed repair transfers;
+- direct `GDREMOTE2` WebRTC guest signaling and RetroPad input;
+- exact-match synchronized netplay;
+- production signing or Play-distribution AAB output.
 
-1. Pure Android readiness and route model aligned to the approved GameDeck Runtime contract.
-2. Embedded libretro host with one verified core and one homebrew fixture.
-3. Signed, checksum-pinned Android core bundle and first-launch provisioning.
-4. RGSX native transfer/repair adapter with resumable state and local-only data boundaries.
-5. `GDREMOTE2` WebRTC guest adapter using the existing invite, expiry, media, and RetroPad input contracts.
-6. Exact-match synchronized netplay and evidence-backed compatibility tuples.
-7. Android CI, signed APK/AAB output, clean-device installation, controller walkthrough, and release checksums.
+Unsupported controls remain visible only where required by the shared renderer and return stable, truthful Android reason codes.
+
+## Validation
+
+The Android workflow builds the exact pull-request revision, installs it on a clean API 36 emulator, completes the full desktop startup transition, and uses a private debug-only fixture to verify that the renderer displays a title, cover artwork, description, year, and genre. The fixture is activated only by a marker inside the debuggable app's private sandbox and is inactive for normal users.
 
 ## Build
 
@@ -68,4 +67,4 @@ The debug APK is generated under `app/build/outputs/apk/debug/`.
 
 ## Legal and trust boundary
 
-GameDeck does not include commercial games, copyrighted firmware, encryption keys, or commercial artwork. Users must provide only files they are legally entitled to use. RGSX remains optional and must preserve the same ownership, provider, and privacy boundaries as desktop GameDeck.
+GameDeck does not include commercial games, copyrighted firmware, encryption keys, or commercial artwork. Users must provide only files they are legally entitled to use. Discovery providers remain internal implementation details and must preserve the same ownership, privacy, and guest-isolation boundaries as desktop GameDeck.
