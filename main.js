@@ -1767,6 +1767,10 @@ public static class GameDeckWindow {
   [DllImport("user32.dll")] public static extern int GetWindowLong(IntPtr hWnd, int nIndex);
   [DllImport("user32.dll")] public static extern int SetWindowLong(IntPtr hWnd, int nIndex, int value);
   [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr hWnd, out RECT rect);
+  [DllImport("user32.dll")] public static extern bool GetClientRect(IntPtr hWnd, out RECT rect);
+  [DllImport("user32.dll")] public static extern IntPtr GetMenu(IntPtr hWnd);
+  [DllImport("user32.dll")] public static extern bool SetMenu(IntPtr hWnd, IntPtr hMenu);
+  [DllImport("user32.dll")] public static extern bool DrawMenuBar(IntPtr hWnd);
   [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr hWnd, IntPtr after, int x, int y, int width, int height, uint flags);
   [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int command);
   [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
@@ -1783,15 +1787,20 @@ for ($i = 0; $i -lt 80 -and $process.MainWindowHandle -eq 0; $i++) { Start-Sleep
 $handle = $process.MainWindowHandle
 if ($handle -eq 0) { throw 'Game window handle was not available.' }
 $rect = New-Object GameDeckWindow+RECT
+$client = New-Object GameDeckWindow+RECT
 [GameDeckWindow]::GetWindowRect($handle, [ref]$rect) | Out-Null
+[GameDeckWindow]::GetClientRect($handle, [ref]$client) | Out-Null
 [pscustomobject]@{
   handle = [long]$handle
+  menu = [long][GameDeckWindow]::GetMenu($handle)
   style = [GameDeckWindow]::GetWindowLong($handle, -16)
   exStyle = [GameDeckWindow]::GetWindowLong($handle, -20)
   x = $rect.Left
   y = $rect.Top
   width = $rect.Right - $rect.Left
   height = $rect.Bottom - $rect.Top
+  clientWidth = $client.Right - $client.Left
+  clientHeight = $client.Bottom - $client.Top
   title = $process.MainWindowTitle
 } | ConvertTo-Json -Compress
 `);
@@ -1808,6 +1817,9 @@ $handle = $process.MainWindowHandle
 if ($handle -eq 0) { throw 'Game window handle was not available.' }
 [GameDeckWindow]::SetWindowLong($handle, -16, ${Number(config.style) | 0}) | Out-Null
 [GameDeckWindow]::SetWindowLong($handle, -20, ${Number(config.exStyle) | 0}) | Out-Null
+$menu = [IntPtr]${config.hideMenu ? 0 : Number(config.menu || 0)}
+[GameDeckWindow]::SetMenu($handle, $menu) | Out-Null
+[GameDeckWindow]::DrawMenuBar($handle) | Out-Null
 [GameDeckWindow]::ShowWindow($handle, 9) | Out-Null
 $after = [IntPtr](${config.behind ? 1 : 0})
 $flags = [uint32](0x0020 -bor 0x0040${config.activate ? '' : ' -bor 0x0010'})
@@ -1856,7 +1868,7 @@ function setEmbeddedEngineWindowMode(session, mode) {
     const height = Math.min(Math.max(450, state.height || 544), Math.max(450, area.height - 120));
     const x = Math.round(area.x + (area.width - width) / 2);
     const y = Math.round(area.y + (area.height - height) / 2);
-    return applyWindowsEngineWindow(pid, { ...state, x, y, width, height, behind: false, activate: true });
+    return applyWindowsEngineWindow(pid, { ...state, menu: state.menu, hideMenu: false, x, y, width, height, behind: false, activate: true });
   }
 
   const chromeMask = 0x00C00000 | 0x00040000 | 0x00080000 | 0x00020000 | 0x00010000;
@@ -1872,7 +1884,7 @@ function setEmbeddedEngineWindowMode(session, mode) {
   if (height > maxHeight) { height = maxHeight; width = Math.round(height * aspect); }
   const x = Math.round(mainBounds.x + (mainBounds.width - width) / 2);
   const y = Math.round(mainBounds.y + (mainBounds.height - height) / 2);
-  const applied = applyWindowsEngineWindow(pid, { style, exStyle, x, y, width, height, behind: true, activate: false });
+  const applied = applyWindowsEngineWindow(pid, { style, exStyle, menu: 0, hideMenu: true, x, y, width, height, behind: true, activate: false });
   if (applied && mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.setAlwaysOnTop(true, mode === 'fullscreen' ? 'screen-saver' : 'floating');
     mainWindow.moveTop();
@@ -1894,7 +1906,7 @@ const embeddedWindowController = {
     if (process.platform === 'win32') {
       const owned = engineWindowState(session);
       if (owned && session?.spec?.engineKind === 'libretro') {
-        const measured = Number(owned.state?.width || 0) / Math.max(1, Number(owned.state?.height || 0));
+        const measured = Number(owned.state?.clientWidth || 0) / Math.max(1, Number(owned.state?.clientHeight || 0));
         if (Number.isFinite(measured) && measured > 0.4 && measured < 3) session.aspectRatio = measured;
       }
       if (requestedMode !== 'popout') setEmbeddedEngineWindowMode(session, requestedMode || 'docked');

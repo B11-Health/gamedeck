@@ -1,6 +1,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('deck', {
+  platform: process.platform,
   library: () => ipcRenderer.invoke('library'),
   launch: file => ipcRenderer.invoke('launch', file),
   setupSystem: systemId => ipcRenderer.invoke('setup-system', systemId),

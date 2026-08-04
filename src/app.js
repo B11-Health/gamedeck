@@ -1,5 +1,6 @@
 const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
+document.documentElement.dataset.platform = String(window.deck?.platform || '').toLowerCase();
 
 const GAME_SORTS = new Set(['title', 'recent', 'system', 'size']);
 const GAMEDECK_LINKS = Object.freeze({
@@ -106,6 +107,7 @@ let playCaptureStream = null;
 let playCapturePromise = null;
 let launchCurtainTimer = null;
 let fullscreenControlsTimer = null;
+let playPointerTimer = null;
 
 const SYSTEM_THEME_BACKGROUNDS = {
   all: { key: 'all', image: '../assets/system-themes/nintendo-polygon.webp', accent: '#72e7ff', glow: '#8b5cff', position: '78% center' },
@@ -1422,6 +1424,26 @@ function resetFullscreenControls() {
   $('#playSurface')?.classList.remove('fullscreen-controls-visible');
 }
 
+function hidePlayPointer() {
+  clearTimeout(playPointerTimer);
+  playPointerTimer = null;
+  const surface = $('#playSurface');
+  if (!surface || !state.playSession?.active || state.playSession.mode === 'popout') return;
+  if (surface.querySelector('.play-header:hover, .play-header:focus-within')) return;
+  surface.classList.add('play-pointer-hidden');
+}
+
+function showPlayPointer(duration = 1600) {
+  const surface = $('#playSurface');
+  if (!surface) return;
+  surface.classList.remove('play-pointer-hidden');
+  clearTimeout(playPointerTimer);
+  playPointerTimer = null;
+  if (duration > 0 && state.playSession?.active && state.playSession.mode !== 'popout') {
+    playPointerTimer = setTimeout(hidePlayPointer, duration);
+  }
+}
+
 function normalizedPlayAspect(value) {
   const aspect = Number(value);
   return Number.isFinite(aspect) && aspect > 0.4 && aspect < 3 ? aspect : 16 / 9;
@@ -1482,6 +1504,7 @@ function renderPlaySession(status = {}) {
   $('#playLoadingMessage').textContent = playPhaseMessage(current);
   const playing = current.phase === 'playing' && Boolean(playCaptureStream);
   $('#playLoading').classList.toggle('ready', playing);
+  if (playing && mode !== 'popout') requestAnimationFrame(() => showPlayPointer(1400));
   $$('[data-play-mode]').forEach(button => {
     const selected = button.dataset.playMode === mode;
     button.classList.toggle('active', selected);
@@ -1499,6 +1522,7 @@ function renderPlaySession(status = {}) {
 
 function resetPlaySessionUi() {
   resetFullscreenControls();
+  showPlayPointer(0);
   stopPlayCapture();
   $('#playSurface').classList.add('hidden');
   $('#playCaptureError').classList.add('hidden');
@@ -3146,6 +3170,7 @@ const playStageObserver = typeof ResizeObserver === 'function' ? new ResizeObser
 playStageObserver?.observe($('#playStage'));
 window.addEventListener('resize', () => requestAnimationFrame(applyPlayGeometry));
 playSurface.addEventListener('mousemove', event => {
+  showPlayPointer(1600);
   if (state.playSession?.mode !== 'fullscreen') return;
   if (event.clientY <= 86) showFullscreenControls(2600);
   else if (!playHeader.matches(':hover') && !playHeader.matches(':focus-within')) {
@@ -3154,10 +3179,12 @@ playSurface.addEventListener('mousemove', event => {
   }
 });
 playSurface.addEventListener('pointerdown', event => {
+  showPlayPointer(2200);
   if (state.playSession?.mode === 'fullscreen' && event.clientY <= 100) showFullscreenControls(2800);
 });
-playHeader.addEventListener('mouseenter', () => showFullscreenControls(0));
+playHeader.addEventListener('mouseenter', () => { showPlayPointer(0); showFullscreenControls(0); });
 playHeader.addEventListener('mouseleave', () => {
+  showPlayPointer(1200);
   if (state.playSession?.mode !== 'fullscreen') return;
   clearTimeout(fullscreenControlsTimer);
   fullscreenControlsTimer = setTimeout(hideFullscreenControls, 1000);

@@ -6883,3 +6883,18 @@ body.play-session-open {
     animation: none;
   }
 }
+
+/* Keep GameDeck play controls clear of Windows caption buttons. */
+html[data-platform="win32"] .mode-docked .play-header {
+  padding-right: 174px;
+}
+
+html[data-platform="win32"] .mode-docked .play-actions {
+  justify-self: end;
+  max-width: calc(100vw - 210px);
+}
+
+.play-surface.play-pointer-hidden,
+.play-surface.play-pointer-hidden * {
+  cursor: none !important;
+}
