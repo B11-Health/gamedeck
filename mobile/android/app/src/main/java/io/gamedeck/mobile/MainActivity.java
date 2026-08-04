@@ -4,12 +4,15 @@ import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.graphics.Color;
+import android.graphics.Insets;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.InputDevice;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.WindowInsets;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
@@ -41,6 +44,7 @@ public class MainActivity extends Activity {
     private void buildWebView() {
         webView = new WebView(this);
         webView.setBackgroundColor(Color.rgb(9, 11, 16));
+        applySystemBarInsets();
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
@@ -76,6 +80,35 @@ public class MainActivity extends Activity {
             }
         });
         setContentView(webView);
+    }
+
+    private void applySystemBarInsets() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            Api30Insets.apply(this, webView);
+        } else {
+            webView.setFitsSystemWindows(true);
+        }
+    }
+
+    private static final class Api30Insets {
+        private Api30Insets() {}
+
+        static void apply(Activity activity, View target) {
+            activity.getWindow().setDecorFitsSystemWindows(false);
+            target.setOnApplyWindowInsetsListener((view, windowInsets) -> {
+                Insets bars = windowInsets.getInsets(
+                    WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout()
+                );
+                if (view.getPaddingLeft() != bars.left
+                    || view.getPaddingTop() != bars.top
+                    || view.getPaddingRight() != bars.right
+                    || view.getPaddingBottom() != bars.bottom) {
+                    view.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+                }
+                return windowInsets;
+            });
+            target.requestApplyInsets();
+        }
     }
 
     private void loadLocalShell() {
