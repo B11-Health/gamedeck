@@ -5,6 +5,17 @@
   <uses-feature android:name="android.hardware.gamepad" android:required="false" />
   <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
 
+  <queries>
+    <package android:name="com.retroarch" />
+    <package android:name="com.retroarch.aarch64" />
+    <package android:name="com.retroarch.ra32" />
+    <intent>
+      <action android:name="android.intent.action.VIEW" />
+      <category android:name="android.intent.category.DEFAULT" />
+      <data android:scheme="content" />
+    </intent>
+  </queries>
+
   <application
       android:allowBackup="true"
       android:hardwareAccelerated="true"
