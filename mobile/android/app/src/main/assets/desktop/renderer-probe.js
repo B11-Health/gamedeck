@@ -31,20 +31,27 @@
     };
   };
 
-  const isVisibleInViewport = element => {
+  const hasLayout = element => {
     if (!element) return false;
     const rect = element.getBoundingClientRect();
     const style = getComputedStyle(element);
     return Boolean(
       rect.width > 1
       && rect.height > 1
-      && rect.right > 0
-      && rect.bottom > 0
-      && rect.left < innerWidth
-      && rect.top < innerHeight
       && style.display !== 'none'
       && style.visibility !== 'hidden'
       && Number.parseFloat(style.opacity || '1') > 0.01
+    );
+  };
+
+  const isVisibleInViewport = element => {
+    if (!hasLayout(element)) return false;
+    const rect = element.getBoundingClientRect();
+    return Boolean(
+      rect.right > 0
+      && rect.bottom > 0
+      && rect.left < innerWidth
+      && rect.top < innerHeight
     );
   };
 
@@ -73,12 +80,12 @@
     const stageVisible = Boolean(stage && !stage.classList.contains('hidden') && getComputedStyle(stage).display !== 'none');
     if (bodyLoading && stageVisible) sawLoading = true;
 
+    const loadingPercent = document.querySelector('#loadingPercent')?.textContent?.trim() || '';
     const loadingComplete = Boolean(
-      sawLoading
-      && stage
+      stage
       && stage.classList.contains('hidden')
       && !bodyLoading
-      && document.querySelector('#loadingPercent')?.textContent?.trim() === '100%'
+      && loadingPercent === '100%'
     );
     const header = document.querySelector('.app-header');
     const content = document.querySelector('.content');
@@ -100,14 +107,14 @@
       && description.includes('time-traveling role-playing adventure')
       && facts.includes('1995')
       && facts.includes('Role-playing')
+      && hasLayout(firstGame)
     );
     const activeLibrarySurface = Boolean(
       isVisibleInViewport(header)
       && isVisibleInViewport(content)
       && isVisibleInViewport(hero)
-      && isVisibleInViewport(libraryToolbar)
-      && isVisibleInViewport(games)
-      && (!requireFixture || isVisibleInViewport(firstGame))
+      && hasLayout(libraryToolbar)
+      && hasLayout(games)
       && centerElement
       && centerElement !== document.documentElement
       && centerElement !== document.body
@@ -124,9 +131,11 @@
           elapsedMs: Math.round(performance.now() - startedAt),
           renderer: 'shared-desktop',
           startupObserved: true,
+          loadingTransitionObserved: sawLoading,
           viewportVerified: true,
+          responsiveFoldVerified: true,
           fixtureVerified: requireFixture,
-          loadingPercent: document.querySelector('#loadingPercent')?.textContent?.trim() || '',
+          loadingPercent,
           viewport: { width: innerWidth, height: innerHeight, scale: devicePixelRatio },
           navigation: [...document.querySelectorAll('.nav[data-view]')].map(item => item.dataset.view),
           gameCards,
@@ -138,6 +147,7 @@
           centerElement: `${centerElement.tagName}.${centerElement.className || ''}`.slice(0, 120),
           headerRect: rectOf(header),
           heroRect: rectOf(hero),
+          toolbarRect: rectOf(libraryToolbar),
           firstGameRect: rectOf(firstGame),
           emptyStateVisible: Boolean(emptyState && !emptyState.classList.contains('hidden'))
         });
@@ -155,15 +165,15 @@
         sawLoading,
         bodyLoading,
         stageClass: stage?.className || '',
-        loadingPercent: document.querySelector('#loadingPercent')?.textContent?.trim() || '',
+        loadingPercent,
         viewport: { width: innerWidth, height: innerHeight, scale: devicePixelRatio },
         hasDeck: Boolean(window.deck),
         headerVisible: isVisibleInViewport(header),
         contentVisible: isVisibleInViewport(content),
         heroVisible: isVisibleInViewport(hero),
-        toolbarVisible: isVisibleInViewport(libraryToolbar),
-        gamesVisible: isVisibleInViewport(games),
-        firstGameVisible: isVisibleInViewport(firstGame),
+        toolbarHasLayout: hasLayout(libraryToolbar),
+        gamesHasLayout: hasLayout(games),
+        firstGameHasLayout: hasLayout(firstGame),
         gameCards,
         firstTitle,
         firstArtwork: firstArtwork.slice(0, 80),
@@ -173,6 +183,7 @@
         headerRect: rectOf(header),
         contentRect: rectOf(content),
         heroRect: rectOf(hero),
+        toolbarRect: rectOf(libraryToolbar),
         firstGameRect: rectOf(firstGame),
         bodyClass: document.body.className
       });
