@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "project": "GameDeck",
   "createdAt": "2026-08-03T23:44:00.000Z",
-  "updatedAt": "2026-08-04T07:05:09.999Z",
+  "updatedAt": "2026-08-04T07:49:20.096Z",
   "policy": {
     "nonReplay": true,
     "visibleLaunchRequired": true,
@@ -39,12 +39,12 @@
     }
   },
   "counters": {
-    "E": 11,
+    "E": 12,
     "T": 11,
     "M": 11,
     "W": 11,
     "recovery": 0,
-    "event": 177
+    "event": 180
   },
   "tickets": [
     {
@@ -2530,6 +2530,29 @@
       },
       "uncertainty": null,
       "quarantine": null
+    },
+    {
+      "id": "E-0012",
+      "lane": "E",
+      "role": "builder",
+      "objective": "Implement ANALYTICS-001 as a privacy-safe multiplayer KPI dictionary and machine-checked data-minimization contract",
+      "assignee": "builder-analytics-kpi-22",
+      "authorizedBy": "general-orchestrator",
+      "status": "active",
+      "chainId": "E-0012",
+      "predecessorTicketId": null,
+      "predecessorReceiptHash": null,
+      "successorTicketId": null,
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T07:49:02.521Z",
+      "acceptedAt": "2026-08-04T07:49:11.472Z",
+      "startedAt": "2026-08-04T07:49:20.096Z",
+      "completedAt": null,
+      "launchEvidence": "Authenticated Shell active in isolated gamedeck-analytics-kpi worktree at origin/main 2970c93e4fbbdde717bce95b9f098594ee15c88b",
+      "receipt": null,
+      "uncertainty": null,
+      "quarantine": null
     }
   ],
   "events": [
@@ -4877,6 +4900,45 @@
         "softwareVersion": "96183537baf7be67c156fbef9b0177d6bbc41d4e"
       },
       "hash": "3d642eced1a31fa0edf0fb2ce4d3c7d5629ce8bfd7c5c7e251c11813965b3bf1"
+    },
+    {
+      "eventId": "EVT-000178",
+      "type": "ticket.issued",
+      "ticketId": "E-0012",
+      "actor": "general-orchestrator",
+      "at": "2026-08-04T07:49:02.521Z",
+      "previousHash": "3d642eced1a31fa0edf0fb2ce4d3c7d5629ce8bfd7c5c7e251c11813965b3bf1",
+      "payload": {
+        "lane": "E",
+        "role": "builder",
+        "assignee": "builder-analytics-kpi-22",
+        "objective": "Implement ANALYTICS-001 as a privacy-safe multiplayer KPI dictionary and machine-checked data-minimization contract"
+      },
+      "hash": "98daabbb0cc6758a11d039fec332b0c815ae2a5d9fd112a63e53bd5689fd1fec"
+    },
+    {
+      "eventId": "EVT-000179",
+      "type": "ticket.accepted",
+      "ticketId": "E-0012",
+      "actor": "builder-analytics-kpi-22",
+      "at": "2026-08-04T07:49:11.472Z",
+      "previousHash": "98daabbb0cc6758a11d039fec332b0c815ae2a5d9fd112a63e53bd5689fd1fec",
+      "payload": {
+        "role": "builder"
+      },
+      "hash": "34ec1d13eca9285417745d10c7db6795e40001a320e13f6346d932eec76e7507"
+    },
+    {
+      "eventId": "EVT-000180",
+      "type": "ticket.started",
+      "ticketId": "E-0012",
+      "actor": "builder-analytics-kpi-22",
+      "at": "2026-08-04T07:49:20.096Z",
+      "previousHash": "34ec1d13eca9285417745d10c7db6795e40001a320e13f6346d932eec76e7507",
+      "payload": {
+        "launchEvidence": "Authenticated Shell active in isolated gamedeck-analytics-kpi worktree at origin/main 2970c93e4fbbdde717bce95b9f098594ee15c88b"
+      },
+      "hash": "73addee6a83976416643a3de2e73db7aaf2d35f49da43165de4839ab6b3eca91"
     }
   ]
 }

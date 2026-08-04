@@ -18,6 +18,10 @@ Sponsor placements are contextual, clearly labeled, and user-disableable. GameDe
 
 Only public receiving addresses may be included in the app. Private keys, seed phrases, and encrypted keystores are excluded by design and by repository rules.
 
+## Measurement
+
+GameDeck does not currently enable product telemetry. The design-only multiplayer metric contract in `docs/MULTIPLAYER_METRICS.md` permits local aggregate counters, public platform aggregates, explicit opt-in diagnostic exports, reviewed user submissions, and restricted operational cost totals. It forbids player identity, persistent installation identifiers, IP addresses, invitation contents, session tokens, library inventories, absolute file paths, and raw controller input. Any future implementation requires a separate reviewed consent, retention, deletion, and cohort-suppression gate.
+
 ## Removal
 
 Uninstalling GameDeck removes the application. Cached settings and artwork may remain in the operating system's application-data folder until the user deletes that folder. GameDeck never deletes a game library during uninstall.

@@ -1,0 +1,507 @@
+{
+  "schemaVersion": 1,
+  "status": "design-only",
+  "title": "GameDeck privacy-safe multiplayer KPI dictionary",
+  "measurementBoundary": {
+    "telemetryImplemented": false,
+    "requiresPlayerIdentity": false,
+    "rawEventUpload": false,
+    "permittedSources": [
+      "public-platform-aggregate",
+      "local-aggregate",
+      "explicit-opt-in-diagnostic",
+      "user-submitted",
+      "operational-aggregate"
+    ],
+    "allowedDimensions": [
+      "appVersion",
+      "evidenceVersion",
+      "platformFamily",
+      "networkRoute",
+      "failureReasonCode",
+      "playerCountBucket",
+      "controllerCountBucket",
+      "consentMode"
+    ],
+    "prohibitedData": [
+      "account identifier",
+      "advertising identifier",
+      "persistent installation identifier",
+      "email address",
+      "IP address",
+      "invite code",
+      "room code",
+      "session token",
+      "game-library inventory",
+      "absolute file path",
+      "save data",
+      "ROM or BIOS content",
+      "free-form chat",
+      "raw controller input"
+    ],
+    "defaultRules": [
+      "Unknown baselines remain unknown until measured.",
+      "Local counters stay on-device unless the user explicitly exports an aggregate diagnostic snapshot.",
+      "Public reporting uses minimum cohort thresholds and suppresses small cells.",
+      "No metric may be used to profile, price-discriminate, or degrade the free direct route."
+    ]
+  },
+  "metrics": [
+    {
+      "id": "multiplayer_doc_visit_rate",
+      "stage": "awareness",
+      "name": "Qualified multiplayer documentation visit rate",
+      "question": "Are interested visitors reaching multiplayer setup and evidence pages?",
+      "numerator": "Qualified visits to multiplayer documentation or release evidence pages",
+      "denominator": "All visits to the linked GameDeck public entry pages",
+      "calculation": "numerator / denominator",
+      "evidenceClass": "directional",
+      "source": "public-platform-aggregate",
+      "aggregation": "aggregate-only",
+      "retention": {
+        "location": "repository-snapshot",
+        "days": 90,
+        "rawEvents": false
+      },
+      "consent": "public-aggregate",
+      "requiresIdentity": false,
+      "dimensions": [
+        "evidenceVersion"
+      ],
+      "baseline": "unknown",
+      "decisionUse": "Improve navigation and recruitment copy without claiming product availability.",
+      "caveats": "Platform analytics are directional and may deduplicate differently."
+    },
+    {
+      "id": "tester_call_response_rate",
+      "stage": "awareness",
+      "name": "Tester call response rate",
+      "question": "Does a bounded tester request produce useful responses?",
+      "numerator": "Responses that include the requested OS, controller, and network categories",
+      "denominator": "Views or impressions of the exact tester call where the platform exposes them",
+      "calculation": "numerator / denominator",
+      "evidenceClass": "directional",
+      "source": "public-platform-aggregate",
+      "aggregation": "aggregate-only",
+      "retention": {
+        "location": "repository-snapshot",
+        "days": 90,
+        "rawEvents": false
+      },
+      "consent": "public-aggregate",
+      "requiresIdentity": false,
+      "dimensions": [
+        "evidenceVersion"
+      ],
+      "baseline": "unknown",
+      "decisionUse": "Choose channels and wording for future reviewed recruitment.",
+      "caveats": "Missing impression data keeps the denominator unknown."
+    },
+    {
+      "id": "host_preflight_completion_rate",
+      "stage": "activation",
+      "name": "Host preflight completion rate",
+      "question": "Can a host finish the local readiness flow?",
+      "numerator": "Host preflights reaching a terminal ready or blocked result",
+      "denominator": "Host preflights started",
+      "calculation": "numerator / denominator",
+      "evidenceClass": "hard",
+      "source": "local-aggregate",
+      "aggregation": "aggregate-only",
+      "retention": {
+        "location": "local-device",
+        "days": 30,
+        "rawEvents": false
+      },
+      "consent": "local-only",
+      "requiresIdentity": false,
+      "dimensions": [
+        "appVersion",
+        "platformFamily",
+        "networkRoute",
+        "failureReasonCode"
+      ],
+      "baseline": "unknown",
+      "decisionUse": "Prioritize readiness failures and flow friction.",
+      "caveats": "No cross-device total exists unless users opt in to aggregate export."
+    },
+    {
+      "id": "invitation_creation_success_rate",
+      "stage": "activation",
+      "name": "Invitation creation success rate",
+      "question": "Can an eligible host create a bounded invitation?",
+      "numerator": "Invitation creation attempts returning success",
+      "denominator": "Invitation creation attempts reaching a terminal result",
+      "calculation": "numerator / denominator",
+      "evidenceClass": "hard",
+      "source": "local-aggregate",
+      "aggregation": "aggregate-only",
+      "retention": {
+        "location": "local-device",
+        "days": 30,
+        "rawEvents": false
+      },
+      "consent": "local-only",
+      "requiresIdentity": false,
+      "dimensions": [
+        "appVersion",
+        "networkRoute",
+        "failureReasonCode"
+      ],
+      "baseline": "unknown",
+      "decisionUse": "Detect invitation generation regressions.",
+      "caveats": "Never retain or export invite contents, codes, or tokens."
+    },
+    {
+      "id": "guest_invitation_parse_success_rate",
+      "stage": "activation",
+      "name": "Guest invitation parse success rate",
+      "question": "Can a guest safely parse a received invitation?",
+      "numerator": "Invitation parses returning a valid bounded contract",
+      "denominator": "Invitation parse attempts reaching a terminal result",
+      "calculation": "numerator / denominator",
+      "evidenceClass": "hard",
+      "source": "local-aggregate",
+      "aggregation": "aggregate-only",
+      "retention": {
+        "location": "local-device",
+        "days": 30,
+        "rawEvents": false
+      },
+      "consent": "local-only",
+      "requiresIdentity": false,
+      "dimensions": [
+        "appVersion",
+        "failureReasonCode"
+      ],
+      "baseline": "unknown",
+      "decisionUse": "Improve compatibility and error guidance.",
+      "caveats": "Never retain or export the invitation payload."
+    },
+    {
+      "id": "readiness_pass_rate",
+      "stage": "readiness",
+      "name": "Readiness pass rate",
+      "question": "How often does a requested route pass deterministic readiness checks?",
+      "numerator": "Readiness checks returning ready",
+      "denominator": "Readiness checks reaching any terminal result",
+      "calculation": "numerator / denominator",
+      "evidenceClass": "hard",
+      "source": "explicit-opt-in-diagnostic",
+      "aggregation": "aggregate-only",
+      "retention": {
+        "location": "local-device",
+        "days": 7,
+        "rawEvents": false
+      },
+      "consent": "explicit-opt-in",
+      "requiresIdentity": false,
+      "dimensions": [
+        "appVersion",
+        "evidenceVersion",
+        "platformFamily",
+        "networkRoute",
+        "failureReasonCode",
+        "playerCountBucket",
+        "controllerCountBucket",
+        "consentMode"
+      ],
+      "baseline": "unknown",
+      "decisionUse": "Prioritize route and setup repairs.",
+      "caveats": "Export only aggregate counts after explicit review and consent."
+    },
+    {
+      "id": "readiness_reason_share",
+      "stage": "readiness",
+      "name": "Readiness terminal reason share",
+      "question": "Which stable public reason most often ends readiness?",
+      "numerator": "Readiness terminal results for one fixed public reason code",
+      "denominator": "All readiness checks reaching a terminal result",
+      "calculation": "numerator / denominator grouped by failureReasonCode",
+      "evidenceClass": "hard",
+      "source": "explicit-opt-in-diagnostic",
+      "aggregation": "aggregate-only",
+      "retention": {
+        "location": "local-device",
+        "days": 7,
+        "rawEvents": false
+      },
+      "consent": "explicit-opt-in",
+      "requiresIdentity": false,
+      "dimensions": [
+        "appVersion",
+        "evidenceVersion",
+        "platformFamily",
+        "networkRoute",
+        "failureReasonCode",
+        "consentMode"
+      ],
+      "baseline": "unknown",
+      "decisionUse": "Rank repair guidance without collecting private paths or payloads.",
+      "caveats": "Reason codes must be allowlisted and path-free."
+    },
+    {
+      "id": "direct_connection_success_rate",
+      "stage": "connection",
+      "name": "Direct connection success rate",
+      "question": "How often does an eligible direct route connect?",
+      "numerator": "Direct connection attempts reaching connected",
+      "denominator": "Direct connection attempts reaching connected or terminal failure",
+      "calculation": "numerator / denominator",
+      "evidenceClass": "hard",
+      "source": "explicit-opt-in-diagnostic",
+      "aggregation": "aggregate-only",
+      "retention": {
+        "location": "local-device",
+        "days": 7,
+        "rawEvents": false
+      },
+      "consent": "explicit-opt-in",
+      "requiresIdentity": false,
+      "dimensions": [
+        "appVersion",
+        "platformFamily",
+        "networkRoute",
+        "failureReasonCode",
+        "playerCountBucket",
+        "consentMode"
+      ],
+      "baseline": "unknown",
+      "decisionUse": "Decide where NAT diagnostics need improvement.",
+      "caveats": "No IP addresses, candidates, or network identifiers are retained."
+    },
+    {
+      "id": "relay_fallback_success_rate",
+      "stage": "connection",
+      "name": "Relay fallback success rate",
+      "question": "When relay is explicitly selected, does it connect?",
+      "numerator": "Relay attempts reaching connected",
+      "denominator": "Relay attempts reaching connected or terminal failure",
+      "calculation": "numerator / denominator",
+      "evidenceClass": "hard",
+      "source": "operational-aggregate",
+      "aggregation": "aggregate-only",
+      "retention": {
+        "location": "restricted-operations",
+        "days": 90,
+        "rawEvents": false
+      },
+      "consent": "service-operation",
+      "requiresIdentity": false,
+      "dimensions": [
+        "appVersion",
+        "networkRoute",
+        "failureReasonCode",
+        "playerCountBucket"
+      ],
+      "baseline": "unknown",
+      "decisionUse": "Evaluate relay reliability and stop-loss thresholds.",
+      "caveats": "Only relay service aggregate counts and cost totals are permitted."
+    },
+    {
+      "id": "invite_to_playable_p95_seconds",
+      "stage": "connection",
+      "name": "Invite-to-playable p95",
+      "question": "How long does a supported session take from invitation open to playable?",
+      "numerator": "Duration values for qualifying sessions that reach playable",
+      "denominator": "Qualifying sessions that reach playable",
+      "calculation": "p95(numerator duration series); denominator is the sample count",
+      "evidenceClass": "hard",
+      "source": "explicit-opt-in-diagnostic",
+      "aggregation": "aggregate-only",
+      "retention": {
+        "location": "local-device",
+        "days": 7,
+        "rawEvents": false
+      },
+      "consent": "explicit-opt-in",
+      "requiresIdentity": false,
+      "dimensions": [
+        "appVersion",
+        "platformFamily",
+        "networkRoute",
+        "playerCountBucket",
+        "consentMode"
+      ],
+      "baseline": "unknown",
+      "decisionUse": "Track the under-ten-minute product target.",
+      "caveats": "Suppress publication below the minimum cohort size."
+    },
+    {
+      "id": "playable_session_rate",
+      "stage": "gameplay",
+      "name": "Playable session rate",
+      "question": "How often does a started multiplayer attempt reach playable?",
+      "numerator": "Session attempts reaching playable",
+      "denominator": "Session attempts reaching playable or a terminal failure",
+      "calculation": "numerator / denominator",
+      "evidenceClass": "hard",
+      "source": "explicit-opt-in-diagnostic",
+      "aggregation": "aggregate-only",
+      "retention": {
+        "location": "local-device",
+        "days": 7,
+        "rawEvents": false
+      },
+      "consent": "explicit-opt-in",
+      "requiresIdentity": false,
+      "dimensions": [
+        "appVersion",
+        "platformFamily",
+        "networkRoute",
+        "failureReasonCode",
+        "playerCountBucket",
+        "consentMode"
+      ],
+      "baseline": "unknown",
+      "decisionUse": "Measure end-to-end reliability by truthful route.",
+      "caveats": "Does not record game titles or library contents."
+    },
+    {
+      "id": "reconnect_success_rate",
+      "stage": "gameplay",
+      "name": "Reconnect success rate",
+      "question": "After a recoverable disconnect, does the session resume?",
+      "numerator": "Reconnect attempts returning resumed play",
+      "denominator": "Reconnect attempts reaching resumed play or terminal recovery",
+      "calculation": "numerator / denominator",
+      "evidenceClass": "hard",
+      "source": "explicit-opt-in-diagnostic",
+      "aggregation": "aggregate-only",
+      "retention": {
+        "location": "local-device",
+        "days": 7,
+        "rawEvents": false
+      },
+      "consent": "explicit-opt-in",
+      "requiresIdentity": false,
+      "dimensions": [
+        "appVersion",
+        "platformFamily",
+        "networkRoute",
+        "failureReasonCode",
+        "playerCountBucket",
+        "consentMode"
+      ],
+      "baseline": "unknown",
+      "decisionUse": "Prioritize reconnect correctness and recovery copy.",
+      "caveats": "No peer address or session token is retained."
+    },
+    {
+      "id": "clean_teardown_rate",
+      "stage": "gameplay",
+      "name": "Clean teardown rate",
+      "question": "Do sessions release capture, input, and processes cleanly?",
+      "numerator": "Session endings confirmed clean by the local lifecycle manager",
+      "denominator": "All session endings reaching a terminal teardown result",
+      "calculation": "numerator / denominator",
+      "evidenceClass": "hard",
+      "source": "local-aggregate",
+      "aggregation": "aggregate-only",
+      "retention": {
+        "location": "local-device",
+        "days": 30,
+        "rawEvents": false
+      },
+      "consent": "local-only",
+      "requiresIdentity": false,
+      "dimensions": [
+        "appVersion",
+        "platformFamily",
+        "networkRoute",
+        "failureReasonCode"
+      ],
+      "baseline": "unknown",
+      "decisionUse": "Detect lifecycle leaks and stuck-input risk.",
+      "caveats": "Local counter only; detailed logs remain user-controlled."
+    },
+    {
+      "id": "repeat_play_intent_rate",
+      "stage": "retention",
+      "name": "Repeat-play intent rate",
+      "question": "Do participants say they intend to play again?",
+      "numerator": "Survey responses selecting likely or very likely",
+      "denominator": "All completed responses to the exact optional question",
+      "calculation": "numerator / denominator",
+      "evidenceClass": "directional",
+      "source": "user-submitted",
+      "aggregation": "aggregate-only",
+      "retention": {
+        "location": "local-device",
+        "days": 90,
+        "rawEvents": false
+      },
+      "consent": "explicit-opt-in",
+      "requiresIdentity": false,
+      "dimensions": [
+        "evidenceVersion",
+        "consentMode"
+      ],
+      "baseline": "unknown",
+      "decisionUse": "Guide onboarding and playtest format without cross-session tracking.",
+      "caveats": "Self-reported intent is not behavioral retention."
+    },
+    {
+      "id": "reproducible_compatibility_report_rate",
+      "stage": "contribution",
+      "name": "Reproducible compatibility report rate",
+      "question": "Are community reports complete enough to reproduce?",
+      "numerator": "Submitted reports meeting the published evidence checklist",
+      "denominator": "All submitted compatibility reports reviewed in the period",
+      "calculation": "numerator / denominator",
+      "evidenceClass": "hard",
+      "source": "user-submitted",
+      "aggregation": "aggregate-only",
+      "retention": {
+        "location": "local-device",
+        "days": 90,
+        "rawEvents": false
+      },
+      "consent": "explicit-opt-in",
+      "requiresIdentity": false,
+      "dimensions": [
+        "evidenceVersion",
+        "platformFamily",
+        "networkRoute",
+        "consentMode"
+      ],
+      "baseline": "unknown",
+      "decisionUse": "Improve report forms and compatibility coverage.",
+      "caveats": "Exact game evidence is user-submitted, never inferred from a library."
+    },
+    {
+      "id": "relay_cost_per_successful_session",
+      "stage": "cost",
+      "name": "Relay cost per successful session",
+      "question": "What does optional relay capacity cost for successful sessions?",
+      "numerator": "Relay bandwidth, compute, and egress cost in the reporting period",
+      "denominator": "Successful relay sessions in the same reporting period",
+      "calculation": "numerator / denominator",
+      "evidenceClass": "hard",
+      "source": "operational-aggregate",
+      "aggregation": "aggregate-only",
+      "retention": {
+        "location": "restricted-operations",
+        "days": 90,
+        "rawEvents": false
+      },
+      "consent": "service-operation",
+      "requiresIdentity": false,
+      "dimensions": [
+        "evidenceVersion",
+        "networkRoute",
+        "playerCountBucket"
+      ],
+      "baseline": "unknown",
+      "decisionUse": "Set transparent cost envelopes and stop-loss thresholds before pricing.",
+      "caveats": "No pricing commitment follows from this metric alone."
+    }
+  ],
+  "publicationRules": {
+    "minimumCohortSize": 20,
+    "smallCellAction": "suppress",
+    "rounding": "two-significant-digits",
+    "comparisonsRequireSameEvidenceVersion": true,
+    "claimsRequireQaApproval": true
+  }
+}
