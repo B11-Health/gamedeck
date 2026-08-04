@@ -254,6 +254,15 @@ class EmbeddedPlayManager {
     return { ok: true, status: this.status() };
   }
 
+  setAspect(sessionId, aspectRatio) {
+    if (!this.session || this.session.id !== String(sessionId || '')) return { ok: false, error: 'stale_session', status: this.status() };
+    const aspect = Number(aspectRatio);
+    if (!Number.isFinite(aspect) || aspect <= 0.4 || aspect >= 3) return { ok: false, error: 'invalid_aspect', status: this.status() };
+    this.session.aspectRatio = aspect;
+    this.windowController.setAspect?.(aspect, this.session);
+    return { ok: true, status: this.update({ aspectRatio: aspect }) };
+  }
+
   async setMode(sessionId, mode) {
     if (!this.session || this.session.id !== String(sessionId || '')) return { ok: false, error: 'stale_session', status: this.status() };
     const nextMode = normalizeMode(mode);

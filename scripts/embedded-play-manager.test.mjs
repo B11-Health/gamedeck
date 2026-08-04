@@ -37,6 +37,7 @@ function fakeChild(pid = 4242) {
     checkReadiness: async () => ({ ready: ++readinessChecks >= 2 }),
     windowController: {
       prepare: mode => windowModes.push('prepare:' + mode),
+      setAspect: aspect => windowModes.push('aspect:' + aspect.toFixed(3)),
       setMode: mode => windowModes.push(mode),
       restore: () => windowModes.push('restore')
     },
@@ -67,6 +68,13 @@ function fakeChild(pid = 4242) {
   const playing = manager.captureStarted(started.status.sessionId);
   assert.equal(playing.ok, true);
   assert.equal(playing.status.phase, 'playing');
+
+  const aspect = manager.setAspect(started.status.sessionId, 1.214285714);
+  assert.equal(aspect.ok, true);
+  assert.ok(Math.abs(aspect.status.aspectRatio - 1.214285714) < 0.000001);
+  assert.ok(windowModes.some(value => value.startsWith('aspect:1.214')));
+  assert.equal(manager.setAspect(started.status.sessionId, 0.2).error, 'invalid_aspect');
+  assert.equal(manager.setAspect('stale', 1.5).error, 'stale_session');
 
   const fullscreen = await manager.setMode(started.status.sessionId, 'fullscreen');
   assert.equal(fullscreen.status.mode, 'fullscreen');

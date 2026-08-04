@@ -1903,7 +1903,7 @@ const embeddedWindowController = {
   async integrate(session, _source, requestedMode) {
     if (process.platform === 'win32') {
       const owned = engineWindowState(session);
-      if (owned && session?.spec?.engineKind === 'libretro') {
+      if (owned) {
         const measured = Number(owned.state?.clientWidth || 0) / Math.max(1, Number(owned.state?.clientHeight || 0));
         if (Number.isFinite(measured) && measured > 0.4 && measured < 3) session.aspectRatio = measured;
       }
@@ -1920,6 +1920,9 @@ const embeddedWindowController = {
     setEmbeddedEngineWindowMode(session, session.mode || 'docked');
     stabilize(350);
     stabilize(1100);
+  },
+  setAspect(_aspect, session) {
+    if (process.platform === 'win32' && session?.mode !== 'popout') setEmbeddedEngineWindowMode(session, session?.mode || 'docked');
   },
   async setMode(mode, session) {
     if (!mainWindow || mainWindow.isDestroyed()) return;
@@ -3919,6 +3922,10 @@ ipcMain.handle('play-session-set-mode', async (event, sessionId, mode) => {
   } catch (error) {
     return { ok: false, error: error.message, status: embeddedPlayManager?.status() };
   }
+});
+ipcMain.handle('play-session-set-aspect', (event, sessionId, aspectRatio) => {
+  if (!isTrustedMainFrameCaller(event, mainWindow)) return { ok: false, error: 'untrusted_caller', status: embeddedPlayManager?.status() };
+  return embeddedPlayManager.setAspect(String(sessionId || '').slice(0, 160), Number(aspectRatio));
 });
 ipcMain.handle('play-session-arm-capture', (event, sessionId, includeAudio = true) => {
   if (!isTrustedMainFrameCaller(event, mainWindow)) return { ok: false, error: 'untrusted_caller' };

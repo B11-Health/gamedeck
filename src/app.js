@@ -107,6 +107,8 @@ let playCapturePromise = null;
 let launchCurtainTimer = null;
 let fullscreenControlsTimer = null;
 let playPointerTimer = null;
+let playAspectTimer = null;
+let reportedPlayAspect = 0;
 
 const SYSTEM_THEME_BACKGROUNDS = {
   all: { key: 'all', image: '../assets/system-themes/nintendo-polygon.webp', accent: '#72e7ff', glow: '#8b5cff', position: '78% center' },
@@ -1359,8 +1361,12 @@ function stopPlayCapture() {
   }
   playCaptureStream = null;
   playCapturePromise = null;
+  clearTimeout(playAspectTimer);
+  playAspectTimer = null;
+  reportedPlayAspect = 0;
   const video = $('#playVideo');
   if (video) {
+    video.onresize = null;
     video.pause();
     video.srcObject = null;
   }
@@ -1412,6 +1418,20 @@ function showPlayPointer(duration = 1600) {
 function normalizedPlayAspect(value) {
   const aspect = Number(value);
   return Number.isFinite(aspect) && aspect > 0.4 && aspect < 3 ? aspect : 16 / 9;
+}
+
+async function syncPlaySourceAspect(video, sessionId) {
+  if (!video || state.playSession?.sessionId !== sessionId) return;
+  const aspect = Number(video.videoWidth) / Math.max(1, Number(video.videoHeight));
+  if (!Number.isFinite(aspect) || aspect <= 0.4 || aspect >= 3 || Math.abs(aspect - reportedPlayAspect) < 0.002) return;
+  reportedPlayAspect = aspect;
+  const result = await window.deck.playSessionSetAspect(sessionId, aspect);
+  if (result?.status && state.playSession?.sessionId === sessionId) renderPlaySession(result.status);
+}
+
+function schedulePlaySourceAspect(video, sessionId, delay = 120) {
+  clearTimeout(playAspectTimer);
+  playAspectTimer = setTimeout(() => syncPlaySourceAspect(video, sessionId).catch(() => {}), delay);
 }
 
 function applyPlayGeometry() {
@@ -1531,6 +1551,8 @@ async function acquirePlayCapture(status = state.playSession) {
       video.onerror = () => { clearTimeout(timer); reject(new Error('The game video could not be opened.')); };
     });
     await video.play();
+    await syncPlaySourceAspect(video, sessionId);
+    video.onresize = () => schedulePlaySourceAspect(video, sessionId);
     for (const track of stream.getVideoTracks()) {
       track.addEventListener('ended', () => {
         if (state.playSession.active && state.playSession.mode !== 'popout') {

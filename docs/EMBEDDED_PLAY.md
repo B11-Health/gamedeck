@@ -7,7 +7,7 @@ Branch: `feature/openbor-embedded-play`
 
 Pressing Play opens one GameDeck-owned session surface for every supported console route. The same running process can move among three presentation modes:
 
-- **Docked** — the game is centered inside the GameDeck window at the console's intended display aspect.
+- **Docked** — the game is centered inside the GameDeck window at the live captured frame's actual display aspect. Console profiles are used only before metadata arrives or as a fallback.
 - **Fullscreen** — the game fills the display without reserving space for GameDeck chrome. Move the pointer to the top edge to reveal Docked, Fullscreen, Pop out, and Close controls. Escape returns to Docked without ending the game.
 - **Pop out** — the same engine process is shown in its native window. Press F10 to return to Docked.
 
@@ -27,9 +27,9 @@ Closing the player ends the owned engine process, stops capture, and restores th
 
 GameDeck does not persist frames or thumbnails and does not enable Remote Play merely because a local Play Session is active.
 
-## Console aspect profiles
+## Source-driven aspect and fallback profiles
 
-The native engine window and Docked viewport use a console display profile rather than a universal widescreen canvas:
+The captured frame is authoritative. After video metadata arrives—and whenever the engine changes resolution—the renderer reports the bounded source ratio to the owned session. GameDeck updates both the Docked viewport and hidden native engine window without restarting the game. Console profiles prevent a wide default canvas during startup and remain the fallback when source metadata is unavailable:
 
 | Profile | Systems |
 |---|---|
@@ -39,7 +39,7 @@ The native engine window and Docked viewport use a console display profile rathe
 | 2:3 | Nintendo DS stacked-screen layout |
 | 16:9 | PSP, GameCube, Wii, Wii U |
 
-RetroArch additionally uses `aspect_ratio_index = 22` and `video_aspect_ratio_auto = true`, so the core-provided geometry remains authoritative inside the profile.
+RetroArch additionally uses `aspect_ratio_index = 22` and `video_aspect_ratio_auto = true`. OpenBOR and every other capturable engine use the same source-metadata synchronization, including late startup resizes.
 
 ## Engine routing
 
