@@ -123,7 +123,7 @@
 
     if (loadingComplete && activeLibrarySurface && window.deck) {
       if (!stableSince) stableSince = performance.now();
-      if (performance.now() - stableSince >= 900) {
+      if (performance.now() - stableSince >= 3500) {
         clearInterval(timer);
         send('reportRendererReady', {
           phase: 'ready',
