@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "updatedAt": "2026-08-03T21:22:00-04:00",
+  "updatedAt": "2026-08-03T21:52:00-04:00",
   "northStar": "A friend can receive an invitation, pass readiness checks, and reach responsive gameplay in under ten minutes across the widest truthful set of legally owned games.",
   "productTargets": {
     "inviteToPlayableP95Minutes": 10,
@@ -1147,7 +1147,7 @@
     }
   ],
   "currentGitTruth": {
-    "verifiedAt": "2026-08-03T21:22:00-04:00",
+    "verifiedAt": "2026-08-03T21:52:00-04:00",
     "originMain": "1cbec11d13ee923cdaa0825748aac5e88965a903",
     "includedSequences": [
       "Aurora focus integration",
@@ -1159,7 +1159,76 @@
       "currentVerifiedVersion": "V1.0.4",
       "status": "review",
       "supersessionRule": "V1.0.5 may replace V1.0.4 only after exact artifact-integrity evidence and reviewer verdicts are recorded.",
-      "v105EvidenceFound": false
+      "v105EvidenceFound": false,
+      "artifactEvidence": [
+        {
+          "identity": "GAMEDECK-EP-RUNTIME-PURE-CONTRACT-V1.0.4",
+          "canonicalLocation": "immutable-artifact://GAMEDECK-EP-RUNTIME-PURE-CONTRACT-V1.0.4/contract.md",
+          "byteLength": 102969,
+          "sha256": "89f9dc4d7881e3263c22527278362395d8a16c3e595e8a36dc596316f3e937ef",
+          "foundationCommit": "7c42367d085bd79871b796123fcf704d2c327de9",
+          "baseCommit": "9d038f7215d031004acf70c6055308090620f745",
+          "reviewerLinkage": [
+            {
+              "reviewerLane": "security-privacy",
+              "reviewStatus": "in-review",
+              "artifactSha256": "89f9dc4d7881e3263c22527278362395d8a16c3e595e8a36dc596316f3e937ef"
+            },
+            {
+              "reviewerLane": "compatibility-lab",
+              "reviewStatus": "pending",
+              "artifactSha256": "89f9dc4d7881e3263c22527278362395d8a16c3e595e8a36dc596316f3e937ef"
+            },
+            {
+              "reviewerLane": "player-experience",
+              "reviewStatus": "pending",
+              "artifactSha256": "89f9dc4d7881e3263c22527278362395d8a16c3e595e8a36dc596316f3e937ef"
+            },
+            {
+              "reviewerLane": "qa-observability",
+              "reviewStatus": "pending",
+              "artifactSha256": "89f9dc4d7881e3263c22527278362395d8a16c3e595e8a36dc596316f3e937ef"
+            }
+          ]
+        },
+        {
+          "identity": "GAMEDECK-EP-RUNTIME-PURE-CONTRACT-V1.0.4 manifest",
+          "canonicalLocation": "immutable-artifact://GAMEDECK-EP-RUNTIME-PURE-CONTRACT-V1.0.4/manifest.json",
+          "byteLength": 4173,
+          "sha256": "7147b3669dfbd65cf95f8e0c0e7e65fff852cd89c0c63a65618570d901e1998e",
+          "foundationCommit": "7c42367d085bd79871b796123fcf704d2c327de9",
+          "baseCommit": "9d038f7215d031004acf70c6055308090620f745",
+          "reviewerLinkage": [
+            {
+              "reviewerLane": "security-privacy",
+              "reviewStatus": "in-review",
+              "artifactSha256": "7147b3669dfbd65cf95f8e0c0e7e65fff852cd89c0c63a65618570d901e1998e"
+            },
+            {
+              "reviewerLane": "compatibility-lab",
+              "reviewStatus": "pending",
+              "artifactSha256": "7147b3669dfbd65cf95f8e0c0e7e65fff852cd89c0c63a65618570d901e1998e"
+            },
+            {
+              "reviewerLane": "player-experience",
+              "reviewStatus": "pending",
+              "artifactSha256": "7147b3669dfbd65cf95f8e0c0e7e65fff852cd89c0c63a65618570d901e1998e"
+            },
+            {
+              "reviewerLane": "qa-observability",
+              "reviewStatus": "pending",
+              "artifactSha256": "7147b3669dfbd65cf95f8e0c0e7e65fff852cd89c0c63a65618570d901e1998e"
+            }
+          ]
+        }
+      ]
+    },
+    "worktreeEvidence": {
+      "branch": "ops/team-operating-system-v3",
+      "head": "2fd2f41c0f0597ee0a46726f26e68c5b14a467e0",
+      "base": "1cbec11d13ee923cdaa0825748aac5e88965a903",
+      "clean": true,
+      "verifiedAt": "2026-08-03T21:52:00-04:00"
     }
   },
   "communicationReceiptSchema": {
@@ -1175,7 +1244,7 @@
       "executionEvidence",
       "nextBoundedAction"
     ],
-    "events": [
+    "allowedEvents": [
       "dispatch",
       "acceptance",
       "evidence",
