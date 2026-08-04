@@ -256,6 +256,9 @@ if (!renderer.includes('Preparing game engines') || !renderer.includes('window.d
 if (!runtimeManager.includes('AbortSignal.timeout') || !runtimeManager.includes('content-range') || !runtimeManager.includes('SHA-256')) fail('managed runtime download safety or resume support is missing');
 if (!managedRuntimeManifest.platforms?.['win32-x64'] || !managedRuntimeManifest.platforms?.['linux-x64'] || !managedRuntimeManifest.platforms?.['darwin-arm64']) fail('runtime manifest is missing a supported desktop platform');
 if (!pkg.build?.files?.includes('runtime-manager.js') || !pkg.build?.asarUnpack?.some(value => value.includes('7zip-bin'))) fail('managed runtime packaging configuration is missing');
+for (const runtimeFile of ['native-window-presenter.js', 'openbor-launch.js']) {
+  if (!pkg.build?.files?.includes(runtimeFile)) fail(`desktop package is missing native launch runtime: ${runtimeFile}`);
+}
 if (!pkg.build?.files?.includes('!assets/branding/brand-kit/**/*')) fail('desktop package must exclude the web-only social brand kit');
 
 

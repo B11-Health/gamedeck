@@ -78,6 +78,8 @@
       "preload.js",
       "play-session-manager.js",
       "runtime-manager.js",
+      "openbor-launch.js",
+      "native-window-presenter.js",
       "stream-server.js",
       "netplay-manager.js",
       "src/**/*",
