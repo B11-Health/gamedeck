@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "project": "GameDeck",
   "createdAt": "2026-08-03T23:44:00.000Z",
-  "updatedAt": "2026-08-04T16:52:35.894Z",
+  "updatedAt": "2026-08-04T16:58:20.143Z",
   "policy": {
     "nonReplay": true,
     "visibleLaunchRequired": true,
@@ -40,11 +40,11 @@
   },
   "counters": {
     "E": 17,
-    "T": 16,
-    "M": 16,
-    "W": 16,
+    "T": 17,
+    "M": 17,
+    "W": 17,
     "recovery": 3,
-    "event": 275
+    "event": 288
   },
   "tickets": [
     {
@@ -4250,19 +4250,334 @@
       "objective": "Correct the relay scenario arithmetic, re-run focused and full gates, and publish only a verified design-only economics model",
       "assignee": "builder-monetization-model-recovery-45",
       "authorizedBy": "watcher-recovery-authority-17",
-      "status": "active",
+      "status": "completed",
       "chainId": "E-0017",
       "predecessorTicketId": null,
       "predecessorReceiptHash": null,
-      "successorTicketId": null,
+      "successorTicketId": "T-0017",
       "recoveryForTicketId": "E-0017",
       "recoveryTicketId": null,
       "createdAt": "2026-08-04T16:52:13.742Z",
       "acceptedAt": "2026-08-04T16:52:24.785Z",
       "startedAt": "2026-08-04T16:52:35.894Z",
-      "completedAt": null,
+      "completedAt": "2026-08-04T16:54:15.502Z",
       "launchEvidence": "Distinct recovery Builder correcting pre-commit arithmetic in isolated monetization worktree; no external side effects",
-      "receipt": null,
+      "receipt": {
+        "ticketId": "E-0017-RECOVERY-BUILDER-MONETIZATION-MODEL-RECOV-0003",
+        "lane": "E",
+        "role": "builder",
+        "actor": "builder-monetization-model-recovery-45",
+        "objective": "Correct the relay scenario arithmetic, re-run focused and full gates, and publish only a verified design-only economics model",
+        "outcome": "pass",
+        "summary": "Corrected scenario arithmetic and added a design-only ethical relay economics contract, human-readable model, and regression gate without authorizing pricing, spending, publication, telemetry, or partner commitments.",
+        "softwareVersion": "a554140bcad906580044a2d56dc2c7f1dd10cafa",
+        "predecessorTicketId": null,
+        "predecessorReceiptHash": null,
+        "launchEvidence": "Distinct recovery Builder correcting pre-commit arithmetic in isolated monetization worktree; no external side effects",
+        "startedAt": "2026-08-04T16:52:35.894Z",
+        "completedAt": "2026-08-04T16:54:15.502Z",
+        "artifacts": [
+          {
+            "path": "config/ethical-relay-economics.json",
+            "source": "git-blob",
+            "commit": "a554140bcad906580044a2d56dc2c7f1dd10cafa",
+            "objectFormat": "sha1",
+            "objectId": "a68ebbc7f2df013d4d7e27ee91ab275d2ac228c3",
+            "bytes": 7545,
+            "sha256": "1cf1bbc2fae872f4a0533bf8e02f2565c5d86ae7eb69118f3b12c7a888dd0960"
+          },
+          {
+            "path": "docs/ETHICAL_REVENUE_MODEL.md",
+            "source": "git-blob",
+            "commit": "a554140bcad906580044a2d56dc2c7f1dd10cafa",
+            "objectFormat": "sha1",
+            "objectId": "d945fa4fd431e7db04b14588d689b973d3ff095a",
+            "bytes": 4644,
+            "sha256": "ee3c8409850b5fcdf0825b1df51c7344d6dcebdde67b20f7d6aa644aea2ccca2"
+          },
+          {
+            "path": "scripts/ethical-relay-economics-contract.test.mjs",
+            "source": "git-blob",
+            "commit": "a554140bcad906580044a2d56dc2c7f1dd10cafa",
+            "objectFormat": "sha1",
+            "objectId": "5ea7f1540747c998fe9b7ce7196b471485ae4997",
+            "bytes": 6430,
+            "sha256": "7605a12b9f83b0db13b738bbf1c550a7998fc98720575ff6c8fb6cae2268df13"
+          },
+          {
+            "path": "package.json",
+            "source": "git-blob",
+            "commit": "a554140bcad906580044a2d56dc2c7f1dd10cafa",
+            "objectFormat": "sha1",
+            "objectId": "8b3ed0264450c4d5141bd6172a7030e299952530",
+            "bytes": 8200,
+            "sha256": "509a5f44bc53de412b1b56863e0aa8db1ca813d78dcd107c3975d0bd564c2bf2"
+          }
+        ],
+        "checks": [
+          "baseline and final full npm test passed",
+          "focused contract passed with 3 scenarios and 10 rejected safety mutations",
+          "git diff --check passed with line-ending warnings only"
+        ],
+        "nextAuthorizedLanes": [
+          "T"
+        ],
+        "chainDisposition": "handoff-required",
+        "hash": "f9f6feddf98b4da9e411594e0bc985fb55dae2845d417964476b7066e019059d"
+      },
+      "uncertainty": null,
+      "quarantine": null
+    },
+    {
+      "id": "T-0017",
+      "lane": "T",
+      "role": "tester",
+      "objective": "Independently review exact commit a554140 for arithmetic integrity, trust boundaries, unknown handling, mutation resistance, scope, and full repository health",
+      "assignee": "tester-monetization-model-46",
+      "authorizedBy": "general-orchestrator",
+      "status": "completed",
+      "chainId": "E-0017",
+      "predecessorTicketId": "E-0017-RECOVERY-BUILDER-MONETIZATION-MODEL-RECOV-0003",
+      "predecessorReceiptHash": "f9f6feddf98b4da9e411594e0bc985fb55dae2845d417964476b7066e019059d",
+      "successorTicketId": "M-0017",
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T16:54:24.609Z",
+      "acceptedAt": "2026-08-04T16:54:44.058Z",
+      "startedAt": "2026-08-04T16:54:50.858Z",
+      "completedAt": "2026-08-04T16:55:41.732Z",
+      "launchEvidence": "Detached exact-commit review worktree at a554140; no source edits or external side effects",
+      "receipt": {
+        "ticketId": "T-0017",
+        "lane": "T",
+        "role": "tester",
+        "actor": "tester-monetization-model-46",
+        "objective": "Independently review exact commit a554140 for arithmetic integrity, trust boundaries, unknown handling, mutation resistance, scope, and full repository health",
+        "outcome": "pass",
+        "summary": "Exact commit a554140 passed independent arithmetic, trust-boundary, unknown-handling, mutation, scope, full-gate, and diff review.",
+        "softwareVersion": "a554140bcad906580044a2d56dc2c7f1dd10cafa",
+        "predecessorTicketId": "E-0017-RECOVERY-BUILDER-MONETIZATION-MODEL-RECOV-0003",
+        "predecessorReceiptHash": "f9f6feddf98b4da9e411594e0bc985fb55dae2845d417964476b7066e019059d",
+        "launchEvidence": "Detached exact-commit review worktree at a554140; no source edits or external side effects",
+        "startedAt": "2026-08-04T16:54:50.858Z",
+        "completedAt": "2026-08-04T16:55:41.732Z",
+        "artifacts": [
+          {
+            "path": "config/ethical-relay-economics.json",
+            "source": "git-blob",
+            "commit": "a554140bcad906580044a2d56dc2c7f1dd10cafa",
+            "objectFormat": "sha1",
+            "objectId": "a68ebbc7f2df013d4d7e27ee91ab275d2ac228c3",
+            "bytes": 7545,
+            "sha256": "1cf1bbc2fae872f4a0533bf8e02f2565c5d86ae7eb69118f3b12c7a888dd0960"
+          },
+          {
+            "path": "docs/ETHICAL_REVENUE_MODEL.md",
+            "source": "git-blob",
+            "commit": "a554140bcad906580044a2d56dc2c7f1dd10cafa",
+            "objectFormat": "sha1",
+            "objectId": "d945fa4fd431e7db04b14588d689b973d3ff095a",
+            "bytes": 4644,
+            "sha256": "ee3c8409850b5fcdf0825b1df51c7344d6dcebdde67b20f7d6aa644aea2ccca2"
+          },
+          {
+            "path": "scripts/ethical-relay-economics-contract.test.mjs",
+            "source": "git-blob",
+            "commit": "a554140bcad906580044a2d56dc2c7f1dd10cafa",
+            "objectFormat": "sha1",
+            "objectId": "5ea7f1540747c998fe9b7ce7196b471485ae4997",
+            "bytes": 6430,
+            "sha256": "7605a12b9f83b0db13b738bbf1c550a7998fc98720575ff6c8fb6cae2268df13"
+          },
+          {
+            "path": "package.json",
+            "source": "git-blob",
+            "commit": "a554140bcad906580044a2d56dc2c7f1dd10cafa",
+            "objectFormat": "sha1",
+            "objectId": "8b3ed0264450c4d5141bd6172a7030e299952530",
+            "bytes": 8200,
+            "sha256": "509a5f44bc53de412b1b56863e0aa8db1ca813d78dcd107c3975d0bd564c2bf2"
+          }
+        ],
+        "checks": [
+          "focused contract passed with 10 built-in mutations rejected",
+          "independent pricing-authorization mutation rejected with exit status 1",
+          "detached full npm test and exact-commit diff check passed"
+        ],
+        "nextAuthorizedLanes": [
+          "M"
+        ],
+        "chainDisposition": "handoff-required",
+        "hash": "330ff6768da16893d925f0a548ad62f7b1d0e7800a57d1e0f243e90ef88b14f9"
+      },
+      "uncertainty": null,
+      "quarantine": null
+    },
+    {
+      "id": "M-0017",
+      "lane": "M",
+      "role": "supervisor",
+      "objective": "Supervise exact commit a554140, custody receipts, arithmetic evidence, trust boundaries, current-main identity, and merge authorization",
+      "assignee": "supervisor-monetization-model-47",
+      "authorizedBy": "general-orchestrator",
+      "status": "completed",
+      "chainId": "E-0017",
+      "predecessorTicketId": "T-0017",
+      "predecessorReceiptHash": "330ff6768da16893d925f0a548ad62f7b1d0e7800a57d1e0f243e90ef88b14f9",
+      "successorTicketId": "W-0017",
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T16:56:01.410Z",
+      "acceptedAt": "2026-08-04T16:56:11.642Z",
+      "startedAt": "2026-08-04T16:56:24.137Z",
+      "completedAt": "2026-08-04T16:56:52.784Z",
+      "launchEvidence": "Supervisor verifying exact implementation commit a554140, Tester receipt, unchanged origin/main, bounded design-only scope, and merge preconditions",
+      "receipt": {
+        "ticketId": "M-0017",
+        "lane": "M",
+        "role": "supervisor",
+        "actor": "supervisor-monetization-model-47",
+        "objective": "Supervise exact commit a554140, custody receipts, arithmetic evidence, trust boundaries, current-main identity, and merge authorization",
+        "outcome": "pass",
+        "summary": "Approved exact commit a554140 for integration because its parent still equals origin/main, scope is bounded to the economics contract and gate, Tester evidence is valid, and all spending, pricing, publication, telemetry, and commitment boundaries remain false.",
+        "softwareVersion": "a554140bcad906580044a2d56dc2c7f1dd10cafa",
+        "predecessorTicketId": "T-0017",
+        "predecessorReceiptHash": "330ff6768da16893d925f0a548ad62f7b1d0e7800a57d1e0f243e90ef88b14f9",
+        "launchEvidence": "Supervisor verifying exact implementation commit a554140, Tester receipt, unchanged origin/main, bounded design-only scope, and merge preconditions",
+        "startedAt": "2026-08-04T16:56:24.137Z",
+        "completedAt": "2026-08-04T16:56:52.784Z",
+        "artifacts": [
+          {
+            "path": "config/ethical-relay-economics.json",
+            "source": "git-blob",
+            "commit": "a554140bcad906580044a2d56dc2c7f1dd10cafa",
+            "objectFormat": "sha1",
+            "objectId": "a68ebbc7f2df013d4d7e27ee91ab275d2ac228c3",
+            "bytes": 7545,
+            "sha256": "1cf1bbc2fae872f4a0533bf8e02f2565c5d86ae7eb69118f3b12c7a888dd0960"
+          },
+          {
+            "path": "docs/ETHICAL_REVENUE_MODEL.md",
+            "source": "git-blob",
+            "commit": "a554140bcad906580044a2d56dc2c7f1dd10cafa",
+            "objectFormat": "sha1",
+            "objectId": "d945fa4fd431e7db04b14588d689b973d3ff095a",
+            "bytes": 4644,
+            "sha256": "ee3c8409850b5fcdf0825b1df51c7344d6dcebdde67b20f7d6aa644aea2ccca2"
+          },
+          {
+            "path": "scripts/ethical-relay-economics-contract.test.mjs",
+            "source": "git-blob",
+            "commit": "a554140bcad906580044a2d56dc2c7f1dd10cafa",
+            "objectFormat": "sha1",
+            "objectId": "5ea7f1540747c998fe9b7ce7196b471485ae4997",
+            "bytes": 6430,
+            "sha256": "7605a12b9f83b0db13b738bbf1c550a7998fc98720575ff6c8fb6cae2268df13"
+          },
+          {
+            "path": "package.json",
+            "source": "git-blob",
+            "commit": "a554140bcad906580044a2d56dc2c7f1dd10cafa",
+            "objectFormat": "sha1",
+            "objectId": "8b3ed0264450c4d5141bd6172a7030e299952530",
+            "bytes": 8200,
+            "sha256": "509a5f44bc53de412b1b56863e0aa8db1ca813d78dcd107c3975d0bd564c2bf2"
+          }
+        ],
+        "checks": [
+          "implementation parent equals current origin/main 0c98c5038e6fa85af28941983cdbbf8bf92304eb",
+          "exact five-file commit scope verified including custody ledger",
+          "CADOps ledger valid and independent Tester receipt accepted"
+        ],
+        "nextAuthorizedLanes": [
+          "W"
+        ],
+        "chainDisposition": "handoff-required",
+        "hash": "632a50daee95008e0fac63d39b5a7df7e655756c4e17c0d18f2e9458f0e66028"
+      },
+      "uncertainty": null,
+      "quarantine": null
+    },
+    {
+      "id": "W-0017",
+      "lane": "W",
+      "role": "watcher",
+      "objective": "Close monetization model custody after final ledger, remote identity, worktree, full-gate, privacy boundary, and ChatChain rotation-safety verification",
+      "assignee": "watcher-monetization-model-48",
+      "authorizedBy": "general-orchestrator",
+      "status": "completed",
+      "chainId": "E-0017",
+      "predecessorTicketId": "M-0017",
+      "predecessorReceiptHash": "632a50daee95008e0fac63d39b5a7df7e655756c4e17c0d18f2e9458f0e66028",
+      "successorTicketId": null,
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T16:57:03.791Z",
+      "acceptedAt": "2026-08-04T16:57:14.260Z",
+      "startedAt": "2026-08-04T16:57:20.724Z",
+      "completedAt": "2026-08-04T16:58:20.143Z",
+      "launchEvidence": "Watcher validating closed-chain readiness, unchanged origin/main, healthy ledger, isolated worktree, and no eligible ChatChain tab rotation",
+      "receipt": {
+        "ticketId": "W-0017",
+        "lane": "W",
+        "role": "watcher",
+        "actor": "watcher-monetization-model-48",
+        "objective": "Close monetization model custody after final ledger, remote identity, worktree, full-gate, privacy boundary, and ChatChain rotation-safety verification",
+        "outcome": "pass",
+        "summary": "Closed monetization model custody after healthy ledger, unchanged current main, isolated worktree, independently approved exact commit, and confirmed absence of a private room registry or loopback ChatChain endpoint; no tab rotation was attempted.",
+        "softwareVersion": "a554140bcad906580044a2d56dc2c7f1dd10cafa",
+        "predecessorTicketId": "M-0017",
+        "predecessorReceiptHash": "632a50daee95008e0fac63d39b5a7df7e655756c4e17c0d18f2e9458f0e66028",
+        "launchEvidence": "Watcher validating closed-chain readiness, unchanged origin/main, healthy ledger, isolated worktree, and no eligible ChatChain tab rotation",
+        "startedAt": "2026-08-04T16:57:20.724Z",
+        "completedAt": "2026-08-04T16:58:20.143Z",
+        "artifacts": [
+          {
+            "path": "config/ethical-relay-economics.json",
+            "source": "git-blob",
+            "commit": "a554140bcad906580044a2d56dc2c7f1dd10cafa",
+            "objectFormat": "sha1",
+            "objectId": "a68ebbc7f2df013d4d7e27ee91ab275d2ac228c3",
+            "bytes": 7545,
+            "sha256": "1cf1bbc2fae872f4a0533bf8e02f2565c5d86ae7eb69118f3b12c7a888dd0960"
+          },
+          {
+            "path": "docs/ETHICAL_REVENUE_MODEL.md",
+            "source": "git-blob",
+            "commit": "a554140bcad906580044a2d56dc2c7f1dd10cafa",
+            "objectFormat": "sha1",
+            "objectId": "d945fa4fd431e7db04b14588d689b973d3ff095a",
+            "bytes": 4644,
+            "sha256": "ee3c8409850b5fcdf0825b1df51c7344d6dcebdde67b20f7d6aa644aea2ccca2"
+          },
+          {
+            "path": "scripts/ethical-relay-economics-contract.test.mjs",
+            "source": "git-blob",
+            "commit": "a554140bcad906580044a2d56dc2c7f1dd10cafa",
+            "objectFormat": "sha1",
+            "objectId": "5ea7f1540747c998fe9b7ce7196b471485ae4997",
+            "bytes": 6430,
+            "sha256": "7605a12b9f83b0db13b738bbf1c550a7998fc98720575ff6c8fb6cae2268df13"
+          },
+          {
+            "path": "package.json",
+            "source": "git-blob",
+            "commit": "a554140bcad906580044a2d56dc2c7f1dd10cafa",
+            "objectFormat": "sha1",
+            "objectId": "8b3ed0264450c4d5141bd6172a7030e299952530",
+            "bytes": 8200,
+            "sha256": "509a5f44bc53de412b1b56863e0aa8db1ca813d78dcd107c3975d0bd564c2bf2"
+          }
+        ],
+        "checks": [
+          "CADOps Watcher healthy with zero risks",
+          "origin/main remained 0c98c5038e6fa85af28941983cdbbf8bf92304eb",
+          "private room registry absent and all inspected loopback CDP ports unavailable; no predecessor tab closed"
+        ],
+        "nextAuthorizedLanes": [],
+        "chainDisposition": "closed",
+        "hash": "811e86203650b27a9f031ff58bd4cdc8bf2a19b0dd0277d11ecba66d153e801e"
+      },
       "uncertainty": null,
       "quarantine": null
     }
@@ -7912,6 +8227,179 @@
         "launchEvidence": "Distinct recovery Builder correcting pre-commit arithmetic in isolated monetization worktree; no external side effects"
       },
       "hash": "bf6705fecb0f7f2a8c11688083ccdadb9a135ce82cf837dbb60f487f38cf7c75"
+    },
+    {
+      "eventId": "EVT-000276",
+      "type": "ticket.completed",
+      "ticketId": "E-0017-RECOVERY-BUILDER-MONETIZATION-MODEL-RECOV-0003",
+      "actor": "builder-monetization-model-recovery-45",
+      "at": "2026-08-04T16:54:15.502Z",
+      "previousHash": "bf6705fecb0f7f2a8c11688083ccdadb9a135ce82cf837dbb60f487f38cf7c75",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "f9f6feddf98b4da9e411594e0bc985fb55dae2845d417964476b7066e019059d",
+        "softwareVersion": "a554140bcad906580044a2d56dc2c7f1dd10cafa"
+      },
+      "hash": "0b3a7766ec296324c113fcca7d4530d31b74641fbf2fb6fe927b0e0354389da1"
+    },
+    {
+      "eventId": "EVT-000277",
+      "type": "custody.handed-off",
+      "ticketId": "E-0017-RECOVERY-BUILDER-MONETIZATION-MODEL-RECOV-0003",
+      "actor": "general-orchestrator",
+      "at": "2026-08-04T16:54:24.609Z",
+      "previousHash": "0b3a7766ec296324c113fcca7d4530d31b74641fbf2fb6fe927b0e0354389da1",
+      "payload": {
+        "successorTicketId": "T-0017",
+        "successorLane": "T",
+        "predecessorReceiptHash": "f9f6feddf98b4da9e411594e0bc985fb55dae2845d417964476b7066e019059d",
+        "assignee": "tester-monetization-model-46"
+      },
+      "hash": "b67abf3b5e3b83250a79e3371c2d8784c17b8fab424dd3c24b1a19ba4f4457b3"
+    },
+    {
+      "eventId": "EVT-000278",
+      "type": "ticket.accepted",
+      "ticketId": "T-0017",
+      "actor": "tester-monetization-model-46",
+      "at": "2026-08-04T16:54:44.058Z",
+      "previousHash": "b67abf3b5e3b83250a79e3371c2d8784c17b8fab424dd3c24b1a19ba4f4457b3",
+      "payload": {
+        "role": "tester"
+      },
+      "hash": "7a6b0a0920f7cda8e47ad296ecc61355a8f4965fb2b62b860d31c98a5053ece4"
+    },
+    {
+      "eventId": "EVT-000279",
+      "type": "ticket.started",
+      "ticketId": "T-0017",
+      "actor": "tester-monetization-model-46",
+      "at": "2026-08-04T16:54:50.858Z",
+      "previousHash": "7a6b0a0920f7cda8e47ad296ecc61355a8f4965fb2b62b860d31c98a5053ece4",
+      "payload": {
+        "launchEvidence": "Detached exact-commit review worktree at a554140; no source edits or external side effects"
+      },
+      "hash": "f7dc92d323b73e0e6e1af307faa151503ac076cad3c483d03455490eaa4663f0"
+    },
+    {
+      "eventId": "EVT-000280",
+      "type": "ticket.completed",
+      "ticketId": "T-0017",
+      "actor": "tester-monetization-model-46",
+      "at": "2026-08-04T16:55:41.732Z",
+      "previousHash": "f7dc92d323b73e0e6e1af307faa151503ac076cad3c483d03455490eaa4663f0",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "330ff6768da16893d925f0a548ad62f7b1d0e7800a57d1e0f243e90ef88b14f9",
+        "softwareVersion": "a554140bcad906580044a2d56dc2c7f1dd10cafa"
+      },
+      "hash": "d94cd1a01679dcb3375ec083d80a9dbe3f8099bff47da7bbe2c6fa018eebf6c4"
+    },
+    {
+      "eventId": "EVT-000281",
+      "type": "custody.handed-off",
+      "ticketId": "T-0017",
+      "actor": "general-orchestrator",
+      "at": "2026-08-04T16:56:01.410Z",
+      "previousHash": "d94cd1a01679dcb3375ec083d80a9dbe3f8099bff47da7bbe2c6fa018eebf6c4",
+      "payload": {
+        "successorTicketId": "M-0017",
+        "successorLane": "M",
+        "predecessorReceiptHash": "330ff6768da16893d925f0a548ad62f7b1d0e7800a57d1e0f243e90ef88b14f9",
+        "assignee": "supervisor-monetization-model-47"
+      },
+      "hash": "f2aac3d1ce3cf3272ad04ab5cc2a5795bd0e3ac65f9a47828a854c53893cbaba"
+    },
+    {
+      "eventId": "EVT-000282",
+      "type": "ticket.accepted",
+      "ticketId": "M-0017",
+      "actor": "supervisor-monetization-model-47",
+      "at": "2026-08-04T16:56:11.642Z",
+      "previousHash": "f2aac3d1ce3cf3272ad04ab5cc2a5795bd0e3ac65f9a47828a854c53893cbaba",
+      "payload": {
+        "role": "supervisor"
+      },
+      "hash": "9c96158a2dfb60c39af01e76a3c1bbbae67ff6ab162ce52db70b11c0a8c45383"
+    },
+    {
+      "eventId": "EVT-000283",
+      "type": "ticket.started",
+      "ticketId": "M-0017",
+      "actor": "supervisor-monetization-model-47",
+      "at": "2026-08-04T16:56:24.137Z",
+      "previousHash": "9c96158a2dfb60c39af01e76a3c1bbbae67ff6ab162ce52db70b11c0a8c45383",
+      "payload": {
+        "launchEvidence": "Supervisor verifying exact implementation commit a554140, Tester receipt, unchanged origin/main, bounded design-only scope, and merge preconditions"
+      },
+      "hash": "ff0fe056bb066bfd9e1e72016f9eea47c67a013c042a0aa9b6885b3b75d57ea9"
+    },
+    {
+      "eventId": "EVT-000284",
+      "type": "ticket.completed",
+      "ticketId": "M-0017",
+      "actor": "supervisor-monetization-model-47",
+      "at": "2026-08-04T16:56:52.784Z",
+      "previousHash": "ff0fe056bb066bfd9e1e72016f9eea47c67a013c042a0aa9b6885b3b75d57ea9",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "632a50daee95008e0fac63d39b5a7df7e655756c4e17c0d18f2e9458f0e66028",
+        "softwareVersion": "a554140bcad906580044a2d56dc2c7f1dd10cafa"
+      },
+      "hash": "b98f1e93ec5ab50c159f992ead14b772d7ff6b36f0840db3fdddf4bad2be86ea"
+    },
+    {
+      "eventId": "EVT-000285",
+      "type": "custody.handed-off",
+      "ticketId": "M-0017",
+      "actor": "general-orchestrator",
+      "at": "2026-08-04T16:57:03.791Z",
+      "previousHash": "b98f1e93ec5ab50c159f992ead14b772d7ff6b36f0840db3fdddf4bad2be86ea",
+      "payload": {
+        "successorTicketId": "W-0017",
+        "successorLane": "W",
+        "predecessorReceiptHash": "632a50daee95008e0fac63d39b5a7df7e655756c4e17c0d18f2e9458f0e66028",
+        "assignee": "watcher-monetization-model-48"
+      },
+      "hash": "e285f125420b1153a1ae609106135780b2260349cd1bae75f64b6e14b50b8c81"
+    },
+    {
+      "eventId": "EVT-000286",
+      "type": "ticket.accepted",
+      "ticketId": "W-0017",
+      "actor": "watcher-monetization-model-48",
+      "at": "2026-08-04T16:57:14.260Z",
+      "previousHash": "e285f125420b1153a1ae609106135780b2260349cd1bae75f64b6e14b50b8c81",
+      "payload": {
+        "role": "watcher"
+      },
+      "hash": "7f78b90e76fc871cde792a0cba02b24cbfbbb1035d16eb9b7a81120b79737852"
+    },
+    {
+      "eventId": "EVT-000287",
+      "type": "ticket.started",
+      "ticketId": "W-0017",
+      "actor": "watcher-monetization-model-48",
+      "at": "2026-08-04T16:57:20.724Z",
+      "previousHash": "7f78b90e76fc871cde792a0cba02b24cbfbbb1035d16eb9b7a81120b79737852",
+      "payload": {
+        "launchEvidence": "Watcher validating closed-chain readiness, unchanged origin/main, healthy ledger, isolated worktree, and no eligible ChatChain tab rotation"
+      },
+      "hash": "0303ae80a3d6ca414fd444b6f9160d8c7a5d3b6e14be947ca7221d356fa1bdcc"
+    },
+    {
+      "eventId": "EVT-000288",
+      "type": "ticket.completed",
+      "ticketId": "W-0017",
+      "actor": "watcher-monetization-model-48",
+      "at": "2026-08-04T16:58:20.143Z",
+      "previousHash": "0303ae80a3d6ca414fd444b6f9160d8c7a5d3b6e14be947ca7221d356fa1bdcc",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "811e86203650b27a9f031ff58bd4cdc8bf2a19b0dd0277d11ecba66d153e801e",
+        "softwareVersion": "a554140bcad906580044a2d56dc2c7f1dd10cafa"
+      },
+      "hash": "721a08091f265930ed8e702bef9cae6d47ea750fef03522fa59368358568ed4e"
     }
   ]
 }
