@@ -14,6 +14,7 @@ import java.io.File;
 
 final class DeckBridge {
     private static final String RENDERER_TAG = "GameDeckRenderer";
+    private static final String QA_TAG = "GameDeckVisualQA";
     private static final String DEBUG_FIXTURE_FILE = "renderer-fixture.enabled";
     private final MainActivity activity;
     private final AndroidRuntimeManager runtime;
@@ -34,7 +35,7 @@ final class DeckBridge {
             boolean debuggable = (activity.getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
             value.put("platform", "android");
             value.put("platformKey", AndroidRuntimeManager.PLATFORM_KEY);
-            value.put("version", "0.3.1-parity-preview");
+            value.put("version", "0.3.3-orientation-polish");
             value.put("localFirst", true);
             value.put("accountRequired", false);
             value.put("embeddedRuntimeReady", false);
@@ -127,6 +128,17 @@ final class DeckBridge {
     @JavascriptInterface
     public void reportRendererError(String payload) {
         Log.e(RENDERER_TAG, "GAMEDECK_RENDERER_ERROR " + safeLog(payload));
+    }
+
+    @JavascriptInterface
+    public void reportQaState(String payload) {
+        if (!isDebugFixtureEnabled()) return;
+        Log.i(QA_TAG, "GAMEDECK_QA_STATE " + safeLog(payload));
+    }
+
+    private boolean isDebugFixtureEnabled() {
+        boolean debuggable = (activity.getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
+        return debuggable && new File(activity.getFilesDir(), DEBUG_FIXTURE_FILE).isFile();
     }
 
     private String safeLog(String value) {
