@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "project": "GameDeck",
   "createdAt": "2026-08-03T23:44:00.000Z",
-  "updatedAt": "2026-08-04T11:58:59.361Z",
+  "updatedAt": "2026-08-04T12:59:58.045Z",
   "policy": {
     "nonReplay": true,
     "visibleLaunchRequired": true,
@@ -39,12 +39,12 @@
     }
   },
   "counters": {
-    "E": 13,
-    "T": 13,
-    "M": 13,
-    "W": 13,
+    "E": 14,
+    "T": 14,
+    "M": 14,
+    "W": 14,
     "recovery": 1,
-    "event": 214
+    "event": 230
   },
   "tickets": [
     {
@@ -3167,6 +3167,376 @@
       },
       "uncertainty": null,
       "quarantine": null
+    },
+    {
+      "id": "E-0014",
+      "lane": "E",
+      "role": "builder",
+      "objective": "Integrate exact OpenBOR fullscreen window-rendering fix 01beebc onto current main without changing unrelated ownership",
+      "assignee": "builder-openbor-window-31",
+      "authorizedBy": "general-orchestrator",
+      "status": "completed",
+      "chainId": "E-0014",
+      "predecessorTicketId": null,
+      "predecessorReceiptHash": null,
+      "successorTicketId": "T-0014",
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T12:50:15.021Z",
+      "acceptedAt": "2026-08-04T12:50:25.388Z",
+      "startedAt": "2026-08-04T12:50:40.834Z",
+      "completedAt": "2026-08-04T12:55:35.998Z",
+      "launchEvidence": "Authenticated Shell active in isolated gamedeck/gamedeck-openbor-window-integration-v3 at origin/main 85db263f46045f5c3ebb7ade6b191b0763d63bd1",
+      "receipt": {
+        "ticketId": "E-0014",
+        "lane": "E",
+        "role": "builder",
+        "actor": "builder-openbor-window-31",
+        "objective": "Integrate exact OpenBOR fullscreen window-rendering fix 01beebc onto current main without changing unrelated ownership",
+        "outcome": "pass",
+        "summary": "Integrated exact OpenBOR fullscreen launch handoff onto current main and corrected packaged-runtime inclusion with a smoke regression guard.",
+        "softwareVersion": "e9072039932c9252620ba69fc06fd8d45eeb6d3b",
+        "predecessorTicketId": null,
+        "predecessorReceiptHash": null,
+        "launchEvidence": "Authenticated Shell active in isolated gamedeck/gamedeck-openbor-window-integration-v3 at origin/main 85db263f46045f5c3ebb7ade6b191b0763d63bd1",
+        "startedAt": "2026-08-04T12:50:40.834Z",
+        "completedAt": "2026-08-04T12:55:35.998Z",
+        "artifacts": [
+          {
+            "path": "main.js",
+            "source": "git-blob",
+            "commit": "e9072039932c9252620ba69fc06fd8d45eeb6d3b",
+            "objectFormat": "sha1",
+            "objectId": "77a7c47d47b768e7f04f8fca5e01dc786de71832",
+            "bytes": 156545,
+            "sha256": "c88f8c580fc1c3140188bd1f307810d3a14ec815d84d67eb68d0194c81507b3d"
+          },
+          {
+            "path": "native-window-presenter.js",
+            "source": "git-blob",
+            "commit": "e9072039932c9252620ba69fc06fd8d45eeb6d3b",
+            "objectFormat": "sha1",
+            "objectId": "35326f77c330dd02a61dd299de4e63cadd0c0da7",
+            "bytes": 10397,
+            "sha256": "9ffdd1f0d637243a0782192403b7c2b9cca601d435a1527d11062e62baf13a59"
+          },
+          {
+            "path": "openbor-launch.js",
+            "source": "git-blob",
+            "commit": "e9072039932c9252620ba69fc06fd8d45eeb6d3b",
+            "objectFormat": "sha1",
+            "objectId": "55ae0c91850167efc97af0582332009a9ce609cb",
+            "bytes": 6729,
+            "sha256": "e3fc727378887cd1088101ffeb013fc4136542a84c0f364d99125af821e06f36"
+          },
+          {
+            "path": "src/app.js",
+            "source": "git-blob",
+            "commit": "e9072039932c9252620ba69fc06fd8d45eeb6d3b",
+            "objectFormat": "sha1",
+            "objectId": "d0020d6817a8a641f97e856f76dc3216e98b3136",
+            "bytes": 157729,
+            "sha256": "418d493f932c283f1b27097106782452d4bd06ca4f2f3ac2ba1b3ac778a2214b"
+          },
+          {
+            "path": "package.json",
+            "source": "git-blob",
+            "commit": "e9072039932c9252620ba69fc06fd8d45eeb6d3b",
+            "objectFormat": "sha1",
+            "objectId": "1c8aa459616099c404074eef017eb6d459ab4136",
+            "bytes": 8077,
+            "sha256": "7939edbbab8869bfe599ed271ff04f17a789b3da4b1315f556e83894f3b19a55"
+          }
+        ],
+        "checks": [
+          "OpenBOR launch 32 scenarios, native presenter 41 scenarios, and launch/spotlight layout probes passed",
+          "Full npm test and git diff --check passed after packaged-runtime correction"
+        ],
+        "nextAuthorizedLanes": [
+          "T"
+        ],
+        "chainDisposition": "handoff-required",
+        "hash": "3ff70e22fd96704bcdf359a4b50124908b60a7ba8a27f3951346296aeb990782"
+      },
+      "uncertainty": null,
+      "quarantine": null
+    },
+    {
+      "id": "T-0014",
+      "lane": "T",
+      "role": "tester",
+      "objective": "Independently review exact OpenBOR fullscreen integration e907203, including packaging and negative mutation evidence",
+      "assignee": "tester-openbor-window-32",
+      "authorizedBy": "general-orchestrator",
+      "status": "completed",
+      "chainId": "E-0014",
+      "predecessorTicketId": "E-0014",
+      "predecessorReceiptHash": "3ff70e22fd96704bcdf359a4b50124908b60a7ba8a27f3951346296aeb990782",
+      "successorTicketId": "M-0014",
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T12:55:47.342Z",
+      "acceptedAt": "2026-08-04T12:56:02.466Z",
+      "startedAt": "2026-08-04T12:56:10.583Z",
+      "completedAt": "2026-08-04T12:57:24.980Z",
+      "launchEvidence": "Detached exact-commit review worktree at e9072039932c9252620ba69fc06fd8d45eeb6d3b; no source edits",
+      "receipt": {
+        "ticketId": "T-0014",
+        "lane": "T",
+        "role": "tester",
+        "actor": "tester-openbor-window-32",
+        "objective": "Independently review exact OpenBOR fullscreen integration e907203, including packaging and negative mutation evidence",
+        "outcome": "pass",
+        "summary": "Exact commit e907203 passed independent fullscreen, window handoff, packaging, layout, and full repository review; missing packaged runtime mutation was rejected.",
+        "softwareVersion": "e9072039932c9252620ba69fc06fd8d45eeb6d3b",
+        "predecessorTicketId": "E-0014",
+        "predecessorReceiptHash": "3ff70e22fd96704bcdf359a4b50124908b60a7ba8a27f3951346296aeb990782",
+        "launchEvidence": "Detached exact-commit review worktree at e9072039932c9252620ba69fc06fd8d45eeb6d3b; no source edits",
+        "startedAt": "2026-08-04T12:56:10.583Z",
+        "completedAt": "2026-08-04T12:57:24.980Z",
+        "artifacts": [
+          {
+            "path": "main.js",
+            "source": "git-blob",
+            "commit": "e9072039932c9252620ba69fc06fd8d45eeb6d3b",
+            "objectFormat": "sha1",
+            "objectId": "77a7c47d47b768e7f04f8fca5e01dc786de71832",
+            "bytes": 156545,
+            "sha256": "c88f8c580fc1c3140188bd1f307810d3a14ec815d84d67eb68d0194c81507b3d"
+          },
+          {
+            "path": "native-window-presenter.js",
+            "source": "git-blob",
+            "commit": "e9072039932c9252620ba69fc06fd8d45eeb6d3b",
+            "objectFormat": "sha1",
+            "objectId": "35326f77c330dd02a61dd299de4e63cadd0c0da7",
+            "bytes": 10397,
+            "sha256": "9ffdd1f0d637243a0782192403b7c2b9cca601d435a1527d11062e62baf13a59"
+          },
+          {
+            "path": "openbor-launch.js",
+            "source": "git-blob",
+            "commit": "e9072039932c9252620ba69fc06fd8d45eeb6d3b",
+            "objectFormat": "sha1",
+            "objectId": "55ae0c91850167efc97af0582332009a9ce609cb",
+            "bytes": 6729,
+            "sha256": "e3fc727378887cd1088101ffeb013fc4136542a84c0f364d99125af821e06f36"
+          },
+          {
+            "path": "src/app.js",
+            "source": "git-blob",
+            "commit": "e9072039932c9252620ba69fc06fd8d45eeb6d3b",
+            "objectFormat": "sha1",
+            "objectId": "d0020d6817a8a641f97e856f76dc3216e98b3136",
+            "bytes": 157729,
+            "sha256": "418d493f932c283f1b27097106782452d4bd06ca4f2f3ac2ba1b3ac778a2214b"
+          },
+          {
+            "path": "package.json",
+            "source": "git-blob",
+            "commit": "e9072039932c9252620ba69fc06fd8d45eeb6d3b",
+            "objectFormat": "sha1",
+            "objectId": "1c8aa459616099c404074eef017eb6d459ab4136",
+            "bytes": 8077,
+            "sha256": "7939edbbab8869bfe599ed271ff04f17a789b3da4b1315f556e83894f3b19a55"
+          }
+        ],
+        "checks": [
+          "Focused tests passed: OpenBOR 32, native presenter 41, spotlight 4 viewports, launch handoff 5 viewports",
+          "Full npm test passed and disposable removal of openbor-launch.js from build.files was rejected by smoke test"
+        ],
+        "nextAuthorizedLanes": [
+          "M"
+        ],
+        "chainDisposition": "handoff-required",
+        "hash": "1a6d7f0e36bb1f344e2ad74b52f109550a7f81ec124f0e09cd1ce35729dcf0a7"
+      },
+      "uncertainty": null,
+      "quarantine": null
+    },
+    {
+      "id": "M-0014",
+      "lane": "M",
+      "role": "supervisor",
+      "objective": "Supervise exact OpenBOR integration e907203 for ancestry, scope, receipts, tests, packaging, and merge authorization",
+      "assignee": "supervisor-openbor-window-33",
+      "authorizedBy": "general-orchestrator",
+      "status": "completed",
+      "chainId": "E-0014",
+      "predecessorTicketId": "T-0014",
+      "predecessorReceiptHash": "1a6d7f0e36bb1f344e2ad74b52f109550a7f81ec124f0e09cd1ce35729dcf0a7",
+      "successorTicketId": "W-0014",
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T12:57:46.667Z",
+      "acceptedAt": "2026-08-04T12:57:55.664Z",
+      "startedAt": "2026-08-04T12:58:03.267Z",
+      "completedAt": "2026-08-04T12:58:42.770Z",
+      "launchEvidence": "Authenticated Shell supervising exact implementation e907203 and linked Builder/Tester receipts before merge authorization",
+      "receipt": {
+        "ticketId": "M-0014",
+        "lane": "M",
+        "role": "supervisor",
+        "actor": "supervisor-openbor-window-33",
+        "objective": "Supervise exact OpenBOR integration e907203 for ancestry, scope, receipts, tests, packaging, and merge authorization",
+        "outcome": "pass",
+        "summary": "Verified exact ancestry from current main, bounded 13-file product/test scope, independent Tester receipt, packaged runtime inclusion, and merge readiness for e907203.",
+        "softwareVersion": "e9072039932c9252620ba69fc06fd8d45eeb6d3b",
+        "predecessorTicketId": "T-0014",
+        "predecessorReceiptHash": "1a6d7f0e36bb1f344e2ad74b52f109550a7f81ec124f0e09cd1ce35729dcf0a7",
+        "launchEvidence": "Authenticated Shell supervising exact implementation e907203 and linked Builder/Tester receipts before merge authorization",
+        "startedAt": "2026-08-04T12:58:03.267Z",
+        "completedAt": "2026-08-04T12:58:42.770Z",
+        "artifacts": [
+          {
+            "path": "main.js",
+            "source": "git-blob",
+            "commit": "e9072039932c9252620ba69fc06fd8d45eeb6d3b",
+            "objectFormat": "sha1",
+            "objectId": "77a7c47d47b768e7f04f8fca5e01dc786de71832",
+            "bytes": 156545,
+            "sha256": "c88f8c580fc1c3140188bd1f307810d3a14ec815d84d67eb68d0194c81507b3d"
+          },
+          {
+            "path": "native-window-presenter.js",
+            "source": "git-blob",
+            "commit": "e9072039932c9252620ba69fc06fd8d45eeb6d3b",
+            "objectFormat": "sha1",
+            "objectId": "35326f77c330dd02a61dd299de4e63cadd0c0da7",
+            "bytes": 10397,
+            "sha256": "9ffdd1f0d637243a0782192403b7c2b9cca601d435a1527d11062e62baf13a59"
+          },
+          {
+            "path": "openbor-launch.js",
+            "source": "git-blob",
+            "commit": "e9072039932c9252620ba69fc06fd8d45eeb6d3b",
+            "objectFormat": "sha1",
+            "objectId": "55ae0c91850167efc97af0582332009a9ce609cb",
+            "bytes": 6729,
+            "sha256": "e3fc727378887cd1088101ffeb013fc4136542a84c0f364d99125af821e06f36"
+          },
+          {
+            "path": "src/app.js",
+            "source": "git-blob",
+            "commit": "e9072039932c9252620ba69fc06fd8d45eeb6d3b",
+            "objectFormat": "sha1",
+            "objectId": "d0020d6817a8a641f97e856f76dc3216e98b3136",
+            "bytes": 157729,
+            "sha256": "418d493f932c283f1b27097106782452d4bd06ca4f2f3ac2ba1b3ac778a2214b"
+          },
+          {
+            "path": "package.json",
+            "source": "git-blob",
+            "commit": "e9072039932c9252620ba69fc06fd8d45eeb6d3b",
+            "objectFormat": "sha1",
+            "objectId": "1c8aa459616099c404074eef017eb6d459ab4136",
+            "bytes": 8077,
+            "sha256": "7939edbbab8869bfe599ed271ff04f17a789b3da4b1315f556e83894f3b19a55"
+          }
+        ],
+        "checks": [
+          "origin/main remained 85db263 and is an ancestor of e907203",
+          "Builder and Tester receipts match identical Git blobs and all focused/full gates passed"
+        ],
+        "nextAuthorizedLanes": [
+          "W"
+        ],
+        "chainDisposition": "handoff-required",
+        "hash": "6f1948908ee7414af7986d2e52fdd93092d7dd6c5234f22b560beddb10567d38"
+      },
+      "uncertainty": null,
+      "quarantine": null
+    },
+    {
+      "id": "W-0014",
+      "lane": "W",
+      "role": "watcher",
+      "objective": "Close OpenBOR fullscreen integration custody after final ledger, repository, remote, and browser-state verification",
+      "assignee": "watcher-openbor-window-34",
+      "authorizedBy": "general-orchestrator",
+      "status": "completed",
+      "chainId": "E-0014",
+      "predecessorTicketId": "M-0014",
+      "predecessorReceiptHash": "6f1948908ee7414af7986d2e52fdd93092d7dd6c5234f22b560beddb10567d38",
+      "successorTicketId": null,
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T12:58:56.046Z",
+      "acceptedAt": "2026-08-04T12:59:04.903Z",
+      "startedAt": "2026-08-04T12:59:16.748Z",
+      "completedAt": "2026-08-04T12:59:58.045Z",
+      "launchEvidence": "Final custody audit of e907203, CADOps receipts, clean review worktree, current origin/main, private registry, and loopback browser state",
+      "receipt": {
+        "ticketId": "W-0014",
+        "lane": "W",
+        "role": "watcher",
+        "actor": "watcher-openbor-window-34",
+        "objective": "Close OpenBOR fullscreen integration custody after final ledger, repository, remote, and browser-state verification",
+        "outcome": "pass",
+        "summary": "Closed OpenBOR fullscreen integration custody after healthy ledger, exact immutable review, clean worktrees, unchanged current main, and no eligible ChatChain browser rotation.",
+        "softwareVersion": "e9072039932c9252620ba69fc06fd8d45eeb6d3b",
+        "predecessorTicketId": "M-0014",
+        "predecessorReceiptHash": "6f1948908ee7414af7986d2e52fdd93092d7dd6c5234f22b560beddb10567d38",
+        "launchEvidence": "Final custody audit of e907203, CADOps receipts, clean review worktree, current origin/main, private registry, and loopback browser state",
+        "startedAt": "2026-08-04T12:59:16.748Z",
+        "completedAt": "2026-08-04T12:59:58.045Z",
+        "artifacts": [
+          {
+            "path": "main.js",
+            "source": "git-blob",
+            "commit": "e9072039932c9252620ba69fc06fd8d45eeb6d3b",
+            "objectFormat": "sha1",
+            "objectId": "77a7c47d47b768e7f04f8fca5e01dc786de71832",
+            "bytes": 156545,
+            "sha256": "c88f8c580fc1c3140188bd1f307810d3a14ec815d84d67eb68d0194c81507b3d"
+          },
+          {
+            "path": "native-window-presenter.js",
+            "source": "git-blob",
+            "commit": "e9072039932c9252620ba69fc06fd8d45eeb6d3b",
+            "objectFormat": "sha1",
+            "objectId": "35326f77c330dd02a61dd299de4e63cadd0c0da7",
+            "bytes": 10397,
+            "sha256": "9ffdd1f0d637243a0782192403b7c2b9cca601d435a1527d11062e62baf13a59"
+          },
+          {
+            "path": "openbor-launch.js",
+            "source": "git-blob",
+            "commit": "e9072039932c9252620ba69fc06fd8d45eeb6d3b",
+            "objectFormat": "sha1",
+            "objectId": "55ae0c91850167efc97af0582332009a9ce609cb",
+            "bytes": 6729,
+            "sha256": "e3fc727378887cd1088101ffeb013fc4136542a84c0f364d99125af821e06f36"
+          },
+          {
+            "path": "src/app.js",
+            "source": "git-blob",
+            "commit": "e9072039932c9252620ba69fc06fd8d45eeb6d3b",
+            "objectFormat": "sha1",
+            "objectId": "d0020d6817a8a641f97e856f76dc3216e98b3136",
+            "bytes": 157729,
+            "sha256": "418d493f932c283f1b27097106782452d4bd06ca4f2f3ac2ba1b3ac778a2214b"
+          },
+          {
+            "path": "package.json",
+            "source": "git-blob",
+            "commit": "e9072039932c9252620ba69fc06fd8d45eeb6d3b",
+            "objectFormat": "sha1",
+            "objectId": "1c8aa459616099c404074eef017eb6d459ab4136",
+            "bytes": 8077,
+            "sha256": "7939edbbab8869bfe599ed271ff04f17a789b3da4b1315f556e83894f3b19a55"
+          }
+        ],
+        "checks": [
+          "CADOps Watcher healthy with zero risks and exact Builder Tester Supervisor receipt chain",
+          "Private room registry absent and no ChatGPT loopback CDP endpoint available; no predecessor tabs closed"
+        ],
+        "nextAuthorizedLanes": [],
+        "chainDisposition": "closed",
+        "hash": "3ca716db91b89f8fa2c80de4d88b808b71a130bf7340ec1060bf6f418f328697"
+      },
+      "uncertainty": null,
+      "quarantine": null
     }
   ],
   "events": [
@@ -6005,6 +6375,218 @@
         "softwareVersion": "406bb137829688769d700c0a1b116a31e41f50b0"
       },
       "hash": "462f67cc78437c5af0d6aa32070caeaf1b2029c4932607361ae65233c15d93e0"
+    },
+    {
+      "eventId": "EVT-000215",
+      "type": "ticket.issued",
+      "ticketId": "E-0014",
+      "actor": "general-orchestrator",
+      "at": "2026-08-04T12:50:15.021Z",
+      "previousHash": "462f67cc78437c5af0d6aa32070caeaf1b2029c4932607361ae65233c15d93e0",
+      "payload": {
+        "lane": "E",
+        "role": "builder",
+        "assignee": "builder-openbor-window-31",
+        "objective": "Integrate exact OpenBOR fullscreen window-rendering fix 01beebc onto current main without changing unrelated ownership"
+      },
+      "hash": "eca6ba07d6cd4058c407d349ec8a21b828164bb3b6fb854d8aacca58b99d73eb"
+    },
+    {
+      "eventId": "EVT-000216",
+      "type": "ticket.accepted",
+      "ticketId": "E-0014",
+      "actor": "builder-openbor-window-31",
+      "at": "2026-08-04T12:50:25.388Z",
+      "previousHash": "eca6ba07d6cd4058c407d349ec8a21b828164bb3b6fb854d8aacca58b99d73eb",
+      "payload": {
+        "role": "builder"
+      },
+      "hash": "3bb04278ceec0ff69d3f516f778ce79fe3f179f6b0c15ea4686335ab7082b56d"
+    },
+    {
+      "eventId": "EVT-000217",
+      "type": "ticket.started",
+      "ticketId": "E-0014",
+      "actor": "builder-openbor-window-31",
+      "at": "2026-08-04T12:50:40.834Z",
+      "previousHash": "3bb04278ceec0ff69d3f516f778ce79fe3f179f6b0c15ea4686335ab7082b56d",
+      "payload": {
+        "launchEvidence": "Authenticated Shell active in isolated gamedeck/gamedeck-openbor-window-integration-v3 at origin/main 85db263f46045f5c3ebb7ade6b191b0763d63bd1"
+      },
+      "hash": "fc73bb4d774da0ad922d8964bb4b38ccf5f8318cf485a3bf5d973390a5409c55"
+    },
+    {
+      "eventId": "EVT-000218",
+      "type": "ticket.completed",
+      "ticketId": "E-0014",
+      "actor": "builder-openbor-window-31",
+      "at": "2026-08-04T12:55:35.998Z",
+      "previousHash": "fc73bb4d774da0ad922d8964bb4b38ccf5f8318cf485a3bf5d973390a5409c55",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "3ff70e22fd96704bcdf359a4b50124908b60a7ba8a27f3951346296aeb990782",
+        "softwareVersion": "e9072039932c9252620ba69fc06fd8d45eeb6d3b"
+      },
+      "hash": "b3d178987f97bacd8de1ea26cb0606318bf5e10c408f3b04b5a7032e4130f089"
+    },
+    {
+      "eventId": "EVT-000219",
+      "type": "custody.handed-off",
+      "ticketId": "E-0014",
+      "actor": "general-orchestrator",
+      "at": "2026-08-04T12:55:47.342Z",
+      "previousHash": "b3d178987f97bacd8de1ea26cb0606318bf5e10c408f3b04b5a7032e4130f089",
+      "payload": {
+        "successorTicketId": "T-0014",
+        "successorLane": "T",
+        "predecessorReceiptHash": "3ff70e22fd96704bcdf359a4b50124908b60a7ba8a27f3951346296aeb990782",
+        "assignee": "tester-openbor-window-32"
+      },
+      "hash": "25a4a22a794c3ddaa04cb433e64916e65897bd792916eccbc32f07daa7fb859e"
+    },
+    {
+      "eventId": "EVT-000220",
+      "type": "ticket.accepted",
+      "ticketId": "T-0014",
+      "actor": "tester-openbor-window-32",
+      "at": "2026-08-04T12:56:02.466Z",
+      "previousHash": "25a4a22a794c3ddaa04cb433e64916e65897bd792916eccbc32f07daa7fb859e",
+      "payload": {
+        "role": "tester"
+      },
+      "hash": "d1119acd0d735d57625d0397bc4a7d67682829788676dd84f55b24d8b1d92ace"
+    },
+    {
+      "eventId": "EVT-000221",
+      "type": "ticket.started",
+      "ticketId": "T-0014",
+      "actor": "tester-openbor-window-32",
+      "at": "2026-08-04T12:56:10.583Z",
+      "previousHash": "d1119acd0d735d57625d0397bc4a7d67682829788676dd84f55b24d8b1d92ace",
+      "payload": {
+        "launchEvidence": "Detached exact-commit review worktree at e9072039932c9252620ba69fc06fd8d45eeb6d3b; no source edits"
+      },
+      "hash": "f6c02beb594636448a2d7d2b755eac7d861980fc9181f11ab39709604beb8b3f"
+    },
+    {
+      "eventId": "EVT-000222",
+      "type": "ticket.completed",
+      "ticketId": "T-0014",
+      "actor": "tester-openbor-window-32",
+      "at": "2026-08-04T12:57:24.980Z",
+      "previousHash": "f6c02beb594636448a2d7d2b755eac7d861980fc9181f11ab39709604beb8b3f",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "1a6d7f0e36bb1f344e2ad74b52f109550a7f81ec124f0e09cd1ce35729dcf0a7",
+        "softwareVersion": "e9072039932c9252620ba69fc06fd8d45eeb6d3b"
+      },
+      "hash": "bfa3b15d25488f35a939d01f1560f1ab5ca4c5c12d45df53751fb17813c18cf2"
+    },
+    {
+      "eventId": "EVT-000223",
+      "type": "custody.handed-off",
+      "ticketId": "T-0014",
+      "actor": "general-orchestrator",
+      "at": "2026-08-04T12:57:46.667Z",
+      "previousHash": "bfa3b15d25488f35a939d01f1560f1ab5ca4c5c12d45df53751fb17813c18cf2",
+      "payload": {
+        "successorTicketId": "M-0014",
+        "successorLane": "M",
+        "predecessorReceiptHash": "1a6d7f0e36bb1f344e2ad74b52f109550a7f81ec124f0e09cd1ce35729dcf0a7",
+        "assignee": "supervisor-openbor-window-33"
+      },
+      "hash": "4f7d587c505c633e34515fa4407ff447ebab8f2aa0a45d7c06d13c60a4b819bf"
+    },
+    {
+      "eventId": "EVT-000224",
+      "type": "ticket.accepted",
+      "ticketId": "M-0014",
+      "actor": "supervisor-openbor-window-33",
+      "at": "2026-08-04T12:57:55.664Z",
+      "previousHash": "4f7d587c505c633e34515fa4407ff447ebab8f2aa0a45d7c06d13c60a4b819bf",
+      "payload": {
+        "role": "supervisor"
+      },
+      "hash": "4089a16c91f1ae491ca62f0f51d9418fcd25812c3ee51f88ee6418345022dde0"
+    },
+    {
+      "eventId": "EVT-000225",
+      "type": "ticket.started",
+      "ticketId": "M-0014",
+      "actor": "supervisor-openbor-window-33",
+      "at": "2026-08-04T12:58:03.267Z",
+      "previousHash": "4089a16c91f1ae491ca62f0f51d9418fcd25812c3ee51f88ee6418345022dde0",
+      "payload": {
+        "launchEvidence": "Authenticated Shell supervising exact implementation e907203 and linked Builder/Tester receipts before merge authorization"
+      },
+      "hash": "48385b8bf65e9d713176b1c07092bf5066a54aef3864a7723c8be6ccb51d0648"
+    },
+    {
+      "eventId": "EVT-000226",
+      "type": "ticket.completed",
+      "ticketId": "M-0014",
+      "actor": "supervisor-openbor-window-33",
+      "at": "2026-08-04T12:58:42.770Z",
+      "previousHash": "48385b8bf65e9d713176b1c07092bf5066a54aef3864a7723c8be6ccb51d0648",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "6f1948908ee7414af7986d2e52fdd93092d7dd6c5234f22b560beddb10567d38",
+        "softwareVersion": "e9072039932c9252620ba69fc06fd8d45eeb6d3b"
+      },
+      "hash": "d33730a88f46bf4f7d1e83a76305715f97c6a9b0a7b75ae2fdc3acc4fe5c84be"
+    },
+    {
+      "eventId": "EVT-000227",
+      "type": "custody.handed-off",
+      "ticketId": "M-0014",
+      "actor": "general-orchestrator",
+      "at": "2026-08-04T12:58:56.046Z",
+      "previousHash": "d33730a88f46bf4f7d1e83a76305715f97c6a9b0a7b75ae2fdc3acc4fe5c84be",
+      "payload": {
+        "successorTicketId": "W-0014",
+        "successorLane": "W",
+        "predecessorReceiptHash": "6f1948908ee7414af7986d2e52fdd93092d7dd6c5234f22b560beddb10567d38",
+        "assignee": "watcher-openbor-window-34"
+      },
+      "hash": "217b49d14c212c5bc3abf349f7bb2196c96a87399dd836ceae7f51089cb63ce0"
+    },
+    {
+      "eventId": "EVT-000228",
+      "type": "ticket.accepted",
+      "ticketId": "W-0014",
+      "actor": "watcher-openbor-window-34",
+      "at": "2026-08-04T12:59:04.903Z",
+      "previousHash": "217b49d14c212c5bc3abf349f7bb2196c96a87399dd836ceae7f51089cb63ce0",
+      "payload": {
+        "role": "watcher"
+      },
+      "hash": "49fcdbcca5302252389580bf839ec6c00a11bf74015453522e44ec406a3e1c40"
+    },
+    {
+      "eventId": "EVT-000229",
+      "type": "ticket.started",
+      "ticketId": "W-0014",
+      "actor": "watcher-openbor-window-34",
+      "at": "2026-08-04T12:59:16.748Z",
+      "previousHash": "49fcdbcca5302252389580bf839ec6c00a11bf74015453522e44ec406a3e1c40",
+      "payload": {
+        "launchEvidence": "Final custody audit of e907203, CADOps receipts, clean review worktree, current origin/main, private registry, and loopback browser state"
+      },
+      "hash": "07766db39a5add79e7f960017b62678123e95feaf1e7f90cdd9a1785c2165420"
+    },
+    {
+      "eventId": "EVT-000230",
+      "type": "ticket.completed",
+      "ticketId": "W-0014",
+      "actor": "watcher-openbor-window-34",
+      "at": "2026-08-04T12:59:58.045Z",
+      "previousHash": "07766db39a5add79e7f960017b62678123e95feaf1e7f90cdd9a1785c2165420",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "3ca716db91b89f8fa2c80de4d88b808b71a130bf7340ec1060bf6f418f328697",
+        "softwareVersion": "e9072039932c9252620ba69fc06fd8d45eeb6d3b"
+      },
+      "hash": "d22c4e95efd90e5c825c4805e0bd4b31ac92fedb02228264d85b336d76c93562"
     }
   ]
 }
