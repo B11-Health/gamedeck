@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "project": "GameDeck",
   "createdAt": "2026-08-03T23:44:00.000Z",
-  "updatedAt": "2026-08-04T01:51:15.344Z",
+  "updatedAt": "2026-08-04T01:54:08.915Z",
   "policy": {
     "nonReplay": true,
     "visibleLaunchRequired": true,
@@ -39,12 +39,12 @@
     }
   },
   "counters": {
-    "E": 4,
+    "E": 5,
     "T": 4,
     "M": 4,
     "W": 4,
     "recovery": 0,
-    "event": 65
+    "event": 68
   },
   "tickets": [
     {
@@ -928,6 +928,29 @@
       },
       "uncertainty": null,
       "quarantine": null
+    },
+    {
+      "id": "E-0005",
+      "lane": "E",
+      "role": "builder",
+      "objective": "Implement safe ChatChain browser-tab rotation: verify the successor chat is open and ready, then close exactly one predecessor tab; keep the predecessor open on uncertainty.",
+      "assignee": "chatchain-tab-builder-01",
+      "authorizedBy": "general-orchestrator",
+      "status": "active",
+      "chainId": "E-0005",
+      "predecessorTicketId": null,
+      "predecessorReceiptHash": null,
+      "successorTicketId": null,
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T01:53:50.357Z",
+      "acceptedAt": "2026-08-04T01:54:03.042Z",
+      "startedAt": "2026-08-04T01:54:08.915Z",
+      "completedAt": null,
+      "launchEvidence": "Authenticated Shell active in dedicated clean worktree gamedeck-chatchain-tabs at main 6af7448; no browser endpoint assumed.",
+      "receipt": null,
+      "uncertainty": null,
+      "quarantine": null
     }
   ],
   "events": [
@@ -1791,6 +1814,45 @@
         "softwareVersion": "a872e61"
       },
       "hash": "b5a41aa62ac0cd48bae7da2beddfd13eba4d2498aa49efbd66dd60ae5fe58085"
+    },
+    {
+      "eventId": "EVT-000066",
+      "type": "ticket.issued",
+      "ticketId": "E-0005",
+      "actor": "general-orchestrator",
+      "at": "2026-08-04T01:53:50.357Z",
+      "previousHash": "b5a41aa62ac0cd48bae7da2beddfd13eba4d2498aa49efbd66dd60ae5fe58085",
+      "payload": {
+        "lane": "E",
+        "role": "builder",
+        "assignee": "chatchain-tab-builder-01",
+        "objective": "Implement safe ChatChain browser-tab rotation: verify the successor chat is open and ready, then close exactly one predecessor tab; keep the predecessor open on uncertainty."
+      },
+      "hash": "3f388bff00e2918d0a8fd7c74301d00993cd484be8ae27e23dd20949d903ce5c"
+    },
+    {
+      "eventId": "EVT-000067",
+      "type": "ticket.accepted",
+      "ticketId": "E-0005",
+      "actor": "chatchain-tab-builder-01",
+      "at": "2026-08-04T01:54:03.042Z",
+      "previousHash": "3f388bff00e2918d0a8fd7c74301d00993cd484be8ae27e23dd20949d903ce5c",
+      "payload": {
+        "role": "builder"
+      },
+      "hash": "419f016a6dabb0f921002f75836fcb4a0f722e05e4c019dc9e9cfd779961f242"
+    },
+    {
+      "eventId": "EVT-000068",
+      "type": "ticket.started",
+      "ticketId": "E-0005",
+      "actor": "chatchain-tab-builder-01",
+      "at": "2026-08-04T01:54:08.915Z",
+      "previousHash": "419f016a6dabb0f921002f75836fcb4a0f722e05e4c019dc9e9cfd779961f242",
+      "payload": {
+        "launchEvidence": "Authenticated Shell active in dedicated clean worktree gamedeck-chatchain-tabs at main 6af7448; no browser endpoint assumed."
+      },
+      "hash": "9b36cf68fc71190aac5db53e9e619c9460430c614ecfe7ced95751b881ad2f8f"
     }
   ]
 }

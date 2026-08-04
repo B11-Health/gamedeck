@@ -170,3 +170,11 @@ Critical findings make `cadops:watch` exit nonzero. Warnings remain visible but 
 4. Existing repository, orchestration, runtime, and smoke gates.
 
 CADOps does not replace independent review. A Builder receipt authorizes only the next declared lane; it is not self-approval and is not permission to merge.
+
+## ChatChain tab handoff
+
+Conversation custody and browser-tab lifetime are separate concerns. The ledger authorizes the successor; the tab operator may close the predecessor only after the successor is a distinct, stably open `https://chatgpt.com/c/<conversation-id>` target.
+
+Run `npm run chatchain:tabs -- status --cdp <endpoint>` to inspect targets and `npm run chatchain:tabs -- handoff ...` to rotate them. The operator activates and repeatedly verifies the successor, re-checks both identities, requests one predecessor close, and verifies continuity. Missing, ambiguous, protected, reused, or unstable targets leave the predecessor open. An uncertain close is never replayed and requires recovery.
+
+See `docs/CHATCHAINS.md` for the complete policy and receipt outcomes.

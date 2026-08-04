@@ -54,6 +54,14 @@ After sending the task:
 - Record the first meaningful evidence timestamp.
 - Ensure no other active item owns the same file, surface, or artifact.
 
+For ChatChain successor tabs:
+
+- Keep the predecessor open while the successor is being created or authenticated.
+- Confirm the successor is a distinct conversation and visibly started.
+- Run the tab handoff operator only after successor verification.
+- Close exactly the predecessor target; preserve unrelated tabs.
+- If closure is uncertain, do not retry. Mark recovery and inspect current targets.
+
 If execution does not start, the item remains `ready`; it is not `active`.
 
 ## 5. Follow the evidence heartbeat
