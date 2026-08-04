@@ -232,6 +232,14 @@ const emulatorPaths = {
     process.platform === 'darwin' && '/Applications/Cemu.app/Contents/MacOS/Cemu',
     process.platform === 'linux' && findOnPath(['cemu'])
   ].filter(Boolean)),
+  openbor: firstExisting([
+    process.env.GAMEDECK_OPENBOR,
+    process.platform === 'win32' && findExecutableUnder(path.join(app.getPath('userData'), 'runtime', 'openbor'), ['OpenBOR.exe'], 8),
+    process.platform === 'win32' && path.join(RGSX_ROOT, 'emulators', 'openbor', 'OpenBOR.exe'),
+    process.platform === 'win32' && findOnPath(['OpenBOR.exe']),
+    process.platform === 'darwin' && '/Applications/OpenBOR.app/Contents/MacOS/OpenBOR',
+    process.platform === 'linux' && findOnPath(['OpenBOR', 'openbor'])
+  ].filter(Boolean)),
   mame: MAME
 };
 
@@ -329,7 +337,8 @@ const systems = [
   { id: 'psp', name: 'PlayStation Portable', short: 'PSP', color: '#06b6d4', folders: ['psp'], exts: ['.iso', '.cso', '.pbp', '.chd'], core: coreFile('ppsspp_libretro'), exe: emulatorPaths.ppsspp, preferExe: true, icon: 'PP' },
   { id: 'gamecube', name: 'Nintendo GameCube', short: 'GAMECUBE', color: '#7c3aed', folders: ['gamecube'], exts: ['.iso', '.gcm', '.rvz'], core: coreFile('dolphin_libretro'), exe: emulatorPaths.dolphin, preferExe: true, args: ['-b', '-e'], icon: 'GC' },
   { id: 'wii', name: 'Nintendo Wii', short: 'WII', color: '#0ea5e9', folders: ['wii'], exts: ['.wbfs', '.rvz'], core: coreFile('dolphin_libretro'), exe: emulatorPaths.dolphin, preferExe: true, args: ['-b', '-e'], icon: 'W' },
-  { id: 'wiiu', name: 'Nintendo Wii U', short: 'WII U', color: '#00a2e8', folders: ['wiiu'], exts: ['.wud', '.wux', '.rpx'], exe: emulatorPaths.cemu, args: ['-f', '-g'], icon: 'WU' }
+  { id: 'wiiu', name: 'Nintendo Wii U', short: 'WII U', color: '#00a2e8', folders: ['wiiu'], exts: ['.wud', '.wux', '.rpx'], exe: emulatorPaths.cemu, args: ['-f', '-g'], icon: 'WU' },
+  { id: 'openbor', name: 'OpenBOR', short: 'OPENBOR', color: '#f97316', folders: ['openbor'], exts: ['.pak'], exe: emulatorPaths.openbor, preferExe: true, launchMode: 'openbor', icon: 'OB' }
 ];
 
 const tgdbPlatforms = {
@@ -1355,6 +1364,7 @@ async function auditArcadeLibrary(force = false) {
 function getLibrary() {
   const state = readStore();
   const games = walk(LIBRARY).map(file => {
+    if (activeManagedDownloadFile(file)) return null;
     const system = detectSystem(file);
     if (!isPlayableFile(file, system) || isArcadeSupportArchive(file, system)) return null;
     let stat;
@@ -1520,6 +1530,9 @@ function safeLibraryFile(file) {
   const relative = path.relative(path.resolve(LIBRARY), resolved);
   if (relative.startsWith('..') || path.isAbsolute(relative) || !fs.existsSync(resolved)) {
     throw Error('The selected game is not inside the RGSX library.');
+  }
+  if (activeManagedDownloadFile(resolved)) {
+    throw Error('This game is still downloading. Wait for the transfer to finish before launching.');
   }
   return resolved;
 }
@@ -2158,6 +2171,17 @@ function readCatalogRows(file) {
   }
 }
 
+function activeManagedDownloadFile(file) {
+  const candidate = path.resolve(String(file || ''));
+  const candidateKey = process.platform === 'win32' ? candidate.toLowerCase() : candidate;
+  return [...downloads.values()].some(job => {
+    if (job?.status !== 'running' || !job.folder || !job.fileName) return false;
+    const expected = path.resolve(LIBRARY, String(job.folder), path.basename(String(job.fileName)));
+    const expectedKey = process.platform === 'win32' ? expected.toLowerCase() : expected;
+    return candidateKey === expectedKey;
+  });
+}
+
 function installedFiles(folder) {
   const root = path.resolve(LIBRARY, String(folder || ''));
   const relative = path.relative(path.resolve(LIBRARY), root);
@@ -2165,6 +2189,7 @@ function installedFiles(folder) {
   const system = systemForFolder(folder);
   const artifacts = new Map();
   for (const file of walk(root)) {
+    if (activeManagedDownloadFile(file)) continue;
     const playable = isPlayableFile(file, system);
     const archive = ['.zip', '.rar', '.7z'].includes(path.extname(file).toLowerCase());
     if (!playable && !archive) continue;
