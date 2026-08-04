@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "project": "GameDeck",
   "createdAt": "2026-08-03T23:44:00.000Z",
-  "updatedAt": "2026-08-04T11:48:04.328Z",
+  "updatedAt": "2026-08-04T11:58:59.361Z",
   "policy": {
     "nonReplay": true,
     "visibleLaunchRequired": true,
@@ -40,11 +40,11 @@
   },
   "counters": {
     "E": 13,
-    "T": 12,
-    "M": 12,
-    "W": 12,
-    "recovery": 0,
-    "event": 196
+    "T": 13,
+    "M": 13,
+    "W": 13,
+    "recovery": 1,
+    "event": 214
   },
   "tickets": [
     {
@@ -2836,19 +2836,335 @@
       "objective": "Reconcile GameDeck operating truth to current main and close ANALYTICS-001 with exact merged evidence without touching product code",
       "assignee": "builder-ops-truth-26",
       "authorizedBy": "general-orchestrator",
-      "status": "active",
+      "status": "completed",
       "chainId": "E-0013",
       "predecessorTicketId": null,
       "predecessorReceiptHash": null,
-      "successorTicketId": null,
+      "successorTicketId": "T-0013",
       "recoveryForTicketId": null,
       "recoveryTicketId": null,
       "createdAt": "2026-08-04T11:47:40.360Z",
       "acceptedAt": "2026-08-04T11:47:52.727Z",
       "startedAt": "2026-08-04T11:48:04.328Z",
-      "completedAt": null,
+      "completedAt": "2026-08-04T11:52:59.175Z",
       "launchEvidence": "Authenticated Shell active in isolated gamedeck/gamedeck-ops-analytics-reconcile worktree at origin/main 8cfd5a75e44f73d1da904ce85a3a5b3ba1f9d0ff; active OpenBOR worktree preserved untouched",
+      "receipt": {
+        "ticketId": "E-0013",
+        "lane": "E",
+        "role": "builder",
+        "actor": "builder-ops-truth-26",
+        "objective": "Reconcile GameDeck operating truth to current main and close ANALYTICS-001 with exact merged evidence without touching product code",
+        "outcome": "pass",
+        "summary": "Reconciled collaboration handoff and team board to merged analytics evidence, preserved active OpenBOR ownership, and made pulse formatting assertions derive from live ready items.",
+        "softwareVersion": "406bb137829688769d700c0a1b116a31e41f50b0",
+        "predecessorTicketId": null,
+        "predecessorReceiptHash": null,
+        "launchEvidence": "Authenticated Shell active in isolated gamedeck/gamedeck-ops-analytics-reconcile worktree at origin/main 8cfd5a75e44f73d1da904ce85a3a5b3ba1f9d0ff; active OpenBOR worktree preserved untouched",
+        "startedAt": "2026-08-04T11:48:04.328Z",
+        "completedAt": "2026-08-04T11:52:59.175Z",
+        "artifacts": [
+          {
+            "path": "COLLAB_HANDOFF.md",
+            "source": "git-blob",
+            "commit": "406bb137829688769d700c0a1b116a31e41f50b0",
+            "objectFormat": "sha1",
+            "objectId": "9b89f401b40eb81683e8d4ad6e96bf89b01e12e0",
+            "bytes": 6552,
+            "sha256": "e81e97336a18aa7a39e98338344485bd4f8a0e55f559b99af93ccd88e34d3475"
+          },
+          {
+            "path": "ops/team-board.json",
+            "source": "git-blob",
+            "commit": "406bb137829688769d700c0a1b116a31e41f50b0",
+            "objectFormat": "sha1",
+            "objectId": "2f8fbe8fab05b79b2dd534082b45ff77a4d70295",
+            "bytes": 46663,
+            "sha256": "5f3f9538c2f090f40e632eee8271b1addcdebe06b054834b1bad88318800bb6b"
+          },
+          {
+            "path": "scripts/orchestrator-pulse.test.mjs",
+            "source": "git-blob",
+            "commit": "406bb137829688769d700c0a1b116a31e41f50b0",
+            "objectFormat": "sha1",
+            "objectId": "530c1fcd6e5d5bcfd2c340ba2810554714ca444c",
+            "bytes": 3016,
+            "sha256": "ba9950bcfbe154f55de64e6b1de2ea74b0b9ec571120b91c38e746ce587da0f2"
+          }
+        ],
+        "checks": [
+          "team board validation passed",
+          "orchestrator pulse tests passed with ANALYTICS-001 absent from executable queue",
+          "full npm test passed after repository-audit line-ending correction",
+          "git diff --check passed with only checkout line-ending warning"
+        ],
+        "nextAuthorizedLanes": [
+          "T"
+        ],
+        "chainDisposition": "handoff-required",
+        "hash": "a23a1c8c71586ee89c2edccb79118945dddf2fe7616bf8beea2bd256e0e66fba"
+      },
+      "uncertainty": null,
+      "quarantine": null
+    },
+    {
+      "id": "T-0013",
+      "lane": "T",
+      "role": "tester",
+      "objective": "Independently test exact commit 406bb137829688769d700c0a1b116a31e41f50b0 for truthful board reconciliation, stale-queue removal, active-worktree preservation, and full repository health",
+      "assignee": "tester-ops-truth-27",
+      "authorizedBy": "general-orchestrator",
+      "status": "quarantined",
+      "chainId": "E-0013",
+      "predecessorTicketId": "E-0013",
+      "predecessorReceiptHash": "a23a1c8c71586ee89c2edccb79118945dddf2fe7616bf8beea2bd256e0e66fba",
+      "successorTicketId": null,
+      "recoveryForTicketId": null,
+      "recoveryTicketId": "T-0013-RECOVERY-TESTER-OPS-TRUTH-RECOVERY-28-0001",
+      "createdAt": "2026-08-04T11:53:08.673Z",
+      "acceptedAt": "2026-08-04T11:53:15.543Z",
+      "startedAt": "2026-08-04T11:53:31.236Z",
+      "completedAt": null,
+      "launchEvidence": "Independent detached review worktree gamedeck/gamedeck-ops-analytics-reconcile-review at exact commit 406bb137829688769d700c0a1b116a31e41f50b0; source worktree not modified",
       "receipt": null,
+      "uncertainty": {
+        "priorStatus": "active",
+        "reason": "The first negative-test harness incorrectly searched validator messages for ANALYTICS-001 while the validator reports workItems[8]; its apparent non-rejection was invalid review evidence, so this identity must not be reused.",
+        "markedBy": "tester-ops-truth-27",
+        "at": "2026-08-04T11:54:50.900Z"
+      },
+      "quarantine": {
+        "reason": "Retire malformed negative-test interpretation and require a distinct recovery tester for the immutable commit.",
+        "quarantinedBy": "tester-ops-truth-27",
+        "at": "2026-08-04T11:55:03.598Z"
+      }
+    },
+    {
+      "id": "T-0013-RECOVERY-TESTER-OPS-TRUTH-RECOVERY-28-0001",
+      "lane": "T",
+      "role": "tester",
+      "objective": "Re-run exact commit 406bb137829688769d700c0a1b116a31e41f50b0 review with corrected validator-message matching and full independent gates",
+      "assignee": "tester-ops-truth-recovery-28",
+      "authorizedBy": "watcher-recovery-authority-13",
+      "status": "completed",
+      "chainId": "E-0013",
+      "predecessorTicketId": null,
+      "predecessorReceiptHash": null,
+      "successorTicketId": "M-0013",
+      "recoveryForTicketId": "T-0013",
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T11:55:10.862Z",
+      "acceptedAt": "2026-08-04T11:55:23.061Z",
+      "startedAt": "2026-08-04T11:55:34.207Z",
+      "completedAt": "2026-08-04T11:56:33.904Z",
+      "launchEvidence": "Fresh recovery tester using clean detached worktree at exact commit 406bb137829688769d700c0a1b116a31e41f50b0 with corrected message matching; no source edits",
+      "receipt": {
+        "ticketId": "T-0013-RECOVERY-TESTER-OPS-TRUTH-RECOVERY-28-0001",
+        "lane": "T",
+        "role": "tester",
+        "actor": "tester-ops-truth-recovery-28",
+        "objective": "Re-run exact commit 406bb137829688769d700c0a1b116a31e41f50b0 review with corrected validator-message matching and full independent gates",
+        "outcome": "pass",
+        "summary": "Exact commit 406bb137829688769d700c0a1b116a31e41f50b0 independently passed scope, ancestry, board, pulse, full repository, clean-worktree, diff, and corrected negative-evidence tests; active OpenBOR worktree remained untouched.",
+        "softwareVersion": "406bb137829688769d700c0a1b116a31e41f50b0",
+        "predecessorTicketId": null,
+        "predecessorReceiptHash": null,
+        "launchEvidence": "Fresh recovery tester using clean detached worktree at exact commit 406bb137829688769d700c0a1b116a31e41f50b0 with corrected message matching; no source edits",
+        "startedAt": "2026-08-04T11:55:34.207Z",
+        "completedAt": "2026-08-04T11:56:33.904Z",
+        "artifacts": [
+          {
+            "path": "COLLAB_HANDOFF.md",
+            "source": "git-blob",
+            "commit": "406bb137829688769d700c0a1b116a31e41f50b0",
+            "objectFormat": "sha1",
+            "objectId": "9b89f401b40eb81683e8d4ad6e96bf89b01e12e0",
+            "bytes": 6552,
+            "sha256": "e81e97336a18aa7a39e98338344485bd4f8a0e55f559b99af93ccd88e34d3475"
+          },
+          {
+            "path": "ops/team-board.json",
+            "source": "git-blob",
+            "commit": "406bb137829688769d700c0a1b116a31e41f50b0",
+            "objectFormat": "sha1",
+            "objectId": "2f8fbe8fab05b79b2dd534082b45ff77a4d70295",
+            "bytes": 46663,
+            "sha256": "5f3f9538c2f090f40e632eee8271b1addcdebe06b054834b1bad88318800bb6b"
+          },
+          {
+            "path": "scripts/orchestrator-pulse.test.mjs",
+            "source": "git-blob",
+            "commit": "406bb137829688769d700c0a1b116a31e41f50b0",
+            "objectFormat": "sha1",
+            "objectId": "530c1fcd6e5d5bcfd2c340ba2810554714ca444c",
+            "bytes": 3016,
+            "sha256": "ba9950bcfbe154f55de64e6b1de2ea74b0b9ec571120b91c38e746ce587da0f2"
+          }
+        ],
+        "checks": [
+          "exact four-file scope against origin/main verified",
+          "ANALYTICS-001 empty exactEvidence mutation rejected",
+          "focused board and pulse tests passed",
+          "full npm test passed in clean detached review worktree",
+          "git diff --check passed and active OpenBOR status unchanged"
+        ],
+        "nextAuthorizedLanes": [
+          "M"
+        ],
+        "chainDisposition": "handoff-required",
+        "hash": "adc566d6d81cb7ba230c68456de48d021c723804fbbea4c5418516e6f5bb7a7a"
+      },
+      "uncertainty": null,
+      "quarantine": null
+    },
+    {
+      "id": "M-0013",
+      "lane": "M",
+      "role": "supervisor",
+      "objective": "Supervise exact commit 406bb137829688769d700c0a1b116a31e41f50b0, recovery custody, evidence hashes, current-main identity, bounded scope, and integration authorization",
+      "assignee": "supervisor-ops-truth-29",
+      "authorizedBy": "general-orchestrator",
+      "status": "completed",
+      "chainId": "E-0013",
+      "predecessorTicketId": "T-0013-RECOVERY-TESTER-OPS-TRUTH-RECOVERY-28-0001",
+      "predecessorReceiptHash": "adc566d6d81cb7ba230c68456de48d021c723804fbbea4c5418516e6f5bb7a7a",
+      "successorTicketId": "W-0013",
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T11:56:44.867Z",
+      "acceptedAt": "2026-08-04T11:56:53.030Z",
+      "startedAt": "2026-08-04T11:57:02.910Z",
+      "completedAt": "2026-08-04T11:57:46.110Z",
+      "launchEvidence": "Supervisor reviewing exact implementation commit 406bb137829688769d700c0a1b116a31e41f50b0, Builder receipt a23a1c8c71586ee89c2edccb79118945dddf2fe7616bf8beea2bd256e0e66fba, and recovery Tester receipt adc566d6d81cb7ba230c68456de48d021c723804fbbea4c5418516e6f5bb7a7a",
+      "receipt": {
+        "ticketId": "M-0013",
+        "lane": "M",
+        "role": "supervisor",
+        "actor": "supervisor-ops-truth-29",
+        "objective": "Supervise exact commit 406bb137829688769d700c0a1b116a31e41f50b0, recovery custody, evidence hashes, current-main identity, bounded scope, and integration authorization",
+        "outcome": "pass",
+        "summary": "Approved exact commit 406bb137829688769d700c0a1b116a31e41f50b0: current-main ancestry is exact, scope is limited to operating truth and pulse tests, recovery Tester receipt is valid, and active product work remains untouched.",
+        "softwareVersion": "406bb137829688769d700c0a1b116a31e41f50b0",
+        "predecessorTicketId": "T-0013-RECOVERY-TESTER-OPS-TRUTH-RECOVERY-28-0001",
+        "predecessorReceiptHash": "adc566d6d81cb7ba230c68456de48d021c723804fbbea4c5418516e6f5bb7a7a",
+        "launchEvidence": "Supervisor reviewing exact implementation commit 406bb137829688769d700c0a1b116a31e41f50b0, Builder receipt a23a1c8c71586ee89c2edccb79118945dddf2fe7616bf8beea2bd256e0e66fba, and recovery Tester receipt adc566d6d81cb7ba230c68456de48d021c723804fbbea4c5418516e6f5bb7a7a",
+        "startedAt": "2026-08-04T11:57:02.910Z",
+        "completedAt": "2026-08-04T11:57:46.110Z",
+        "artifacts": [
+          {
+            "path": "COLLAB_HANDOFF.md",
+            "source": "git-blob",
+            "commit": "406bb137829688769d700c0a1b116a31e41f50b0",
+            "objectFormat": "sha1",
+            "objectId": "9b89f401b40eb81683e8d4ad6e96bf89b01e12e0",
+            "bytes": 6552,
+            "sha256": "e81e97336a18aa7a39e98338344485bd4f8a0e55f559b99af93ccd88e34d3475"
+          },
+          {
+            "path": "ops/team-board.json",
+            "source": "git-blob",
+            "commit": "406bb137829688769d700c0a1b116a31e41f50b0",
+            "objectFormat": "sha1",
+            "objectId": "2f8fbe8fab05b79b2dd534082b45ff77a4d70295",
+            "bytes": 46663,
+            "sha256": "5f3f9538c2f090f40e632eee8271b1addcdebe06b054834b1bad88318800bb6b"
+          },
+          {
+            "path": "scripts/orchestrator-pulse.test.mjs",
+            "source": "git-blob",
+            "commit": "406bb137829688769d700c0a1b116a31e41f50b0",
+            "objectFormat": "sha1",
+            "objectId": "530c1fcd6e5d5bcfd2c340ba2810554714ca444c",
+            "bytes": 3016,
+            "sha256": "ba9950bcfbe154f55de64e6b1de2ea74b0b9ec571120b91c38e746ce587da0f2"
+          }
+        ],
+        "checks": [
+          "origin/main remained 8cfd5a75e44f73d1da904ce85a3a5b3ba1f9d0ff",
+          "merge-base and exact four-file scope verified",
+          "Builder and recovery Tester receipts validated",
+          "CADOps ledger valid with quarantined malformed Tester preserved"
+        ],
+        "nextAuthorizedLanes": [
+          "W"
+        ],
+        "chainDisposition": "handoff-required",
+        "hash": "498148b2f513d9d8aeca14218598d578a69699cf1866f68247d6811fd066435d"
+      },
+      "uncertainty": null,
+      "quarantine": null
+    },
+    {
+      "id": "W-0013",
+      "lane": "W",
+      "role": "watcher",
+      "objective": "Close operating-truth custody after final ledger, room-registry, CDP, worktree, remote-main, and test-health verification",
+      "assignee": "watcher-ops-truth-30",
+      "authorizedBy": "general-orchestrator",
+      "status": "completed",
+      "chainId": "E-0013",
+      "predecessorTicketId": "M-0013",
+      "predecessorReceiptHash": "498148b2f513d9d8aeca14218598d578a69699cf1866f68247d6811fd066435d",
+      "successorTicketId": null,
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T11:57:58.419Z",
+      "acceptedAt": "2026-08-04T11:58:05.196Z",
+      "startedAt": "2026-08-04T11:58:14.922Z",
+      "completedAt": "2026-08-04T11:58:59.361Z",
+      "launchEvidence": "Watcher auditing exact commit 406bb137829688769d700c0a1b116a31e41f50b0, recovery custody, current origin/main, private registry availability, loopback CDP availability, and preserved active worktrees",
+      "receipt": {
+        "ticketId": "W-0013",
+        "lane": "W",
+        "role": "watcher",
+        "actor": "watcher-ops-truth-30",
+        "objective": "Close operating-truth custody after final ledger, room-registry, CDP, worktree, remote-main, and test-health verification",
+        "outcome": "pass",
+        "summary": "Closed operating-truth reconciliation after healthy custody, unchanged current main, independent approval, and exact bounded scope; no ChatChain tabs were rotated because the private registry and loopback CDP evidence were unavailable.",
+        "softwareVersion": "406bb137829688769d700c0a1b116a31e41f50b0",
+        "predecessorTicketId": "M-0013",
+        "predecessorReceiptHash": "498148b2f513d9d8aeca14218598d578a69699cf1866f68247d6811fd066435d",
+        "launchEvidence": "Watcher auditing exact commit 406bb137829688769d700c0a1b116a31e41f50b0, recovery custody, current origin/main, private registry availability, loopback CDP availability, and preserved active worktrees",
+        "startedAt": "2026-08-04T11:58:14.922Z",
+        "completedAt": "2026-08-04T11:58:59.361Z",
+        "artifacts": [
+          {
+            "path": "COLLAB_HANDOFF.md",
+            "source": "git-blob",
+            "commit": "406bb137829688769d700c0a1b116a31e41f50b0",
+            "objectFormat": "sha1",
+            "objectId": "9b89f401b40eb81683e8d4ad6e96bf89b01e12e0",
+            "bytes": 6552,
+            "sha256": "e81e97336a18aa7a39e98338344485bd4f8a0e55f559b99af93ccd88e34d3475"
+          },
+          {
+            "path": "ops/team-board.json",
+            "source": "git-blob",
+            "commit": "406bb137829688769d700c0a1b116a31e41f50b0",
+            "objectFormat": "sha1",
+            "objectId": "2f8fbe8fab05b79b2dd534082b45ff77a4d70295",
+            "bytes": 46663,
+            "sha256": "5f3f9538c2f090f40e632eee8271b1addcdebe06b054834b1bad88318800bb6b"
+          },
+          {
+            "path": "scripts/orchestrator-pulse.test.mjs",
+            "source": "git-blob",
+            "commit": "406bb137829688769d700c0a1b116a31e41f50b0",
+            "objectFormat": "sha1",
+            "objectId": "530c1fcd6e5d5bcfd2c340ba2810554714ca444c",
+            "bytes": 3016,
+            "sha256": "ba9950bcfbe154f55de64e6b1de2ea74b0b9ec571120b91c38e746ce587da0f2"
+          }
+        ],
+        "checks": [
+          "CADOps Watcher healthy with zero risks",
+          "origin/main remained 8cfd5a75e44f73d1da904ce85a3a5b3ba1f9d0ff",
+          "private ChatChain registry absent and all inspected loopback CDP ports refused; no tab closure attempted",
+          "active OpenBOR worktree progressed independently while reviewed branch touched no product files"
+        ],
+        "nextAuthorizedLanes": [],
+        "chainDisposition": "closed",
+        "hash": "52468caecbb987e13f048529f11683ace1e08b48fb711bd4df91ea7cf1c15b02"
+      },
       "uncertainty": null,
       "quarantine": null
     }
@@ -5449,6 +5765,246 @@
         "launchEvidence": "Authenticated Shell active in isolated gamedeck/gamedeck-ops-analytics-reconcile worktree at origin/main 8cfd5a75e44f73d1da904ce85a3a5b3ba1f9d0ff; active OpenBOR worktree preserved untouched"
       },
       "hash": "b4f371e0b88029d21fd8a40ba721072122f60773dfc5ee575bd9d4a95714d685"
+    },
+    {
+      "eventId": "EVT-000197",
+      "type": "ticket.completed",
+      "ticketId": "E-0013",
+      "actor": "builder-ops-truth-26",
+      "at": "2026-08-04T11:52:59.175Z",
+      "previousHash": "b4f371e0b88029d21fd8a40ba721072122f60773dfc5ee575bd9d4a95714d685",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "a23a1c8c71586ee89c2edccb79118945dddf2fe7616bf8beea2bd256e0e66fba",
+        "softwareVersion": "406bb137829688769d700c0a1b116a31e41f50b0"
+      },
+      "hash": "f9dc5e8ac574fcd6e2f6665a28a818f6dfc2cbcdae355ce9c3b9c378b29f0b02"
+    },
+    {
+      "eventId": "EVT-000198",
+      "type": "custody.handed-off",
+      "ticketId": "E-0013",
+      "actor": "general-orchestrator",
+      "at": "2026-08-04T11:53:08.673Z",
+      "previousHash": "f9dc5e8ac574fcd6e2f6665a28a818f6dfc2cbcdae355ce9c3b9c378b29f0b02",
+      "payload": {
+        "successorTicketId": "T-0013",
+        "successorLane": "T",
+        "predecessorReceiptHash": "a23a1c8c71586ee89c2edccb79118945dddf2fe7616bf8beea2bd256e0e66fba",
+        "assignee": "tester-ops-truth-27"
+      },
+      "hash": "18fedda972a007136f75da75cb647ae79b65dcd4ea5a8ef9780310ffc36de96c"
+    },
+    {
+      "eventId": "EVT-000199",
+      "type": "ticket.accepted",
+      "ticketId": "T-0013",
+      "actor": "tester-ops-truth-27",
+      "at": "2026-08-04T11:53:15.543Z",
+      "previousHash": "18fedda972a007136f75da75cb647ae79b65dcd4ea5a8ef9780310ffc36de96c",
+      "payload": {
+        "role": "tester"
+      },
+      "hash": "733abb12f8dd33ddf583a466e49fc63158839fb2feeed3030152945949d61595"
+    },
+    {
+      "eventId": "EVT-000200",
+      "type": "ticket.started",
+      "ticketId": "T-0013",
+      "actor": "tester-ops-truth-27",
+      "at": "2026-08-04T11:53:31.236Z",
+      "previousHash": "733abb12f8dd33ddf583a466e49fc63158839fb2feeed3030152945949d61595",
+      "payload": {
+        "launchEvidence": "Independent detached review worktree gamedeck/gamedeck-ops-analytics-reconcile-review at exact commit 406bb137829688769d700c0a1b116a31e41f50b0; source worktree not modified"
+      },
+      "hash": "e834c5e0cee174c1502a2a58aff9090d90115f18e4189c95fd3c4fe7122a597d"
+    },
+    {
+      "eventId": "EVT-000201",
+      "type": "ticket.uncertain",
+      "ticketId": "T-0013",
+      "actor": "tester-ops-truth-27",
+      "at": "2026-08-04T11:54:50.900Z",
+      "previousHash": "e834c5e0cee174c1502a2a58aff9090d90115f18e4189c95fd3c4fe7122a597d",
+      "payload": {
+        "priorStatus": "active",
+        "reason": "The first negative-test harness incorrectly searched validator messages for ANALYTICS-001 while the validator reports workItems[8]; its apparent non-rejection was invalid review evidence, so this identity must not be reused.",
+        "markedBy": "tester-ops-truth-27",
+        "at": "2026-08-04T11:54:50.900Z"
+      },
+      "hash": "9c3e0d72679cca5ccec04c6946f86c6a41c3710a01ef235a4d8ee075773b078a"
+    },
+    {
+      "eventId": "EVT-000202",
+      "type": "ticket.quarantined",
+      "ticketId": "T-0013",
+      "actor": "tester-ops-truth-27",
+      "at": "2026-08-04T11:55:03.598Z",
+      "previousHash": "9c3e0d72679cca5ccec04c6946f86c6a41c3710a01ef235a4d8ee075773b078a",
+      "payload": {
+        "reason": "Retire malformed negative-test interpretation and require a distinct recovery tester for the immutable commit.",
+        "quarantinedBy": "tester-ops-truth-27",
+        "at": "2026-08-04T11:55:03.598Z"
+      },
+      "hash": "3558662ba7a016bae308aadc35003e84c07f4d0b67e2485ae9b0f3cee63f3fb7"
+    },
+    {
+      "eventId": "EVT-000203",
+      "type": "recovery.issued",
+      "ticketId": "T-0013-RECOVERY-TESTER-OPS-TRUTH-RECOVERY-28-0001",
+      "actor": "watcher-recovery-authority-13",
+      "at": "2026-08-04T11:55:10.862Z",
+      "previousHash": "3558662ba7a016bae308aadc35003e84c07f4d0b67e2485ae9b0f3cee63f3fb7",
+      "payload": {
+        "originalTicketId": "T-0013",
+        "originalStatus": "quarantined",
+        "operator": "tester-ops-truth-recovery-28"
+      },
+      "hash": "25bf9fd7af191478cf7fa2bc0739696e74f375e9acffc4803acb006899b5ee02"
+    },
+    {
+      "eventId": "EVT-000204",
+      "type": "ticket.accepted",
+      "ticketId": "T-0013-RECOVERY-TESTER-OPS-TRUTH-RECOVERY-28-0001",
+      "actor": "tester-ops-truth-recovery-28",
+      "at": "2026-08-04T11:55:23.061Z",
+      "previousHash": "25bf9fd7af191478cf7fa2bc0739696e74f375e9acffc4803acb006899b5ee02",
+      "payload": {
+        "role": "tester"
+      },
+      "hash": "735ff8001f4680e335323db784c69e3d319d95bca9a1ad777b587bf9b8b06044"
+    },
+    {
+      "eventId": "EVT-000205",
+      "type": "ticket.started",
+      "ticketId": "T-0013-RECOVERY-TESTER-OPS-TRUTH-RECOVERY-28-0001",
+      "actor": "tester-ops-truth-recovery-28",
+      "at": "2026-08-04T11:55:34.207Z",
+      "previousHash": "735ff8001f4680e335323db784c69e3d319d95bca9a1ad777b587bf9b8b06044",
+      "payload": {
+        "launchEvidence": "Fresh recovery tester using clean detached worktree at exact commit 406bb137829688769d700c0a1b116a31e41f50b0 with corrected message matching; no source edits"
+      },
+      "hash": "b691e5750b220091cfb8631369f0daee5cb0939ba277d642fb14e5dc2da570c0"
+    },
+    {
+      "eventId": "EVT-000206",
+      "type": "ticket.completed",
+      "ticketId": "T-0013-RECOVERY-TESTER-OPS-TRUTH-RECOVERY-28-0001",
+      "actor": "tester-ops-truth-recovery-28",
+      "at": "2026-08-04T11:56:33.904Z",
+      "previousHash": "b691e5750b220091cfb8631369f0daee5cb0939ba277d642fb14e5dc2da570c0",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "adc566d6d81cb7ba230c68456de48d021c723804fbbea4c5418516e6f5bb7a7a",
+        "softwareVersion": "406bb137829688769d700c0a1b116a31e41f50b0"
+      },
+      "hash": "94e83aaebce39212153422cc2b2384fd6b5ed4036f95c38c2ba6022e36c44ccc"
+    },
+    {
+      "eventId": "EVT-000207",
+      "type": "custody.handed-off",
+      "ticketId": "T-0013-RECOVERY-TESTER-OPS-TRUTH-RECOVERY-28-0001",
+      "actor": "general-orchestrator",
+      "at": "2026-08-04T11:56:44.867Z",
+      "previousHash": "94e83aaebce39212153422cc2b2384fd6b5ed4036f95c38c2ba6022e36c44ccc",
+      "payload": {
+        "successorTicketId": "M-0013",
+        "successorLane": "M",
+        "predecessorReceiptHash": "adc566d6d81cb7ba230c68456de48d021c723804fbbea4c5418516e6f5bb7a7a",
+        "assignee": "supervisor-ops-truth-29"
+      },
+      "hash": "2901bf0420609a27dad7000c31da29e742fd2bddc9998ecc9d6e26bcfeb91ef7"
+    },
+    {
+      "eventId": "EVT-000208",
+      "type": "ticket.accepted",
+      "ticketId": "M-0013",
+      "actor": "supervisor-ops-truth-29",
+      "at": "2026-08-04T11:56:53.030Z",
+      "previousHash": "2901bf0420609a27dad7000c31da29e742fd2bddc9998ecc9d6e26bcfeb91ef7",
+      "payload": {
+        "role": "supervisor"
+      },
+      "hash": "acb8901f8db4ec483ac2b23f348433845e339c0248876f39356a53f766e6d63e"
+    },
+    {
+      "eventId": "EVT-000209",
+      "type": "ticket.started",
+      "ticketId": "M-0013",
+      "actor": "supervisor-ops-truth-29",
+      "at": "2026-08-04T11:57:02.910Z",
+      "previousHash": "acb8901f8db4ec483ac2b23f348433845e339c0248876f39356a53f766e6d63e",
+      "payload": {
+        "launchEvidence": "Supervisor reviewing exact implementation commit 406bb137829688769d700c0a1b116a31e41f50b0, Builder receipt a23a1c8c71586ee89c2edccb79118945dddf2fe7616bf8beea2bd256e0e66fba, and recovery Tester receipt adc566d6d81cb7ba230c68456de48d021c723804fbbea4c5418516e6f5bb7a7a"
+      },
+      "hash": "15d2be9d4d7aceb8294c3f25f78bbf7fc0e6cfb4201d2495586317465734891f"
+    },
+    {
+      "eventId": "EVT-000210",
+      "type": "ticket.completed",
+      "ticketId": "M-0013",
+      "actor": "supervisor-ops-truth-29",
+      "at": "2026-08-04T11:57:46.110Z",
+      "previousHash": "15d2be9d4d7aceb8294c3f25f78bbf7fc0e6cfb4201d2495586317465734891f",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "498148b2f513d9d8aeca14218598d578a69699cf1866f68247d6811fd066435d",
+        "softwareVersion": "406bb137829688769d700c0a1b116a31e41f50b0"
+      },
+      "hash": "da8f6cb4b98c8b40d18a3b7605cd01c956d25a1b2fc2d31c3b8e45d587c9af72"
+    },
+    {
+      "eventId": "EVT-000211",
+      "type": "custody.handed-off",
+      "ticketId": "M-0013",
+      "actor": "general-orchestrator",
+      "at": "2026-08-04T11:57:58.419Z",
+      "previousHash": "da8f6cb4b98c8b40d18a3b7605cd01c956d25a1b2fc2d31c3b8e45d587c9af72",
+      "payload": {
+        "successorTicketId": "W-0013",
+        "successorLane": "W",
+        "predecessorReceiptHash": "498148b2f513d9d8aeca14218598d578a69699cf1866f68247d6811fd066435d",
+        "assignee": "watcher-ops-truth-30"
+      },
+      "hash": "8a197422ff6b3f5f0234629e5ba8cb6d6ed6aba1864c2d127ec7a473505470ef"
+    },
+    {
+      "eventId": "EVT-000212",
+      "type": "ticket.accepted",
+      "ticketId": "W-0013",
+      "actor": "watcher-ops-truth-30",
+      "at": "2026-08-04T11:58:05.196Z",
+      "previousHash": "8a197422ff6b3f5f0234629e5ba8cb6d6ed6aba1864c2d127ec7a473505470ef",
+      "payload": {
+        "role": "watcher"
+      },
+      "hash": "62f92a69c8bca4f61396a27570ff6c6e577bbaada1cfba116d3140789f3b2ef2"
+    },
+    {
+      "eventId": "EVT-000213",
+      "type": "ticket.started",
+      "ticketId": "W-0013",
+      "actor": "watcher-ops-truth-30",
+      "at": "2026-08-04T11:58:14.922Z",
+      "previousHash": "62f92a69c8bca4f61396a27570ff6c6e577bbaada1cfba116d3140789f3b2ef2",
+      "payload": {
+        "launchEvidence": "Watcher auditing exact commit 406bb137829688769d700c0a1b116a31e41f50b0, recovery custody, current origin/main, private registry availability, loopback CDP availability, and preserved active worktrees"
+      },
+      "hash": "c57c72008133d7cfdf13462ba838e1a9d3987d6bd256344742d9b90a1afda71f"
+    },
+    {
+      "eventId": "EVT-000214",
+      "type": "ticket.completed",
+      "ticketId": "W-0013",
+      "actor": "watcher-ops-truth-30",
+      "at": "2026-08-04T11:58:59.361Z",
+      "previousHash": "c57c72008133d7cfdf13462ba838e1a9d3987d6bd256344742d9b90a1afda71f",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "52468caecbb987e13f048529f11683ace1e08b48fb711bd4df91ea7cf1c15b02",
+        "softwareVersion": "406bb137829688769d700c0a1b116a31e41f50b0"
+      },
+      "hash": "462f67cc78437c5af0d6aa32070caeaf1b2029c4932607361ae65233c15d93e0"
     }
   ]
 }
