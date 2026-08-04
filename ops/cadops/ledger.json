@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "project": "GameDeck",
   "createdAt": "2026-08-03T23:44:00.000Z",
-  "updatedAt": "2026-08-04T07:00:35.621Z",
+  "updatedAt": "2026-08-04T07:05:09.999Z",
   "policy": {
     "nonReplay": true,
     "visibleLaunchRequired": true,
@@ -40,11 +40,11 @@
   },
   "counters": {
     "E": 11,
-    "T": 10,
-    "M": 10,
-    "W": 10,
+    "T": 11,
+    "M": 11,
+    "W": 11,
     "recovery": 0,
-    "event": 164
+    "event": 177
   },
   "tickets": [
     {
@@ -2270,19 +2270,264 @@
       "objective": "Add the independently approved least-privilege release workflow regression gate onto current origin/main ca319eb0 without modifying release behavior",
       "assignee": "builder-release-guard-current-18",
       "authorizedBy": "general-orchestrator",
-      "status": "active",
+      "status": "completed",
       "chainId": "E-0011",
       "predecessorTicketId": null,
       "predecessorReceiptHash": null,
-      "successorTicketId": null,
+      "successorTicketId": "T-0011",
       "recoveryForTicketId": null,
       "recoveryTicketId": null,
       "createdAt": "2026-08-04T07:00:18.172Z",
       "acceptedAt": "2026-08-04T07:00:27.379Z",
       "startedAt": "2026-08-04T07:00:35.621Z",
-      "completedAt": null,
+      "completedAt": "2026-08-04T07:02:04.462Z",
       "launchEvidence": "Authenticated Shell active in isolated gamedeck-release-guard-v2 worktree at origin/main ca319eb05b99218af083ec86bfdfc99b2b738b8a",
-      "receipt": null,
+      "receipt": {
+        "ticketId": "E-0011",
+        "lane": "E",
+        "role": "builder",
+        "actor": "builder-release-guard-current-18",
+        "objective": "Add the independently approved least-privilege release workflow regression gate onto current origin/main ca319eb0 without modifying release behavior",
+        "outcome": "pass",
+        "summary": "Added the approved least-privilege release workflow regression gate to current main without changing release behavior.",
+        "softwareVersion": "96183537baf7be67c156fbef9b0177d6bbc41d4e",
+        "predecessorTicketId": null,
+        "predecessorReceiptHash": null,
+        "launchEvidence": "Authenticated Shell active in isolated gamedeck-release-guard-v2 worktree at origin/main ca319eb05b99218af083ec86bfdfc99b2b738b8a",
+        "startedAt": "2026-08-04T07:00:35.621Z",
+        "completedAt": "2026-08-04T07:02:04.462Z",
+        "artifacts": [
+          {
+            "path": "package.json",
+            "source": "git-blob",
+            "commit": "96183537baf7be67c156fbef9b0177d6bbc41d4e",
+            "objectFormat": "sha1",
+            "objectId": "fda9501d128ad08e8924ceaae45b23bfc7592479",
+            "bytes": 7688,
+            "sha256": "e98708311bd5af0d1618d5d655ed24b25678f543b1dafc8dcca4833f2f12e1c1"
+          },
+          {
+            "path": "scripts/release-workflow-permissions.test.mjs",
+            "source": "git-blob",
+            "commit": "96183537baf7be67c156fbef9b0177d6bbc41d4e",
+            "objectFormat": "sha1",
+            "objectId": "907df2c51a16465f681ac274e773068a263fd697",
+            "bytes": 2143,
+            "sha256": "3c88de0038302ba1bdbf1861e22f3eb733f82a1d56920dccf5df8ecbf2c8d694"
+          }
+        ],
+        "checks": [
+          "approved test artifact SHA-256 matched 3c88de0038302ba1bdbf1861e22f3eb733f82a1d56920dccf5df8ecbf2c8d694",
+          "focused release permission test passed",
+          "full npm test passed",
+          "git diff --check passed with line-ending warning only"
+        ],
+        "nextAuthorizedLanes": [
+          "T"
+        ],
+        "chainDisposition": "handoff-required",
+        "hash": "f78c5768307b1e2e3891ced55f3dff1d9f0d41430af13a28290d1156f6fcd59c"
+      },
+      "uncertainty": null,
+      "quarantine": null
+    },
+    {
+      "id": "T-0011",
+      "lane": "T",
+      "role": "tester",
+      "objective": "Independently test exact commit 96183537 on current main, including permission-escalation mutation rejection",
+      "assignee": "tester-release-guard-current-19",
+      "authorizedBy": "general-orchestrator",
+      "status": "completed",
+      "chainId": "E-0011",
+      "predecessorTicketId": "E-0011",
+      "predecessorReceiptHash": "f78c5768307b1e2e3891ced55f3dff1d9f0d41430af13a28290d1156f6fcd59c",
+      "successorTicketId": "M-0011",
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T07:02:22.335Z",
+      "acceptedAt": "2026-08-04T07:02:31.280Z",
+      "startedAt": "2026-08-04T07:02:37.376Z",
+      "completedAt": "2026-08-04T07:03:19.261Z",
+      "launchEvidence": "Independent exact-commit review of 96183537baf7be67c156fbef9b0177d6bbc41d4e; no source edits",
+      "receipt": {
+        "ticketId": "T-0011",
+        "lane": "T",
+        "role": "tester",
+        "actor": "tester-release-guard-current-19",
+        "objective": "Independently test exact commit 96183537 on current main, including permission-escalation mutation rejection",
+        "outcome": "pass",
+        "summary": "Exact current-main commit 96183537 passed focused, mutation, and full repository tests independently.",
+        "softwareVersion": "96183537baf7be67c156fbef9b0177d6bbc41d4e",
+        "predecessorTicketId": "E-0011",
+        "predecessorReceiptHash": "f78c5768307b1e2e3891ced55f3dff1d9f0d41430af13a28290d1156f6fcd59c",
+        "launchEvidence": "Independent exact-commit review of 96183537baf7be67c156fbef9b0177d6bbc41d4e; no source edits",
+        "startedAt": "2026-08-04T07:02:37.376Z",
+        "completedAt": "2026-08-04T07:03:19.261Z",
+        "artifacts": [
+          {
+            "path": "package.json",
+            "source": "git-blob",
+            "commit": "96183537baf7be67c156fbef9b0177d6bbc41d4e",
+            "objectFormat": "sha1",
+            "objectId": "fda9501d128ad08e8924ceaae45b23bfc7592479",
+            "bytes": 7688,
+            "sha256": "e98708311bd5af0d1618d5d655ed24b25678f543b1dafc8dcca4833f2f12e1c1"
+          },
+          {
+            "path": "scripts/release-workflow-permissions.test.mjs",
+            "source": "git-blob",
+            "commit": "96183537baf7be67c156fbef9b0177d6bbc41d4e",
+            "objectFormat": "sha1",
+            "objectId": "907df2c51a16465f681ac274e773068a263fd697",
+            "bytes": 2143,
+            "sha256": "3c88de0038302ba1bdbf1861e22f3eb733f82a1d56920dccf5df8ecbf2c8d694"
+          }
+        ],
+        "checks": [
+          "focused release permission test passed",
+          "workflow-level contents write mutation rejected",
+          "independent full npm test passed"
+        ],
+        "nextAuthorizedLanes": [
+          "M"
+        ],
+        "chainDisposition": "handoff-required",
+        "hash": "19b56c70acce224fb323aeabf76d2c80c0c57823f840cef5ad178da73a570f46"
+      },
+      "uncertainty": null,
+      "quarantine": null
+    },
+    {
+      "id": "M-0011",
+      "lane": "M",
+      "role": "supervisor",
+      "objective": "Verify exact commit, receipts, scope, current origin/main identity, and non-force merge authorization",
+      "assignee": "supervisor-release-guard-current-20",
+      "authorizedBy": "general-orchestrator",
+      "status": "completed",
+      "chainId": "E-0011",
+      "predecessorTicketId": "T-0011",
+      "predecessorReceiptHash": "19b56c70acce224fb323aeabf76d2c80c0c57823f840cef5ad178da73a570f46",
+      "successorTicketId": "W-0011",
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T07:03:26.990Z",
+      "acceptedAt": "2026-08-04T07:03:36.280Z",
+      "startedAt": "2026-08-04T07:03:45.011Z",
+      "completedAt": "2026-08-04T07:04:15.187Z",
+      "launchEvidence": "Supervisor independently verifying exact source scope, receipt hashes, current origin/main, and non-force fast-forward conditions",
+      "receipt": {
+        "ticketId": "M-0011",
+        "lane": "M",
+        "role": "supervisor",
+        "actor": "supervisor-release-guard-current-20",
+        "objective": "Verify exact commit, receipts, scope, current origin/main identity, and non-force merge authorization",
+        "outcome": "pass",
+        "summary": "Approved exact commit 96183537 for non-force fast-forward integration; origin/main remained ca319eb0 and scope is limited to ledger, package gate registration, and one test file.",
+        "softwareVersion": "96183537baf7be67c156fbef9b0177d6bbc41d4e",
+        "predecessorTicketId": "T-0011",
+        "predecessorReceiptHash": "19b56c70acce224fb323aeabf76d2c80c0c57823f840cef5ad178da73a570f46",
+        "launchEvidence": "Supervisor independently verifying exact source scope, receipt hashes, current origin/main, and non-force fast-forward conditions",
+        "startedAt": "2026-08-04T07:03:45.011Z",
+        "completedAt": "2026-08-04T07:04:15.187Z",
+        "artifacts": [
+          {
+            "path": "package.json",
+            "source": "git-blob",
+            "commit": "96183537baf7be67c156fbef9b0177d6bbc41d4e",
+            "objectFormat": "sha1",
+            "objectId": "fda9501d128ad08e8924ceaae45b23bfc7592479",
+            "bytes": 7688,
+            "sha256": "e98708311bd5af0d1618d5d655ed24b25678f543b1dafc8dcca4833f2f12e1c1"
+          },
+          {
+            "path": "scripts/release-workflow-permissions.test.mjs",
+            "source": "git-blob",
+            "commit": "96183537baf7be67c156fbef9b0177d6bbc41d4e",
+            "objectFormat": "sha1",
+            "objectId": "907df2c51a16465f681ac274e773068a263fd697",
+            "bytes": 2143,
+            "sha256": "3c88de0038302ba1bdbf1861e22f3eb733f82a1d56920dccf5df8ecbf2c8d694"
+          }
+        ],
+        "checks": [
+          "origin/main unchanged at ca319eb05b99218af083ec86bfdfc99b2b738b8a",
+          "merge-base equals current origin/main",
+          "exact source scope verified",
+          "Builder and Tester receipt hashes linked correctly"
+        ],
+        "nextAuthorizedLanes": [
+          "W"
+        ],
+        "chainDisposition": "handoff-required",
+        "hash": "7e8c5e39e0f7b4549fc4dd305374228512b3f0fa0eed82677843c098e55c7cc5"
+      },
+      "uncertainty": null,
+      "quarantine": null
+    },
+    {
+      "id": "W-0011",
+      "lane": "W",
+      "role": "watcher",
+      "objective": "Close current-main release guard custody after final ledger, remote, test, and ChatChain safety checks",
+      "assignee": "watcher-release-guard-current-21",
+      "authorizedBy": "general-orchestrator",
+      "status": "completed",
+      "chainId": "E-0011",
+      "predecessorTicketId": "M-0011",
+      "predecessorReceiptHash": "7e8c5e39e0f7b4549fc4dd305374228512b3f0fa0eed82677843c098e55c7cc5",
+      "successorTicketId": null,
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T07:04:25.450Z",
+      "acceptedAt": "2026-08-04T07:04:35.454Z",
+      "startedAt": "2026-08-04T07:04:44.536Z",
+      "completedAt": "2026-08-04T07:05:09.999Z",
+      "launchEvidence": "Final Watcher audit of exact commit 96183537, receipt chain, current origin/main, clean bounded scope, and unavailable private ChatChain registry/CDP state",
+      "receipt": {
+        "ticketId": "W-0011",
+        "lane": "W",
+        "role": "watcher",
+        "actor": "watcher-release-guard-current-21",
+        "objective": "Close current-main release guard custody after final ledger, remote, test, and ChatChain safety checks",
+        "outcome": "pass",
+        "summary": "Closed current-main release permission guard custody after healthy ledger, exact approved scope, independent tests, and no unsafe ChatChain rotation.",
+        "softwareVersion": "96183537baf7be67c156fbef9b0177d6bbc41d4e",
+        "predecessorTicketId": "M-0011",
+        "predecessorReceiptHash": "7e8c5e39e0f7b4549fc4dd305374228512b3f0fa0eed82677843c098e55c7cc5",
+        "launchEvidence": "Final Watcher audit of exact commit 96183537, receipt chain, current origin/main, clean bounded scope, and unavailable private ChatChain registry/CDP state",
+        "startedAt": "2026-08-04T07:04:44.536Z",
+        "completedAt": "2026-08-04T07:05:09.999Z",
+        "artifacts": [
+          {
+            "path": "package.json",
+            "source": "git-blob",
+            "commit": "96183537baf7be67c156fbef9b0177d6bbc41d4e",
+            "objectFormat": "sha1",
+            "objectId": "fda9501d128ad08e8924ceaae45b23bfc7592479",
+            "bytes": 7688,
+            "sha256": "e98708311bd5af0d1618d5d655ed24b25678f543b1dafc8dcca4833f2f12e1c1"
+          },
+          {
+            "path": "scripts/release-workflow-permissions.test.mjs",
+            "source": "git-blob",
+            "commit": "96183537baf7be67c156fbef9b0177d6bbc41d4e",
+            "objectFormat": "sha1",
+            "objectId": "907df2c51a16465f681ac274e773068a263fd697",
+            "bytes": 2143,
+            "sha256": "3c88de0038302ba1bdbf1861e22f3eb733f82a1d56920dccf5df8ecbf2c8d694"
+          }
+        ],
+        "checks": [
+          "cadops watch healthy with zero risks",
+          "private room registry absent and no loopback ChatChain CDP endpoint available, so no tabs were closed",
+          "exact commit independently approved for non-force integration"
+        ],
+        "nextAuthorizedLanes": [],
+        "chainDisposition": "closed",
+        "hash": "494dff70638ab3f1c889624e948ff021e4019ed442f4a44c7bb645c6b23d2be2"
+      },
       "uncertainty": null,
       "quarantine": null
     }
@@ -4459,6 +4704,179 @@
         "launchEvidence": "Authenticated Shell active in isolated gamedeck-release-guard-v2 worktree at origin/main ca319eb05b99218af083ec86bfdfc99b2b738b8a"
       },
       "hash": "392a3a095ee935ba026a7c0774cbf2b20373abde5c2b35b8a306103d6a148951"
+    },
+    {
+      "eventId": "EVT-000165",
+      "type": "ticket.completed",
+      "ticketId": "E-0011",
+      "actor": "builder-release-guard-current-18",
+      "at": "2026-08-04T07:02:04.462Z",
+      "previousHash": "392a3a095ee935ba026a7c0774cbf2b20373abde5c2b35b8a306103d6a148951",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "f78c5768307b1e2e3891ced55f3dff1d9f0d41430af13a28290d1156f6fcd59c",
+        "softwareVersion": "96183537baf7be67c156fbef9b0177d6bbc41d4e"
+      },
+      "hash": "5c5b0290875fa38d3ce7db4bf2112e90421b4451fd21f80db45433167c5523c1"
+    },
+    {
+      "eventId": "EVT-000166",
+      "type": "custody.handed-off",
+      "ticketId": "E-0011",
+      "actor": "general-orchestrator",
+      "at": "2026-08-04T07:02:22.335Z",
+      "previousHash": "5c5b0290875fa38d3ce7db4bf2112e90421b4451fd21f80db45433167c5523c1",
+      "payload": {
+        "successorTicketId": "T-0011",
+        "successorLane": "T",
+        "predecessorReceiptHash": "f78c5768307b1e2e3891ced55f3dff1d9f0d41430af13a28290d1156f6fcd59c",
+        "assignee": "tester-release-guard-current-19"
+      },
+      "hash": "b6dd3fc9e61bbd0d5c8611c61296dc9c83ba05c706a123ce19b49190ae7c7106"
+    },
+    {
+      "eventId": "EVT-000167",
+      "type": "ticket.accepted",
+      "ticketId": "T-0011",
+      "actor": "tester-release-guard-current-19",
+      "at": "2026-08-04T07:02:31.280Z",
+      "previousHash": "b6dd3fc9e61bbd0d5c8611c61296dc9c83ba05c706a123ce19b49190ae7c7106",
+      "payload": {
+        "role": "tester"
+      },
+      "hash": "42b5e5ff5bb54ed555d0fe9508a1cc22358c9169f48f415488465cc3ab652f2e"
+    },
+    {
+      "eventId": "EVT-000168",
+      "type": "ticket.started",
+      "ticketId": "T-0011",
+      "actor": "tester-release-guard-current-19",
+      "at": "2026-08-04T07:02:37.376Z",
+      "previousHash": "42b5e5ff5bb54ed555d0fe9508a1cc22358c9169f48f415488465cc3ab652f2e",
+      "payload": {
+        "launchEvidence": "Independent exact-commit review of 96183537baf7be67c156fbef9b0177d6bbc41d4e; no source edits"
+      },
+      "hash": "e642494b4271a95cbaa2fbb32d36754de09299d884bd14158af2b48a72361364"
+    },
+    {
+      "eventId": "EVT-000169",
+      "type": "ticket.completed",
+      "ticketId": "T-0011",
+      "actor": "tester-release-guard-current-19",
+      "at": "2026-08-04T07:03:19.261Z",
+      "previousHash": "e642494b4271a95cbaa2fbb32d36754de09299d884bd14158af2b48a72361364",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "19b56c70acce224fb323aeabf76d2c80c0c57823f840cef5ad178da73a570f46",
+        "softwareVersion": "96183537baf7be67c156fbef9b0177d6bbc41d4e"
+      },
+      "hash": "bdd80be3c285282b2d7dfd810bf307d21bbd3e92b082adcb14b76c0c6f1a5aa7"
+    },
+    {
+      "eventId": "EVT-000170",
+      "type": "custody.handed-off",
+      "ticketId": "T-0011",
+      "actor": "general-orchestrator",
+      "at": "2026-08-04T07:03:26.990Z",
+      "previousHash": "bdd80be3c285282b2d7dfd810bf307d21bbd3e92b082adcb14b76c0c6f1a5aa7",
+      "payload": {
+        "successorTicketId": "M-0011",
+        "successorLane": "M",
+        "predecessorReceiptHash": "19b56c70acce224fb323aeabf76d2c80c0c57823f840cef5ad178da73a570f46",
+        "assignee": "supervisor-release-guard-current-20"
+      },
+      "hash": "e7caea2541c41bd3afd8c26d25987f28fa85ace12781a6542191410311cd3392"
+    },
+    {
+      "eventId": "EVT-000171",
+      "type": "ticket.accepted",
+      "ticketId": "M-0011",
+      "actor": "supervisor-release-guard-current-20",
+      "at": "2026-08-04T07:03:36.280Z",
+      "previousHash": "e7caea2541c41bd3afd8c26d25987f28fa85ace12781a6542191410311cd3392",
+      "payload": {
+        "role": "supervisor"
+      },
+      "hash": "db52a3bc2bc0e2eb3bc296b8daa2c413c210d2871fc138dfc805bb1b393e63f5"
+    },
+    {
+      "eventId": "EVT-000172",
+      "type": "ticket.started",
+      "ticketId": "M-0011",
+      "actor": "supervisor-release-guard-current-20",
+      "at": "2026-08-04T07:03:45.011Z",
+      "previousHash": "db52a3bc2bc0e2eb3bc296b8daa2c413c210d2871fc138dfc805bb1b393e63f5",
+      "payload": {
+        "launchEvidence": "Supervisor independently verifying exact source scope, receipt hashes, current origin/main, and non-force fast-forward conditions"
+      },
+      "hash": "770edcbb05543ff94687389bea8eae68e0cc4213c284be5497781e792441ba6b"
+    },
+    {
+      "eventId": "EVT-000173",
+      "type": "ticket.completed",
+      "ticketId": "M-0011",
+      "actor": "supervisor-release-guard-current-20",
+      "at": "2026-08-04T07:04:15.187Z",
+      "previousHash": "770edcbb05543ff94687389bea8eae68e0cc4213c284be5497781e792441ba6b",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "7e8c5e39e0f7b4549fc4dd305374228512b3f0fa0eed82677843c098e55c7cc5",
+        "softwareVersion": "96183537baf7be67c156fbef9b0177d6bbc41d4e"
+      },
+      "hash": "f575af2e89ccab4e13fb0c4b39da2134d3dab4a43ea1c192622936fd3747f4dd"
+    },
+    {
+      "eventId": "EVT-000174",
+      "type": "custody.handed-off",
+      "ticketId": "M-0011",
+      "actor": "general-orchestrator",
+      "at": "2026-08-04T07:04:25.450Z",
+      "previousHash": "f575af2e89ccab4e13fb0c4b39da2134d3dab4a43ea1c192622936fd3747f4dd",
+      "payload": {
+        "successorTicketId": "W-0011",
+        "successorLane": "W",
+        "predecessorReceiptHash": "7e8c5e39e0f7b4549fc4dd305374228512b3f0fa0eed82677843c098e55c7cc5",
+        "assignee": "watcher-release-guard-current-21"
+      },
+      "hash": "a39866fb82631414acc753c02d3671e7d46e95b870e17ff2a2c990487a4ba32e"
+    },
+    {
+      "eventId": "EVT-000175",
+      "type": "ticket.accepted",
+      "ticketId": "W-0011",
+      "actor": "watcher-release-guard-current-21",
+      "at": "2026-08-04T07:04:35.454Z",
+      "previousHash": "a39866fb82631414acc753c02d3671e7d46e95b870e17ff2a2c990487a4ba32e",
+      "payload": {
+        "role": "watcher"
+      },
+      "hash": "2686afa48f7bc8f2fc6dd353d9fc0f8e747938d0a905f5ae1107dca0138062bb"
+    },
+    {
+      "eventId": "EVT-000176",
+      "type": "ticket.started",
+      "ticketId": "W-0011",
+      "actor": "watcher-release-guard-current-21",
+      "at": "2026-08-04T07:04:44.536Z",
+      "previousHash": "2686afa48f7bc8f2fc6dd353d9fc0f8e747938d0a905f5ae1107dca0138062bb",
+      "payload": {
+        "launchEvidence": "Final Watcher audit of exact commit 96183537, receipt chain, current origin/main, clean bounded scope, and unavailable private ChatChain registry/CDP state"
+      },
+      "hash": "ea3a0c14f414dded02ff33569760f59596cf18a5b600fc04ca3c8f4a9edfc0e9"
+    },
+    {
+      "eventId": "EVT-000177",
+      "type": "ticket.completed",
+      "ticketId": "W-0011",
+      "actor": "watcher-release-guard-current-21",
+      "at": "2026-08-04T07:05:09.999Z",
+      "previousHash": "ea3a0c14f414dded02ff33569760f59596cf18a5b600fc04ca3c8f4a9edfc0e9",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "494dff70638ab3f1c889624e948ff021e4019ed442f4a44c7bb645c6b23d2be2",
+        "softwareVersion": "96183537baf7be67c156fbef9b0177d6bbc41d4e"
+      },
+      "hash": "3d642eced1a31fa0edf0fb2ce4d3c7d5629ce8bfd7c5c7e251c11813965b3bf1"
     }
   ]
 }
