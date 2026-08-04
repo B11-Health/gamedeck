@@ -22,7 +22,7 @@ import android.webkit.WebViewClient;
 public class MainActivity extends Activity {
     static final int REQUEST_LIBRARY = 4101;
     static final int REQUEST_RGSX = 4102;
-    private static final String LOCAL_URL = "file:///android_asset/index.html";
+    private static final String LOCAL_URL = "file:///android_asset/desktop/index.html";
 
     private WebView webView;
     private DeckBridge bridge;
@@ -55,7 +55,7 @@ public class MainActivity extends Activity {
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         settings.setBuiltInZoomControls(false);
         settings.setDisplayZoomControls(false);
-        settings.setUserAgentString(settings.getUserAgentString() + " GameDeckAndroid/0.2.0-alpha");
+        settings.setUserAgentString(settings.getUserAgentString() + " GameDeckAndroid/0.3.0-parity-preview");
         bridge = new DeckBridge(this);
         exposeBridge();
         webView.setWebChromeClient(new WebChromeClient());
