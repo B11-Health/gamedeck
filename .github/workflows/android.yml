@@ -122,22 +122,43 @@ jobs:
           adb shell settings put global transition_animation_scale 0
           adb shell settings put global animator_duration_scale 0
           adb install "$APK"
+          adb logcat -c
           adb shell am start -W -n "$PACKAGE/$ACTIVITY" \
             | tee "$OUT/ACTIVITY-START.txt"
-          sleep 6
+
+          renderer_ready=0
+          for attempt in $(seq 1 45); do
+            adb logcat -d -v brief \
+              | grep -E "GAMEDECK_RENDERER_(READY|ERROR)" \
+              | tail -1 \
+              > "$OUT/RENDERER-STATUS.txt" || true
+            if grep -q "GAMEDECK_RENDERER_ERROR" "$OUT/RENDERER-STATUS.txt"; then
+              break
+            fi
+            if grep -q "GAMEDECK_RENDERER_READY" "$OUT/RENDERER-STATUS.txt"; then
+              renderer_ready=1
+              break
+            fi
+            sleep 1
+          done
+
           adb shell dumpsys window \
             | grep -E "mCurrentFocus|mFocusedApp" \
             | tee "$OUT/WINDOW-FOCUS.txt"
           grep -Fq "$PACKAGE" "$OUT/WINDOW-FOCUS.txt"
-          adb shell uiautomator dump /sdcard/gamedeck-window.xml
-          adb pull /sdcard/gamedeck-window.xml "$OUT/UI-HIERARCHY.xml"
-          grep -Fq "$PACKAGE" "$OUT/UI-HIERARCHY.xml"
-          grep -Eqi "GAMEDECK|GameDeck" "$OUT/UI-HIERARCHY.xml"
           adb exec-out screencap -p > "$OUT/EMULATOR-SCREENSHOT.png"
           test -s "$OUT/EMULATOR-SCREENSHOT.png"
+          if adb shell uiautomator dump /sdcard/gamedeck-window.xml; then
+            adb pull /sdcard/gamedeck-window.xml "$OUT/UI-HIERARCHY.xml" || true
+          fi
           adb logcat -d -v brief > "$OUT/LOGCAT.txt"
           PACKAGE_REGEX=${PACKAGE//./\\.}
           ! grep -Eqi "FATAL EXCEPTION.*$PACKAGE_REGEX|Process: $PACKAGE_REGEX.*FATAL EXCEPTION" "$OUT/LOGCAT.txt"
+          if [ "$renderer_ready" != "1" ]; then
+            cat "$OUT/RENDERER-STATUS.txt"
+            grep -E "GameDeckRenderer|chromium|cr_AwContents" "$OUT/LOGCAT.txt" | tail -120 || true
+            exit 1
+          fi
 
       - name: Upload Android debug and smoke evidence
         if: always()
@@ -152,6 +173,7 @@ jobs:
             mobile/android/app/build/outputs/apk/debug/AVD-LIST.txt
             mobile/android/app/build/outputs/apk/debug/ACTIVITY-START.txt
             mobile/android/app/build/outputs/apk/debug/WINDOW-FOCUS.txt
+            mobile/android/app/build/outputs/apk/debug/RENDERER-STATUS.txt
             mobile/android/app/build/outputs/apk/debug/UI-HIERARCHY.xml
             mobile/android/app/build/outputs/apk/debug/EMULATOR-SCREENSHOT.png
             mobile/android/app/build/outputs/apk/debug/EMULATOR-LOG.txt
