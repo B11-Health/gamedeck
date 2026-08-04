@@ -12,15 +12,17 @@ permissions:
 
 jobs:
   build:
-    name: Build debug APK
+    name: Build and launch debug APK
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     defaults:
       run:
         working-directory: mobile/android
     steps:
-      - name: Checkout sources
+      - name: Checkout exact source revision
         uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Set up Java
         uses: actions/setup-java@v5
@@ -31,8 +33,14 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Android SDK 36
-        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - name: Install Android SDK and emulator image
+        run: |
+          sdkmanager \
+            "platform-tools" \
+            "emulator" \
+            "platforms;android-36" \
+            "build-tools;36.0.0" \
+            "system-images;android-36;google_apis;x86_64"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
@@ -42,6 +50,57 @@ jobs:
       - name: Build debug APK
         run: gradle :app:assembleDebug --no-daemon --stacktrace
 
+      - name: Launch clean API 36 emulator smoke test
+        run: |
+          set -euo pipefail
+          APK=app/build/outputs/apk/debug/app-debug.apk
+          AVD=gamedeck_api36
+          test -f "$APK"
+          echo no | avdmanager create avd \
+            --force \
+            --name "$AVD" \
+            --package "system-images;android-36;google_apis;x86_64" \
+            --device pixel_6
+          if [ -e /dev/kvm ]; then sudo chmod 666 /dev/kvm; fi
+          nohup emulator \
+            -avd "$AVD" \
+            -no-window \
+            -no-audio \
+            -no-boot-anim \
+            -no-snapshot \
+            -gpu swiftshader_indirect \
+            > app/build/outputs/apk/debug/EMULATOR-LOG.txt 2>&1 &
+          adb wait-for-device
+          booted=0
+          for attempt in $(seq 1 120); do
+            if [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ]; then
+              booted=1
+              break
+            fi
+            sleep 2
+          done
+          test "$booted" = "1"
+          adb shell settings put global window_animation_scale 0
+          adb shell settings put global transition_animation_scale 0
+          adb shell settings put global animator_duration_scale 0
+          adb install -r "$APK"
+          adb shell am start -W -n io.gamedeck.mobile/.MainActivity \
+            | tee app/build/outputs/apk/debug/ACTIVITY-START.txt
+          sleep 6
+          adb shell dumpsys window \
+            | grep -E "mCurrentFocus|mFocusedApp" \
+            | tee app/build/outputs/apk/debug/WINDOW-FOCUS.txt
+          grep -q "io.gamedeck.mobile" app/build/outputs/apk/debug/WINDOW-FOCUS.txt
+          adb shell uiautomator dump /sdcard/gamedeck-window.xml
+          adb pull /sdcard/gamedeck-window.xml app/build/outputs/apk/debug/UI-HIERARCHY.xml
+          grep -q "io.gamedeck.mobile" app/build/outputs/apk/debug/UI-HIERARCHY.xml
+          grep -Eqi "GAMEDECK|GameDeck" app/build/outputs/apk/debug/UI-HIERARCHY.xml
+          adb exec-out screencap -p > app/build/outputs/apk/debug/EMULATOR-SCREENSHOT.png
+          test -s app/build/outputs/apk/debug/EMULATOR-SCREENSHOT.png
+          adb logcat -d -v brief > app/build/outputs/apk/debug/LOGCAT.txt
+          ! grep -Eqi "FATAL EXCEPTION.*io\.gamedeck\.mobile|Process: io\.gamedeck\.mobile.*FATAL EXCEPTION" app/build/outputs/apk/debug/LOGCAT.txt
+          adb emu kill || true
+
       - name: Inspect and checksum APK
         run: |
           APK=app/build/outputs/apk/debug/app-debug.apk
@@ -50,14 +109,20 @@ jobs:
           unzip -l "$APK" > app/build/outputs/apk/debug/APK-CONTENTS.txt
           "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump badging "$APK" > app/build/outputs/apk/debug/APK-BADGING.txt
 
-      - name: Upload Android debug artifact
+      - name: Upload Android debug and smoke evidence
         uses: actions/upload-artifact@v7
         with:
-          name: gamedeck-android-debug-${{ github.sha }}
+          name: gamedeck-android-debug-${{ github.event.pull_request.head.sha || github.sha }}
           path: |
             mobile/android/app/build/outputs/apk/debug/app-debug.apk
             mobile/android/app/build/outputs/apk/debug/SHA256SUMS-android-debug.txt
             mobile/android/app/build/outputs/apk/debug/APK-CONTENTS.txt
             mobile/android/app/build/outputs/apk/debug/APK-BADGING.txt
+            mobile/android/app/build/outputs/apk/debug/ACTIVITY-START.txt
+            mobile/android/app/build/outputs/apk/debug/WINDOW-FOCUS.txt
+            mobile/android/app/build/outputs/apk/debug/UI-HIERARCHY.xml
+            mobile/android/app/build/outputs/apk/debug/EMULATOR-SCREENSHOT.png
+            mobile/android/app/build/outputs/apk/debug/EMULATOR-LOG.txt
+            mobile/android/app/build/outputs/apk/debug/LOGCAT.txt
           if-no-files-found: error
           retention-days: 14
