@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 
 export const ROLES = Object.freeze({ E: 'builder', T: 'tester', M: 'supervisor', W: 'watcher' });
 export const STATUSES = Object.freeze(['prepared','accepted','active','completed','uncertain','quarantined']);
@@ -117,13 +118,43 @@ export function start(l, { ticketId, actor: by, launchEvidence, at = new Date() 
     return t;
   });
 }
-function artifact(file, root) {
-  const base = path.resolve(root), absolute = path.resolve(base, file), rel = path.relative(base, absolute);
+function runGit(base, args, binary = false) {
+  try {
+    return execFileSync('git', ['-C', base, ...args], {
+      encoding: binary ? null : 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+      windowsHide: true
+    });
+  } catch (error) {
+    const stderr = Buffer.isBuffer(error?.stderr) ? error.stderr.toString('utf8') : String(error?.stderr || error?.message || error);
+    throw new Error(`git ${args.join(' ')} failed: ${stderr.trim()}`);
+  }
+}
+function gitContext(root, softwareVersion) {
+  const base = path.resolve(root);
+  const requested = required(softwareVersion, 'softwareVersion');
+  const commit = String(runGit(base, ['rev-parse', '--verify', `${requested}^{commit}`])).trim().toLowerCase();
+  if (!/^[a-f0-9]{40,64}$/.test(commit)) throw new Error('softwareVersion did not resolve to an exact Git commit');
+  const objectFormat = String(runGit(base, ['rev-parse', '--show-object-format'])).trim().toLowerCase();
+  return { base, commit, objectFormat };
+}
+function artifact(file, context) {
+  const absolute = path.resolve(context.base, file), rel = path.relative(context.base, absolute);
   if (!rel || rel.startsWith('..') || path.isAbsolute(rel)) throw new Error('artifact must be inside repository root');
-  const s = fs.statSync(absolute);
-  if (!s.isFile()) throw new Error(`artifact is not a file: ${file}`);
-  return { path: rel.split(path.sep).join('/'), bytes: s.size,
-    sha256: crypto.createHash('sha256').update(fs.readFileSync(absolute)).digest('hex') };
+  const repoPath = rel.split(path.sep).join('/');
+  const objectId = String(runGit(context.base, ['rev-parse', '--verify', `${context.commit}:${repoPath}`])).trim().toLowerCase();
+  const objectType = String(runGit(context.base, ['cat-file', '-t', objectId])).trim();
+  if (objectType !== 'blob') throw new Error(`artifact is not a Git blob: ${file}`);
+  const content = runGit(context.base, ['cat-file', 'blob', objectId], true);
+  return {
+    path: repoPath,
+    source: 'git-blob',
+    commit: context.commit,
+    objectFormat: context.objectFormat,
+    objectId,
+    bytes: content.length,
+    sha256: crypto.createHash('sha256').update(content).digest('hex')
+  };
 }
 export function complete(l, {
   ticketId, actor: by, outcome, summary, softwareVersion, artifactPaths = [], checks = [],
@@ -134,12 +165,14 @@ export function complete(l, {
     if (t.status !== 'active') throw new Error(`${ticketId} must be active`);
     if (!OUTCOMES.includes(outcome)) throw new Error(`invalid outcome: ${outcome}`);
     if (closeChain && t.lane !== 'W') throw new Error('only Watcher may close a chain');
+    const version = required(softwareVersion, 'softwareVersion');
+    const context = artifactPaths.length ? gitContext(root, version) : null;
     const r = {
       ticketId, lane: t.lane, role: t.role, actor: by, objective: t.objective, outcome,
-      summary: required(summary, 'summary'), softwareVersion: required(softwareVersion, 'softwareVersion'),
+      summary: required(summary, 'summary'), softwareVersion: context?.commit || version,
       predecessorTicketId: t.predecessorTicketId, predecessorReceiptHash: t.predecessorReceiptHash,
       launchEvidence: t.launchEvidence, startedAt: t.startedAt, completedAt: iso(at),
-      artifacts: artifactPaths.map((p) => artifact(p, root)), checks: checks.map((c) => required(c, 'check')),
+      artifacts: artifactPaths.map((p) => artifact(p, context)), checks: checks.map((c) => required(c, 'check')),
       nextAuthorizedLanes: closeChain ? [] : clone(n.policy.allowedSuccessors[t.lane]),
       chainDisposition: closeChain ? 'closed' : 'handoff-required'
     };

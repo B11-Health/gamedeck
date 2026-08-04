@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 import {
   createLedger,
   issue,
@@ -23,6 +24,20 @@ import {
 const at = (hour) => new Date(`2026-08-03T${String(hour).padStart(2, '0')}:00:00.000Z`);
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'gamedeck-cadops-'));
 fs.writeFileSync(path.join(tmp, 'artifact.txt'), 'exact GameDeck artifact\n');
+const git = (...args) => execFileSync('git', args, {
+  cwd: tmp,
+  encoding: 'utf8',
+  stdio: ['ignore', 'pipe', 'pipe'],
+  windowsHide: true
+}).trim();
+git('init', '-q');
+git('config', 'user.name', 'GameDeck CADOps Test');
+git('config', 'user.email', 'cadops-test@example.invalid');
+git('add', 'artifact.txt');
+git('commit', '-qm', 'fixture');
+const fixtureCommit = git('rev-parse', 'HEAD');
+const fixtureObjectId = git('rev-parse', `${fixtureCommit}:artifact.txt`);
+const fixtureObjectFormat = git('rev-parse', '--show-object-format');
 
 let ledger = createLedger('GameDeck', at(1));
 assert.deepEqual(validateLedger(ledger), [], 'new ledger must validate');
@@ -50,7 +65,7 @@ ledger = complete(ledger, {
   actor: 'builder-1',
   outcome: 'pass',
   summary: 'Implemented the bounded feature.',
-  softwareVersion: 'abc1234',
+  softwareVersion: fixtureCommit,
   artifactPaths: ['artifact.txt'],
   checks: ['unit tests passed'],
   root: tmp,
@@ -59,10 +74,32 @@ ledger = complete(ledger, {
 
 const builder = ledger.tickets.find((ticket) => ticket.id === 'E-0001');
 assert.equal(verifyReceipt(builder.receipt), true);
+const canonicalArtifact = builder.receipt.artifacts[0];
+assert.equal(canonicalArtifact.source, 'git-blob');
+assert.equal(canonicalArtifact.commit, fixtureCommit);
+assert.equal(canonicalArtifact.objectFormat, fixtureObjectFormat);
+assert.equal(canonicalArtifact.objectId, fixtureObjectId);
+assert.equal(canonicalArtifact.bytes, Buffer.byteLength('exact GameDeck artifact\n'));
 assert.equal(
-  builder.receipt.artifacts[0].sha256,
+  canonicalArtifact.sha256,
   crypto.createHash('sha256').update('exact GameDeck artifact\n').digest('hex')
 );
+
+fs.writeFileSync(path.join(tmp, 'artifact.txt'), 'exact GameDeck artifact\r\n');
+let portability = createLedger('GameDeck portability', at(1));
+portability = issue(portability, {
+  lane: 'E', objective: 'Verify canonical Git artifact hashing', assignee: 'portable-builder',
+  authorizedBy: 'orchestrator', at: at(2)
+}).ledger;
+portability = accept(portability, { ticketId: 'E-0001', actor: 'portable-builder', at: at(3) }).ledger;
+portability = start(portability, {
+  ticketId: 'E-0001', actor: 'portable-builder', launchEvidence: 'worktree line endings changed', at: at(4)
+}).ledger;
+portability = complete(portability, {
+  ticketId: 'E-0001', actor: 'portable-builder', outcome: 'pass', summary: 'Canonical blob remained stable.',
+  softwareVersion: fixtureCommit, artifactPaths: ['artifact.txt'], checks: ['cross-worktree hash stable'], root: tmp, at: at(5)
+}).ledger;
+assert.deepEqual(portability.tickets[0].receipt.artifacts[0], canonicalArtifact);
 assert.throws(
   () => start(ledger, { ticketId: 'E-0001', actor: 'builder-1', launchEvidence: 'retry', at: at(6) }),
   /replay-protected/
@@ -114,7 +151,7 @@ ledger = complete(ledger, {
   actor: 'tester-1',
   outcome: 'pass',
   summary: 'Verified expected behavior without modifying implementation.',
-  softwareVersion: 'abc1234',
+  softwareVersion: fixtureCommit,
   checks: ['black-box behavior passed', 'receipt version matched'],
   root: tmp,
   at: at(9)
@@ -209,4 +246,4 @@ saveLedger(saved, ledger);
 assert.deepEqual(loadLedger(saved), ledger);
 assert.deepEqual(validateLedger(loadLedger(saved)), []);
 
-console.log('cadops: 18 scenarios passed');
+console.log('cadops: 19 scenarios passed');

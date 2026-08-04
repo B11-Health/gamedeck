@@ -47,7 +47,9 @@ Each mutation:
 - validates the resulting ledger,
 - writes it through an atomic temporary-file rename.
 
-Completion receipts contain the ticket and lane, actor, objective, outcome, exact software version, timestamps, launch evidence, predecessor receipt hash, checks, artifact byte lengths and SHA-256 hashes, authorized successor lanes, and chain disposition.
+Completion receipts contain the ticket and lane, actor, objective, outcome, exact software version, timestamps, launch evidence, predecessor receipt hash, checks, artifact identities, authorized successor lanes, and chain disposition.
+
+Artifact evidence is calculated from the canonical Git blob at the resolved commit, not from checkout-transformed working-tree bytes. Each new artifact entry records the exact commit, Git object format, blob object ID, canonical byte length, and SHA-256 digest. This keeps receipts stable across Windows CRLF and Unix LF checkouts and rejects untracked or uncommitted artifacts.
 
 The ledger is committed to Git. Git history is not replaced by the ledger; both are required evidence.
 
