@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "project": "GameDeck",
   "createdAt": "2026-08-03T23:44:00.000Z",
-  "updatedAt": "2026-08-04T14:52:04.767Z",
+  "updatedAt": "2026-08-04T14:58:47.411Z",
   "policy": {
     "nonReplay": true,
     "visibleLaunchRequired": true,
@@ -40,11 +40,11 @@
   },
   "counters": {
     "E": 15,
-    "T": 14,
-    "M": 14,
-    "W": 14,
+    "T": 15,
+    "M": 15,
+    "W": 15,
     "recovery": 2,
-    "event": 238
+    "event": 251
   },
   "tickets": [
     {
@@ -3577,19 +3577,334 @@
       "objective": "Correct the pre-commit recruitment contract test syntax and complete the bounded draft artifact",
       "assignee": "builder-growth-recruitment-recovery-36",
       "authorizedBy": "watcher-recovery-authority-15",
-      "status": "active",
+      "status": "completed",
       "chainId": "E-0015",
       "predecessorTicketId": null,
       "predecessorReceiptHash": null,
-      "successorTicketId": null,
+      "successorTicketId": "T-0015",
       "recoveryForTicketId": "E-0015",
       "recoveryTicketId": null,
       "createdAt": "2026-08-04T14:51:45.736Z",
       "acceptedAt": "2026-08-04T14:51:57.534Z",
       "startedAt": "2026-08-04T14:52:04.767Z",
-      "completedAt": null,
+      "completedAt": "2026-08-04T14:54:19.309Z",
       "launchEvidence": "Fresh recovery Builder correcting only the uncommitted recruitment contract test syntax in isolated worktree",
-      "receipt": null,
+      "receipt": {
+        "ticketId": "E-0015-RECOVERY-BUILDER-GROWTH-RECRUITMENT-RECOV-0002",
+        "lane": "E",
+        "role": "builder",
+        "actor": "builder-growth-recruitment-recovery-36",
+        "objective": "Correct the pre-commit recruitment contract test syntax and complete the bounded draft artifact",
+        "outcome": "pass",
+        "summary": "Added a draft-only privacy-safe multiplayer tester recruitment contract, proof-capture plan, and safety mutation gate without publication or telemetry.",
+        "softwareVersion": "b3494c34e142de9e6983bbd5ce513614fbd96dbd",
+        "predecessorTicketId": null,
+        "predecessorReceiptHash": null,
+        "launchEvidence": "Fresh recovery Builder correcting only the uncommitted recruitment contract test syntax in isolated worktree",
+        "startedAt": "2026-08-04T14:52:04.767Z",
+        "completedAt": "2026-08-04T14:54:19.309Z",
+        "artifacts": [
+          {
+            "path": "config/multiplayer-tester-recruitment.json",
+            "source": "git-blob",
+            "commit": "b3494c34e142de9e6983bbd5ce513614fbd96dbd",
+            "objectFormat": "sha1",
+            "objectId": "86e0405e952c6eb3b814cc82b07184e0adb113b7",
+            "bytes": 5721,
+            "sha256": "bf467db54f31b4a99e0a528c1b2981d886c65dea3e3aafac45c4f3053d22a0c4"
+          },
+          {
+            "path": "marketing/MULTIPLAYER_TESTER_RECRUITMENT_DRAFT.md",
+            "source": "git-blob",
+            "commit": "b3494c34e142de9e6983bbd5ce513614fbd96dbd",
+            "objectFormat": "sha1",
+            "objectId": "f1a1276fc0315388670e4d74f6a1fba438d2911f",
+            "bytes": 5626,
+            "sha256": "b354f1a7f4dfa4d1c73f5dae314c32305e7fa47858ef49395c1531394578ec44"
+          },
+          {
+            "path": "scripts/multiplayer-tester-recruitment-contract.test.mjs",
+            "source": "git-blob",
+            "commit": "b3494c34e142de9e6983bbd5ce513614fbd96dbd",
+            "objectFormat": "sha1",
+            "objectId": "2fa7dd55f41132ab93fbd84b75884b87c7b4d9d3",
+            "bytes": 6865,
+            "sha256": "cf26387fd6f3fac12488d84301291ec6a2b6750d7e6f5c297009f5e1666f5bf3"
+          },
+          {
+            "path": "package.json",
+            "source": "git-blob",
+            "commit": "b3494c34e142de9e6983bbd5ce513614fbd96dbd",
+            "objectFormat": "sha1",
+            "objectId": "91eadb076ded29c8c695025e219d724f99a8f2bd",
+            "bytes": 8142,
+            "sha256": "5022b13c185a18d0161e5d0982fa23aebc8c4de32ea0e1113ad4e09dd74b1476"
+          }
+        ],
+        "checks": [
+          "focused recruitment contract test passed with seven safety mutations rejected",
+          "full npm test passed through installed npm CLI JavaScript entrypoint",
+          "git diff --check passed with line-ending warnings only"
+        ],
+        "nextAuthorizedLanes": [
+          "T"
+        ],
+        "chainDisposition": "handoff-required",
+        "hash": "6700c7ac1ee4930c74d24f3412d0632d3b2bdff01cd6391f673d1cbe8bd9ad23"
+      },
+      "uncertainty": null,
+      "quarantine": null
+    },
+    {
+      "id": "T-0015",
+      "lane": "T",
+      "role": "tester",
+      "objective": "Independently review exact commit b3494c34e142de9e6983bbd5ce513614fbd96dbd for privacy boundaries, claim discipline, CTA integrity, and mutation resistance",
+      "assignee": "tester-growth-recruitment-37",
+      "authorizedBy": "general-orchestrator",
+      "status": "completed",
+      "chainId": "E-0015",
+      "predecessorTicketId": "E-0015-RECOVERY-BUILDER-GROWTH-RECRUITMENT-RECOV-0002",
+      "predecessorReceiptHash": "6700c7ac1ee4930c74d24f3412d0632d3b2bdff01cd6391f673d1cbe8bd9ad23",
+      "successorTicketId": "M-0015",
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T14:54:50.686Z",
+      "acceptedAt": "2026-08-04T14:54:59.572Z",
+      "startedAt": "2026-08-04T14:55:06.673Z",
+      "completedAt": "2026-08-04T14:56:10.630Z",
+      "launchEvidence": "Detached exact-commit review worktree gamedeck-growth-recruitment-contract-v1-review at b3494c34e142de9e6983bbd5ce513614fbd96dbd; no source edits",
+      "receipt": {
+        "ticketId": "T-0015",
+        "lane": "T",
+        "role": "tester",
+        "actor": "tester-growth-recruitment-37",
+        "objective": "Independently review exact commit b3494c34e142de9e6983bbd5ce513614fbd96dbd for privacy boundaries, claim discipline, CTA integrity, and mutation resistance",
+        "outcome": "pass",
+        "summary": "Exact commit b3494c34 passed independent privacy, claims, CTA, scope, and mutation review; a disposable telemetry-enabled copy was rejected.",
+        "softwareVersion": "b3494c34e142de9e6983bbd5ce513614fbd96dbd",
+        "predecessorTicketId": "E-0015-RECOVERY-BUILDER-GROWTH-RECRUITMENT-RECOV-0002",
+        "predecessorReceiptHash": "6700c7ac1ee4930c74d24f3412d0632d3b2bdff01cd6391f673d1cbe8bd9ad23",
+        "launchEvidence": "Detached exact-commit review worktree gamedeck-growth-recruitment-contract-v1-review at b3494c34e142de9e6983bbd5ce513614fbd96dbd; no source edits",
+        "startedAt": "2026-08-04T14:55:06.673Z",
+        "completedAt": "2026-08-04T14:56:10.630Z",
+        "artifacts": [
+          {
+            "path": "config/multiplayer-tester-recruitment.json",
+            "source": "git-blob",
+            "commit": "b3494c34e142de9e6983bbd5ce513614fbd96dbd",
+            "objectFormat": "sha1",
+            "objectId": "86e0405e952c6eb3b814cc82b07184e0adb113b7",
+            "bytes": 5721,
+            "sha256": "bf467db54f31b4a99e0a528c1b2981d886c65dea3e3aafac45c4f3053d22a0c4"
+          },
+          {
+            "path": "marketing/MULTIPLAYER_TESTER_RECRUITMENT_DRAFT.md",
+            "source": "git-blob",
+            "commit": "b3494c34e142de9e6983bbd5ce513614fbd96dbd",
+            "objectFormat": "sha1",
+            "objectId": "f1a1276fc0315388670e4d74f6a1fba438d2911f",
+            "bytes": 5626,
+            "sha256": "b354f1a7f4dfa4d1c73f5dae314c32305e7fa47858ef49395c1531394578ec44"
+          },
+          {
+            "path": "scripts/multiplayer-tester-recruitment-contract.test.mjs",
+            "source": "git-blob",
+            "commit": "b3494c34e142de9e6983bbd5ce513614fbd96dbd",
+            "objectFormat": "sha1",
+            "objectId": "2fa7dd55f41132ab93fbd84b75884b87c7b4d9d3",
+            "bytes": 6865,
+            "sha256": "cf26387fd6f3fac12488d84301291ec6a2b6750d7e6f5c297009f5e1666f5bf3"
+          },
+          {
+            "path": "package.json",
+            "source": "git-blob",
+            "commit": "b3494c34e142de9e6983bbd5ce513614fbd96dbd",
+            "objectFormat": "sha1",
+            "objectId": "91eadb076ded29c8c695025e219d724f99a8f2bd",
+            "bytes": 8142,
+            "sha256": "5022b13c185a18d0161e5d0982fa23aebc8c4de32ea0e1113ad4e09dd74b1476"
+          }
+        ],
+        "checks": [
+          "focused exact-commit contract test passed",
+          "disposable telemetry-enabled mutation rejected with exit status 1",
+          "exact five-file scope and git diff --check passed"
+        ],
+        "nextAuthorizedLanes": [
+          "M"
+        ],
+        "chainDisposition": "handoff-required",
+        "hash": "2b0a46a180908c687b19094db09f84c2209079a34292576646582b80ca2217f4"
+      },
+      "uncertainty": null,
+      "quarantine": null
+    },
+    {
+      "id": "M-0015",
+      "lane": "M",
+      "role": "supervisor",
+      "objective": "Verify exact commit b3494c34, recovery and Tester receipts, current origin/main ancestry, bounded draft-only scope, and merge authorization",
+      "assignee": "supervisor-growth-recruitment-38",
+      "authorizedBy": "general-orchestrator",
+      "status": "completed",
+      "chainId": "E-0015",
+      "predecessorTicketId": "T-0015",
+      "predecessorReceiptHash": "2b0a46a180908c687b19094db09f84c2209079a34292576646582b80ca2217f4",
+      "successorTicketId": "W-0015",
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T14:56:40.433Z",
+      "acceptedAt": "2026-08-04T14:56:50.083Z",
+      "startedAt": "2026-08-04T14:56:56.792Z",
+      "completedAt": "2026-08-04T14:57:34.641Z",
+      "launchEvidence": "Supervisor inspecting current origin/main 125f63e7, exact implementation b3494c34, immutable receipts, and draft-only non-publication boundary",
+      "receipt": {
+        "ticketId": "M-0015",
+        "lane": "M",
+        "role": "supervisor",
+        "actor": "supervisor-growth-recruitment-38",
+        "objective": "Verify exact commit b3494c34, recovery and Tester receipts, current origin/main ancestry, bounded draft-only scope, and merge authorization",
+        "outcome": "pass",
+        "summary": "Approved exact commit b3494c34 for integration: current-base ancestry, receipt chain, draft-only publication gate, privacy boundary, and bounded scope are valid.",
+        "softwareVersion": "b3494c34e142de9e6983bbd5ce513614fbd96dbd",
+        "predecessorTicketId": "T-0015",
+        "predecessorReceiptHash": "2b0a46a180908c687b19094db09f84c2209079a34292576646582b80ca2217f4",
+        "launchEvidence": "Supervisor inspecting current origin/main 125f63e7, exact implementation b3494c34, immutable receipts, and draft-only non-publication boundary",
+        "startedAt": "2026-08-04T14:56:56.792Z",
+        "completedAt": "2026-08-04T14:57:34.641Z",
+        "artifacts": [
+          {
+            "path": "config/multiplayer-tester-recruitment.json",
+            "source": "git-blob",
+            "commit": "b3494c34e142de9e6983bbd5ce513614fbd96dbd",
+            "objectFormat": "sha1",
+            "objectId": "86e0405e952c6eb3b814cc82b07184e0adb113b7",
+            "bytes": 5721,
+            "sha256": "bf467db54f31b4a99e0a528c1b2981d886c65dea3e3aafac45c4f3053d22a0c4"
+          },
+          {
+            "path": "marketing/MULTIPLAYER_TESTER_RECRUITMENT_DRAFT.md",
+            "source": "git-blob",
+            "commit": "b3494c34e142de9e6983bbd5ce513614fbd96dbd",
+            "objectFormat": "sha1",
+            "objectId": "f1a1276fc0315388670e4d74f6a1fba438d2911f",
+            "bytes": 5626,
+            "sha256": "b354f1a7f4dfa4d1c73f5dae314c32305e7fa47858ef49395c1531394578ec44"
+          },
+          {
+            "path": "scripts/multiplayer-tester-recruitment-contract.test.mjs",
+            "source": "git-blob",
+            "commit": "b3494c34e142de9e6983bbd5ce513614fbd96dbd",
+            "objectFormat": "sha1",
+            "objectId": "2fa7dd55f41132ab93fbd84b75884b87c7b4d9d3",
+            "bytes": 6865,
+            "sha256": "cf26387fd6f3fac12488d84301291ec6a2b6750d7e6f5c297009f5e1666f5bf3"
+          },
+          {
+            "path": "package.json",
+            "source": "git-blob",
+            "commit": "b3494c34e142de9e6983bbd5ce513614fbd96dbd",
+            "objectFormat": "sha1",
+            "objectId": "91eadb076ded29c8c695025e219d724f99a8f2bd",
+            "bytes": 8142,
+            "sha256": "5022b13c185a18d0161e5d0982fa23aebc8c4de32ea0e1113ad4e09dd74b1476"
+          }
+        ],
+        "checks": [
+          "origin/main remained 125f63e7 and is exact ancestor",
+          "CADOps ledger valid and Watcher healthy with zero risks",
+          "draft status, no telemetry, unknown baseline, and publication review gate verified"
+        ],
+        "nextAuthorizedLanes": [
+          "W"
+        ],
+        "chainDisposition": "handoff-required",
+        "hash": "890c1b6c5599a5e925484731ce748a05b1eb9c1e86c61cbbb691671b0d466c18"
+      },
+      "uncertainty": null,
+      "quarantine": null
+    },
+    {
+      "id": "W-0015",
+      "lane": "W",
+      "role": "watcher",
+      "objective": "Close the recruitment contract custody after final ledger, remote, worktree, test, privacy, and ChatChain rotation checks",
+      "assignee": "watcher-growth-recruitment-39",
+      "authorizedBy": "general-orchestrator",
+      "status": "completed",
+      "chainId": "E-0015",
+      "predecessorTicketId": "M-0015",
+      "predecessorReceiptHash": "890c1b6c5599a5e925484731ce748a05b1eb9c1e86c61cbbb691671b0d466c18",
+      "successorTicketId": null,
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T14:57:49.550Z",
+      "acceptedAt": "2026-08-04T14:57:57.643Z",
+      "startedAt": "2026-08-04T14:58:03.872Z",
+      "completedAt": "2026-08-04T14:58:47.411Z",
+      "launchEvidence": "Final custody audit of exact commit b3494c34, recovery chain, remote ancestry, draft-only boundaries, and live ChatChain safety",
+      "receipt": {
+        "ticketId": "W-0015",
+        "lane": "W",
+        "role": "watcher",
+        "actor": "watcher-growth-recruitment-39",
+        "objective": "Close the recruitment contract custody after final ledger, remote, worktree, test, privacy, and ChatChain rotation checks",
+        "outcome": "pass",
+        "summary": "Closed the recruitment contract custody with current remote ancestry, healthy ledger, approved exact artifacts, preserved publication boundaries, and no unsafe ChatChain rotation.",
+        "softwareVersion": "b3494c34e142de9e6983bbd5ce513614fbd96dbd",
+        "predecessorTicketId": "M-0015",
+        "predecessorReceiptHash": "890c1b6c5599a5e925484731ce748a05b1eb9c1e86c61cbbb691671b0d466c18",
+        "launchEvidence": "Final custody audit of exact commit b3494c34, recovery chain, remote ancestry, draft-only boundaries, and live ChatChain safety",
+        "startedAt": "2026-08-04T14:58:03.872Z",
+        "completedAt": "2026-08-04T14:58:47.411Z",
+        "artifacts": [
+          {
+            "path": "config/multiplayer-tester-recruitment.json",
+            "source": "git-blob",
+            "commit": "b3494c34e142de9e6983bbd5ce513614fbd96dbd",
+            "objectFormat": "sha1",
+            "objectId": "86e0405e952c6eb3b814cc82b07184e0adb113b7",
+            "bytes": 5721,
+            "sha256": "bf467db54f31b4a99e0a528c1b2981d886c65dea3e3aafac45c4f3053d22a0c4"
+          },
+          {
+            "path": "marketing/MULTIPLAYER_TESTER_RECRUITMENT_DRAFT.md",
+            "source": "git-blob",
+            "commit": "b3494c34e142de9e6983bbd5ce513614fbd96dbd",
+            "objectFormat": "sha1",
+            "objectId": "f1a1276fc0315388670e4d74f6a1fba438d2911f",
+            "bytes": 5626,
+            "sha256": "b354f1a7f4dfa4d1c73f5dae314c32305e7fa47858ef49395c1531394578ec44"
+          },
+          {
+            "path": "scripts/multiplayer-tester-recruitment-contract.test.mjs",
+            "source": "git-blob",
+            "commit": "b3494c34e142de9e6983bbd5ce513614fbd96dbd",
+            "objectFormat": "sha1",
+            "objectId": "2fa7dd55f41132ab93fbd84b75884b87c7b4d9d3",
+            "bytes": 6865,
+            "sha256": "cf26387fd6f3fac12488d84301291ec6a2b6750d7e6f5c297009f5e1666f5bf3"
+          },
+          {
+            "path": "package.json",
+            "source": "git-blob",
+            "commit": "b3494c34e142de9e6983bbd5ce513614fbd96dbd",
+            "objectFormat": "sha1",
+            "objectId": "91eadb076ded29c8c695025e219d724f99a8f2bd",
+            "bytes": 8142,
+            "sha256": "5022b13c185a18d0161e5d0982fa23aebc8c4de32ea0e1113ad4e09dd74b1476"
+          }
+        ],
+        "checks": [
+          "origin/main remained exact base and CADOps Watcher reported zero risks",
+          "private room registry absent and all inspected loopback CDP endpoints unavailable; no tabs closed",
+          "draft-only, no telemetry, unknown baseline, privacy and publication gates preserved"
+        ],
+        "nextAuthorizedLanes": [],
+        "chainDisposition": "closed",
+        "hash": "1037ea725115a0d58dc8029ed7072e2a5f9fa2dd1e1b02273a64bf93f3d608a2"
+      },
       "uncertainty": null,
       "quarantine": null
     }
@@ -6748,6 +7063,179 @@
         "launchEvidence": "Fresh recovery Builder correcting only the uncommitted recruitment contract test syntax in isolated worktree"
       },
       "hash": "ae8a8c21319eb562c3a5a6b5f4c6a17e785eefb44cffcf51cc56275950e5f07e"
+    },
+    {
+      "eventId": "EVT-000239",
+      "type": "ticket.completed",
+      "ticketId": "E-0015-RECOVERY-BUILDER-GROWTH-RECRUITMENT-RECOV-0002",
+      "actor": "builder-growth-recruitment-recovery-36",
+      "at": "2026-08-04T14:54:19.309Z",
+      "previousHash": "ae8a8c21319eb562c3a5a6b5f4c6a17e785eefb44cffcf51cc56275950e5f07e",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "6700c7ac1ee4930c74d24f3412d0632d3b2bdff01cd6391f673d1cbe8bd9ad23",
+        "softwareVersion": "b3494c34e142de9e6983bbd5ce513614fbd96dbd"
+      },
+      "hash": "cbaddace0176940370b1dbe87581a00f92ad35390526445fa9fadc0984c582c5"
+    },
+    {
+      "eventId": "EVT-000240",
+      "type": "custody.handed-off",
+      "ticketId": "E-0015-RECOVERY-BUILDER-GROWTH-RECRUITMENT-RECOV-0002",
+      "actor": "general-orchestrator",
+      "at": "2026-08-04T14:54:50.686Z",
+      "previousHash": "cbaddace0176940370b1dbe87581a00f92ad35390526445fa9fadc0984c582c5",
+      "payload": {
+        "successorTicketId": "T-0015",
+        "successorLane": "T",
+        "predecessorReceiptHash": "6700c7ac1ee4930c74d24f3412d0632d3b2bdff01cd6391f673d1cbe8bd9ad23",
+        "assignee": "tester-growth-recruitment-37"
+      },
+      "hash": "4b3ed1cc360cbc75046dec64b71bc6917184ec0576c580d067dc31cfbf1658c8"
+    },
+    {
+      "eventId": "EVT-000241",
+      "type": "ticket.accepted",
+      "ticketId": "T-0015",
+      "actor": "tester-growth-recruitment-37",
+      "at": "2026-08-04T14:54:59.572Z",
+      "previousHash": "4b3ed1cc360cbc75046dec64b71bc6917184ec0576c580d067dc31cfbf1658c8",
+      "payload": {
+        "role": "tester"
+      },
+      "hash": "a0da66c7e0c90425c5dc7c0118ce9accd6c019a48a5b7d6fa3f4362850bb0baf"
+    },
+    {
+      "eventId": "EVT-000242",
+      "type": "ticket.started",
+      "ticketId": "T-0015",
+      "actor": "tester-growth-recruitment-37",
+      "at": "2026-08-04T14:55:06.673Z",
+      "previousHash": "a0da66c7e0c90425c5dc7c0118ce9accd6c019a48a5b7d6fa3f4362850bb0baf",
+      "payload": {
+        "launchEvidence": "Detached exact-commit review worktree gamedeck-growth-recruitment-contract-v1-review at b3494c34e142de9e6983bbd5ce513614fbd96dbd; no source edits"
+      },
+      "hash": "565086eb763f7e128a5dfb5360cd5d76ab3bdaad81915ff506b93c889698464b"
+    },
+    {
+      "eventId": "EVT-000243",
+      "type": "ticket.completed",
+      "ticketId": "T-0015",
+      "actor": "tester-growth-recruitment-37",
+      "at": "2026-08-04T14:56:10.630Z",
+      "previousHash": "565086eb763f7e128a5dfb5360cd5d76ab3bdaad81915ff506b93c889698464b",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "2b0a46a180908c687b19094db09f84c2209079a34292576646582b80ca2217f4",
+        "softwareVersion": "b3494c34e142de9e6983bbd5ce513614fbd96dbd"
+      },
+      "hash": "4b9cd83042a1d04a3093b9cf18c08baef8af8c05ae064822907ae9f8098d59cb"
+    },
+    {
+      "eventId": "EVT-000244",
+      "type": "custody.handed-off",
+      "ticketId": "T-0015",
+      "actor": "general-orchestrator",
+      "at": "2026-08-04T14:56:40.433Z",
+      "previousHash": "4b9cd83042a1d04a3093b9cf18c08baef8af8c05ae064822907ae9f8098d59cb",
+      "payload": {
+        "successorTicketId": "M-0015",
+        "successorLane": "M",
+        "predecessorReceiptHash": "2b0a46a180908c687b19094db09f84c2209079a34292576646582b80ca2217f4",
+        "assignee": "supervisor-growth-recruitment-38"
+      },
+      "hash": "551cbec0db5c3d7354d74657eee514256bc08a07668a4d7a6652f6d67a2e7aa1"
+    },
+    {
+      "eventId": "EVT-000245",
+      "type": "ticket.accepted",
+      "ticketId": "M-0015",
+      "actor": "supervisor-growth-recruitment-38",
+      "at": "2026-08-04T14:56:50.083Z",
+      "previousHash": "551cbec0db5c3d7354d74657eee514256bc08a07668a4d7a6652f6d67a2e7aa1",
+      "payload": {
+        "role": "supervisor"
+      },
+      "hash": "70564efa799612ac5fa5e5c69796919139e2d0d97a19fadfb719b54e5f34b93c"
+    },
+    {
+      "eventId": "EVT-000246",
+      "type": "ticket.started",
+      "ticketId": "M-0015",
+      "actor": "supervisor-growth-recruitment-38",
+      "at": "2026-08-04T14:56:56.792Z",
+      "previousHash": "70564efa799612ac5fa5e5c69796919139e2d0d97a19fadfb719b54e5f34b93c",
+      "payload": {
+        "launchEvidence": "Supervisor inspecting current origin/main 125f63e7, exact implementation b3494c34, immutable receipts, and draft-only non-publication boundary"
+      },
+      "hash": "49e92eb834c7c2367fca69eb0772f553687cd67767ec5c703f567d633f592e55"
+    },
+    {
+      "eventId": "EVT-000247",
+      "type": "ticket.completed",
+      "ticketId": "M-0015",
+      "actor": "supervisor-growth-recruitment-38",
+      "at": "2026-08-04T14:57:34.641Z",
+      "previousHash": "49e92eb834c7c2367fca69eb0772f553687cd67767ec5c703f567d633f592e55",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "890c1b6c5599a5e925484731ce748a05b1eb9c1e86c61cbbb691671b0d466c18",
+        "softwareVersion": "b3494c34e142de9e6983bbd5ce513614fbd96dbd"
+      },
+      "hash": "364b4fdfb56bbf7fdcbee526fb79da5859bc9907167059ef5b08fc2fc627e48f"
+    },
+    {
+      "eventId": "EVT-000248",
+      "type": "custody.handed-off",
+      "ticketId": "M-0015",
+      "actor": "general-orchestrator",
+      "at": "2026-08-04T14:57:49.550Z",
+      "previousHash": "364b4fdfb56bbf7fdcbee526fb79da5859bc9907167059ef5b08fc2fc627e48f",
+      "payload": {
+        "successorTicketId": "W-0015",
+        "successorLane": "W",
+        "predecessorReceiptHash": "890c1b6c5599a5e925484731ce748a05b1eb9c1e86c61cbbb691671b0d466c18",
+        "assignee": "watcher-growth-recruitment-39"
+      },
+      "hash": "fdc5878ba6e738f1d4a3164e17b272104ce30584348161467c1f2346c6eeb568"
+    },
+    {
+      "eventId": "EVT-000249",
+      "type": "ticket.accepted",
+      "ticketId": "W-0015",
+      "actor": "watcher-growth-recruitment-39",
+      "at": "2026-08-04T14:57:57.643Z",
+      "previousHash": "fdc5878ba6e738f1d4a3164e17b272104ce30584348161467c1f2346c6eeb568",
+      "payload": {
+        "role": "watcher"
+      },
+      "hash": "9721932b908c9c2e0a28c62f10e67cf7c7ae8ec5a13c3a84097b16ab02d76db6"
+    },
+    {
+      "eventId": "EVT-000250",
+      "type": "ticket.started",
+      "ticketId": "W-0015",
+      "actor": "watcher-growth-recruitment-39",
+      "at": "2026-08-04T14:58:03.872Z",
+      "previousHash": "9721932b908c9c2e0a28c62f10e67cf7c7ae8ec5a13c3a84097b16ab02d76db6",
+      "payload": {
+        "launchEvidence": "Final custody audit of exact commit b3494c34, recovery chain, remote ancestry, draft-only boundaries, and live ChatChain safety"
+      },
+      "hash": "c20af9cabd4dbd203f748b6995f654135c4388501782da33b99437c57462a2bc"
+    },
+    {
+      "eventId": "EVT-000251",
+      "type": "ticket.completed",
+      "ticketId": "W-0015",
+      "actor": "watcher-growth-recruitment-39",
+      "at": "2026-08-04T14:58:47.411Z",
+      "previousHash": "c20af9cabd4dbd203f748b6995f654135c4388501782da33b99437c57462a2bc",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "1037ea725115a0d58dc8029ed7072e2a5f9fa2dd1e1b02273a64bf93f3d608a2",
+        "softwareVersion": "b3494c34e142de9e6983bbd5ce513614fbd96dbd"
+      },
+      "hash": "84ed105f20afc25a5a1665f9dce20abcbb3444b0f6244440b7862ee47a6d1d1a"
     }
   ]
 }
