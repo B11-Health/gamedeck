@@ -2,8 +2,13 @@ package io.gamedeck.mobile;
 
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.pm.ApplicationInfo;
 import android.graphics.Color;
+import android.graphics.Insets;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -11,19 +16,27 @@ import android.view.InputDevice;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.WindowInsets;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.FrameLayout;
+
+import java.io.File;
 
 public class MainActivity extends Activity {
     static final int REQUEST_LIBRARY = 4101;
     static final int REQUEST_RGSX = 4102;
     private static final String LOCAL_URL = "file:///android_asset/desktop/index.html";
+    private static final String QA_ACTION = "io.gamedeck.mobile.QA";
+    private static final String DEBUG_FIXTURE_FILE = "renderer-fixture.enabled";
 
+    private FrameLayout rootView;
     private WebView webView;
     private DeckBridge bridge;
+    private BroadcastReceiver qaReceiver;
     private boolean remoteMode = false;
     private boolean bridgeExposed = false;
     private Uri remoteOrigin;
@@ -35,17 +48,24 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         getWindow().setStatusBarColor(Color.rgb(9, 11, 16));
         getWindow().setNavigationBarColor(Color.rgb(9, 11, 16));
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            getWindow().setDecorFitsSystemWindows(false);
+        }
         buildWebView();
+        registerQaReceiver();
         loadLocalShell();
     }
 
     private void buildWebView() {
+        rootView = new FrameLayout(this);
+        rootView.setBackgroundColor(Color.rgb(9, 11, 16));
+
         webView = new WebView(this);
         webView.setBackgroundColor(Color.rgb(9, 11, 16));
         webView.setVisibility(View.VISIBLE);
         webView.setAlpha(1f);
         webView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
-        applySystemBarInsets();
+
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
@@ -57,7 +77,8 @@ public class MainActivity extends Activity {
         settings.setBuiltInZoomControls(false);
         settings.setDisplayZoomControls(false);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) settings.setOffscreenPreRaster(true);
-        settings.setUserAgentString(settings.getUserAgentString() + " GameDeckAndroid/0.3.2-polish-preview");
+        settings.setUserAgentString(settings.getUserAgentString() + " GameDeckAndroid/0.3.3-orientation-polish");
+
         bridge = new DeckBridge(this);
         exposeBridge();
         webView.setWebChromeClient(new WebChromeClient());
@@ -85,7 +106,36 @@ public class MainActivity extends Activity {
                 view.requestFocus(View.FOCUS_DOWN);
             }
         });
-        setContentView(webView);
+
+        rootView.addView(
+            webView,
+            new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+        );
+        setContentView(rootView);
+        applySystemBarInsets(rootView);
+    }
+
+    private void applySystemBarInsets(View target) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            target.setOnApplyWindowInsetsListener((view, windowInsets) -> {
+                Insets bars = windowInsets.getInsets(
+                    WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout()
+                );
+                if (view.getPaddingLeft() != bars.left
+                    || view.getPaddingTop() != bars.top
+                    || view.getPaddingRight() != bars.right
+                    || view.getPaddingBottom() != bars.bottom) {
+                    view.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+                }
+                return WindowInsets.CONSUMED;
+            });
+            target.requestApplyInsets();
+        } else {
+            target.setFitsSystemWindows(true);
+        }
     }
 
     private void useLocalRendererLayer() {
@@ -102,13 +152,6 @@ public class MainActivity extends Activity {
         webView.setVisibility(View.VISIBLE);
         webView.setAlpha(1f);
         webView.invalidate();
-    }
-
-    private void applySystemBarInsets() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            getWindow().setDecorFitsSystemWindows(true);
-        }
-        webView.setFitsSystemWindows(true);
     }
 
     private void loadLocalShell() {
@@ -145,6 +188,55 @@ public class MainActivity extends Activity {
 
     private boolean safeEquals(String left, String right) {
         return left == null ? right == null : left.equalsIgnoreCase(right);
+    }
+
+    private boolean isDebugFixtureEnabled() {
+        boolean debuggable = (getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
+        return debuggable && new File(getFilesDir(), DEBUG_FIXTURE_FILE).isFile();
+    }
+
+    private void registerQaReceiver() {
+        if (!isDebugFixtureEnabled()) return;
+        qaReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                runQaCommand(intent == null ? null : intent.getStringExtra("command"));
+            }
+        };
+        IntentFilter filter = new IntentFilter(QA_ACTION);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(qaReceiver, filter, Context.RECEIVER_EXPORTED);
+        } else {
+            registerReceiver(qaReceiver, filter);
+        }
+    }
+
+    private void runQaCommand(String rawCommand) {
+        if (!isDebugFixtureEnabled()) return;
+        String command = rawCommand == null ? "" : rawCommand.trim();
+        if (command.startsWith("view:")) {
+            String view = command.substring(5);
+            if (!("home".equals(view) || "discover".equals(view) || "favorites".equals(view)
+                || "recent".equals(view) || "community".equals(view))) return;
+            evaluate("(()=>{const n=document.querySelector('.nav[data-view=\"" + view + "\"]');if(n)n.click();const c=document.querySelector('.content');if(c)c.scrollTo(0,0);window.scrollTo(0,0);})()");
+            return;
+        }
+        switch (command) {
+            case "menu:open":
+                evaluate("(()=>{const m=document.querySelector('#headerMenu');if(m&&m.classList.contains('hidden'))document.querySelector('#headerMenuToggle')?.click();})()");
+                break;
+            case "menu:close":
+                evaluate("(()=>{const m=document.querySelector('#headerMenu');if(m&&!m.classList.contains('hidden'))document.querySelector('#headerMenuToggle')?.click();})()");
+                break;
+            case "scroll:top":
+                evaluate("(()=>{const c=document.querySelector('.content');if(c)c.scrollTo(0,0);document.scrollingElement?.scrollTo(0,0);window.scrollTo(0,0);})()");
+                break;
+            case "scroll:down":
+                evaluate("(()=>{const c=document.querySelector('.content');if(c&&c.scrollHeight>c.clientHeight)c.scrollTo(0,Math.min(c.scrollHeight-c.clientHeight,Math.max(520,c.clientHeight*.9)));else{const d=document.scrollingElement;d?.scrollTo(0,Math.min(d.scrollHeight-innerHeight,Math.max(520,innerHeight*.9)));}})()");
+                break;
+            default:
+                break;
+        }
     }
 
     void chooseTree(int requestCode) {
@@ -286,6 +378,12 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        if (qaReceiver != null) {
+            try {
+                unregisterReceiver(qaReceiver);
+            } catch (IllegalArgumentException ignored) {}
+            qaReceiver = null;
+        }
         if (webView != null) {
             webView.loadUrl("about:blank");
             hideBridge();
