@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "project": "GameDeck",
   "createdAt": "2026-08-03T23:44:00.000Z",
-  "updatedAt": "2026-08-04T00:27:38.928Z",
+  "updatedAt": "2026-08-04T00:32:34.848Z",
   "policy": {
     "nonReplay": true,
     "visibleLaunchRequired": true,
@@ -40,11 +40,11 @@
   },
   "counters": {
     "E": 3,
-    "T": 2,
+    "T": 3,
     "M": 2,
     "W": 2,
     "recovery": 0,
-    "event": 36
+    "event": 38
   },
   "tickets": [
     {
@@ -488,18 +488,111 @@
       "objective": "Integrate the approved console-theme, spotlight-layout, arcade-routing, and launch-repair sequence onto current main, preserve CADOps gates, and close remaining accessibility gaps.",
       "assignee": "uiux-integration-builder-01",
       "authorizedBy": "general-orchestrator",
-      "status": "active",
+      "status": "completed",
       "chainId": "E-0003",
       "predecessorTicketId": null,
       "predecessorReceiptHash": null,
-      "successorTicketId": null,
+      "successorTicketId": "T-0003",
       "recoveryForTicketId": null,
       "recoveryTicketId": null,
       "createdAt": "2026-08-04T00:27:20.848Z",
       "acceptedAt": "2026-08-04T00:27:30.244Z",
       "startedAt": "2026-08-04T00:27:38.928Z",
-      "completedAt": null,
+      "completedAt": "2026-08-04T00:32:26.324Z",
       "launchEvidence": "Authenticated Shell active in clean integration worktree gamedeck-uiux-integration; source 99c474b merged onto main 4633f2e with conflicts explicitly resolved.",
+      "receipt": {
+        "ticketId": "E-0003",
+        "lane": "E",
+        "role": "builder",
+        "actor": "uiux-integration-builder-01",
+        "objective": "Integrate the approved console-theme, spotlight-layout, arcade-routing, and launch-repair sequence onto current main, preserve CADOps gates, and close remaining accessibility gaps.",
+        "outcome": "pass",
+        "summary": "Integrated console-themed environments, stable spotlight geometry, 44-pixel actions, reduced-motion safety, game-system classification, archive validation, firmware truth, and arcade launch repairs onto CADOps-enabled main.",
+        "softwareVersion": "9bd7818d42429f70912c9a8b912fc33dcbfbc606",
+        "predecessorTicketId": null,
+        "predecessorReceiptHash": null,
+        "launchEvidence": "Authenticated Shell active in clean integration worktree gamedeck-uiux-integration; source 99c474b merged onto main 4633f2e with conflicts explicitly resolved.",
+        "startedAt": "2026-08-04T00:27:38.928Z",
+        "completedAt": "2026-08-04T00:32:26.324Z",
+        "artifacts": [
+          {
+            "path": "main.js",
+            "source": "git-blob",
+            "commit": "9bd7818d42429f70912c9a8b912fc33dcbfbc606",
+            "objectFormat": "sha1",
+            "objectId": "0acbda193d1ba8b2c44a7c35ab44faae2799c6f2",
+            "bytes": 152853,
+            "sha256": "eaeca61280150a0fdec8a913d8f26c9a1dbb98f553baa06098efe2f0959c75e2"
+          },
+          {
+            "path": "library-system-classifier.js",
+            "source": "git-blob",
+            "commit": "9bd7818d42429f70912c9a8b912fc33dcbfbc606",
+            "objectFormat": "sha1",
+            "objectId": "3f9c6fd4283de57aff8b393e4b93b10455e23aa4",
+            "bytes": 3006,
+            "sha256": "63f4cc973a4903a563df1bd587d0be0e0ca28420692b4c18c23781cd1b3f594d"
+          },
+          {
+            "path": "src/app.js",
+            "source": "git-blob",
+            "commit": "9bd7818d42429f70912c9a8b912fc33dcbfbc606",
+            "objectFormat": "sha1",
+            "objectId": "31678e80d2392c10033a7b67762f26f7ad5701be",
+            "bytes": 155843,
+            "sha256": "d23e9dba21a9f077f00df910561386248d00adc9692204635db22ade40b50559"
+          },
+          {
+            "path": "src/styles.css",
+            "source": "git-blob",
+            "commit": "9bd7818d42429f70912c9a8b912fc33dcbfbc606",
+            "objectFormat": "sha1",
+            "objectId": "b70e3d3577552098c58cebb83a58ec83b262e0b9",
+            "bytes": 182984,
+            "sha256": "bcb6c16cdff969857b0dba985e99859fd4bd6b760bcfd2253a6052380dba6e57"
+          },
+          {
+            "path": "scripts/spotlight-layout.test.cjs",
+            "source": "git-blob",
+            "commit": "9bd7818d42429f70912c9a8b912fc33dcbfbc606",
+            "objectFormat": "sha1",
+            "objectId": "71cf45325e5b240f90a9d4ab77eca47eb225295b",
+            "bytes": 5458,
+            "sha256": "c780b397b9ef1569a238a0c0a373f9db1cde937fe3d5363a8258ef0a47e6ecf3"
+          }
+        ],
+        "checks": [
+          "Full GameDeck npm test passed with CADOps, classifier, launch, and smoke coverage.",
+          "Electron spotlight layout probe passed at 1440, 1080, 820, and 480 pixels; git diff --check passed."
+        ],
+        "nextAuthorizedLanes": [
+          "T"
+        ],
+        "chainDisposition": "handoff-required",
+        "hash": "83eca1036fe510e0f34c15a6b0cccba2ee941a45d9ec1390c080a92912c4320d"
+      },
+      "uncertainty": null,
+      "quarantine": null
+    },
+    {
+      "id": "T-0003",
+      "lane": "T",
+      "role": "tester",
+      "objective": "Independently verify exact UI integration commit 9bd7818d42429f70912c9a8b912fc33dcbfbc606, game-launch behavior, accessibility geometry, reduced motion, ancestry, and complete combined gate.",
+      "assignee": "independent-uiux-reviewer-01",
+      "authorizedBy": "general-orchestrator",
+      "status": "prepared",
+      "chainId": "E-0003",
+      "predecessorTicketId": "E-0003",
+      "predecessorReceiptHash": "83eca1036fe510e0f34c15a6b0cccba2ee941a45d9ec1390c080a92912c4320d",
+      "successorTicketId": null,
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T00:32:34.848Z",
+      "acceptedAt": null,
+      "startedAt": null,
+      "completedAt": null,
+      "launchEvidence": null,
       "receipt": null,
       "uncertainty": null,
       "quarantine": null
@@ -981,6 +1074,35 @@
         "launchEvidence": "Authenticated Shell active in clean integration worktree gamedeck-uiux-integration; source 99c474b merged onto main 4633f2e with conflicts explicitly resolved."
       },
       "hash": "fe60058b2ccd30d6be7f53c9f26f462831c51a4b7c13b4b679a58355dabcd4bb"
+    },
+    {
+      "eventId": "EVT-000037",
+      "type": "ticket.completed",
+      "ticketId": "E-0003",
+      "actor": "uiux-integration-builder-01",
+      "at": "2026-08-04T00:32:26.324Z",
+      "previousHash": "fe60058b2ccd30d6be7f53c9f26f462831c51a4b7c13b4b679a58355dabcd4bb",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "83eca1036fe510e0f34c15a6b0cccba2ee941a45d9ec1390c080a92912c4320d",
+        "softwareVersion": "9bd7818d42429f70912c9a8b912fc33dcbfbc606"
+      },
+      "hash": "0af4e5819cee0485c341e0fc423b610de72b1385b126e21ddbf8f91584f96e8e"
+    },
+    {
+      "eventId": "EVT-000038",
+      "type": "custody.handed-off",
+      "ticketId": "E-0003",
+      "actor": "general-orchestrator",
+      "at": "2026-08-04T00:32:34.848Z",
+      "previousHash": "0af4e5819cee0485c341e0fc423b610de72b1385b126e21ddbf8f91584f96e8e",
+      "payload": {
+        "successorTicketId": "T-0003",
+        "successorLane": "T",
+        "predecessorReceiptHash": "83eca1036fe510e0f34c15a6b0cccba2ee941a45d9ec1390c080a92912c4320d",
+        "assignee": "independent-uiux-reviewer-01"
+      },
+      "hash": "ef6e20c6d8f01641228556763bf7d4ffb938787adee0da0d3dc5f31127a8a5c7"
     }
   ]
 }
