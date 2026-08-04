@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "project": "GameDeck",
   "createdAt": "2026-08-03T23:44:00.000Z",
-  "updatedAt": "2026-08-04T07:59:16.768Z",
+  "updatedAt": "2026-08-04T11:48:04.328Z",
   "policy": {
     "nonReplay": true,
     "visibleLaunchRequired": true,
@@ -39,12 +39,12 @@
     }
   },
   "counters": {
-    "E": 12,
+    "E": 13,
     "T": 12,
     "M": 12,
     "W": 12,
     "recovery": 0,
-    "event": 193
+    "event": 196
   },
   "tickets": [
     {
@@ -2828,6 +2828,29 @@
       },
       "uncertainty": null,
       "quarantine": null
+    },
+    {
+      "id": "E-0013",
+      "lane": "E",
+      "role": "builder",
+      "objective": "Reconcile GameDeck operating truth to current main and close ANALYTICS-001 with exact merged evidence without touching product code",
+      "assignee": "builder-ops-truth-26",
+      "authorizedBy": "general-orchestrator",
+      "status": "active",
+      "chainId": "E-0013",
+      "predecessorTicketId": null,
+      "predecessorReceiptHash": null,
+      "successorTicketId": null,
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T11:47:40.360Z",
+      "acceptedAt": "2026-08-04T11:47:52.727Z",
+      "startedAt": "2026-08-04T11:48:04.328Z",
+      "completedAt": null,
+      "launchEvidence": "Authenticated Shell active in isolated gamedeck/gamedeck-ops-analytics-reconcile worktree at origin/main 8cfd5a75e44f73d1da904ce85a3a5b3ba1f9d0ff; active OpenBOR worktree preserved untouched",
+      "receipt": null,
+      "uncertainty": null,
+      "quarantine": null
     }
   ],
   "events": [
@@ -5387,6 +5410,45 @@
         "softwareVersion": "4d2604eba2f40be05fb592010f98222d18018178"
       },
       "hash": "35d127f74503b4e4a4a70f3bd4ad4518da6cdfe58b2e4609bc3795cee1e9c482"
+    },
+    {
+      "eventId": "EVT-000194",
+      "type": "ticket.issued",
+      "ticketId": "E-0013",
+      "actor": "general-orchestrator",
+      "at": "2026-08-04T11:47:40.360Z",
+      "previousHash": "35d127f74503b4e4a4a70f3bd4ad4518da6cdfe58b2e4609bc3795cee1e9c482",
+      "payload": {
+        "lane": "E",
+        "role": "builder",
+        "assignee": "builder-ops-truth-26",
+        "objective": "Reconcile GameDeck operating truth to current main and close ANALYTICS-001 with exact merged evidence without touching product code"
+      },
+      "hash": "789f327e3576dd14ef5a7246b8a96574eba7bff0cc5bbe07822617047c7091a9"
+    },
+    {
+      "eventId": "EVT-000195",
+      "type": "ticket.accepted",
+      "ticketId": "E-0013",
+      "actor": "builder-ops-truth-26",
+      "at": "2026-08-04T11:47:52.727Z",
+      "previousHash": "789f327e3576dd14ef5a7246b8a96574eba7bff0cc5bbe07822617047c7091a9",
+      "payload": {
+        "role": "builder"
+      },
+      "hash": "40c1689cadf35c9f8598efa35ffa89b35cbb9af946c1df22f2597367aca7e92b"
+    },
+    {
+      "eventId": "EVT-000196",
+      "type": "ticket.started",
+      "ticketId": "E-0013",
+      "actor": "builder-ops-truth-26",
+      "at": "2026-08-04T11:48:04.328Z",
+      "previousHash": "40c1689cadf35c9f8598efa35ffa89b35cbb9af946c1df22f2597367aca7e92b",
+      "payload": {
+        "launchEvidence": "Authenticated Shell active in isolated gamedeck/gamedeck-ops-analytics-reconcile worktree at origin/main 8cfd5a75e44f73d1da904ce85a3a5b3ba1f9d0ff; active OpenBOR worktree preserved untouched"
+      },
+      "hash": "b4f371e0b88029d21fd8a40ba721072122f60773dfc5ee575bd9d4a95714d685"
     }
   ]
 }

@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "updatedAt": "2026-08-04T02:46:00-04:00",
+  "updatedAt": "2026-08-04T11:49:11.530Z",
   "northStar": "A friend can receive an invitation, pass readiness checks, and reach responsive gameplay in under ten minutes across the widest truthful set of legally owned games.",
   "productTargets": {
     "inviteToPlayableP95Minutes": 10,
@@ -376,8 +376,8 @@
         "opt-in diagnostics",
         "experiment design"
       ],
-      "branch": null,
-      "worktree": null,
+      "branch": "analytics/privacy-safe-multiplayer-kpi-dictionary",
+      "worktree": "gamedeck-analytics-kpi",
       "scope": {
         "files": [],
         "surfaces": [],
@@ -391,7 +391,7 @@
         "opt-in design",
         "metric definitions"
       ],
-      "nextAction": "Execute ANALYTICS-001 in parallel with product work."
+      "nextAction": "Review MON-001 demand and cost assumptions against the merged privacy-safe KPI contract; telemetry implementation requires a separate approved task."
     },
     {
       "id": "partnerships",
@@ -854,7 +854,7 @@
       "id": "ANALYTICS-001",
       "title": "Define the privacy-safe multiplayer KPI dictionary",
       "priority": "P1",
-      "status": "ready",
+      "status": "complete",
       "ownerLane": "analytics",
       "reviewerLane": "security-privacy",
       "approvalLanes": [
@@ -870,14 +870,20 @@
         "require account identity",
         "invent traction"
       ],
-      "branch": null,
-      "worktree": null,
+      "branch": "analytics/privacy-safe-multiplayer-kpi-dictionary",
+      "worktree": "gamedeck-analytics-kpi",
       "scope": {
-        "files": [],
+        "files": [
+          "config/multiplayer-metrics.json",
+          "docs/MULTIPLAYER_METRICS.md",
+          "docs/PRIVACY.md",
+          "scripts/multiplayer-metrics-contract.test.mjs",
+          "package.json"
+        ],
         "surfaces": [],
         "artifacts": [
-          "metric dictionary",
-          "data-minimization matrix"
+          "16-metric privacy-safe multiplayer evidence contract",
+          "data-minimization and publication gate"
         ]
       },
       "evidenceRequired": [
@@ -892,13 +898,23 @@
         "no metric requires player identity",
         "unknown baselines remain explicit"
       ],
-      "startedAt": null,
-      "lastEvidenceAt": null,
-      "exactEvidence": [],
+      "startedAt": "2026-08-04T07:49:20.096Z",
+      "lastEvidenceAt": "2026-08-04T07:59:16.768Z",
+      "exactEvidence": [
+        "Base origin/main 2970c93e4fbbdde717bce95b9f098594ee15c88b.",
+        "Implementation commit 4d2604eba2f40be05fb592010f98222d18018178 defines 16 metrics across eight stages and rejects six privacy mutations.",
+        "Custody closure and merged origin/main commit 8cfd5a75e44f73d1da904ce85a3a5b3ba1f9d0ff.",
+        "Builder receipt 6a98e636e2d88ff1205e3ce2f0523ec7ee6eb5302dcc53bdf75bffd849cc60b8.",
+        "Tester receipt 7bc6d2f93d794c03123893c4f539657df18887d5a63bc1a268ca15e6daab6915.",
+        "Supervisor receipt 0d47b8727e0636ca03ebfd9dbfcdc3ab1f25afabee420d8ddca24cc47f4fb42f.",
+        "Watcher receipt 832652491efdc48a96b30a89521ab05705018c04b4fc104bd8e477bb0e2a39de.",
+        "Focused contract, full npm test, repository audit, CADOps Watcher, and git diff --check passed."
+      ],
       "blocker": null,
       "unblockOwner": null,
-      "nextAction": "Assign one clean artifact-only task and return the metric dictionary for privacy review.",
-      "rollbackPoint": "No telemetry implementation; retain the existing local-first privacy posture."
+      "nextAction": "Use the merged metric contract as review input for MON-001 and GROWTH-001; telemetry implementation and public claims remain separately gated.",
+      "rollbackPoint": "2970c93e4fbbdde717bce95b9f098594ee15c88b",
+      "continuationWorkItem": "MON-001"
     },
     {
       "id": "MON-001",
@@ -1149,8 +1165,8 @@
     }
   ],
   "currentGitTruth": {
-    "verifiedAt": "2026-08-04T02:46:00-04:00",
-    "originMain": "38cff0391185ac3bda7e949157fdc180be06e6e0",
+    "verifiedAt": "2026-08-04T11:49:11.530Z",
+    "originMain": "8cfd5a75e44f73d1da904ce85a3a5b3ba1f9d0ff",
     "includedSequences": [
       "Aurora focus integration",
       "CADOps custody foundation",
@@ -1160,7 +1176,10 @@
       "safe ChatChain tab handoff and custody",
       "CADOps browser hygiene and custody",
       "ledger-bound ChatChain room registry and browser workflow v2",
-      "corrected absent-predecessor reconciliation with ledger-bound close receipts"
+      "corrected absent-predecessor reconciliation with ledger-bound close receipts",
+      "Team Operating System v3 with closure-state-independent gates",
+      "least-privilege release workflow regression guard",
+      "privacy-safe multiplayer KPI dictionary and contract tests"
     ],
     "runtimeContract": {
       "currentVerifiedVersion": "V1.0.4",
@@ -1231,11 +1250,11 @@
       ]
     },
     "worktreeEvidence": {
-      "branch": "ops/team-operating-system-v3-cadops",
-      "head": "70bdc2e4291adcec3e55a65620e192756bcb228f",
-      "base": "38cff0391185ac3bda7e949157fdc180be06e6e0",
+      "branch": "ops/reconcile-analytics-truth-v1",
+      "head": "8cfd5a75e44f73d1da904ce85a3a5b3ba1f9d0ff",
+      "base": "8cfd5a75e44f73d1da904ce85a3a5b3ba1f9d0ff",
       "clean": true,
-      "verifiedAt": "2026-08-04T02:46:00-04:00"
+      "verifiedAt": "2026-08-04T11:49:11.530Z"
     }
   },
   "communicationReceiptSchema": {
@@ -1284,7 +1303,7 @@
       "lane": "analytics",
       "status": "ready",
       "entryRule": "Use aggregate or opt-in evidence only; no invasive telemetry.",
-      "nextBoundedTask": "Define KPI dictionary for discovery, successful launch, invite readiness, play success, retention, and contribution."
+      "nextBoundedTask": "Review MON-001 cost and demand assumptions against the merged privacy-safe KPI contract; do not enable telemetry or publish claims without separate approval."
     },
     {
       "id": "PARTNERSHIPS-QUEUE",

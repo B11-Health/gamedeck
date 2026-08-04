@@ -54,11 +54,13 @@ const compareItems = (a, b) => (priorityRank.get(a.priority) ?? 99) - (priorityR
 }
 
 {
-  const text = formatPulse(buildPulse(original, new Date('2026-08-03T18:11:00.000Z')));
+  const pulse = buildPulse(original, new Date('2026-08-03T18:11:00.000Z'));
+  const text = formatPulse(pulse);
   assert.match(text, /GAMEDECK ORCHESTRATOR PULSE/);
   assert.match(text, /PLAY-001 (active|review)/);
   assert.doesNotMatch(text, /OPS-001 (active|review)/);
-  assert.match(text, /ANALYTICS-001/);
+  for (const item of pulse.ready) assert.match(text, new RegExp(item.id));
+  assert.doesNotMatch(text, /ANALYTICS-001/);
   assert.match(text, /Critical risks \(0\)/);
 }
 

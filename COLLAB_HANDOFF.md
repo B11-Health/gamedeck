@@ -1,95 +1,68 @@
 # GameDeck collaboration handoff
 
-This file is the repository-level source of truth for parallel GameDeck work. Private teammate-room URLs and credentials do not belong here. The machine-readable ownership board is `ops/team-board.json`.
+This file is the repository-level source of truth for parallel GameDeck work. Private teammate-room URLs, credentials, browser target IDs, and local ChatChain receipts do not belong here. The machine-readable ownership board is `ops/team-board.json`.
 
 ## Active handoff
 
-**Handoff ID:** GD-20260803-UIUX-CADOPS
-**Updated:** 2026-08-03 20:22 ET
+**Handoff ID:** GD-20260804-ANALYTICS-TRUTH-RECONCILE
+**Updated:** 2026-08-04 07:49 ET
 **Repository:** `B11-Health/gamedeck`
-**Production branch / HEAD:** `main` / `4633f2eb00bd2be19b7b07914cd395d6e972d8ca`
-**Active integration branch:** `integration/uiux-console-cadops`
-**Primary objective:** Make GameDeck the most dependable local-first platform for playing legally owned games with friends while improving the internal multi-team delivery system.
+**Verified production branch / base:** `main` / `8cfd5a75e44f73d1da904ce85a3a5b3ba1f9d0ff`
+**Active bounded branch:** `ops/reconcile-analytics-truth-v1`
+**Primary objective:** Reconcile repository operating truth to the merged privacy-safe analytics evidence without modifying product, runtime, UI, networking, publication, or authenticated community surfaces.
 
 ## Current product truth
 
-- CADOps and the team operating system are on `main` at `4633f2e`; the first complete Builder/Tester/Supervisor/Watcher chain is closed with valid receipts.
-- The approved console-theme, spotlight-layout, arcade-routing, and launch-repair sequence at `99c474b` is being integrated onto current `main` in `integration/uiux-console-cadops`.
-- Embedded/Runtime design work is contract-gated. V1.0.3 is invalid and superseded. V1.0.5 is the latest reported pure-design artifact; Security approval is recorded, but implementation may start only after the General Orchestrator independently confirms all required reviewer receipts and issues a fresh bounded handoff.
-- `feature/runtime-lifecycle-normalizer` and its dedicated worktree exist at `62f3b3c` but remain clean: no module, test, package change, commit, push, or implementation verdict exists.
-- The shared repository worktree contains an unrelated untracked `gamedeck-console-themes-complete/` directory. Do not delete, stage, absorb, or modify it without a separate ownership handoff.
-- No Runtime contract authorizes Electron, main, preload, renderer, capture, controller, network, consent, certification, audio, or player-visible side effects by itself.
-
-## Operating model
-
-The ten canonical lanes are defined in `ops/team-board.json` and `docs/TEAM_OPERATING_SYSTEM.md`:
-
-1. Program Operations and Integration
-2. Multiplayer Platform and Network Reliability
-3. Universal Game Compatibility Lab
-4. Multiplayer Player Experience
-5. Security and Privacy
-6. QA, Reliability, and Observability
-7. Growth and Community
-8. Ethical Monetization
-9. Privacy-Preserving Analytics
-10. Partnerships and Ecosystem
-
-Every active task has one owner, one reviewer, an exclusive scope, a rollback point, required evidence, and a concrete next action.
+- `origin/main@8cfd5a75e44f73d1da904ce85a3a5b3ba1f9d0ff` includes the CADOps and ChatChain safeguards, console and Aurora UIUX sequences, OpenBOR catalog and launch support, Team Operating System v3, the least-privilege release-permission regression gate, and the privacy-safe multiplayer KPI contract.
+- ANALYTICS-001 is complete. Implementation commit `4d2604eba2f40be05fb592010f98222d18018178` defines 16 aggregate or opt-in metrics across eight stages and rejects six privacy-breaking mutations. Custody closed and merged at `8cfd5a75e44f73d1da904ce85a3a5b3ba1f9d0ff`.
+- PLAY-001 remains the highest-priority unresolved item. Runtime implementation stays blocked until all required reviewers evaluate identical immutable contract bytes and return synchronized verdicts.
+- The currently verified Runtime contract remains V1.0.4: contract SHA-256 `89f9dc4d7881e3263c22527278362395d8a16c3e595e8a36dc596316f3e937ef`; manifest SHA-256 `7147b3669dfbd65cf95f8e0c0e7e65fff852cd89c0c63a65618570d901e1998e`; foundation `7c42367d085bd79871b796123fcf704d2c327de9`; base `9d038f7215d031004acf70c6055308090620f745`. V1.0.5 must not be promoted without exact bytes, lengths, hashes, lineage, and reviewer linkage.
+- The dedicated `fix/openbor-window-rendering` worktree contains active uncommitted product work. It is outside this task and must not be edited, staged, cleaned, absorbed, reviewed as immutable, or rotated by Program Operations.
+- No contract or planning artifact authorizes Electron, main-process, preload, renderer, capture, controller, networking, consent, certification, audio, publication, spending, or partner side effects by itself.
 
 ## Current ownership
 
 ### Program Operations and Integration
 
-**Status:** Integrated on `main`
-**Branch:** `main@4633f2e`
-**Scope:**
+**Status:** Active bounded truth reconciliation
+**Branch:** `ops/reconcile-analytics-truth-v1`
+**Owned scope:**
 
 - `COLLAB_HANDOFF.md`
-- `docs/TEAM_OPERATING_SYSTEM.md`
-- `docs/ONLINE_PLAY_PROGRAM.md`
 - `ops/team-board.json`
-- `scripts/team-board-validate.mjs`
-- `scripts/team-board-validate.test.mjs`
-- `package.json` only for board validation registration
+- append-only CADOps custody in `ops/cadops/ledger.json`
 
-**Required return:** Clean commit, push, full repository gate, exact diff, and independent review.
+**Do not touch:** Product/runtime/UI/network files, the active OpenBOR worktree, marketing publication, account settings, private room data, or another lane's worktree.
 
-### Runtime lifecycle contract and pure implementation
+**Required return:** Exact immutable commit, focused board/pulse checks, full `npm test`, `git diff --check`, independent Tester and Supervisor approval, Watcher closure, clean push, and merge only if `origin/main` remains the reviewed base.
 
-**Status:** Contract review / implementation hold
-**Do not touch:** Production imports, Electron, main, preload, renderer, capture, input, networking, consent, audio, or player-visible behavior.
-**Unblock condition:** Exact V1.0.5 attachment/manifest identity plus synchronized approval receipts from Security, Compatibility, Player Experience, and Integration QA, followed by a new bounded implementation handoff.
+### Runtime contract
 
-### Console themes integration
+**Status:** P0 review / implementation hold
+**Unblock condition:** Every required reviewer names the same immutable bytes and hashes, contradictions are resolved through a new immutable artifact, and the General Orchestrator issues a fresh bounded implementation handoff.
 
-**Status:** Active CADOps integration
-**Source:** `integration/console-themes-complete@99c474b`
-**Integration:** `integration/uiux-console-cadops` from `main@4633f2e`
-**Required return:** Combined CADOps and product test gate, visual/player-semantic review, clean exact commit, rollback, and Watcher-authorized merge.
+### OpenBOR window rendering
 
-### Multiplayer program
+**Status:** Active work owned elsewhere
+**Boundary:** Preserve its uncommitted worktree exactly. This handoff makes no quality, completion, test, or merge claim about that branch.
 
-**Status:** Ready for staffing
-**Program:** `docs/ONLINE_PLAY_PROGRAM.md`
-**First work:** Universal route contract, host/guest preflight, invitation replay/slot hardening, authenticated discovery, NAT/relay diagnostics, reconnect, and two-to-four-player acceptance evidence.
+### Analytics, growth, and monetization
 
-### Growth, monetization, analytics, and partnerships
+- Privacy-safe analytics design is merged; telemetry remains disabled and separately gated.
+- MON-001 may use the merged metric contract to separate verified costs, assumptions, and unknown demand. No spending, pricing promise, or product commitment is authorized.
+- GROWTH-001 may use the metric contract for truthful proof planning. No publication, unsupported availability claim, or unnecessary personal-data collection is authorized.
 
-**Status:** Ready for bounded assignments after the product evidence plan is synchronized.
-**Boundary:** No unsupported claims, spam, private-data collection, spending, partner commitments, account creation, publication, or authenticated-surface mutation without explicit ownership and evidence requirements.
+## Operating model
+
+The ten canonical lanes are defined in `ops/team-board.json` and `docs/TEAM_OPERATING_SYSTEM.md`. Every active task requires one owner, an independent reviewer, exclusive scope, exact evidence, a rollback point, and a concrete next action. Rejection is a handoff, not an endpoint: preserve the failed identity, issue a bounded correction, and retest under a distinct identity when execution was uncertain.
+
+## ChatChain and browser custody
+
+The canonical CADOps ledger authorizes custody. The private room registry binds a conversation identity to a ticket. A live loopback Chromium DevTools endpoint proves browser state. No predecessor tab may close unless a distinct successor is ledger-authorized, bound, visibly verified, accepted or active, and rechecked immediately before closure. Missing registry or CDP evidence means no tab rotation.
 
 ## Discord-free operating model
 
-Treat Discord as unavailable for required product, onboarding, support, event, signaling, community, sponsorship, or growth flows. Replace Discord dependencies with GitHub Discussions, Issues, releases, the repository, the public site, YouTube, TikTok, Reddit, email, or another explicitly approved private exchange path. Documentation that still mentions Discord must be corrected through a bounded content task.
-
-## Rejection and remediation rule
-
-A rejection is a handoff, not an endpoint. It must include severity, exact object identity, evidence, deterministic probe, impact, smallest correction, owner, and retest. The correction owner publishes a new immutable commit or artifact. The rejecting reviewer remains responsible through re-verification.
-
-## Authenticated Shell rule
-
-Authenticated Shell prompts are approved when the delegated task and scope are authorized. After approval, the General Orchestrator must still verify that the prompt disappeared and real execution began. Desktop-notification prompts are not shell permissions and should normally be dismissed.
+Discord is not a required product, onboarding, support, event, signaling, sponsorship, or growth dependency. Use GitHub Discussions, Issues, releases, the repository, the public site, YouTube, TikTok, Reddit, email, or another explicitly approved channel. Publication and authenticated-surface changes require separate ownership and evidence.
 
 ## Baton packet
 
@@ -111,21 +84,17 @@ ROLLBACK POINT:
 
 ## Mandatory repository gate
 
-For every repository change:
-
-- Verify exact base and remote identity.
-- Run `npm test`.
+- Verify exact base, ancestry, remote identity, and active worktree ownership.
+- Run all focused tests and full `npm test`.
 - Run `git diff --check`.
-- Confirm the worktree is clean after commit.
+- Confirm a clean worktree after commit.
 - Review only the exact immutable commit.
-- Confirm rollback.
 - Push only the bounded branch.
-- Do not merge `main` without an independent integration verdict.
+- Merge only exact independently approved work and recheck `origin/main` immediately before integration.
 
 ## Next sequence
 
-1. Complete and independently review `ops/team-operating-system-v2`.
-2. Staff the Multiplayer Platform, Compatibility, Player Experience, Security, and QA lanes against `docs/ONLINE_PLAY_PROGRAM.md`.
-3. Independently verify all V1.0.5 approval receipts before deciding whether the clean Runtime implementation lane may restart.
-4. Review `integration/console-themes-complete@99c474b` separately.
-5. Launch Growth, Monetization, Analytics, and Partnerships against verified multiplayer evidence and explicit trust boundaries.
+1. Independently review and close this operating-truth reconciliation.
+2. Advance PLAY-001 only against exact immutable Runtime evidence; preserve uncertainty rather than promoting V1.0.5 by report alone.
+3. Allow the existing OpenBOR window-rendering owner to finish, test, and submit its own immutable custody packet without interference.
+4. Use the merged analytics contract as a review input for MON-001 and GROWTH-001 while preserving privacy, claim, spending, and publication boundaries.
