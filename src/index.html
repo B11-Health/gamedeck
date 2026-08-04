@@ -606,7 +606,9 @@
   </section>
 
   <section class="play-surface hidden mode-docked" id="playSurface" aria-label="Integrated game player" aria-live="polite">
-    <div class="play-ambient" id="playAmbient" aria-hidden="true"></div>
+    <div class="play-ambient" id="playAmbient" aria-hidden="true">
+      <video id="playAmbientVideo" autoplay muted playsinline tabindex="-1"></video>
+    </div>
     <header class="play-header">
       <div class="play-brand"><span><img src="../assets/branding/gamedeck-mark-source.png" alt=""></span><div><small>GAMEDECK PLAY</small><b id="playTitle">Preparing game</b></div></div>
       <div class="play-session-copy"><span class="play-live-dot" aria-hidden="true"></span><span id="playStatus">Connecting the game window…</span></div>

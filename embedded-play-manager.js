@@ -243,7 +243,7 @@ class EmbeddedPlayManager {
 
   captureSource(sessionId) {
     if (!this.session || this.session.id !== String(sessionId || '') || !this.session.sourceId || this.session.mode === 'popout') return null;
-    return { sourceId: this.session.sourceId, audio: this.session.spec?.captureAudio === true };
+    return { sourceId: this.session.sourceId, sourceName: this.session.sourceName || '', audio: this.session.spec?.captureAudio === true };
   }
 
   captureStarted(sessionId) {
@@ -265,24 +265,58 @@ class EmbeddedPlayManager {
 
   async setMode(sessionId, mode) {
     if (!this.session || this.session.id !== String(sessionId || '')) return { ok: false, error: 'stale_session', status: this.status() };
+    const session = this.session;
     const nextMode = normalizeMode(mode);
-    const previousMode = this.session.mode;
-    const previousPhase = this.session.phase;
-    await this.windowController.setMode?.(nextMode, this.session);
+    const previousMode = session.mode;
+    const previousPhase = session.phase;
     const returningFromPopout = previousMode === 'popout' || previousPhase === 'external_playing';
-    const phase = nextMode === 'popout'
-      ? 'external_playing'
-      : returningFromPopout && this.session.sourceId
-        ? 'capture_armed'
-        : previousPhase;
+    await this.windowController.setMode?.(nextMode, session);
+
+    if (nextMode !== 'popout' && returningFromPopout) {
+      this.update({
+        mode: nextMode,
+        phase: 'discovering',
+        sourceId: '',
+        sourceName: '',
+        message: `Reconnecting ${session.title} to GameDeck…`
+      });
+      try {
+        const source = await this.discoverSource(session, []);
+        if (this.session !== session) return { ok: false, error: 'stale_session', status: this.status() };
+        this.update({
+          mode: nextMode,
+          phase: 'capture_armed',
+          sourceId: source.id,
+          sourceName: source.name,
+          message: nextMode === 'fullscreen'
+            ? `${session.title} is reconnecting in fullscreen GameDeck.`
+            : `${session.title} is reconnecting in the docked GameDeck player.`
+        });
+        return { ok: true, status: this.status() };
+      } catch (error) {
+        if (this.session === session) {
+          try { await this.windowController.setMode?.('popout', session); } catch {}
+          this.update({
+            mode: 'popout',
+            phase: 'external_playing',
+            sourceId: '',
+            sourceName: '',
+            message: `GameDeck could not reconnect the live window. ${session.title} is still running in Pop out.`
+          });
+        }
+        return { ok: false, error: error.message || 'The game window could not be reconnected.', status: this.status() };
+      }
+    }
+
+    const phase = nextMode === 'popout' ? 'external_playing' : previousPhase;
     this.update({
       mode: nextMode,
       phase,
       message: nextMode === 'popout'
-        ? `${this.session.title} is playing in its engine window. Press F10 to return to GameDeck.`
+        ? `${session.title} is playing in its engine window. Press F10 to return to GameDeck.`
         : nextMode === 'fullscreen'
-          ? `${this.session.title} is ready in fullscreen GameDeck.`
-          : `${this.session.title} is ready in the docked GameDeck player.`
+          ? `${session.title} is ready in fullscreen GameDeck.`
+          : `${session.title} is ready in the docked GameDeck player.`
     });
     return { ok: true, status: this.status() };
   }

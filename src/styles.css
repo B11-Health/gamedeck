@@ -6333,9 +6333,14 @@ body.modal-open > main {
   .launch-handoff, .launch-handoff-card { transition: none; }
   .launch-handoff-card::after { animation: none; }
   .launch-handoff-spinner { animation-duration: 1.5s; }
+}
 
 /* Integrated GameDeck Play surface */
 .play-surface {
+  --ambient-left: 72 231 255;
+  --ambient-right: 139 92 255;
+  --ambient-top: 83 180 255;
+  --ambient-bottom: 255 78 177;
   position: fixed;
   inset: 0;
   z-index: 940;
@@ -6355,14 +6360,64 @@ body.modal-open > main {
 
 .play-ambient {
   position: absolute;
-  inset: -14%;
+  inset: -12%;
   z-index: -2;
+  overflow: hidden;
   background:
-    radial-gradient(circle at 72% 24%, rgba(123, 92, 255, .26), transparent 34%),
-    radial-gradient(circle at 25% 72%, rgba(73, 220, 255, .18), transparent 38%),
-    linear-gradient(145deg, #060810 0%, #090d17 50%, #030509 100%);
-  filter: saturate(1.12);
-  transform: scale(1.08);
+    radial-gradient(ellipse at 10% 52%, rgb(var(--ambient-left) / .22), transparent 42%),
+    radial-gradient(ellipse at 90% 48%, rgb(var(--ambient-right) / .22), transparent 42%),
+    radial-gradient(ellipse at 50% 2%, rgb(var(--ambient-top) / .16), transparent 40%),
+    radial-gradient(ellipse at 50% 98%, rgb(var(--ambient-bottom) / .14), transparent 42%),
+    linear-gradient(145deg, #05070d 0%, #090d17 50%, #020408 100%);
+  filter: saturate(1.08);
+  transform: scale(1.04);
+  transition: background-color .5s ease;
+}
+
+.play-ambient::before {
+  content: "";
+  position: absolute;
+  inset: 9%;
+  border-radius: 17%;
+  background:
+    linear-gradient(90deg, rgb(var(--ambient-left) / .34), transparent 24%, transparent 76%, rgb(var(--ambient-right) / .34)),
+    linear-gradient(180deg, rgb(var(--ambient-top) / .28), transparent 27%, transparent 73%, rgb(var(--ambient-bottom) / .26));
+  filter: blur(46px) saturate(1.45);
+  opacity: 0;
+  transform: scale(.92);
+  transition: opacity .55s ease, transform .8s cubic-bezier(.2,.8,.2,1);
+  pointer-events: none;
+}
+
+#playAmbientVideo {
+  position: absolute;
+  inset: 8%;
+  width: 84%;
+  height: 84%;
+  object-fit: contain;
+  border-radius: 24%;
+  opacity: 0;
+  transform: scale(1.18);
+  filter: blur(58px) saturate(1.65) brightness(.48) contrast(1.1);
+  mix-blend-mode: screen;
+  transition: opacity .6s ease, filter .6s ease;
+  pointer-events: none;
+  will-change: opacity, filter, transform;
+}
+
+.play-surface.mode-docked.play-ambient-live .play-ambient::before {
+  opacity: .64;
+  transform: scale(1);
+}
+
+.play-surface.mode-docked.play-ambient-live #playAmbientVideo {
+  opacity: .34;
+}
+
+.play-surface.mode-docked.play-ambient-live .play-stage {
+  background:
+    radial-gradient(ellipse at 50% 48%, rgb(var(--ambient-top) / .06), transparent 58%),
+    transparent;
 }
 
 .play-ambient::after {
@@ -6370,10 +6425,12 @@ body.modal-open > main {
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
-  background-size: 46px 46px;
-  mask-image: radial-gradient(circle at center, black, transparent 82%);
+    linear-gradient(rgba(255,255,255,.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.022) 1px, transparent 1px),
+    radial-gradient(circle at center, transparent 34%, rgba(2,4,8,.58) 88%);
+  background-size: 46px 46px, 46px 46px, 100% 100%;
+  mask-image: radial-gradient(circle at center, black, transparent 88%);
+  pointer-events: none;
 }
 
 .play-header {
@@ -6897,4 +6954,12 @@ html[data-platform="win32"] .mode-docked .play-actions {
 .play-surface.play-pointer-hidden,
 .play-surface.play-pointer-hidden * {
   cursor: none !important;
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+  .play-ambient::before,
+  #playAmbientVideo {
+    transition: none;
+  }
 }

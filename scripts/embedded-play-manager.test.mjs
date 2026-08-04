@@ -63,7 +63,7 @@ function fakeChild(pid = 4242) {
   assert.equal(started.status.phase, 'capture_armed');
   assert.equal(started.status.mode, 'docked');
   assert.equal(started.status.captureReady, true);
-  assert.deepEqual(manager.captureSource(started.status.sessionId), { sourceId: 'window:openbor', audio: false });
+  assert.deepEqual(manager.captureSource(started.status.sessionId), { sourceId: 'window:openbor', sourceName: 'OpenBOR', audio: false });
 
   const playing = manager.captureStarted(started.status.sessionId);
   assert.equal(playing.ok, true);
@@ -149,6 +149,59 @@ function fakeChild(pid = 4242) {
   assert.equal(updates.some(update => update.phase === 'capture_armed'), false);
   assert.ok(modes.includes('popout'));
   await manager.stop(result.status.sessionId, 'test_complete');
+}
+
+{
+  let poll = 0;
+  const snapshots = [
+    [{ id: 'window:gamedeck', name: 'GameDeck', type: 'window', ownedByGameDeck: true }],
+    [
+      { id: 'window:gamedeck', name: 'GameDeck', type: 'window', ownedByGameDeck: true },
+      { id: 'window:flycast-old', name: 'RetroArch Flycast', type: 'window' }
+    ],
+    [
+      { id: 'window:gamedeck', name: 'GameDeck', type: 'window', ownedByGameDeck: true },
+      { id: 'window:flycast-old', name: 'RetroArch Flycast', type: 'window' }
+    ],
+    [
+      { id: 'window:gamedeck', name: 'GameDeck', type: 'window', ownedByGameDeck: true },
+      { id: 'window:flycast-new', name: 'RetroArch Flycast', type: 'window' }
+    ],
+    [
+      { id: 'window:gamedeck', name: 'GameDeck', type: 'window', ownedByGameDeck: true },
+      { id: 'window:flycast-new', name: 'RetroArch Flycast', type: 'window' }
+    ]
+  ];
+  const child = fakeChild(4545);
+  const manager = createEmbeddedPlayManager({
+    listSources: async () => snapshots[Math.min(poll++, snapshots.length - 1)],
+    rankSources: rankSourceCandidates,
+    spawnProcess: () => child,
+    terminateProcess: value => value?.emit('exit', 0, null),
+    windowController: { setMode: async () => {} },
+    wait: async () => {},
+    sourcePollMs: 1,
+    sourceTimeoutMs: 1000
+  });
+  const started = await manager.start({
+    executable: 'retroarch.exe',
+    args: [],
+    title: 'Ikaruga',
+    shortName: 'Ikaruga',
+    systemId: 'dreamcast',
+    engineLabel: 'RetroArch Flycast',
+    sourceTerms: ['Flycast', 'Ikaruga']
+  }, { mode: 'docked' });
+  assert.equal(started.ok, true);
+  assert.deepEqual(manager.captureSource(started.status.sessionId), { sourceId: 'window:flycast-old', sourceName: 'RetroArch Flycast', audio: false });
+  manager.captureStarted(started.status.sessionId);
+  const popout = await manager.setMode(started.status.sessionId, 'popout');
+  assert.equal(popout.ok, true);
+  const returned = await manager.setMode(started.status.sessionId, 'docked');
+  assert.equal(returned.ok, true);
+  assert.equal(returned.status.phase, 'capture_armed');
+  assert.deepEqual(manager.captureSource(started.status.sessionId), { sourceId: 'window:flycast-new', sourceName: 'RetroArch Flycast', audio: false });
+  await manager.stop(started.status.sessionId, 'test_complete');
 }
 
 {

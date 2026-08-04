@@ -8,7 +8,12 @@ const require = createRequire(import.meta.url);
 const {
   OPENBOR_CONFIG_MIN_BYTES,
   OPENBOR_CONFIG_OFFSETS,
+  OPENBOR_P1_KEYBOARD_DEFAULTS,
+  OPENBOR_XINPUT_P1_KEYS,
+  openBorControllerProfile,
+  openBorPlayerKeyOffset,
   patchOpenBorConfig,
+  readOpenBorPlayerKeys,
   prepareOpenBorLaunch,
   safeSegment,
   sessionIdentity
@@ -30,7 +35,9 @@ try {
 
   const template = Buffer.alloc(OPENBOR_CONFIG_MIN_BYTES, 0);
   template.writeUInt32LE(210760, 0);
-  template.writeUInt32LE(99, 100);
+  template.writeInt32LE(0, OPENBOR_CONFIG_OFFSETS.usejoy);
+  OPENBOR_P1_KEYBOARD_DEFAULTS.forEach((value, action) => template.writeInt32LE(value, openBorPlayerKeyOffset(0, action)));
+  template.writeUInt32LE(99, 276);
   template.writeUInt32LE(7, OPENBOR_CONFIG_OFFSETS.swfilter);
   template.writeUInt32LE(0, OPENBOR_CONFIG_OFFSETS.fullscreen);
   template.writeUInt32LE(1, OPENBOR_CONFIG_OFFSETS.stretch);
@@ -42,7 +49,10 @@ try {
   const patched = patchOpenBorConfig(template);
   assert.equal(patched.length, template.length);
   assert.equal(patched.readUInt32LE(0), 210760);
-  assert.equal(patched.readUInt32LE(100), 99);
+  assert.equal(patched.readUInt32LE(276), 99);
+  assert.equal(patched.readUInt32LE(OPENBOR_CONFIG_OFFSETS.usejoy), 1);
+  assert.deepEqual(readOpenBorPlayerKeys(patched).slice(0, OPENBOR_XINPUT_P1_KEYS.length), OPENBOR_XINPUT_P1_KEYS);
+  assert.equal(openBorControllerProfile(patched).xinputReady, true);
   assert.equal(patched.readUInt32LE(OPENBOR_CONFIG_OFFSETS.swfilter), 0);
   assert.equal(patched.readUInt32LE(OPENBOR_CONFIG_OFFSETS.fullscreen), 1);
   assert.equal(patched.readUInt32LE(OPENBOR_CONFIG_OFFSETS.stretch), 0);
@@ -50,6 +60,15 @@ try {
   assert.equal(patched.readFloatLE(OPENBOR_CONFIG_OFFSETS.hwscale), 1);
   assert.equal(patched.readUInt32LE(OPENBOR_CONFIG_OFFSETS.hwfilter), 1);
   assert.equal(template.readUInt32LE(OPENBOR_CONFIG_OFFSETS.fullscreen), 0, 'source buffer must stay immutable');
+  assert.deepEqual(readOpenBorPlayerKeys(template), OPENBOR_P1_KEYBOARD_DEFAULTS, 'source controller settings must stay immutable');
+
+  const customKeyboard = Buffer.from(template);
+  customKeyboard.writeInt32LE(44, openBorPlayerKeyOffset(0, 4));
+  const preservedKeyboard = patchOpenBorConfig(customKeyboard);
+  assert.equal(readOpenBorPlayerKeys(preservedKeyboard)[4], 44, 'custom P1 controls must not be overwritten');
+  assert.equal(openBorControllerProfile(preservedKeyboard).xinputReady, false);
+  const forcedController = patchOpenBorConfig(customKeyboard, { controllerProfile: 'xinput-force' });
+  assert.equal(openBorControllerProfile(forcedController).xinputReady, true);
   assert.throws(() => patchOpenBorConfig(Buffer.alloc(64)), /at least 352 bytes/);
 
   assert.equal(safeSegment('  Battletoads: Test?  '), 'Battletoads-Test');
@@ -59,6 +78,9 @@ try {
   const first = prepareOpenBorLaunch({ engineExecutable: executable, sourcePak: pak, sessionsRoot });
   assert.equal(first.args.length, 0);
   assert.equal(first.presentation, 'native-fullscreen');
+  assert.equal(first.controllerProfile.xinputReady, true);
+  assert.equal(first.controllerProfile.usejoy, true);
+  assert.equal(path.basename(first.logFile), 'OpenBorLog.txt');
   assert(fs.existsSync(first.executable));
   assert(fs.existsSync(first.stagedPak));
   assert(fs.existsSync(first.gameConfigPath));
@@ -72,9 +94,11 @@ try {
   assert.equal(gameConfig.readUInt32LE(OPENBOR_CONFIG_OFFSETS.stretch), 0);
   assert.equal(gameConfig.readUInt32LE(OPENBOR_CONFIG_OFFSETS.usegl), 0);
   assert.equal(gameConfig.readUInt32LE(OPENBOR_CONFIG_OFFSETS.hwfilter), 1);
+  assert.equal(gameConfig.readUInt32LE(OPENBOR_CONFIG_OFFSETS.usejoy), 1);
+  assert.deepEqual(readOpenBorPlayerKeys(gameConfig).slice(0, OPENBOR_XINPUT_P1_KEYS.length), OPENBOR_XINPUT_P1_KEYS);
   assert.equal(fs.readFileSync(path.join(first.sessionRoot, 'Saves', 'default.cfg')).readUInt32LE(OPENBOR_CONFIG_OFFSETS.fullscreen), 1);
 
-  gameConfig.writeUInt32LE(4242, 100);
+  gameConfig.writeUInt32LE(4242, 276);
   gameConfig.writeUInt32LE(0, OPENBOR_CONFIG_OFFSETS.fullscreen);
   fs.writeFileSync(first.gameConfigPath, gameConfig);
   fs.writeFileSync(path.join(first.sessionRoot, 'Paks', 'obsolete.pak'), Buffer.from('obsolete'));
@@ -82,9 +106,25 @@ try {
   const second = prepareOpenBorLaunch({ engineExecutable: executable, sourcePak: pak, sessionsRoot });
   assert.equal(second.sessionRoot, first.sessionRoot, 'session identity must be stable');
   const preserved = fs.readFileSync(second.gameConfigPath);
-  assert.equal(preserved.readUInt32LE(100), 4242, 'non-display game settings must persist');
+  assert.equal(preserved.readUInt32LE(276), 4242, 'non-display game settings must persist');
   assert.equal(preserved.readUInt32LE(OPENBOR_CONFIG_OFFSETS.fullscreen), 1, 'display settings must be re-enforced');
   assert.deepEqual(fs.readdirSync(path.join(second.sessionRoot, 'Paks')), [path.basename(pak)], 'session must contain exactly one PAK');
+  assert.equal(second.controllerProfile.xinputReady, true);
+
+  const integrated = prepareOpenBorLaunch({
+    engineExecutable: executable,
+    sourcePak: pak,
+    sessionsRoot,
+    presentation: 'integrated',
+    configOptions: { fullscreen: false, preserveAspect: true, controllerProfile: 'xinput-if-default' }
+  });
+  assert.equal(integrated.sessionRoot, first.sessionRoot);
+  assert.equal(integrated.presentation, 'integrated');
+  assert.equal(fs.readFileSync(integrated.gameConfigPath).readUInt32LE(OPENBOR_CONFIG_OFFSETS.fullscreen), 0);
+  assert.equal(integrated.controllerProfile.xinputReady, true);
+
+  const externalAgain = prepareOpenBorLaunch({ engineExecutable: executable, sourcePak: pak, sessionsRoot });
+  assert.equal(fs.readFileSync(externalAgain.gameConfigPath).readUInt32LE(OPENBOR_CONFIG_OFFSETS.fullscreen), 1);
 
   const otherPak = path.join(libraryRoot, 'Other Game.pak');
   fs.writeFileSync(otherPak, Buffer.from('other-pak'));
@@ -97,7 +137,7 @@ try {
     /require a \.pak file/
   );
 
-  console.log('openbor launch preparation: 32 scenarios passed');
+  console.log('openbor launch preparation: 49 scenarios passed');
 } finally {
   fs.rmSync(root, { recursive: true, force: true });
 }

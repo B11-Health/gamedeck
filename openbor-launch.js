@@ -4,6 +4,8 @@ const path = require('path');
 
 const OPENBOR_CONFIG_MIN_BYTES = 352;
 const OPENBOR_CONFIG_OFFSETS = Object.freeze({
+  usejoy: 40,
+  keys: 52,
   swfilter: 284,
   fullscreen: 324,
   stretch: 328,
@@ -33,18 +35,74 @@ function sessionIdentity(sourcePak) {
   return crypto.createHash('sha256').update(key).digest('hex').slice(0, 16);
 }
 
+const OPENBOR_PLAYER_COUNT = 4;
+const OPENBOR_BUTTON_COUNT = 13;
+const OPENBOR_JOY_LIST_FIRST = 600;
+const OPENBOR_JOY_MAX_INPUTS = 64;
+const OPENBOR_P1_KEYBOARD_DEFAULTS = Object.freeze([82, 81, 80, 79, 4, 22, 29, 27, 7, 9, 40, 69, 0]);
+const OPENBOR_XINPUT_P1_KEYS = Object.freeze([
+  624, // D-pad up (hat 0)
+  626, // D-pad down
+  627, // D-pad left
+  625, // D-pad right
+  601, // A: primary attack
+  603, // X: secondary attack
+  604, // Y: third attack
+  606, // Right bumper: fourth attack
+  602, // B: jump
+  605, // Left bumper: special
+  608  // Menu/Start
+]);
+
+function openBorPlayerKeyOffset(player, action) {
+  const normalizedPlayer = Number(player);
+  const normalizedAction = Number(action);
+  if (!Number.isInteger(normalizedPlayer) || normalizedPlayer < 0 || normalizedPlayer >= OPENBOR_PLAYER_COUNT) throw new Error('OpenBOR player index is invalid.');
+  if (!Number.isInteger(normalizedAction) || normalizedAction < 0 || normalizedAction >= OPENBOR_BUTTON_COUNT) throw new Error('OpenBOR action index is invalid.');
+  return OPENBOR_CONFIG_OFFSETS.keys + ((normalizedPlayer * OPENBOR_BUTTON_COUNT + normalizedAction) * 4);
+}
+
+function readOpenBorPlayerKeys(source, player = 0) {
+  if (!Buffer.isBuffer(source) || source.length < OPENBOR_CONFIG_MIN_BYTES) throw new Error(`OpenBOR settings must be at least ${OPENBOR_CONFIG_MIN_BYTES} bytes.`);
+  return Array.from({ length: OPENBOR_BUTTON_COUNT }, (_, action) => source.readInt32LE(openBorPlayerKeyOffset(player, action)));
+}
+
+function seedOpenBorControllerProfile(target, mode = 'xinput-if-default') {
+  if (mode === false || mode === 'preserve') return false;
+  target.writeInt32LE(1, OPENBOR_CONFIG_OFFSETS.usejoy);
+  const current = readOpenBorPlayerKeys(target, 0);
+  const defaultKeyboard = OPENBOR_P1_KEYBOARD_DEFAULTS.slice(0, OPENBOR_XINPUT_P1_KEYS.length).every((value, index) => current[index] === value);
+  const empty = current.slice(0, OPENBOR_XINPUT_P1_KEYS.length).every(value => value === 0);
+  if (mode !== 'xinput-force' && !defaultKeyboard && !empty) return false;
+  OPENBOR_XINPUT_P1_KEYS.forEach((value, action) => target.writeInt32LE(value, openBorPlayerKeyOffset(0, action)));
+  return true;
+}
+
+function openBorControllerProfile(source) {
+  const keys = readOpenBorPlayerKeys(source, 0);
+  return {
+    usejoy: source.readInt32LE(OPENBOR_CONFIG_OFFSETS.usejoy) !== 0,
+    player1Keys: keys,
+    xinputReady: OPENBOR_XINPUT_P1_KEYS.every((value, action) => keys[action] === value),
+    movement: OPENBOR_XINPUT_P1_KEYS.slice(0, 4),
+    actions: OPENBOR_XINPUT_P1_KEYS.slice(4)
+  };
+}
+
 function patchOpenBorConfig(source, {
   fullscreen = true,
   preserveAspect = true,
   useOpenGl = false,
   hardwareScale = 1,
   hardwareFilter = true,
-  softwareFilter = 0
+  softwareFilter = 0,
+  controllerProfile = 'xinput-if-default'
 } = {}) {
   if (!Buffer.isBuffer(source) || source.length < OPENBOR_CONFIG_MIN_BYTES) {
     throw new Error(`OpenBOR settings must be at least ${OPENBOR_CONFIG_MIN_BYTES} bytes.`);
   }
   const result = Buffer.from(source);
+  seedOpenBorControllerProfile(result, controllerProfile);
   result.writeInt32LE(Number(softwareFilter) || 0, OPENBOR_CONFIG_OFFSETS.swfilter);
   result.writeInt32LE(fullscreen ? 1 : 0, OPENBOR_CONFIG_OFFSETS.fullscreen);
   result.writeInt32LE(preserveAspect ? 0 : 1, OPENBOR_CONFIG_OFFSETS.stretch);
@@ -125,7 +183,7 @@ function readCompatibleConfig(candidate, template, fsImpl = fs) {
   return template;
 }
 
-function prepareOpenBorLaunch({ engineExecutable, sourcePak, sessionsRoot, fsImpl = fs } = {}) {
+function prepareOpenBorLaunch({ engineExecutable, sourcePak, sessionsRoot, configOptions = {}, presentation = 'native-fullscreen', fsImpl = fs } = {}) {
   if (!isNonEmptyString(engineExecutable)) throw new Error('OpenBOR executable path is required.');
   if (!isNonEmptyString(sourcePak)) throw new Error('OpenBOR PAK path is required.');
   if (!isNonEmptyString(sessionsRoot)) throw new Error('OpenBOR sessions root is required.');
@@ -157,9 +215,9 @@ function prepareOpenBorLaunch({ engineExecutable, sourcePak, sessionsRoot, fsImp
   const stagingMethod = linkOrCopyFile(pak, stagedPak, fsImpl);
 
   const gameConfigPath = path.join(savesRoot, `${stem}.cfg`);
-  const gameConfig = patchOpenBorConfig(readCompatibleConfig(gameConfigPath, template, fsImpl));
+  const gameConfig = patchOpenBorConfig(readCompatibleConfig(gameConfigPath, template, fsImpl), configOptions);
   fsImpl.writeFileSync(gameConfigPath, gameConfig);
-  fsImpl.writeFileSync(path.join(savesRoot, 'default.cfg'), patchOpenBorConfig(template));
+  fsImpl.writeFileSync(path.join(savesRoot, 'default.cfg'), patchOpenBorConfig(template, configOptions));
 
   return {
     executable: sessionExecutable,
@@ -168,17 +226,27 @@ function prepareOpenBorLaunch({ engineExecutable, sourcePak, sessionsRoot, fsImp
     sessionRoot,
     stagedPak,
     gameConfigPath,
+    logFile: path.join(sessionRoot, 'Logs', 'OpenBorLog.txt'),
+    saveDirectory: savesRoot,
     sourcePak: pak,
     stagingMethod,
-    presentation: 'native-fullscreen'
+    controllerProfile: openBorControllerProfile(gameConfig),
+    presentation
   };
 }
 
 module.exports = {
   OPENBOR_CONFIG_MIN_BYTES,
   OPENBOR_CONFIG_OFFSETS,
+  OPENBOR_BUTTON_COUNT,
+  OPENBOR_P1_KEYBOARD_DEFAULTS,
+  OPENBOR_XINPUT_P1_KEYS,
   findConfigTemplate,
+  openBorControllerProfile,
+  openBorPlayerKeyOffset,
   patchOpenBorConfig,
+  readOpenBorPlayerKeys,
+  seedOpenBorControllerProfile,
   prepareOpenBorLaunch,
   safeSegment,
   sessionIdentity

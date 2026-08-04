@@ -105,6 +105,10 @@ const state = {
 
 let playCaptureStream = null;
 let playCapturePromise = null;
+let playAmbientTimer = null;
+let playAmbientCanvas = null;
+let playAmbientContext = null;
+let playAmbientColorState = Object.create(null);
 let launchCurtainTimer = null;
 let fullscreenControlsTimer = null;
 let playPointerTimer = null;
@@ -1390,7 +1394,118 @@ function playPhaseMessage(status = {}) {
   }[status.phase] || 'Preparing integrated play…';
 }
 
+function clampAmbientChannel(value) {
+  return Math.max(8, Math.min(235, Math.round(Number(value) || 0)));
+}
+
+function ambientZoneColor(pixels, width, height, x0, y0, x1, y1) {
+  let red = 0;
+  let green = 0;
+  let blue = 0;
+  let count = 0;
+  for (let y = y0; y < y1; y += 1) {
+    for (let x = x0; x < x1; x += 1) {
+      const offset = (y * width + x) * 4;
+      red += pixels[offset] * pixels[offset];
+      green += pixels[offset + 1] * pixels[offset + 1];
+      blue += pixels[offset + 2] * pixels[offset + 2];
+      count += 1;
+    }
+  }
+  if (!count) return '72 231 255';
+  let r = Math.sqrt(red / count);
+  let g = Math.sqrt(green / count);
+  let b = Math.sqrt(blue / count);
+  const average = (r + g + b) / 3;
+  const saturation = 1.32;
+  r = average + (r - average) * saturation;
+  g = average + (g - average) * saturation;
+  b = average + (b - average) * saturation;
+  const brightness = Math.max(r, g, b);
+  if (brightness < 42) {
+    const lift = 42 - brightness;
+    r += lift * .45;
+    g += lift * .55;
+    b += lift * .7;
+  }
+  const peak = Math.max(r, g, b);
+  if (peak > 235) {
+    const scale = 235 / peak;
+    r *= scale;
+    g *= scale;
+    b *= scale;
+  }
+  return [clampAmbientChannel(r), clampAmbientChannel(g), clampAmbientChannel(b)];
+}
+
+function smoothedAmbientColor(key, next) {
+  const previous = playAmbientColorState[key] || next;
+  const alpha = .18;
+  const value = next.map((channel, index) => previous[index] + ((channel - previous[index]) * alpha));
+  playAmbientColorState[key] = value;
+  return value.map(clampAmbientChannel).join(' ');
+}
+
+function samplePlayAmbientFrame() {
+  const surface = $('#playSurface');
+  const ambient = $('#playAmbient');
+  const video = $('#playVideo');
+  if (!surface?.classList.contains('play-ambient-live') || !ambient || !video || video.readyState < 2 || !video.videoWidth || !video.videoHeight) return;
+  playAmbientCanvas ||= document.createElement('canvas');
+  playAmbientCanvas.width = 12;
+  playAmbientCanvas.height = 8;
+  playAmbientContext ||= playAmbientCanvas.getContext('2d', { alpha: false, willReadFrequently: true });
+  if (!playAmbientContext) return;
+  try {
+    playAmbientContext.drawImage(video, 0, 0, playAmbientCanvas.width, playAmbientCanvas.height);
+    const frame = playAmbientContext.getImageData(0, 0, playAmbientCanvas.width, playAmbientCanvas.height);
+    const { data, width, height } = frame;
+    surface.style.setProperty('--ambient-left', smoothedAmbientColor('left', ambientZoneColor(data, width, height, 0, 1, 3, height - 1)));
+    surface.style.setProperty('--ambient-right', smoothedAmbientColor('right', ambientZoneColor(data, width, height, width - 3, 1, width, height - 1)));
+    surface.style.setProperty('--ambient-top', smoothedAmbientColor('top', ambientZoneColor(data, width, height, 2, 0, width - 2, 2)));
+    surface.style.setProperty('--ambient-bottom', smoothedAmbientColor('bottom', ambientZoneColor(data, width, height, 2, height - 2, width - 2, height)));
+  } catch {}
+}
+
+function stopPlayAmbient(detach = true) {
+  clearInterval(playAmbientTimer);
+  playAmbientTimer = null;
+  $('#playSurface')?.classList.remove('play-ambient-live');
+  const ambientVideo = $('#playAmbientVideo');
+  if (!ambientVideo) return;
+  ambientVideo.pause();
+  if (detach) {
+    ambientVideo.srcObject = null;
+    playAmbientColorState = Object.create(null);
+  }
+}
+
+function updatePlayAmbientState() {
+  const surface = $('#playSurface');
+  const ambientVideo = $('#playAmbientVideo');
+  const streamLive = Boolean(playCaptureStream?.getVideoTracks().some(track => track.readyState === 'live'));
+  const shouldGlow = Boolean(
+    surface
+    && ambientVideo
+    && state.playSession?.active
+    && state.playSession.mode === 'docked'
+    && state.playSession.phase === 'playing'
+    && streamLive
+  );
+  if (!shouldGlow) {
+    stopPlayAmbient(false);
+    return;
+  }
+  if (ambientVideo.srcObject !== playCaptureStream) ambientVideo.srcObject = playCaptureStream;
+  ambientVideo.muted = true;
+  ambientVideo.play().catch(() => {});
+  surface.classList.add('play-ambient-live');
+  samplePlayAmbientFrame();
+  if (!playAmbientTimer) playAmbientTimer = setInterval(samplePlayAmbientFrame, 180);
+}
+
 function stopPlayCapture() {
+  stopPlayAmbient(true);
   if (playCaptureStream) {
     for (const track of playCaptureStream.getTracks()) track.stop();
   }
@@ -1533,10 +1648,11 @@ function renderPlaySession(status = {}) {
   if (active && mode !== 'popout') {
     surface.classList.remove('hidden');
     document.body.classList.add('play-session-open');
-    requestAnimationFrame(applyPlayGeometry);
+    requestAnimationFrame(() => { applyPlayGeometry(); updatePlayAmbientState(); });
   } else {
     surface.classList.add('hidden');
     document.body.classList.remove('play-session-open');
+    stopPlayAmbient(false);
   }
 }
 
@@ -1579,6 +1695,8 @@ async function acquirePlayCapture(status = state.playSession) {
     const video = $('#playVideo');
     video.srcObject = stream;
     video.muted = true;
+    const ambientVideo = $('#playAmbientVideo');
+    if (ambientVideo) { ambientVideo.srcObject = stream; ambientVideo.muted = true; }
     await new Promise((resolve, reject) => {
       if (video.readyState >= 1) return resolve();
       const timer = setTimeout(() => reject(new Error('The game video did not become ready in time.')), 10000);
@@ -1586,6 +1704,7 @@ async function acquirePlayCapture(status = state.playSession) {
       video.onerror = () => { clearTimeout(timer); reject(new Error('The game video could not be opened.')); };
     });
     await video.play();
+    updatePlayAmbientState();
     await syncPlaySourceAspect(video, sessionId);
     video.onresize = () => schedulePlaySourceAspect(video, sessionId);
     for (const track of stream.getVideoTracks()) {
@@ -1625,7 +1744,6 @@ async function acquirePlayCapture(status = state.playSession) {
 async function handlePlaySessionUpdate(status = {}) {
   const previous = state.playSession;
   renderPlaySession(status);
-  if (status.active && ['docked', 'fullscreen', 'popout'].includes(status.mode)) writePreference('play-mode', status.mode);
   if (status.active) {
     if (status.mode === 'popout') {
       stopPlayCapture();
@@ -1650,7 +1768,6 @@ async function setPlayMode(mode) {
   const status = state.playSession;
   if (!status?.active || !status.sessionId) return;
   if (!['docked', 'fullscreen', 'popout'].includes(mode)) return;
-  writePreference('play-mode', mode);
   if (mode === 'popout') {
     resetFullscreenControls();
     stopPlayCapture();
@@ -1677,7 +1794,7 @@ async function stopIntegratedPlay(reason = 'player_closed') {
 }
 
 async function startIntegratedPlay(file, game) {
-  const mode = ['docked', 'fullscreen', 'popout'].includes(readPreference('play-mode', 'docked')) ? readPreference('play-mode', 'docked') : 'docked';
+  const mode = 'docked';
   state.playFile = file;
   state.playGameId = game?.id || null;
   renderPlaySession({

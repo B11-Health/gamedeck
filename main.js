@@ -434,30 +434,68 @@ async function gameDeckStreamSources() {
     }))
     .sort((a, b) => Number(a.type === 'screen') - Number(b.type === 'screen') || a.name.localeCompare(b.name));
 }
+function captureSourceNameKey(value) {
+  return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+async function resolvePlayCaptureSource(playCapture) {
+  let sources = [];
+  const expectedName = captureSourceNameKey(playCapture?.sourceName);
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    sources = await desktopCapturer.getSources({ types: ['window', 'screen'], thumbnailSize: { width: 0, height: 0 } });
+    const exact = sources.find(source => source.id === playCapture?.sourceId);
+    if (exact) return { selected: exact, sources };
+    if (expectedName) {
+      const named = sources.find(source => {
+        if (!source.id?.startsWith('window:') || /^GameDeck$/i.test(source.name)) return false;
+        const candidate = captureSourceNameKey(source.name);
+        return candidate === expectedName || candidate.includes(expectedName) || expectedName.includes(candidate);
+      });
+      if (named) return { selected: named, sources };
+    }
+    if (attempt < 9) await new Promise(resolve => setTimeout(resolve, 120));
+  }
+  return { selected: null, sources };
+}
+
 function configureGameDeckCapture() {
   session.defaultSession.setDisplayMediaRequestHandler(async (_request, callback) => {
+    let completed = false;
+    const finish = options => {
+      if (completed) return;
+      completed = true;
+      callback(options);
+    };
     try {
-      const sources = await desktopCapturer.getSources({ types: ['window', 'screen'], thumbnailSize: { width: 0, height: 0 } });
       const playCapture = armedPlayCapture && armedPlayCapture.expiresAt > Date.now() ? armedPlayCapture : null;
-      const selected = playCapture
-        ? sources.find(source => source.id === playCapture.sourceId)
-        : sources.find(source => source.id === streamCaptureSourceId)
+      let sources = [];
+      let selected = null;
+      if (playCapture) {
+        const resolved = await resolvePlayCaptureSource(playCapture);
+        sources = resolved.sources;
+        selected = resolved.selected;
+      } else {
+        sources = await desktopCapturer.getSources({ types: ['window', 'screen'], thumbnailSize: { width: 0, height: 0 } });
+        selected = sources.find(source => source.id === streamCaptureSourceId)
           || sources.find(source => source.id.startsWith('screen:'))
           || sources[0];
+      }
       if (!selected) {
         armedPlayCapture = null;
-        return callback({});
+        finish({});
+        return;
       }
       const audio = playCapture ? playCapture.audio : streamCaptureAudio;
       armedPlayCapture = null;
-      callback(audio && process.platform === 'win32' ? { video: selected, audio: 'loopback' } : { video: selected });
+      finish(audio && process.platform === 'win32' ? { video: selected, audio: 'loopback' } : { video: selected });
     } catch (error) {
       armedPlayCapture = null;
       addActivity('error', 'GameDeck capture failed: ' + error.message);
-      callback({});
+      if (!completed) finish({});
     }
   }, { useSystemPicker: false });
 }
+
 function emitRuntime(update) {
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('runtime-update', update);
 }
@@ -1666,8 +1704,10 @@ function ensureOpenBorRuntimeConfig(executable = emulatorPaths.openbor) {
     compatibilityBuild: 'v3.0 Build 6391',
     executable,
     root,
-    directPakLaunch: true,
+    directPakLaunch: false,
+    deterministicSinglePackSession: true,
     backgroundControllerInput: true,
+    controllerProfile: 'xinput-player-1',
     savesDirectory: path.join(root, 'Saves'),
     logsDirectory: path.join(root, 'Logs'),
     screenshotsDirectory: path.join(root, 'ScreenShots'),
@@ -1678,56 +1718,25 @@ function ensureOpenBorRuntimeConfig(executable = emulatorPaths.openbor) {
   return { ready: true, root, profileFile, logFile: path.join(root, 'Logs', 'OpenBorLog.txt') };
 }
 
-function openBorGameSessionKey(file) {
-  const identity = process.platform === 'win32' ? path.resolve(file).toLowerCase() : path.resolve(file);
-  return crypto.createHash('sha256').update(identity).digest('hex').slice(0, 20);
-}
-
 function ensureOpenBorGameSession(file, executable = emulatorPaths.openbor) {
   const runtime = ensureOpenBorRuntimeConfig(executable);
   if (!runtime.ready) throw Error(runtime.issue || 'OpenBOR runtime setup is incomplete.');
-  const source = safeLibraryFile(file);
-  const sourceStat = fs.statSync(source);
-  const root = path.join(app.getPath('userData'), 'openbor-games', openBorGameSessionKey(source));
-  const paks = path.join(root, 'Paks');
-  for (const folder of [paks, path.join(root, 'Logs'), path.join(root, 'Saves'), path.join(root, 'ScreenShots')]) {
-    fs.mkdirSync(folder, { recursive: true });
-  }
-  const stagedPak = path.join(paks, path.basename(source));
-  const manifestFile = path.join(root, 'gamedeck-session.json');
-  const expected = {
-    version: 1,
-    source,
-    size: sourceStat.size,
-    modified: Math.floor(sourceStat.mtimeMs)
-  };
-  const current = readJson(manifestFile, null);
-  const reusable = Boolean(
-    fs.existsSync(stagedPak)
-    && current?.source === expected.source
-    && Number(current?.size) === expected.size
-    && Number(current?.modified) === expected.modified
-  );
-  if (!reusable) {
-    for (const name of fs.readdirSync(paks)) {
-      const candidate = path.join(paks, name);
-      try { fs.rmSync(candidate, { recursive: true, force: true }); } catch {}
+  const launch = prepareOpenBorLaunch({
+    engineExecutable: executable,
+    sourcePak: safeLibraryFile(file),
+    sessionsRoot: path.join(app.getPath('userData'), 'runtime', 'openbor', 'sessions'),
+    presentation: 'integrated',
+    configOptions: {
+      fullscreen: false,
+      preserveAspect: true,
+      useOpenGl: false,
+      hardwareScale: 1,
+      hardwareFilter: true,
+      softwareFilter: 0,
+      controllerProfile: 'xinput-if-default'
     }
-    let staging = 'hardlink';
-    try {
-      fs.linkSync(source, stagedPak);
-    } catch {
-      staging = 'copy';
-      fs.copyFileSync(source, stagedPak);
-    }
-    fs.writeFileSync(manifestFile, JSON.stringify({ ...expected, stagedPak, staging, updatedAt: new Date().toISOString() }, null, 2));
-  }
-  return {
-    root,
-    stagedPak,
-    logFile: path.join(root, 'Logs', 'OpenBorLog.txt'),
-    saveDirectory: path.join(root, 'Saves')
-  };
+  });
+  return { ...launch, root: launch.sessionRoot };
 }
 
 function emitPlaySession(update) {
@@ -1766,6 +1775,8 @@ public static class GameDeckWindow {
   [StructLayout(LayoutKind.Sequential)] public struct RECT { public int Left, Top, Right, Bottom; }
   [DllImport("user32.dll")] public static extern int GetWindowLong(IntPtr hWnd, int nIndex);
   [DllImport("user32.dll")] public static extern int SetWindowLong(IntPtr hWnd, int nIndex, int value);
+  [DllImport("user32.dll", EntryPoint="GetWindowLongPtr")] public static extern IntPtr GetWindowLongPtr(IntPtr hWnd, int nIndex);
+  [DllImport("user32.dll", EntryPoint="SetWindowLongPtr")] public static extern IntPtr SetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr value);
   [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr hWnd, out RECT rect);
   [DllImport("user32.dll")] public static extern bool GetClientRect(IntPtr hWnd, out RECT rect);
   [DllImport("user32.dll")] public static extern IntPtr GetMenu(IntPtr hWnd);
@@ -1795,6 +1806,7 @@ $client = New-Object GameDeckWindow+RECT
   menu = [long][GameDeckWindow]::GetMenu($handle)
   style = [GameDeckWindow]::GetWindowLong($handle, -16)
   exStyle = [GameDeckWindow]::GetWindowLong($handle, -20)
+  owner = [long][GameDeckWindow]::GetWindowLongPtr($handle, -8)
   x = $rect.Left
   y = $rect.Top
   width = $rect.Right - $rect.Left
@@ -2079,6 +2091,7 @@ function embeddedLaunchSpec(file) {
     aspectRatio: systemDisplayAspect(system),
     captureAudio: false,
     audioMode: 'native_engine',
+    controllerProfile: openBorSession?.controllerProfile || null,
     sourceTerms: [
       displayName,
       game.shortName,
@@ -2104,7 +2117,8 @@ async function startEmbeddedPlay(file, options = {}) {
     const store = readStore();
     store.recent[spec.file] = Date.now();
     writeStore(store);
-    addActivity('success', `Integrated play ready: ${spec.title} with ${spec.engineLabel}`);
+    const controllerNote = spec.controllerProfile?.xinputReady ? ' with Xbox/XInput Player 1 controls' : '';
+    addActivity('success', `Integrated play ready: ${spec.title} with ${spec.engineLabel}${controllerNote}`);
   } else {
     addActivity('error', `Integrated play failed: ${result.error}`);
   }
