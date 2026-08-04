@@ -3,6 +3,7 @@ package io.gamedeck.mobile;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.pm.ApplicationInfo;
 import android.net.Uri;
 import android.util.Log;
 import android.webkit.JavascriptInterface;
@@ -30,13 +31,14 @@ final class DeckBridge {
     public String appInfo() {
         JSONObject value = new JSONObject();
         try {
+            boolean debuggable = (activity.getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
             value.put("platform", "android");
             value.put("platformKey", AndroidRuntimeManager.PLATFORM_KEY);
             value.put("version", "0.3.1-parity-preview");
             value.put("localFirst", true);
             value.put("accountRequired", false);
             value.put("embeddedRuntimeReady", false);
-            value.put("debugFixture", BuildConfig.DEBUG && new File(activity.getFilesDir(), DEBUG_FIXTURE_FILE).isFile());
+            value.put("debugFixture", debuggable && new File(activity.getFilesDir(), DEBUG_FIXTURE_FILE).isFile());
         } catch (Exception ignored) {}
         return value.toString();
     }
