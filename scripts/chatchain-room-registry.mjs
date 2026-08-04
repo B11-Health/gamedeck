@@ -119,6 +119,11 @@ export function validateRoomRegistry(registry, ledger = null) {
       }
     }
     if (room.state === 'closed' && !receiptValid(room.closeReceipt)) errors.push(`${prefix} closed without a valid close receipt`);
+    if (room.state === 'closed' && receiptValid(room.closeReceipt) && ledger && room.kind === 'custody') {
+      const ticket = tickets.get(room.ticketId);
+      if (!ledger.events.some((event) => event.hash === room.closeReceipt.ledgerEventHash)) errors.push(`${prefix} close receipt ledger event is missing`);
+      if (!ticket?.receipt || ticket.receipt.hash !== room.closeReceipt.ticketReceiptHash) errors.push(`${prefix} close receipt ticket hash mismatch`);
+    }
     if (room.state !== 'closed' && room.closeReceipt) errors.push(`${prefix} premature close receipt`);
     if (room.state === 'uncertain' && !room.uncertainty) errors.push(`${prefix} uncertain without evidence`);
     if (room.state !== 'uncertain' && room.uncertainty) errors.push(`${prefix} premature uncertainty evidence`);
@@ -276,10 +281,13 @@ export function markRoomClosed(registry, ledger, selector, {
     const room = findRoom(next, selector);
     const eligibility = roomEligibility(room, ledger, next);
     if (eligibility.disposition !== 'eligible') throw new Error(`room ${room.id} is not close-eligible: ${eligibility.reason}`);
+    const ticket = ticketMap(ledger).get(room.ticketId);
     const receipt = {
       roomId: room.id,
       ticketId: room.ticketId,
       conversationId: room.conversationId,
+      ledgerEventHash: ledger.events.at(-1)?.hash || null,
+      ticketReceiptHash: ticket?.receipt?.hash || null,
       targetId: required(targetId, 'targetId'),
       reason: required(reason || eligibility.reason, 'reason'),
       successorTicketId: successorTicketId || eligibility.successorTicketId || null,

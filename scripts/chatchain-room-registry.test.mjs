@@ -5,6 +5,7 @@ import path from 'node:path';
 import { createLedger, issue, accept, start, complete, handoff } from './cadops-core.mjs';
 import {
   createRoomRegistry,
+  hashObject,
   validateRoomRegistry,
   bindRoom,
   verifyRoom,
@@ -75,13 +76,22 @@ const closed = markRoomClosed(registry, ledger, { ticketId: 'E-0001' }, {
 registry = closed.registry;
 assert.equal(closed.result.state, 'closed');
 assert.match(closed.result.closeReceipt.hash, /^[a-f0-9]{64}$/);
+assert.equal(closed.result.closeReceipt.ledgerEventHash, ledger.events.at(-1).hash);
+assert.equal(closed.result.closeReceipt.ticketReceiptHash, ledger.tickets.find((ticket) => ticket.id === 'E-0001').receipt.hash);
 assert.deepEqual(validateRoomRegistry(registry, ledger), []);
-console.log('ok - verified closure creates a hash-bound room receipt');
+console.log('ok - verified closure creates a ledger-bound room receipt');
 
 const tampered = structuredClone(registry);
 tampered.rooms.find((room) => room.ticketId === 'E-0001').closeReceipt.targetId = 'rewritten-target';
 assert(validateRoomRegistry(tampered, ledger).some((error) => error.includes('valid close receipt')));
 console.log('ok - room close receipt tampering is detected');
+
+const detachedAnchor = structuredClone(registry);
+const detachedReceipt = detachedAnchor.rooms.find((room) => room.ticketId === 'E-0001').closeReceipt;
+detachedReceipt.ledgerEventHash = '0'.repeat(64);
+detachedReceipt.hash = hashObject(Object.fromEntries(Object.entries(detachedReceipt).filter(([key]) => key !== 'hash')));
+assert(validateRoomRegistry(detachedAnchor, ledger).some((error) => error.includes('ledger event is missing')));
+console.log('ok - close receipt cannot detach from the authorizing ledger snapshot');
 
 let uncertainLedger = createLedger('GameDeck', at(0));
 uncertainLedger = issue(uncertainLedger, { lane: 'E', objective: 'Uncertain work', assignee: 'builder', authorizedBy: 'orchestrator', at: at(1) }).ledger;
@@ -101,4 +111,4 @@ assert.deepEqual(loadRoomRegistry(file), registry);
 assert.equal(fs.readdirSync(folder).some((name) => name.endsWith('.tmp')), false);
 console.log('ok - room registry saves atomically');
 
-console.log('chatchain room registry: 11 scenarios passed');
+console.log('chatchain room registry: 12 scenarios passed');

@@ -164,11 +164,34 @@ console.log('ok - protected predecessor is never closed');
 
 {
   const browser = new FakeBrowser([chat('next', 'next-conversation')]);
-  const receipt = await handoffTabs(browser, { predecessorTargetId: 'old', successorTargetId: 'next' });
+  const receipt = await handoffTabs(browser, {
+    predecessorUrl: 'https://chatgpt.com/c/old-conversation',
+    successorTargetId: 'next',
+    stablePolls: 1,
+    pollIntervalMs: 1,
+    timeoutMs: 20
+  });
   assert.equal(receipt.status, 'already-closed');
+  assert.equal(receipt.successorVerified, true);
+  assert.equal(receipt.predecessor.conversationId, 'old-conversation');
+  assert(browser.calls.includes('activate:next'));
+  assert(browser.calls.includes('probe:next'));
   assert.equal(browser.calls.some((call) => call.startsWith('close:')), false);
 }
-console.log('ok - already closed predecessor is idempotent');
+console.log('ok - already closed predecessor still requires verified successor readiness');
+
+{
+  const browser = new FakeBrowser([chat('next', 'next-conversation')], { ready: false });
+  await assert.rejects(() => handoffTabs(browser, {
+    predecessorUrl: 'https://chatgpt.com/c/old-conversation',
+    successorTargetId: 'next',
+    stablePolls: 1,
+    pollIntervalMs: 1,
+    timeoutMs: 8
+  }), /not stably open/);
+  assert.equal(browser.calls.some((call) => call.startsWith('close:')), false);
+}
+console.log('ok - absent predecessor cannot bypass unready successor checks');
 
 {
   const browser = new FakeBrowser([chat('old', 'old-conversation'), chat('next', 'next-conversation')], {
@@ -413,4 +436,4 @@ console.log('ok - receipt writes atomically');
 }
 console.log('ok - HTTP CDP adapter performs verified handoff');
 
-console.log('chatchain tab lifecycle: 27 scenarios passed');
+console.log('chatchain tab lifecycle: 28 scenarios passed');

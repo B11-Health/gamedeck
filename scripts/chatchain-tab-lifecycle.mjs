@@ -243,14 +243,35 @@ export async function handoffTabs(browser, options = {}) {
   const generatedAt = new Date().toISOString();
 
   if (!predecessor) {
+    const absentPredecessor = {
+      targetId: predecessorSpec.targetId || null,
+      conversationId: conversationIdentity(predecessorSpec.url),
+      url: predecessorSpec.url || null
+    };
+    if (options.dryRun) {
+      return {
+        schemaVersion: 1,
+        generatedAt,
+        status: 'planned',
+        predecessorClosed: true,
+        successorVerified: false,
+        predecessor: absentPredecessor,
+        successor: { targetId: successor.id, conversationId: successor.conversationId, url: successor.url },
+        sideEffects: []
+      };
+    }
+    await browser.activateTarget(successor.id);
+    const verifiedSuccessor = await waitForSuccessor(browser, successor, options);
     return {
       schemaVersion: 1,
       generatedAt,
       status: 'already-closed',
       predecessorClosed: true,
       successorVerified: true,
+      predecessor: absentPredecessor,
       successor: { targetId: successor.id, conversationId: successor.conversationId, url: successor.url },
-      sideEffects: []
+      verifiedSuccessorUrl: verifiedSuccessor.url,
+      sideEffects: ['successor-activated']
     };
   }
   assertDistinct(predecessor, successor);
@@ -718,10 +739,11 @@ async function runCli() {
     });
     if (!args.dryRun && result.predecessorClosed === true) {
       const latest = loadCustodyPolicy(ledgerFile, roomsFile);
+      const observedAbsent = result.status === 'already-closed';
       const operation = markRoomClosed(latest.registry, latest.ledger, { ticketId: predecessorTicketId }, {
         actor,
-        targetId: result.predecessor.targetId,
-        reason: 'successor-custody-visible',
+        targetId: result.predecessor?.targetId || `absent:${custody.predecessorRoom.conversationId}`,
+        reason: observedAbsent ? 'predecessor-already-absent' : 'successor-custody-visible',
         successorTicketId
       });
       saveRoomRegistry(roomsFile, operation.registry, latest.ledger);

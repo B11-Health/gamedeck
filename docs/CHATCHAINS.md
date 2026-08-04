@@ -156,7 +156,7 @@ Cleanup closes at most one room by default. Increase `--max-close` only for a re
 
 Browser mutations use an exclusive local lock at `.cadops-private/chatchains/browser.lock`. A second cleanup or handoff process is rejected while the lock exists.
 
-Every cleanup and handoff writes a private receipt under `.cadops-private/chatchains/receipts/` unless `--receipt` supplies another path. Receipts include exact closed, skipped, uncertain, and remaining counts. Conversation URLs are not committed to Git.
+Every cleanup and handoff writes a private receipt under `.cadops-private/chatchains/receipts/` unless `--receipt` supplies another path. Room-close receipts include the exact CADOps ledger event hash and predecessor ticket receipt hash that authorized closure, plus exact closed, skipped, uncertain, and remaining counts. Conversation URLs are not committed to Git.
 
 ## Failure and recovery
 
@@ -170,7 +170,7 @@ The predecessor stays open when:
 - custody changes during the final pre-close recheck;
 - the CDP endpoint is unavailable.
 
-A close request is issued at most once. If dispatch or verification is uncertain, the room registry records uncertainty and the close is not replayed. A recovery operator must inspect current targets and continue under a distinct CADOps recovery identity.
+An already-absent predecessor does not bypass successor checks: the successor is still activated and readiness-probed before the registry is reconciled. A close request is issued at most once. If dispatch or verification is uncertain, the room registry records uncertainty and the close is not replayed. A recovery operator must inspect current targets and continue under a distinct CADOps recovery identity.
 
 If the browser closes successfully but the registry update fails, the browser receipt still records the verified side effect and marks recovery required.
 
