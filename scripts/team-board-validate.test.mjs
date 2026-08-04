@@ -17,7 +17,7 @@ assert.deepEqual(validateBoard(original), [], 'canonical board must validate');
 {
   const board = clone();
   board.version = 1;
-  expectError(board, 'version must equal 2');
+  expectError(board, 'version must equal 3');
 }
 
 {

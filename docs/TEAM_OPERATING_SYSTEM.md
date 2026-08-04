@@ -258,3 +258,26 @@ npm test
 ## CADOps custody ledger
 
 All agent-executed bounded work should be mirrored in `ops/cadops/ledger.json` through `npm run cadops -- ...`. The ledger enforces Builder, Tester, Supervisor, and Watcher separation; exact receipt-linked custody; visible launch evidence; non-replay; quarantine; and distinct recovery identities. `docs/CADOPS.md` is the operating reference. The team board selects and bounds work; CADOps proves who held custody and whether it passed safely.
+
+## Operating controls added in v3
+
+### Cross-lane communication receipts
+Every dispatch, acceptance, blocker, rejection, correction, approval, integration, completion, and stale recovery must leave a receipt linking sender lane, receiver lane, work item, immutable target, timestamp, acknowledgement, execution evidence, and the next bounded action. A sent message without acknowledgement or execution evidence is not a completed handoff.
+
+### Permission-prompt verification
+Permission approval is only an authorization event. The owner must verify that the intended bounded command actually started and record its result. A dismissed, blocked, or approved-but-not-started prompt leaves the task unstarted.
+
+### Stale-tab recovery
+Before using a conversation or browser tab, verify its exact identity and latest immutable target. When identity or delivery is uncertain, quarantine the old dispatch and create a distinct recovery identity. Never replay an uncertain publish, send, merge, or mutation action.
+
+### Artifact-integrity gate
+A successor artifact supersedes an earlier version only when canonical bytes or location, byte length, SHA-256, foundation or base identity, and reviewer verdicts all refer to the exact same object. Missing evidence preserves the prior verified state and records uncertainty.
+
+### Continuous bounded work
+Completion is not idle state. Every completed work item immediately creates or unblocks exactly one next bounded task with one owner, one independent reviewer, explicit scope, evidence requirements, and rollback point.
+
+### Reviewer-owned correction closure
+After rejection, the correction owner remains accountable through the successor artifact or commit and re-review. The original reviewer owns verdict closure; neither role may abandon the loop after issuing or receiving a rejection.
+
+### Business-program queues
+Marketing, monetization, analytics, and partnerships maintain explicit queues on the board. Research and drafting may proceed in parallel, but publication, spending, outreach, compatibility claims, and partner commitments remain evidence- and owner-gated.
