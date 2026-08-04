@@ -3,6 +3,8 @@ import fs from 'node:fs';
 import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
+import { createLedger, issue, accept, start, complete, handoff } from './cadops-core.mjs';
+import { createRoomRegistry, bindRoom, verifyRoom } from './chatchain-room-registry.mjs';
 import {
   conversationIdentity,
   listChatTargets,
@@ -10,6 +12,8 @@ import {
   handoffTabs,
   auditTabHygiene,
   cleanTabHygiene,
+  assertCustodyHandoff,
+  withFileLock,
   writeReceipt
 } from './chatchain-tab-lifecycle.mjs';
 
@@ -66,6 +70,9 @@ assert.equal(conversationIdentity('http://chatgpt.com/c/not-secure'), null);
 assert.equal(conversationIdentity('https://example.com/c/wrong-host'), null);
 console.log('ok - conversation identity is strict');
 
+assert.throws(() => new HttpCdpBrowser('https://example.com:9222'), /loopback-only/);
+console.log('ok - CDP endpoint is restricted to loopback');
+
 assert.deepEqual(listChatTargets([
   chat('old', 'old-conversation'),
   { id: 'settings', type: 'page', url: 'https://chatgpt.com/settings', title: 'Settings' },
@@ -98,6 +105,37 @@ console.log('ok - successor is verified before exactly one predecessor closes');
   assert.equal(browser.calls.some((call) => call.startsWith('close:')), false);
 }
 console.log('ok - non-conversation successor cannot close predecessor');
+
+{
+  const browser = new FakeBrowser([chat('old', 'old-conversation'), chat('next', 'next-conversation')]);
+  await assert.rejects(() => handoffTabs(browser, {
+    predecessorTargetId: 'old',
+    predecessorUrl: 'https://chatgpt.com/c/different-conversation',
+    successorTargetId: 'next',
+    successorUrl: 'https://chatgpt.com/c/next-conversation'
+  }), /identify different conversations/);
+  assert.equal(browser.calls.some((call) => call.startsWith('close:')), false);
+}
+console.log('ok - target ID and URL must identify the same conversation');
+
+{
+  let ledger = createLedger('GameDeck', new Date('2026-08-04T04:00:00.000Z'));
+  ledger = issue(ledger, { lane: 'E', objective: 'Protected build', assignee: 'builder', authorizedBy: 'orchestrator' }).ledger;
+  ledger = accept(ledger, { ticketId: 'E-0001', actor: 'builder' }).ledger;
+  ledger = start(ledger, { ticketId: 'E-0001', actor: 'builder', launchEvidence: 'visible builder room' }).ledger;
+  let registry = createRoomRegistry('GameDeck');
+  registry = bindRoom(registry, ledger, {
+    ticketId: 'E-0001', url: 'https://chatgpt.com/c/protected-builder-room', actor: 'orchestrator', protectedRoom: true
+  }).registry;
+  registry = verifyRoom(registry, ledger, { ticketId: 'E-0001' }, { actor: 'orchestrator' }).registry;
+  ledger = complete(ledger, { ticketId: 'E-0001', actor: 'builder', outcome: 'pass', summary: 'done', softwareVersion: 'v1' }).ledger;
+  ledger = handoff(ledger, { ticketId: 'E-0001', lane: 'T', objective: 'test', assignee: 'tester', authorizedBy: 'orchestrator' }).ledger;
+  registry = bindRoom(registry, ledger, { ticketId: 'T-0001', url: 'https://chatgpt.com/c/tester-room', actor: 'orchestrator' }).registry;
+  registry = verifyRoom(registry, ledger, { ticketId: 'T-0001' }, { actor: 'orchestrator' }).registry;
+  ledger = accept(ledger, { ticketId: 'T-0001', actor: 'tester' }).ledger;
+  assert.throws(() => assertCustodyHandoff(ledger, registry, 'E-0001', 'T-0001'), /not close-eligible: room-protected/);
+}
+console.log('ok - protected room policy fails before browser mutation');
 
 {
   const browser = new FakeBrowser([chat('old', 'same-conversation'), chat('next', 'same-conversation')]);
@@ -216,48 +254,118 @@ console.log('ok - dry run has no browser side effects');
     },
     activityErrors: { unknown: 'target probe unavailable' }
   });
-  const report = await auditTabHygiene(browser);
+  const report = await auditTabHygiene(browser, { roomPolicy: new Map() });
   assert.equal(report.health, 'attention');
-  assert.deepEqual(report.counts, { open: 5, protected: 1, busy: 2, unknown: 1, stale: 1 });
+  assert.deepEqual(report.counts, { open: 5, protected: 1, busy: 2, unknown: 1, unmanaged: 1, eligible: 0 });
   assert.equal(report.tabs.find((tab) => tab.targetId === 'watch').classification, 'protected');
   assert.equal(report.tabs.find((tab) => tab.targetId === 'draft').classification, 'busy');
   assert.equal(report.tabs.find((tab) => tab.targetId === 'stream').classification, 'busy');
   assert.equal(report.tabs.find((tab) => tab.targetId === 'unknown').classification, 'unknown');
-  assert.equal(report.tabs.find((tab) => tab.targetId === 'idle').classification, 'stale');
+  assert.equal(report.tabs.find((tab) => tab.targetId === 'idle').classification, 'unmanaged');
 }
-console.log('ok - hygiene audit protects Room Watch, drafts, generating work, and uncertain probes');
+console.log('ok - hygiene audit protects Room Watch, drafts, generating work, and unmanaged rooms');
 
 {
+  const policy = new Map([
+    ['active-conversation', { room: { id: 'ROOM-0001', ticketId: 'E-0001' }, eligibility: { disposition: 'keep', reason: 'ticket-active' } }],
+    ['eligible-conversation', { room: { id: 'ROOM-0002', ticketId: 'E-0002' }, eligibility: { disposition: 'eligible', reason: 'successor-custody-visible' } }]
+  ]);
   const browser = new FakeBrowser([
-    chat('watch', 'watch-conversation', { title: 'GameDeck Room Watch' }),
-    chat('draft', 'draft-conversation'),
-    chat('stream', 'stream-conversation'),
-    chat('idle', 'idle-conversation')
-  ], {
-    activity: {
-      draft: { draft: 'unsent handoff' },
-      stream: { generating: true }
-    }
-  });
-  const receipt = await cleanTabHygiene(browser);
+    chat('active', 'active-conversation'),
+    chat('eligible', 'eligible-conversation')
+  ]);
+  const receipt = await cleanTabHygiene(browser, { roomPolicy: policy });
   assert.equal(receipt.status, 'clean');
-  assert.deepEqual(receipt.closed.map((item) => item.targetId), ['idle']);
-  assert.equal(browser.targets.some((target) => target.id === 'idle'), false);
-  assert.equal(browser.targets.some((target) => target.id === 'watch'), true);
-  assert.equal(browser.targets.some((target) => target.id === 'draft'), true);
-  assert.equal(browser.targets.some((target) => target.id === 'stream'), true);
-  assert.equal(browser.calls.filter((call) => call === 'close:idle').length, 1);
+  assert.deepEqual(receipt.closed.map((item) => item.targetId), ['eligible']);
+  assert.equal(browser.targets.some((target) => target.id === 'active'), true);
+  assert.equal(browser.targets.some((target) => target.id === 'eligible'), false);
+  assert.equal(browser.calls.filter((call) => call === 'close:eligible').length, 1);
+  assert.equal(browser.calls.filter((call) => call === 'close:active').length, 0);
 }
-console.log('ok - hygiene cleanup closes only idle unprotected tabs');
+console.log('ok - cleanup closes only ledger-eligible rooms and preserves idle active custody');
+
+{
+  const policy = new Map([
+    ['first-conversation', { room: { id: 'ROOM-0001', ticketId: 'E-0001' }, eligibility: { disposition: 'eligible', reason: 'successor-custody-visible' } }],
+    ['second-conversation', { room: { id: 'ROOM-0002', ticketId: 'E-0002' }, eligibility: { disposition: 'eligible', reason: 'successor-custody-visible' } }]
+  ]);
+  const browser = new FakeBrowser([chat('first', 'first-conversation'), chat('second', 'second-conversation')]);
+  const receipt = await cleanTabHygiene(browser, { roomPolicy: policy });
+  assert.equal(receipt.status, 'partial');
+  assert.equal(receipt.closed.length, 1);
+  assert.equal(browser.calls.filter((call) => call.startsWith('close:')).length, 1);
+}
+console.log('ok - cleanup closes at most one room by default');
+
+{
+  const eligible = new Map([
+    ['changing-conversation', { room: { id: 'ROOM-0001', ticketId: 'E-0001' }, eligibility: { disposition: 'eligible', reason: 'successor-custody-visible' } }]
+  ]);
+  const protectedPolicy = new Map([
+    ['changing-conversation', { room: { id: 'ROOM-0001', ticketId: 'E-0001' }, eligibility: { disposition: 'keep', reason: 'ticket-active' } }]
+  ]);
+  let refreshes = 0;
+  const browser = new FakeBrowser([chat('changing', 'changing-conversation')]);
+  const receipt = await cleanTabHygiene(browser, {
+    roomPolicy: eligible,
+    refreshRoomPolicy: async () => (++refreshes === 1 ? eligible : protectedPolicy)
+  });
+  assert.equal(receipt.closed.length, 0);
+  assert.equal(receipt.skipped[0].reason, 'custody-changed');
+  assert.equal(browser.calls.some((call) => call === 'close:changing'), false);
+}
+console.log('ok - cleanup rechecks custody immediately before close');
+
+{
+  const policy = new Map([
+    ['duplicate-conversation', { room: { id: 'ROOM-0001', ticketId: 'E-0001' }, eligibility: { disposition: 'eligible', reason: 'successor-custody-visible' } }]
+  ]);
+  const browser = new FakeBrowser([chat('one', 'duplicate-conversation'), chat('two', 'duplicate-conversation')]);
+  const report = await auditTabHygiene(browser, { roomPolicy: policy });
+  assert.equal(report.counts.unknown, 2);
+  const receipt = await cleanTabHygiene(browser, { roomPolicy: policy });
+  assert.equal(receipt.closed.length, 0);
+  assert.equal(browser.calls.some((call) => call.startsWith('close:')), false);
+}
+console.log('ok - duplicate conversation targets are never auto-closed');
 
 {
   const browser = new FakeBrowser([chat('idle', 'idle-conversation')]);
-  const receipt = await cleanTabHygiene(browser, { dryRun: true });
+  const receipt = await cleanTabHygiene(browser, { roomPolicy: new Map(), dryRun: true });
   assert.equal(receipt.status, 'planned');
   assert.equal(browser.targets.some((target) => target.id === 'idle'), true);
   assert.equal(browser.calls.some((call) => call.startsWith('close:')), false);
 }
 console.log('ok - hygiene cleanup dry run has no browser side effects');
+
+{
+  const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'gamedeck-chatchain-lock-'));
+  const lock = path.join(folder, 'browser.lock');
+  let nestedRejected = false;
+  await withFileLock(lock, async () => {
+    await assert.rejects(() => withFileLock(lock, async () => {}), /holds the lock/);
+    nestedRejected = true;
+  });
+  assert.equal(nestedRejected, true);
+  assert.equal(fs.existsSync(lock), false);
+}
+console.log('ok - browser mutation lock rejects concurrent cleanup');
+
+{
+  const policy = new Map([
+    ['eligible-conversation', { room: { id: 'ROOM-0001', ticketId: 'E-0001' }, eligibility: { disposition: 'eligible', reason: 'successor-custody-visible' } }]
+  ]);
+  const browser = new FakeBrowser([chat('eligible', 'eligible-conversation')]);
+  const receipt = await cleanTabHygiene(browser, {
+    roomPolicy: policy,
+    onClosed: async () => { throw new Error('registry disk unavailable'); }
+  });
+  assert.equal(receipt.status, 'uncertain');
+  assert.equal(receipt.closed[0].registryUpdateError, 'registry disk unavailable');
+  assert.equal(receipt.uncertain[0].reason, 'registry-close-update-failed');
+  assert.equal(browser.targets.length, 0);
+}
+console.log('ok - verified browser closure survives registry update failure with recovery evidence');
 
 {
   const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'gamedeck-chatchain-'));
@@ -288,6 +396,7 @@ console.log('ok - receipt writes atomically');
   try {
     const address = server.address();
     const browser = new HttpCdpBrowser('http://127.0.0.1:' + address.port);
+    browser.probeTargetReady = async () => ({ ready: true });
     const receipt = await handoffTabs(browser, {
       predecessorUrl: 'https://chatgpt.com/c/old-conversation',
       successorUrl: 'https://chatgpt.com/c/next-conversation',
@@ -304,4 +413,4 @@ console.log('ok - receipt writes atomically');
 }
 console.log('ok - HTTP CDP adapter performs verified handoff');
 
-console.log('chatchain tab lifecycle: 19 scenarios passed');
+console.log('chatchain tab lifecycle: 27 scenarios passed');

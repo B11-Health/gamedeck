@@ -141,8 +141,10 @@ Inspect the system:
 ```bash
 npm run cadops:validate
 npm run cadops:watch
-npm run cadops:watch:live -- --cdp http://127.0.0.1:9944
-npm run cadops:browser:clean -- --cdp http://127.0.0.1:9944
+npm run chatchain:rooms:init
+npm run chatchain:rooms -- status --json
+npm run cadops:watch:live -- --cdp http://127.0.0.1:9222
+npm run cadops:browser:clean -- --cdp http://127.0.0.1:9222 --actor general-orchestrator
 npm run cadops:status
 npm run cadops -- show --ticket E-0001
 ```
@@ -153,8 +155,10 @@ Add `--json` for machine-readable output. Repeat `--artifact` and `--check` as n
 
 The Watcher reports:
 
-- stale idle CDP conversation tabs that have no active custody, draft, generating response, or explicit protection;
-- browser targets whose activity cannot be inspected safely;
+- eligible predecessor rooms that remain open after verified custody transfer;
+- unmanaged, duplicated, inconsistent, or uninspectable browser rooms;
+- invalid or tampered private room-registry events and close receipts;
+- room bindings that disagree with ticket identity, lane, role, or status;
 - broken ledger or event-chain integrity,
 - stale accepted or active custody,
 - uncertain or quarantined work without a recovery identity,
@@ -169,16 +173,19 @@ Critical findings make `cadops:watch` exit nonzero. Warnings remain visible but 
 `npm test` runs:
 
 1. CADOps state-machine and adversarial tests.
-2. Canonical ledger validation.
-3. Canonical Watcher health.
-4. Existing repository, orchestration, runtime, and smoke gates.
+2. ChatChain room-registry integrity and custody-policy tests.
+3. ChatChain browser handoff, identity, locking, and no-replay tests.
+4. Canonical ledger validation and Watcher health.
+5. Existing repository, orchestration, runtime, and smoke gates.
 
 CADOps does not replace independent review. A Builder receipt authorizes only the next declared lane; it is not self-approval and is not permission to merge.
 
-## ChatChain tab handoff
+## ChatChain room custody and tab handoff
 
-Conversation custody and browser-tab lifetime are separate concerns. The ledger authorizes the successor; the tab operator may close the predecessor only after the successor is a distinct, stably open `https://chatgpt.com/c/<conversation-id>` target.
+Conversation custody and browser-tab lifetime are separate concerns. The canonical ledger authorizes the successor, the private room registry binds one conversation to one ticket, and the live CDP target proves the browser side effect.
 
-Run `npm run chatchain:tabs -- status --cdp <endpoint>` to inspect targets and `npm run chatchain:tabs -- handoff ...` to rotate them. The operator activates and repeatedly verifies the successor, re-checks both identities, requests one predecessor close, and verifies continuity. Missing, ambiguous, protected, reused, or unstable targets leave the predecessor open. An uncertain close is never replayed and requires recovery.
+Idle is not stale. Accepted, active, review, uncertain, and recovery rooms remain protected even when they have no draft and are not generating. Automatic closure requires a completed predecessor, an exact linked successor when applicable, a verified successor room, accepted successor custody, and an unchanged idle predecessor target.
 
-See `docs/CHATCHAINS.md` for the complete policy and receipt outcomes.
+Use `npm run chatchain:rooms` to initialize, bind, verify, validate, and inspect private room custody. Use `npm run chatchain:tabs -- handoff --predecessor-ticket ... --successor-ticket ...` for the baton pass. Browser mutation is loopback-only, single-process locked, one-close-by-default, receipt-producing, and non-replayable on uncertainty.
+
+See `docs/CHATCHAINS.md` for the complete workflow, private-data boundary, classifications, and recovery rules.

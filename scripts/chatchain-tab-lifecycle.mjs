@@ -1,6 +1,15 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { loadLedger } from './cadops-core.mjs';
+import {
+  loadRoomRegistry,
+  saveRoomRegistry,
+  buildRoomPolicy,
+  roomEligibility,
+  markRoomClosed,
+  markRoomUncertain
+} from './chatchain-room-registry.mjs';
 
 const CHAT_HOST = 'chatgpt.com';
 const CHAT_PATH = /^\/c\/([A-Za-z0-9-]+)(?:[/?#]|$)/;
@@ -66,6 +75,11 @@ export function resolveChatTarget(targets, spec, label, { allowMissing = false }
   const id = targetIdentity(target);
   const conversationId = conversationIdentity(target.url);
   if (!id || !conversationId) throw new Error(label + ' target is not an open ChatGPT conversation');
+  if (spec.url) {
+    const expectedConversationId = conversationIdentity(spec.url);
+    if (!expectedConversationId) throw new Error(label + ' URL is not a ChatGPT conversation URL');
+    if (expectedConversationId !== conversationId) throw new Error(label + ' target ID and URL identify different conversations');
+  }
   return { id, conversationId, url: String(target.url), title: String(target.title || ''), raw: target };
 }
 
@@ -79,6 +93,8 @@ export class HttpCdpBrowser {
     if (typeof fetchImpl !== 'function') throw new Error('fetch is unavailable');
     this.endpoint = new URL(required(endpoint, 'CDP endpoint'));
     if (!['http:', 'https:'].includes(this.endpoint.protocol)) throw new Error('CDP endpoint must use HTTP or HTTPS');
+    const host = this.endpoint.hostname.toLowerCase();
+    if (!['127.0.0.1', 'localhost', '::1', '[::1]'].includes(host)) throw new Error('CDP endpoint must be loopback-only');
     this.fetchImpl = fetchImpl;
     this.requestTimeoutMs = requestTimeoutMs;
   }
@@ -135,6 +151,16 @@ export class HttpCdpBrowser {
       });
       socket.addEventListener('error', () => finish(reject, new Error('CDP target websocket failed')), { once: true });
     });
+  }
+
+  async probeTargetReady(target) {
+    const value = await this.evaluateTarget(target, `(() => {
+      const readyState = document.readyState === 'complete' || document.readyState === 'interactive';
+      const main = Boolean(document.querySelector('main'));
+      const login = Boolean(document.querySelector('input[type=\"password\"], form[action*=\"login\"]'));
+      return { ready: readyState && main && !login };
+    })()`);
+    return { ready: Boolean(value?.ready) };
   }
 
   async probeTargetActivity(target) {
@@ -307,15 +333,32 @@ function defaultProtectedTitle(title) {
   return /\broom watch\b/i.test(String(title || ''));
 }
 
+function duplicateConversationIds(chats) {
+  const counts = new Map();
+  for (const chat of chats) counts.set(chat.conversationId, (counts.get(chat.conversationId) || 0) + 1);
+  return new Set([...counts].filter(([, count]) => count > 1).map(([conversationId]) => conversationId));
+}
+
+function policyClassification(policyItem) {
+  if (!policyItem) return { classification: 'unmanaged', reason: 'room-not-registered' };
+  const eligibility = policyItem.eligibility || {};
+  if (eligibility.disposition === 'keep') return { classification: 'protected', reason: eligibility.reason || 'custody-protected' };
+  if (eligibility.disposition === 'eligible') return { classification: 'eligible', reason: eligibility.reason || 'custody-advanced' };
+  if (eligibility.disposition === 'closed') return { classification: 'unknown', reason: 'registered-room-closed-but-target-open' };
+  return { classification: 'unknown', reason: eligibility.reason || 'room-policy-unknown' };
+}
+
 export async function auditTabHygiene(browser, options = {}) {
   if (!browser || typeof browser.listTargets !== 'function' || typeof browser.probeTargetActivity !== 'function') {
     throw new Error('browser adapter must implement listTargets and probeTargetActivity');
   }
   const rawTargets = await browser.listTargets();
   const chats = listChatTargets(rawTargets);
+  const duplicates = duplicateConversationIds(chats);
   const rawById = new Map(rawTargets.map((target) => [targetIdentity(target), target]));
   const protectedTargetIds = new Set((options.protectedTargetIds || []).map(String));
   const protectedConversationIds = new Set((options.protectedUrls || []).map(conversationIdentity).filter(Boolean));
+  const roomPolicy = options.roomPolicy instanceof Map ? options.roomPolicy : new Map();
   const tabs = [];
 
   for (const chat of chats) {
@@ -323,6 +366,20 @@ export async function auditTabHygiene(browser, options = {}) {
     if (protectedTargetIds.has(chat.targetId)) reasons.push('protected-target');
     if (protectedConversationIds.has(chat.conversationId)) reasons.push('protected-conversation');
     if (options.protectRoomWatch !== false && defaultProtectedTitle(chat.title)) reasons.push('room-watch');
+    let classification;
+    let custodyReason = null;
+    const policyItem = roomPolicy.get(chat.conversationId);
+    if (reasons.length) {
+      classification = 'protected';
+    } else if (duplicates.has(chat.conversationId)) {
+      classification = 'unknown';
+      custodyReason = 'duplicate-conversation-targets';
+    } else {
+      const policy = policyClassification(policyItem);
+      classification = policy.classification;
+      custodyReason = policy.reason;
+    }
+
     let activity = null;
     let probeError = null;
     try {
@@ -332,14 +389,15 @@ export async function auditTabHygiene(browser, options = {}) {
     }
     const hasDraft = Boolean(String(activity?.draft || '').trim());
     const generating = Boolean(activity?.generating);
-    let classification = 'stale';
-    if (reasons.length) classification = 'protected';
-    else if (hasDraft || generating) classification = 'busy';
-    else if (probeError) classification = 'unknown';
+    if (classification !== 'protected' && (hasDraft || generating)) classification = 'busy';
+    if (classification !== 'protected' && probeError) classification = 'unknown';
+    if (custodyReason) reasons.push(custodyReason);
     tabs.push({
       ...chat,
       classification,
       reasons,
+      roomId: policyItem?.room?.id || null,
+      ticketId: policyItem?.room?.ticketId || null,
       hasDraft,
       generating,
       probeError
@@ -351,12 +409,13 @@ export async function auditTabHygiene(browser, options = {}) {
     protected: tabs.filter((tab) => tab.classification === 'protected').length,
     busy: tabs.filter((tab) => tab.classification === 'busy').length,
     unknown: tabs.filter((tab) => tab.classification === 'unknown').length,
-    stale: tabs.filter((tab) => tab.classification === 'stale').length
+    unmanaged: tabs.filter((tab) => tab.classification === 'unmanaged').length,
+    eligible: tabs.filter((tab) => tab.classification === 'eligible').length
   };
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     generatedAt: new Date().toISOString(),
-    health: counts.stale || counts.unknown ? 'attention' : 'healthy',
+    health: counts.eligible || counts.unknown || counts.unmanaged ? 'attention' : 'healthy',
     counts,
     tabs
   };
@@ -364,45 +423,87 @@ export async function auditTabHygiene(browser, options = {}) {
 
 export async function cleanTabHygiene(browser, options = {}) {
   if (!browser || typeof browser.closeTarget !== 'function') throw new Error('browser adapter must implement closeTarget');
-  const before = await auditTabHygiene(browser, options);
+  const initialPolicy = typeof options.refreshRoomPolicy === 'function'
+    ? await options.refreshRoomPolicy()
+    : options.roomPolicy;
+  const before = await auditTabHygiene(browser, { ...options, roomPolicy: initialPolicy });
   if (options.dryRun) {
-    return { schemaVersion: 1, generatedAt: new Date().toISOString(), status: 'planned', before, closed: [], skipped: [], uncertain: [] };
+    return { schemaVersion: 2, generatedAt: new Date().toISOString(), status: 'planned', before, closed: [], skipped: [], uncertain: [] };
   }
 
   const closed = [];
   const skipped = [];
   const uncertain = [];
-  const maxClose = Number.isFinite(Number(options.maxClose)) ? Math.max(0, Number(options.maxClose)) : 20;
-  for (const tab of before.tabs.filter((item) => item.classification === 'stale').slice(0, maxClose)) {
+  const maxClose = Number.isFinite(Number(options.maxClose)) ? Math.max(0, Number(options.maxClose)) : 1;
+  for (const tab of before.tabs.filter((item) => item.classification === 'eligible').slice(0, maxClose)) {
+    const currentPolicy = typeof options.refreshRoomPolicy === 'function'
+      ? await options.refreshRoomPolicy()
+      : initialPolicy;
+    const policyItem = currentPolicy instanceof Map ? currentPolicy.get(tab.conversationId) : null;
+    if (policyClassification(policyItem).classification !== 'eligible') {
+      skipped.push({ targetId: tab.targetId, conversationId: tab.conversationId, reason: 'custody-changed' });
+      continue;
+    }
     const currentTargets = await browser.listTargets();
     const current = currentTargets.find((target) => targetIdentity(target) === tab.targetId);
-    if (!current) { skipped.push({ targetId: tab.targetId, reason: 'already-closed' }); continue; }
+    if (!current) {
+      skipped.push({ targetId: tab.targetId, conversationId: tab.conversationId, reason: 'already-closed' });
+      continue;
+    }
+    if (conversationIdentity(current.url) !== tab.conversationId) {
+      skipped.push({ targetId: tab.targetId, conversationId: tab.conversationId, reason: 'target-identity-changed' });
+      continue;
+    }
     try {
       const activity = await browser.probeTargetActivity(current);
       if (String(activity?.draft || '').trim() || activity?.generating) {
-        skipped.push({ targetId: tab.targetId, reason: 'became-busy' });
+        skipped.push({ targetId: tab.targetId, conversationId: tab.conversationId, reason: 'became-busy' });
         continue;
       }
     } catch (error) {
-      skipped.push({ targetId: tab.targetId, reason: 'probe-uncertain', error: error.message });
+      skipped.push({ targetId: tab.targetId, conversationId: tab.conversationId, reason: 'probe-uncertain', error: error.message });
       continue;
     }
     try {
       await browser.closeTarget(tab.targetId);
     } catch (error) {
-      uncertain.push({ targetId: tab.targetId, reason: 'close-request-uncertain', error: error.message });
+      const finding = { targetId: tab.targetId, conversationId: tab.conversationId, reason: 'close-request-uncertain', error: error.message };
+      uncertain.push(finding);
+      if (typeof options.onUncertain === 'function') {
+        try { await options.onUncertain(tab, finding); } catch (error) { finding.registryUpdateError = error.message; }
+      }
       continue;
     }
     const remaining = await browser.listTargets();
     if (remaining.some((target) => targetIdentity(target) === tab.targetId)) {
-      uncertain.push({ targetId: tab.targetId, reason: 'close-unverified' });
+      const finding = { targetId: tab.targetId, conversationId: tab.conversationId, reason: 'close-unverified' };
+      uncertain.push(finding);
+      if (typeof options.onUncertain === 'function') {
+        try { await options.onUncertain(tab, finding); } catch (error) { finding.registryUpdateError = error.message; }
+      }
     } else {
-      closed.push({ targetId: tab.targetId, conversationId: tab.conversationId, url: tab.url });
+      const finding = { targetId: tab.targetId, conversationId: tab.conversationId, roomId: tab.roomId, ticketId: tab.ticketId };
+      closed.push(finding);
+      if (typeof options.onClosed === 'function') {
+        try { await options.onClosed(tab, finding); } catch (error) {
+          finding.registryUpdateError = error.message;
+          uncertain.push({ ...finding, reason: 'registry-close-update-failed', error: error.message });
+        }
+      }
     }
   }
-  const after = await auditTabHygiene(browser, options);
-  const status = uncertain.length ? 'uncertain' : after.counts.stale ? 'partial' : 'clean';
-  return { schemaVersion: 1, generatedAt: new Date().toISOString(), status, before, after, closed, skipped, uncertain };
+  const finalPolicy = typeof options.refreshRoomPolicy === 'function'
+    ? await options.refreshRoomPolicy()
+    : initialPolicy;
+  const after = await auditTabHygiene(browser, { ...options, roomPolicy: finalPolicy });
+  const status = uncertain.length
+    ? 'uncertain'
+    : after.counts.eligible
+      ? 'partial'
+      : after.counts.unknown || after.counts.unmanaged
+        ? 'attention'
+        : 'clean';
+  return { schemaVersion: 2, generatedAt: new Date().toISOString(), status, before, after, closed, skipped, uncertain };
 }
 
 export function formatTabHygiene(report) {
@@ -410,12 +511,12 @@ export function formatTabHygiene(report) {
     'GAMEDECK CADOPS BROWSER HYGIENE',
     `Generated: ${report.generatedAt}`,
     `Health: ${report.health.toUpperCase()}`,
-    `Open: ${report.counts.open} | Protected: ${report.counts.protected} | Busy: ${report.counts.busy} | Unknown: ${report.counts.unknown} | Stale: ${report.counts.stale}`
+    `Open: ${report.counts.open} | Protected: ${report.counts.protected} | Busy: ${report.counts.busy} | Eligible: ${report.counts.eligible} | Unmanaged: ${report.counts.unmanaged} | Unknown: ${report.counts.unknown}`
   ];
-  for (const tab of report.tabs.filter((item) => ['stale', 'unknown'].includes(item.classification))) {
-    lines.push(`- ${tab.classification.toUpperCase()} ${tab.targetId} ${tab.title || tab.url}`);
+  for (const tab of report.tabs.filter((item) => ['eligible', 'unmanaged', 'unknown'].includes(item.classification))) {
+    lines.push(`- ${tab.classification.toUpperCase()} ${tab.targetId} ${tab.ticketId || '-'} ${tab.title || '(untitled chat)'}`);
   }
-  if (!report.counts.stale && !report.counts.unknown) lines.push('- no browser hygiene findings');
+  if (!report.counts.eligible && !report.counts.unmanaged && !report.counts.unknown) lines.push('- no browser hygiene findings');
   return lines.join('\n');
 }
 
@@ -426,6 +527,70 @@ export function writeReceipt(file, receipt) {
   fs.writeFileSync(temp, JSON.stringify(receipt, null, 2) + '\n', { flag: 'wx' });
   fs.renameSync(temp, absolute);
   return absolute;
+}
+
+const DEFAULT_LEDGER = 'ops/cadops/ledger.json';
+const DEFAULT_ROOMS = '.cadops-private/chatchains/rooms.json';
+const DEFAULT_RECEIPT_DIR = '.cadops-private/chatchains/receipts';
+const DEFAULT_LOCK = '.cadops-private/chatchains/browser.lock';
+
+function privatePath(value, fallback) {
+  return path.resolve(value || fallback);
+}
+
+export async function withFileLock(file, operation) {
+  const absolute = path.resolve(required(file, 'lock file'));
+  fs.mkdirSync(path.dirname(absolute), { recursive: true });
+  let descriptor;
+  try {
+    descriptor = fs.openSync(absolute, 'wx');
+    fs.writeFileSync(descriptor, JSON.stringify({ pid: process.pid, acquiredAt: new Date().toISOString() }) + '\n');
+  } catch (error) {
+    if (error?.code === 'EEXIST') throw new Error('another ChatChain browser operation holds the lock');
+    throw error;
+  }
+  try {
+    return await operation();
+  } finally {
+    try { fs.closeSync(descriptor); } catch {}
+    try { fs.unlinkSync(absolute); } catch {}
+  }
+}
+
+function receiptFile(directory, prefix) {
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  return path.join(path.resolve(directory), `${prefix}-${stamp}-${process.pid}.json`);
+}
+
+function loadCustodyPolicy(ledgerFile, roomsFile) {
+  const ledger = loadLedger(ledgerFile);
+  const registry = loadRoomRegistry(roomsFile);
+  return { ledger, registry, policy: buildRoomPolicy(registry, ledger) };
+}
+
+function roomForTicket(registry, ticketId) {
+  const matches = registry.rooms.filter((room) => room.ticketId === ticketId);
+  if (matches.length !== 1) throw new Error(matches.length ? `ticket ${ticketId} has ambiguous rooms` : `ticket ${ticketId} has no bound room`);
+  return matches[0];
+}
+
+export function assertCustodyHandoff(ledger, registry, predecessorTicketId, successorTicketId) {
+  const predecessor = ledger.tickets.find((ticket) => ticket.id === predecessorTicketId);
+  const successor = ledger.tickets.find((ticket) => ticket.id === successorTicketId);
+  if (!predecessor || !successor) throw new Error('predecessor and successor tickets must exist');
+  if (predecessor.status !== 'completed') throw new Error('predecessor ticket must be completed');
+  if (predecessor.successorTicketId !== successor.id || successor.predecessorTicketId !== predecessor.id) {
+    throw new Error('tickets are not an exact CADOps custody handoff');
+  }
+  if (!['accepted', 'active', 'completed'].includes(successor.status)) throw new Error('successor ticket has not accepted custody');
+  const predecessorRoom = roomForTicket(registry, predecessor.id);
+  const successorRoom = roomForTicket(registry, successor.id);
+  const eligibility = roomEligibility(predecessorRoom, ledger, registry);
+  if (eligibility.disposition !== 'eligible') throw new Error(`predecessor room is not close-eligible: ${eligibility.reason}`);
+  if (successorRoom.state !== 'open') throw new Error('successor room is not open');
+  if (!successorRoom.verifiedAt) throw new Error('successor room is not verified');
+  if (predecessorRoom.conversationId === successorRoom.conversationId) throw new Error('predecessor and successor rooms must differ');
+  return { predecessor, successor, predecessorRoom, successorRoom };
 }
 
 function parseArgs(argv) {
@@ -450,14 +615,13 @@ function help() {
     '',
     'Commands:',
     '  status --cdp http://127.0.0.1:9222',
-    '  audit --cdp URL [--protected-target ID] [--protected-url CHAT_URL] [--json]',
-    '  clean --cdp URL --apply [--protected-target ID] [--protected-url CHAT_URL] [--max-close N]',
-    '  handoff --cdp URL --predecessor-target ID --successor-target ID [--receipt FILE]',
-    '  handoff --cdp URL --predecessor-url CHAT_URL --successor-url CHAT_URL [--dry-run]',
+    '  audit --cdp URL [--ledger FILE] [--rooms FILE] [--json]',
+    '  clean --cdp URL --apply [--ledger FILE] [--rooms FILE] [--max-close 1]',
+    '  handoff --cdp URL --predecessor-ticket E-0001 --successor-ticket T-0001',
     '',
-    'Room Watch, drafts, generating responses, protected targets, and uncertain probes are never cleaned.',
-    'The predecessor closes only after the successor conversation is activated and stably verified.',
-    'On uncertainty, the predecessor remains open or the result is reported as recovery-required.'
+    'Room bindings are private by default under .cadops-private/chatchains/.',
+    'Only ledger-proven close-eligible rooms can be closed automatically.',
+    'Unmanaged, active, review, draft, generating, duplicate, and uncertain rooms stay open.'
   ].join('\n');
 }
 
@@ -467,51 +631,118 @@ async function runCli() {
   if (command === 'help' || args.help) { console.log(help()); return; }
   const endpoint = args.cdp || process.env.CHATCHAIN_CDP_URL;
   const browser = new HttpCdpBrowser(endpoint);
+  const ledgerFile = privatePath(args.ledger, DEFAULT_LEDGER);
+  const roomsFile = privatePath(args.rooms, DEFAULT_ROOMS);
+  const receiptDirectory = privatePath(args.receiptDir, DEFAULT_RECEIPT_DIR);
+  const lockFile = privatePath(args.lock, DEFAULT_LOCK);
+  const actor = args.actor || 'cadops-browser-operator';
+
   if (command === 'status') {
-    const targets = listChatTargets(await browser.listTargets());
-    console.log(args.json ? JSON.stringify(targets, null, 2) : targets.map((t) => t.targetId + ' ' + t.url).join('\n'));
+    const targets = listChatTargets(await browser.listTargets()).map((target) => ({
+      targetId: target.targetId,
+      conversationId: target.conversationId,
+      title: target.title
+    }));
+    console.log(args.json ? JSON.stringify(targets, null, 2) : targets.map((target) => `${target.targetId} ${target.conversationId} ${target.title}`).join('\n'));
     return;
   }
+
   if (command === 'audit' || command === 'clean') {
-    const options = {
+    const loaded = loadCustodyPolicy(ledgerFile, roomsFile);
+    const baseOptions = {
       protectedTargetIds: args.protectedTargetIds,
       protectedUrls: args.protectedUrls,
-      maxClose: args.maxClose ? Number(args.maxClose) : undefined
+      maxClose: args.maxClose ? Number(args.maxClose) : undefined,
+      roomPolicy: loaded.policy
     };
     if (command === 'audit') {
-      const report = await auditTabHygiene(browser, options);
+      const report = await auditTabHygiene(browser, baseOptions);
       console.log(args.json ? JSON.stringify(report, null, 2) : formatTabHygiene(report));
       if (report.health !== 'healthy') process.exitCode = 2;
       return;
     }
-    const receipt = await cleanTabHygiene(browser, { ...options, dryRun: !args.apply });
-    console.log(args.json ? JSON.stringify(receipt, null, 2) : [
+
+    const receipt = await withFileLock(lockFile, async () => cleanTabHygiene(browser, {
+      ...baseOptions,
+      dryRun: !args.apply,
+      refreshRoomPolicy: async () => loadCustodyPolicy(ledgerFile, roomsFile).policy,
+      onClosed: async (tab, finding) => {
+        const current = loadCustodyPolicy(ledgerFile, roomsFile);
+        const operation = markRoomClosed(current.registry, current.ledger, { conversationId: tab.conversationId }, {
+          actor,
+          targetId: finding.targetId,
+          reason: 'browser-close-verified'
+        });
+        saveRoomRegistry(roomsFile, operation.registry, current.ledger);
+      },
+      onUncertain: async (tab, finding) => {
+        const current = loadCustodyPolicy(ledgerFile, roomsFile);
+        const operation = markRoomUncertain(current.registry, current.ledger, { conversationId: tab.conversationId }, {
+          actor,
+          targetId: finding.targetId,
+          reason: finding.reason
+        });
+        saveRoomRegistry(roomsFile, operation.registry, current.ledger);
+      }
+    }));
+    const outputFile = args.receipt || receiptFile(receiptDirectory, 'browser-clean');
+    writeReceipt(outputFile, receipt);
+    console.log(args.json ? JSON.stringify({ receiptFile: outputFile, ...receipt }, null, 2) : [
       'CADOps browser cleanup: ' + receipt.status,
       'Closed: ' + receipt.closed.length,
       'Skipped: ' + receipt.skipped.length,
       'Uncertain: ' + receipt.uncertain.length,
-      receipt.after ? `Remaining stale: ${receipt.after.counts.stale}` : `Planned stale closures: ${receipt.before.counts.stale}`
+      'Receipt: ' + outputFile,
+      receipt.after ? `Remaining eligible: ${receipt.after.counts.eligible}` : `Planned closures: ${receipt.before.counts.eligible}`
     ].join('\n'));
     if (!['clean', 'planned'].includes(receipt.status)) process.exitCode = 2;
     return;
   }
+
   if (command !== 'handoff') throw new Error('unknown command: ' + command);
-  const receipt = await handoffTabs(browser, {
-    predecessorTargetId: args.predecessorTarget,
-    predecessorUrl: args.predecessorUrl,
-    successorTargetId: args.successorTarget,
-    successorUrl: args.successorUrl,
-    protectedTargetIds: args.protectedTargetIds,
-    timeoutMs: args.timeoutMs ? Number(args.timeoutMs) : undefined,
-    pollIntervalMs: args.pollIntervalMs ? Number(args.pollIntervalMs) : undefined,
-    stablePolls: args.stablePolls ? Number(args.stablePolls) : undefined,
-    dryRun: Boolean(args.dryRun)
+  const predecessorTicketId = required(args.predecessorTicket, 'predecessor ticket');
+  const successorTicketId = required(args.successorTicket, 'successor ticket');
+  const receipt = await withFileLock(lockFile, async () => {
+    const current = loadCustodyPolicy(ledgerFile, roomsFile);
+    const custody = assertCustodyHandoff(current.ledger, current.registry, predecessorTicketId, successorTicketId);
+    const result = await handoffTabs(browser, {
+      predecessorTargetId: args.predecessorTarget,
+      predecessorUrl: args.predecessorUrl || custody.predecessorRoom.url,
+      successorTargetId: args.successorTarget,
+      successorUrl: args.successorUrl || custody.successorRoom.url,
+      protectedTargetIds: args.protectedTargetIds,
+      timeoutMs: args.timeoutMs ? Number(args.timeoutMs) : undefined,
+      pollIntervalMs: args.pollIntervalMs ? Number(args.pollIntervalMs) : undefined,
+      stablePolls: args.stablePolls ? Number(args.stablePolls) : undefined,
+      dryRun: Boolean(args.dryRun)
+    });
+    if (!args.dryRun && result.predecessorClosed === true) {
+      const latest = loadCustodyPolicy(ledgerFile, roomsFile);
+      const operation = markRoomClosed(latest.registry, latest.ledger, { ticketId: predecessorTicketId }, {
+        actor,
+        targetId: result.predecessor.targetId,
+        reason: 'successor-custody-visible',
+        successorTicketId
+      });
+      saveRoomRegistry(roomsFile, operation.registry, latest.ledger);
+    } else if (!args.dryRun && result.status === 'uncertain') {
+      const latest = loadCustodyPolicy(ledgerFile, roomsFile);
+      const operation = markRoomUncertain(latest.registry, latest.ledger, { ticketId: predecessorTicketId }, {
+        actor,
+        targetId: result.predecessor?.targetId || null,
+        reason: result.errorCode || 'handoff-close-uncertain'
+      });
+      saveRoomRegistry(roomsFile, operation.registry, latest.ledger);
+    }
+    return result;
   });
-  if (args.receipt) writeReceipt(args.receipt, receipt);
-  console.log(args.json ? JSON.stringify(receipt, null, 2) : [
+  const outputFile = args.receipt || receiptFile(receiptDirectory, 'tab-handoff');
+  writeReceipt(outputFile, receipt);
+  console.log(args.json ? JSON.stringify({ receiptFile: outputFile, ...receipt }, null, 2) : [
     'ChatChain tab handoff: ' + receipt.status,
-    'Successor: ' + receipt.successor.url,
+    'Successor ticket: ' + successorTicketId,
     'Predecessor closed: ' + String(receipt.predecessorClosed),
+    'Receipt: ' + outputFile,
     receipt.requiresRecovery ? 'Recovery required: yes' : 'Recovery required: no'
   ].join('\n'));
   if (receipt.status === 'uncertain') process.exitCode = 2;

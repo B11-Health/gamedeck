@@ -12,6 +12,8 @@ Start from immutable state:
 - Run `npm run team:pulse`.
 - Inspect active, review, blocked, stale, and newly unblocked items.
 - Confirm that room claims match commits, artifacts, tests, or live surfaces.
+- Run `npm run chatchain:rooms -- status --json` when browser custody is active.
+- Treat idle and stale as different states; only ledger-derived room eligibility can authorize closure.
 
 Do not infer execution from a delivered prompt or an open tab.
 
@@ -54,13 +56,17 @@ After sending the task:
 - Record the first meaningful evidence timestamp.
 - Ensure no other active item owns the same file, surface, or artifact.
 
-For ChatChain successor tabs:
+For ChatChain successor rooms:
 
+- Initialize the private room registry before live dispatch.
 - Keep the predecessor open while the successor is being created or authenticated.
-- Confirm the successor is a distinct conversation and visibly started.
-- Run the tab handoff operator only after successor verification.
-- Close exactly the predecessor target; preserve unrelated tabs.
-- If closure is uncertain, do not retry. Mark recovery and inspect current targets.
+- Bind exactly one conversation to the successor CADOps ticket.
+- Make the successor accept custody before treating the room as ready.
+- Verify the room only after the exact conversation is visibly open and correct.
+- Start the successor ticket with visible launch evidence.
+- Run the ticket-bound tab handoff only after ledger and room verification agree.
+- Close exactly one predecessor target; preserve active, review, unmanaged, busy, protected, and unrelated tabs.
+- If closure or registry persistence is uncertain, do not retry. Preserve the private receipt and issue recovery.
 
 If execution does not start, the item remains `ready`; it is not `active`.
 
@@ -166,6 +172,15 @@ Owns acquisition and sustainability. It cannot publish product claims ahead of Q
 - Re-run the relevant gate before writing or publishing.
 - Record the tool failure separately from product failure.
 
+### Browser close or room-registry uncertainty
+
+- Do not resend a close request.
+- Preserve the automatically written private browser receipt.
+- Inspect current CDP targets without mutation.
+- Mark the room uncertain when the side effect or registry update cannot be proved.
+- Continue only under a distinct recovery identity.
+- Never infer that an idle room is safe to close.
+
 ### Ownership collision
 
 - Stop both tasks before further writes.
@@ -193,6 +208,12 @@ Run:
 
 ```bash
 npm run team:pulse
+```
+
+When ChatChain browser custody is active, also run:
+
+```bash
+npm run cadops:watch:live -- --cdp http://127.0.0.1:9222
 ```
 
 The pulse must answer:

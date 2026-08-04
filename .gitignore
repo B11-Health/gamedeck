@@ -40,3 +40,6 @@ tmp-*.log
 .tmp-stage-*
 .tmp-multiplayer-e2e*
 .tmp-*
+
+# Private local CADOps browser custody and receipts
+.cadops-private/

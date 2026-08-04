@@ -11,113 +11,187 @@ Imagine robots building a LEGO castle:
 3. A Supervisor checks the identities, evidence, and rules.
 4. A Watcher checks that nobody duplicated, skipped, or replayed work.
 
-When a worker finishes, it passes a baton and a receipt to the next worker. The receipt says what was completed, the proof, and the exact next job.
+When one robot finishes, it passes a baton and a receipt. The receipt says what was completed, the proof, and the exact next job.
 
-## Why separate chats
+## Three authorities
 
-One giant conversation can mix responsibilities, repeat actions, lose constraints, or accumulate stale context. ChatChains keep work replaceable and traceable:
+ChatChain browser operations use three separate sources of truth:
 
-- every chat has a unique CADOps identity;
-- only one chat holds accepted or active custody for a lane;
-- completion requires an exact receipt;
-- the successor must be explicitly authorized;
-- uncertain work is quarantined and recovered under a new identity;
-- a Watcher checks continuity and replay protection.
+1. **CADOps ledger** — `ops/cadops/ledger.json` says which ticket owns custody, whether it is prepared, accepted, active, completed, uncertain, or quarantined, and which successor is authorized.
+2. **Private room registry** — `.cadops-private/chatchains/rooms.json` binds one ChatGPT conversation identity to one CADOps ticket. It has its own append-only event hashes and close receipts. It is ignored by Git because conversation URLs are private operational data.
+3. **Live browser targets** — the Chromium DevTools endpoint proves which tabs are actually open, whether a response is generating, and whether the composer contains an unsent draft.
 
-## Tab lifecycle rule
+No one source can close a tab by itself. The ledger authorizes custody, the registry identifies the room, and the browser proves the live side effect.
 
-When a successor chat is opened, the predecessor tab must close only after the successor is proven to be a distinct, open ChatGPT conversation.
+## Core invariant
 
-The order is mandatory:
+**Idle is not stale.**
 
-1. Identify the exact predecessor target and conversation.
-2. Identify the exact successor target and conversation.
-3. Confirm the target IDs and conversation IDs are different.
-4. Activate the successor tab.
-5. Verify the same successor target remains at the same `https://chatgpt.com/c/<conversation-id>` URL for repeated polls.
-6. Re-check both identities immediately before the side effect.
-7. Request closure of exactly the predecessor target.
-8. Verify the predecessor disappeared and the successor remains open.
-9. Emit a machine-readable receipt.
+An idle room may still hold accepted, active, review, uncertain, or recovery custody. Automatic cleanup may close a room only when all of these are true:
+
+- the room is registered to exactly one CADOps ticket;
+- the ticket is completed;
+- the ticket either closed its chain as a Watcher or handed custody to exactly one successor;
+- a successor room is bound and verified when a successor is required;
+- the successor ticket has accepted, activated, or completed custody;
+- the predecessor target still has the same conversation identity;
+- the predecessor has no draft and is not generating;
+- the room is not protected, duplicated, unmanaged, or uncertain.
+
+Everything else stays open.
+
+## Room registry lifecycle
+
+Initialize the private registry once:
+
+```bash
+npm run chatchain:rooms:init
+```
+
+Bind the permanent control room:
+
+```bash
+npm run chatchain:rooms -- bind \
+  --control \
+  --url https://chatgpt.com/c/ROOM-WATCH-CONVERSATION \
+  --title "GameDeck Room Watch" \
+  --actor general-orchestrator
+```
+
+Bind a custody room to a prepared, accepted, active, uncertain, or quarantined ticket:
+
+```bash
+npm run chatchain:rooms -- bind \
+  --ticket T-0007 \
+  --url https://chatgpt.com/c/TESTER-CONVERSATION \
+  --title "GameDeck independent tester" \
+  --actor general-orchestrator
+```
+
+After the room is visibly open and correct, verify it:
+
+```bash
+npm run chatchain:rooms -- verify \
+  --ticket T-0007 \
+  --actor general-orchestrator
+```
+
+Inspect custody and closure eligibility:
+
+```bash
+npm run chatchain:rooms -- status --json
+```
+
+The registry rejects duplicate conversation identities, duplicate ticket bindings, ticket-role mismatches, event-chain tampering, and close-receipt tampering.
+
+## Safe baton pass
+
+The mandatory order is:
+
+1. Complete the predecessor ticket and create its immutable receipt.
+2. Create exactly one authorized successor ticket with `cadops handoff`.
+3. Open a new ChatGPT conversation for that successor.
+4. Bind the new room to the successor ticket.
+5. Make the successor accept custody.
+6. Confirm the room is visibly correct and record `rooms verify`.
+7. Start the successor ticket with visible launch evidence.
+8. Run the browser handoff using the predecessor and successor **ticket IDs**.
+9. Activate and repeatedly verify the successor target.
+10. Re-read the CADOps ledger and private room registry immediately before closing.
+11. Close exactly one predecessor target.
+12. Verify the predecessor disappeared and the successor remains open.
+13. Update the private room registry and write a durable private receipt.
+
+Example:
+
+```bash
+npm run chatchain:tabs -- handoff \
+  --cdp http://127.0.0.1:9222 \
+  --predecessor-ticket E-0007 \
+  --successor-ticket T-0007 \
+  --actor general-orchestrator \
+  --json
+```
+
+Target IDs may also be supplied, but when both a target ID and URL are present they must identify the same conversation.
+
+## Browser hygiene classifications
+
+The live audit classifies each ChatGPT tab as:
+
+- **protected** — control room, explicitly protected room, or custody that must remain open;
+- **busy** — a response is generating or the composer contains a draft;
+- **eligible** — ledger and registry prove that custody advanced and the room may close;
+- **unmanaged** — the conversation is open but not registered; it is reported and never auto-closed;
+- **unknown** — duplicate target, probe failure, inconsistent registry, closed registry room still visible, or another ambiguous state.
+
+Only `eligible` rooms may close automatically.
+
+Audit:
+
+```bash
+npm run cadops:browser -- --cdp http://127.0.0.1:9222 --json
+```
+
+Preview cleanup without side effects:
+
+```bash
+npm run chatchain:tabs -- clean \
+  --cdp http://127.0.0.1:9222 \
+  --json
+```
+
+Apply cleanup:
+
+```bash
+npm run cadops:browser:clean -- \
+  --cdp http://127.0.0.1:9222 \
+  --actor general-orchestrator \
+  --json
+```
+
+Cleanup closes at most one room by default. Increase `--max-close` only for a reviewed recovery operation.
+
+## Locks and receipts
+
+Browser mutations use an exclusive local lock at `.cadops-private/chatchains/browser.lock`. A second cleanup or handoff process is rejected while the lock exists.
+
+Every cleanup and handoff writes a private receipt under `.cadops-private/chatchains/receipts/` unless `--receipt` supplies another path. Receipts include exact closed, skipped, uncertain, and remaining counts. Conversation URLs are not committed to Git.
+
+## Failure and recovery
 
 The predecessor stays open when:
 
-- the successor is missing, ambiguous, not a conversation, or not stable;
-- predecessor and successor resolve to the same conversation;
-- the predecessor is protected;
-- either target changes identity before closure;
-- the browser-control endpoint is unavailable.
+- the successor is missing, ambiguous, unverified, not accepted, or not a ChatGPT conversation;
+- predecessor and successor are not the exact linked CADOps tickets;
+- either room is unregistered or has inconsistent identity;
+- the target ID and URL disagree;
+- a room is protected, busy, duplicated, unmanaged, or uninspectable;
+- custody changes during the final pre-close recheck;
+- the CDP endpoint is unavailable.
 
-A close request is issued at most once. If the connection ends after dispatch or closure cannot be verified, the result is `uncertain`. Do not resend the close request. Record recovery instead.
+A close request is issued at most once. If dispatch or verification is uncertain, the room registry records uncertainty and the close is not replayed. A recovery operator must inspect current targets and continue under a distinct CADOps recovery identity.
 
-## Continuous browser hygiene
-
-CADOps treats browser-tab sprawl as an operational defect. The live browser should contain only:
-
-- one permanent **GameDeck Room Watch** control tab;
-- one tab for each accepted, active, or review custody item that still needs interaction;
-- a verified successor during an in-progress handoff;
-- a tab with a non-empty draft or a response that is still generating.
-
-Everything else is stale. The Watcher audits the CDP session at every live pulse and closes stale tabs after rechecking them immediately before closure. The cleaner fails closed: Room Watch, explicit protected targets, explicit protected conversations, drafts, generating responses, and targets whose activity cannot be inspected are never automatically closed.
-
-A clean result means there are no idle, unprotected ChatGPT conversation tabs. A tab is not kept merely because its work was once important; its immutable CADOps receipt and Git evidence survive after the tab closes.
-
-Live audit:
-
-```bash
-npm run cadops:browser -- --cdp http://127.0.0.1:9944 --json
-```
-
-Apply safe cleanup:
-
-```bash
-npm run cadops:browser:clean -- --cdp http://127.0.0.1:9944 --protected-url https://chatgpt.com/c/ROOM-WATCH-ID --json
-```
-
-Run ledger and browser Watchers together:
-
-```bash
-npm run cadops:watch:live -- --cdp http://127.0.0.1:9944
-```
-
-The audit exits nonzero when stale or uninspectable tabs remain. Cleanup emits exact closed, skipped, uncertain, and remaining counts. A close request is never retried when its result is uncertain.
+If the browser closes successfully but the registry update fails, the browser receipt still records the verified side effect and marks recovery required.
 
 ## Browser requirement
 
-The operator uses a Chromium DevTools HTTP endpoint, normally bound only to localhost. It does not bypass ChatGPT authentication and it does not create a conversation by itself. It rotates two already-open, authenticated conversation tabs.
+The operator accepts only a loopback Chromium DevTools endpoint such as `http://127.0.0.1:9222`. Remote CDP endpoints are rejected. The tool does not bypass ChatGPT authentication and does not create a conversation by itself.
 
-No browser endpoint is assumed. If no endpoint is active, the command fails safely and leaves existing tabs alone.
+The real adapter verifies page readiness through the target WebSocket. Merely appearing in `/json/list` is not enough.
 
-## Commands
+## Live Watcher
 
-List open ChatGPT conversation targets:
-
-```bash
-npm run chatchain:tabs -- status --cdp http://127.0.0.1:9222
-```
-
-Preview a handoff without side effects:
+Run all three checks together:
 
 ```bash
-npm run chatchain:tabs -- handoff   --cdp http://127.0.0.1:9222   --predecessor-url https://chatgpt.com/c/OLD-CONVERSATION   --successor-url https://chatgpt.com/c/NEW-CONVERSATION   --dry-run
+npm run cadops:watch:live -- --cdp http://127.0.0.1:9222
 ```
 
-Close the exact predecessor after successor verification:
+This validates:
 
-```bash
-npm run chatchain:tabs -- handoff   --cdp http://127.0.0.1:9222   --predecessor-target OLD-TARGET-ID   --successor-target NEW-TARGET-ID   --receipt ops/chatchains/E-0005-tab-receipt.json   --json
-```
+1. the canonical CADOps ledger;
+2. the private room registry and its hash chain;
+3. the live browser against ledger-derived room policy.
 
-Target IDs are safer than URLs when several tabs could show the same conversation. Use `--protected-target ID` to prevent a specific predecessor from closing.
-
-## Receipt outcomes
-
-- `closed`: successor remained verified and the predecessor disappeared.
-- `already-closed`: successor is verified and the predecessor was already absent; no close was sent.
-- `planned`: dry-run validation passed; no browser side effect occurred.
-- `uncertain`: a close may have happened or post-close continuity could not be proved; recovery is required and no retry is allowed.
-
-## Relationship to CADOps
-
-The browser receipt is operational evidence. The CADOps ledger remains the authority for Builder, Tester, Supervisor, Watcher, quarantine, and recovery identities. Closing a predecessor tab does not erase its receipt, Git history, or chain record.
+A healthy result contains no critical ledger risk, invalid room binding, eligible predecessor left open, unmanaged room, duplicate conversation target, or unknown browser state.
