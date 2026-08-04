@@ -9,6 +9,7 @@ const { spawn, spawnSync } = require('child_process');
 const { pathToFileURL } = require('url');
 const { handoffHostWindowForNativeGame, presentNativeGameWindow } = require('./native-window-presenter');
 const { prepareOpenBorLaunch } = require('./openbor-launch');
+const { buildFbneoReadiness, isFatalLibretroReadinessLog, isFbneoCore, resolveLibretroLaunchCwd } = require('./libretro-launch');
 const { path7za } = require('7zip-bin');
 const { createRuntimeManager, pathsFor: managedRuntimePathsFor, key: managedRuntimeKey } = require('./runtime-manager');
 const { createStreamServer } = require('./stream-server');
@@ -2030,12 +2031,21 @@ function embeddedLaunchSpec(file) {
   let args = [];
   let launchCwd = path.dirname(emulator.executable);
   let openBorSession = null;
+  let libretroReadiness = null;
   if (emulator.kind === 'libretro') {
     if (emulator.executable !== MANAGED_RUNTIME_PATHS.retroArch) throw Error('Integrated play requires the managed GameDeck RetroArch runtime.');
-    const configs = [ensureRetroArchEmbeddedConfig(), isArcadeSystem(system) ? ensureRetroArchArcadeControllerConfig() : ''].filter(Boolean);
+    const arcade = isArcadeSystem(system);
+    const configs = [ensureRetroArchEmbeddedConfig(), arcade ? ensureRetroArchArcadeControllerConfig() : ''].filter(Boolean);
+    launchCwd = resolveLibretroLaunchCwd({ contentFile: safeFile, emulatorExecutable: emulator.executable, arcade });
+    if (arcade && isFbneoCore(emulator.corePath)) {
+      libretroReadiness = buildFbneoReadiness({ userData: app.getPath('userData'), shortName: game.shortName });
+      fs.mkdirSync(path.dirname(libretroReadiness.logFile), { recursive: true });
+      try { fs.unlinkSync(libretroReadiness.logFile); } catch {}
+    }
     args = [
       ...(fs.existsSync(MANAGED_RUNTIME_PATHS.config) ? ['--config', MANAGED_RUNTIME_PATHS.config] : []),
       ...(configs.length ? [`--appendconfig=${configs.join('|')}`] : []),
+      ...(libretroReadiness ? ['--verbose', `--log-file=${libretroReadiness.logFile}`] : []),
       '-L', emulator.corePath, safeFile
     ];
   } else if (emulator.kind === 'openbor') {
@@ -2072,7 +2082,7 @@ function embeddedLaunchSpec(file) {
       pollMs: 200,
       message: 'Loading the selected OpenBOR pack…',
       failureMessage: 'OpenBOR started, but the selected game pack did not load.'
-    } : null,
+    } : libretroReadiness,
     env: {
       ...process.env,
       SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS: '1',
@@ -2669,8 +2679,10 @@ function launchGame(file, options = {}) {
     presentation = openBorLaunch.presentation;
     args = openBorLaunch.args;
   } else if (emulator.kind === 'libretro') {
-    const controllerConfig = isArcadeSystem(system) ? ensureRetroArchArcadeControllerConfig() : '';
+    const arcade = isArcadeSystem(system);
+    const controllerConfig = arcade ? ensureRetroArchArcadeControllerConfig() : '';
     const managedConfig = emulator.executable === MANAGED_RUNTIME_PATHS.retroArch && fs.existsSync(MANAGED_RUNTIME_PATHS.config) ? ['--config', MANAGED_RUNTIME_PATHS.config] : [];
+    launchCwd = resolveLibretroLaunchCwd({ contentFile: safeFile, emulatorExecutable: emulator.executable, arcade });
     args = ['-f', ...managedConfig, ...(controllerConfig ? ['--appendconfig=' + controllerConfig] : []), '-L', emulator.corePath, safeFile];
   } else if (emulator.kind === 'mame') {
     args = [game.shortName, '-rompath', mameRomSearchPath(safeFile), '-joystick', ...(process.platform === 'win32' ? ['-joystickprovider', 'winhybrid'] : []), '-skip_gameinfo', '-noconfirm_quit', '-nowindow'];
@@ -4137,7 +4149,7 @@ app.whenReady().then(() => {
       let text = '';
       try { text = fs.readFileSync(readiness.logFile, 'utf8'); } catch { return { ready: false }; }
       if (text.includes(readiness.requiredText)) return { ready: true };
-      if (/Unable to load|FATAL|Could not open|No games were found/i.test(text)) {
+      if (isFatalLibretroReadinessLog(text) || /Unable to load|FATAL|Could not open|No games were found/i.test(text)) {
         return { ready: false, fatal: true, error: readiness.failureMessage || 'The selected game did not load.' };
       }
       return { ready: false };
