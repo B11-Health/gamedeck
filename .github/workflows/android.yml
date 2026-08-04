@@ -63,6 +63,11 @@ jobs:
           set -euo pipefail
           APK=app/build/outputs/apk/debug/app-debug.apk
           OUT=app/build/outputs/apk/debug
+          BADGING="$OUT/APK-BADGING.txt"
+          PACKAGE=$(sed -n "s/^package: name='\([^']*\)'.*/\1/p" "$BADGING" | head -1)
+          ACTIVITY=$(sed -n "s/^launchable-activity: name='\([^']*\)'.*/\1/p" "$BADGING" | head -1)
+          test -n "$PACKAGE"
+          test -n "$ACTIVITY"
           AVD=gamedeck_api36
           EMULATOR="$ANDROID_HOME/emulator/emulator"
           export ANDROID_AVD_HOME="$RUNNER_TEMP/android-avd"
@@ -116,22 +121,23 @@ jobs:
           adb shell settings put global window_animation_scale 0
           adb shell settings put global transition_animation_scale 0
           adb shell settings put global animator_duration_scale 0
-          adb install -r "$APK"
-          adb shell am start -W -n io.gamedeck.mobile/.MainActivity \
+          adb install "$APK"
+          adb shell am start -W -n "$PACKAGE/$ACTIVITY" \
             | tee "$OUT/ACTIVITY-START.txt"
           sleep 6
           adb shell dumpsys window \
             | grep -E "mCurrentFocus|mFocusedApp" \
             | tee "$OUT/WINDOW-FOCUS.txt"
-          grep -q "io.gamedeck.mobile" "$OUT/WINDOW-FOCUS.txt"
+          grep -Fq "$PACKAGE" "$OUT/WINDOW-FOCUS.txt"
           adb shell uiautomator dump /sdcard/gamedeck-window.xml
           adb pull /sdcard/gamedeck-window.xml "$OUT/UI-HIERARCHY.xml"
-          grep -q "io.gamedeck.mobile" "$OUT/UI-HIERARCHY.xml"
+          grep -Fq "$PACKAGE" "$OUT/UI-HIERARCHY.xml"
           grep -Eqi "GAMEDECK|GameDeck" "$OUT/UI-HIERARCHY.xml"
           adb exec-out screencap -p > "$OUT/EMULATOR-SCREENSHOT.png"
           test -s "$OUT/EMULATOR-SCREENSHOT.png"
           adb logcat -d -v brief > "$OUT/LOGCAT.txt"
-          ! grep -Eqi "FATAL EXCEPTION.*io\.gamedeck\.mobile|Process: io\.gamedeck\.mobile.*FATAL EXCEPTION" "$OUT/LOGCAT.txt"
+          PACKAGE_REGEX=${PACKAGE//./\\.}
+          ! grep -Eqi "FATAL EXCEPTION.*$PACKAGE_REGEX|Process: $PACKAGE_REGEX.*FATAL EXCEPTION" "$OUT/LOGCAT.txt"
 
       - name: Upload Android debug and smoke evidence
         if: always()
