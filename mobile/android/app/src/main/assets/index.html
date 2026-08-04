@@ -82,13 +82,13 @@
       </section>
 
       <section class="view" data-view-panel="discover">
-        <section class="page-head"><div><div class="eyebrow">OPTIONAL PROVIDER</div><h1>Discover through RGSX.</h1><p>GameDeck keeps RGSX optional: local play never depends on a catalog provider.</p></div><span class="page-glyph">R</span></section>
+        <section class="page-head"><div><div class="eyebrow">GAME CATALOG</div><h1>Find something great.</h1><p>Browse systems available in GameDeck. Discover is connected automatically and requires no provider setup.</p></div><span class="page-glyph">✦</span></section>
         <section class="provider-card">
-          <div class="provider-status"><i id="rgsxDot"></i><div><small>RGSX ADAPTER</small><h2 id="rgsxTitle">Not configured</h2><p id="rgsxMessage">Choose an existing RGSX root to inspect its catalog metadata.</p></div></div>
-          <div class="provider-metrics"><div><strong id="rgsxSystems">0</strong><span>CATALOG SYSTEMS</span></div><div><strong id="rgsxTransfer">OFF</strong><span>TRANSFER ADAPTER</span></div><div><strong>LOCAL</strong><span>DATA BOUNDARY</span></div></div>
-          <div class="provider-actions"><button class="primary focusable" id="chooseRgsx" type="button">Choose RGSX folder</button><button class="secondary focusable" id="refreshRgsx" type="button">Inspect again</button></div>
+          <div class="provider-status"><i id="rgsxDot"></i><div><small>DISCOVER</small><h2 id="rgsxTitle">Connecting catalog</h2><p id="rgsxMessage">GameDeck is preparing your discovery catalog.</p></div></div>
+          <div class="provider-metrics"><div><strong id="rgsxSystems">0</strong><span>SUPPORTED SYSTEMS</span></div><div><strong id="rgsxTransfer">AUTO</strong><span>CATALOG CONNECTION</span></div><div><strong>PRIVATE</strong><span>LIBRARY BOUNDARY</span></div></div>
+          <div class="provider-actions"><button class="primary focusable hidden" id="chooseRgsx" type="button" aria-hidden="true" tabindex="-1">Internal catalog override</button><button class="secondary focusable" id="refreshRgsx" type="button">Refresh catalog</button></div>
         </section>
-        <section class="truth-card"><div class="eyebrow">PROVIDER BOUNDARY</div><h2>Discover, firmware, and repair—never guest file transfer.</h2><p>The desktop mechanics use RGSX for optional catalogs, BIOS restoration, arcade dependencies, and managed repair. Android will preserve that boundary. Remote guests never receive ROMs, BIOS files, saves, or keys.</p></section>
+        <section class="truth-card"><div class="eyebrow">BUILT INTO GAMEDECK</div><h2>Discovery without technical setup.</h2><p>GameDeck handles catalog providers behind the product surface. Your local game files, firmware, saves, and keys remain private and are never sent to remote guests.</p></section>
       </section>
 
       <section class="view" data-view-panel="remote">
@@ -110,7 +110,7 @@
           <article class="status-card"><header><span>APPLICATION</span><i class="good"></i></header><h2>Android shell</h2><strong>READY</strong><p>Bundled local UI, secure storage picker, library scanner, and controller navigation.</p></article>
           <article class="status-card" id="runtimeCard"><header><span>GAME ENGINES</span><i></i></header><h2 id="runtimeTitle">Embedded runtime</h2><strong id="runtimeState">CHECKING</strong><p id="runtimeMessage">Inspecting this device.</p></article>
           <article class="status-card"><header><span>LIBRARY</span><i id="libraryDot"></i></header><h2 id="libraryTitle">Local library</h2><strong id="libraryState">NOT SELECTED</strong><p id="libraryMessage">Choose one folder through Android's system picker.</p></article>
-          <article class="status-card"><header><span>RGSX</span><i id="statusRgsxDot"></i></header><h2>Optional provider</h2><strong id="statusRgsxState">NOT CONFIGURED</strong><p id="statusRgsxMessage">No dependency on RGSX for normal local browsing.</p></article>
+          <article class="status-card"><header><span>DISCOVER</span><i id="statusRgsxDot"></i></header><h2>Catalog service</h2><strong id="statusRgsxState">CONNECTING</strong><p id="statusRgsxMessage">GameDeck connects discovery automatically.</p></article>
         </section>
         <section class="reason-card"><div><small>PUBLIC REASON</small><code id="reasonCode">android_embedded_runtime_pending</code></div><p id="reasonAction">Next action: integrate and verify an Android-native libretro host and signed core bundle.</p></section>
       </section>
