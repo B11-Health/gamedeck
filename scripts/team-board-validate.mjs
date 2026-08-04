@@ -83,7 +83,7 @@ function findDependencyCycle(itemsById) {
 export function validateBoard(board) {
   const errors = [];
   if (!board || typeof board !== 'object' || Array.isArray(board)) return ['board must be a JSON object'];
-  if (board.version !== 2) errors.push('version must equal 2');
+  if (board.version !== 3) errors.push('version must equal 3');
   if (!isNonEmptyString(board.northStar) || board.northStar.trim().length < 40) errors.push('northStar must be a concrete sentence of at least 40 characters');
   if (!isIsoDate(board.updatedAt)) errors.push('updatedAt must be a valid ISO date');
   if (!Array.isArray(board.lanes) || board.lanes.length === 0) errors.push('lanes must be a non-empty array');
