@@ -1,6 +1,6 @@
 {
-  "version": 2,
-  "updatedAt": "2026-08-03T14:20:00-04:00",
+  "version": 3,
+  "updatedAt": "2026-08-03T21:22:00-04:00",
   "northStar": "A friend can receive an invitation, pass readiness checks, and reach responsive gameplay in under ten minutes across the widest truthful set of legally owned games.",
   "productTargets": {
     "inviteToPlayableP95Minutes": 10,
@@ -34,7 +34,16 @@
       "ops/team-board.json",
       "conversation status"
     ],
-    "permissionPromptPolicy": "Approve Authenticated Shell prompts only for the bounded task, then verify execution actually started."
+    "permissionPromptPolicy": "Approve Authenticated Shell prompts only for the bounded task; verify the command actually began, record the command/result receipt, and treat a prompt approval without execution evidence as not started.",
+    "crossLaneReceiptsRequired": true,
+    "permissionPromptVerificationRequired": true,
+    "staleTabRecoveryRequired": true,
+    "artifactIntegrityGateRequired": true,
+    "completedTaskMustCreateOrUnblockNext": true,
+    "rejectionOwnerContinuity": true,
+    "staleTabRecoveryPolicy": "Before acting on a room or tab, verify exact target identity and current immutable evidence. If stale, missing, or uncertain, quarantine the old dispatch and issue a distinct recovery identity without replaying the prior action.",
+    "artifactIntegrityPolicy": "No artifact version supersedes another without exact bytes or canonical location, byte length, SHA-256, foundation/base identity, and reviewer verdicts tied to those exact bytes.",
+    "completionContinuityPolicy": "Every completed task must immediately create or unblock exactly one next bounded task, with owner, scope, evidence gate, and rollback point."
   },
   "statuses": [
     "planned",
@@ -105,7 +114,7 @@
       "id": "program-ops",
       "name": "Program Operations and Integration",
       "mission": "Maintain the critical path, allocate non-overlapping ownership, verify handoffs, and protect main.",
-      "status": "review",
+      "status": "active",
       "ownerRole": "General Orchestrator",
       "reviewerRole": "Independent Integration QA",
       "capabilities": [
@@ -114,8 +123,8 @@
         "integration gates",
         "remediation closure"
       ],
-      "branch": "ops/team-operating-system-v2",
-      "worktree": "gamedeck-program-ops",
+      "branch": "ops/team-operating-system-v3",
+      "worktree": "gamedeck-program-ops-v3",
       "scope": {
         "files": [
           "docs/TEAM_OPERATING_SYSTEM.md",
@@ -135,7 +144,7 @@
         "exact pushed commit",
         "independent review"
       ],
-      "nextAction": "Independent Integration QA reviews the exact orchestration sequence before any integration decision."
+      "nextAction": "Publish and independently review the v3 operating-system update; after any rejection, retain correction ownership through re-review."
     },
     {
       "id": "multiplayer-platform",
@@ -418,24 +427,24 @@
   "workItems": [
     {
       "id": "OPS-001",
-      "title": "Operationalize the GameDeck team system",
+      "title": "Reconcile and harden the GameDeck team operating system v3",
       "priority": "P0",
-      "status": "review",
+      "status": "active",
       "ownerLane": "program-ops",
       "reviewerLane": "qa-observability",
       "approvalLanes": [
         "security-privacy"
       ],
       "dependencies": [],
-      "objective": "Replace lane-wide blocking with task-level dependencies and provide an executable pulse that exposes focus, ready work, stale work, WIP, and critical risks.",
+      "objective": "Reconcile the operating board to origin/main truth and add enforceable communication, permission, stale-tab, artifact-integrity, correction-closure, and next-task continuity controls.",
       "nonGoals": [
         "modify multiplayer product code",
         "merge to main",
         "publish marketing",
         "make partner or spending commitments"
       ],
-      "branch": "ops/team-operating-system-v2",
-      "worktree": "gamedeck-program-ops",
+      "branch": "ops/team-operating-system-v3",
+      "worktree": "gamedeck-program-ops-v3",
       "scope": {
         "files": [
           "docs/TEAM_OPERATING_SYSTEM.md",
@@ -467,22 +476,22 @@
         "WIP, dependency cycles, stale rules, and reviewer independence are enforced",
         "worktree is clean after push"
       ],
-      "startedAt": "2026-08-03T13:44:00-04:00",
-      "lastEvidenceAt": "2026-08-03T14:20:00-04:00",
+      "startedAt": "2026-08-03T21:22:00-04:00",
+      "lastEvidenceAt": "2026-08-03T21:25:18-04:00",
       "exactEvidence": [
-        "Implementation commit 6ba5f1825c031768b487dcd91af377d3ed0a8bd8",
-        "npm test passed: repository audit, board validation, 14 validator scenarios, 5 pulse scenarios, play-session-manager 28 tests, runtime cache limit test, smoke test",
-        "git diff --check passed",
-        "Orchestrator pulse reported 2 P0 focus items, 3 executable P1 items, 0 stale items, and 0 critical risks at 2026-08-03T14:20:01-04:00"
+        "origin/main verified at 1cbec11d13ee923cdaa0825748aac5e88965a903",
+        "origin/main history includes Aurora, CADOps, console UIUX, and OpenBOR integration",
+        "No repository commit or canonical board evidence for Runtime contract V1.0.5 was found; V1.0.4 remains the current verified review target",
+        "Full repository check chain passed directly through Node: CADOps 19 scenarios, ledger validate/watch healthy, repository audit, board validation, 14 validator scenarios, 5 pulse scenarios, syntax checks, play-session-manager 28 tests, library classifier, runtime cache stream limit, and smoke test"
       ],
       "blocker": null,
       "unblockOwner": null,
-      "nextAction": "Independent Integration QA reviews commit 6ba5f1825c031768b487dcd91af377d3ed0a8bd8 plus this board-state transition, then returns APPROVE or a bounded remediation packet.",
-      "rollbackPoint": "ba0ac57a4cabf29b81b74cfde7a7110fffe28e27"
+      "nextAction": "Run validators, pulse tests, full npm test, and git diff --check; commit and push the bounded branch for independent Integration QA.",
+      "rollbackPoint": "1cbec11d13ee923cdaa0825748aac5e88965a903"
     },
     {
       "id": "PLAY-001",
-      "title": "Approve immutable Runtime pure contract V1.0.4",
+      "title": "Approve immutable Runtime pure contract V1.0.4 unless V1.0.5 exact evidence is produced",
       "priority": "P0",
       "status": "review",
       "ownerLane": "multiplayer-platform",
@@ -531,7 +540,7 @@
       ],
       "blocker": null,
       "unblockOwner": null,
-      "nextAction": "Collect the independent Security verdict and keep any rejection in the same reviewer-owned remediation loop.",
+      "nextAction": "Continue V1.0.4 review. Promote V1.0.5 only after exact bytes, byte lengths, SHA-256 values, foundation/base identity, and reviewer verdicts are recorded against the same artifact.",
       "rollbackPoint": "V1.0.3 remains invalid and superseded; no implementation may fall back to it."
     },
     {
@@ -1135,6 +1144,78 @@
       "ownerLane": "monetization",
       "risk": "Relay costs can grow faster than voluntary funding.",
       "mitigation": "Set explicit capacity, cost, consent, and stop-loss limits before deployment."
+    }
+  ],
+  "currentGitTruth": {
+    "verifiedAt": "2026-08-03T21:22:00-04:00",
+    "originMain": "1cbec11d13ee923cdaa0825748aac5e88965a903",
+    "includedSequences": [
+      "Aurora focus integration",
+      "CADOps custody foundation",
+      "console UIUX integration",
+      "OpenBOR catalog and launch support"
+    ],
+    "runtimeContract": {
+      "currentVerifiedVersion": "V1.0.4",
+      "status": "review",
+      "supersessionRule": "V1.0.5 may replace V1.0.4 only after exact artifact-integrity evidence and reviewer verdicts are recorded.",
+      "v105EvidenceFound": false
+    }
+  },
+  "communicationReceiptSchema": {
+    "requiredFields": [
+      "fromLane",
+      "toLane",
+      "workItem",
+      "event",
+      "immutableTarget",
+      "messageOrArtifact",
+      "sentAt",
+      "acknowledgedAt",
+      "executionEvidence",
+      "nextBoundedAction"
+    ],
+    "events": [
+      "dispatch",
+      "acceptance",
+      "evidence",
+      "blocker",
+      "rejection",
+      "correction",
+      "approval",
+      "integration",
+      "completion",
+      "stale-recovery"
+    ]
+  },
+  "programQueues": [
+    {
+      "id": "MARKETING-QUEUE",
+      "lane": "growth-community",
+      "status": "ready",
+      "entryRule": "Only claims backed by current QA or immutable artifact evidence.",
+      "nextBoundedTask": "Prepare tester recruitment assets using verified OpenBOR, console UIUX, Aurora, and CADOps evidence; do not publish without approval."
+    },
+    {
+      "id": "MONETIZATION-QUEUE",
+      "lane": "monetization",
+      "status": "ready",
+      "entryRule": "Separate verified infrastructure costs, assumptions, and unknown demand; no spending or commitments.",
+      "nextBoundedTask": "Produce low/base/high supporter, sponsor, and optional relay economics."
+    },
+    {
+      "id": "ANALYTICS-QUEUE",
+      "lane": "analytics",
+      "status": "ready",
+      "entryRule": "Use aggregate or opt-in evidence only; no invasive telemetry.",
+      "nextBoundedTask": "Define KPI dictionary for discovery, successful launch, invite readiness, play success, retention, and contribution."
+    },
+    {
+      "id": "PARTNERSHIPS-QUEUE",
+      "lane": "partnerships",
+      "status": "planned",
+      "entryRule": "Research is allowed; outreach and commitments require owner approval plus compatibility and cost evidence.",
+      "nextBoundedTask": "Build a qualified emulator, controller, relay, creator, and open-source partner pipeline."
     }
   ]
 }

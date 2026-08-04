@@ -230,3 +230,9 @@ Do not sell conversation data, gameplay data, library inventories, invite metada
 10. Player-facing recovery and focus contract
 11. Privacy-preserving multiplayer KPI tree
 12. Verified multiplayer acquisition campaign
+
+## Program-operations continuity gates
+
+Online Play work uses cross-lane receipts for Runtime, Compatibility, Player Experience, Security, and Integration QA transitions. Runtime contract V1.0.4 remains the current verified review target until a V1.0.5 artifact is proven by exact bytes, byte length, SHA-256, foundation/base identity, and reviewer verdicts tied to the same immutable object. Product work may not infer supersession from a conversation claim alone.
+
+Every approved contract or completed slice immediately unblocks one bounded successor; every rejection stays in a correction and re-review loop owned by the correction owner and original reviewer.

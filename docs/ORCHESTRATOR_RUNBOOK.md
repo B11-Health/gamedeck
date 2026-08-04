@@ -214,4 +214,10 @@ npm run team:pulse:json
 
 Before dispatch, issue the lane ticket and record the assignee. After the teammate visibly accepts and starts, record launch evidence. On completion, record the exact version, checks, and artifact hashes, then create exactly one authorized successor. When dispatch or completion is uncertain, do not retry the ticket: mark it uncertain, quarantine it, and issue a distinct recovery identity.
 
-Run `npm run cadops:watch` with every repository pulse and `npm run cadops:watch:live -- --cdp <local-endpoint>` whenever the authenticated CDP browser is active. Keep one Room Watch control tab plus only tabs tied to accepted, active, or review custody. After a verified handoff, close the predecessor. Never automatically close a draft, a generating response, an explicitly protected tab, or a target whose activity probe is uncertain.
+Run `npm run cadops:watch` with every orchestrator and repository pulse, and run `npm run cadops:watch:live -- --cdp LOCAL_ENDPOINT` whenever the authenticated CDP browser is active. Keep one Room Watch control tab plus only tabs tied to accepted, active, or review custody. After a verified handoff, close the predecessor. Never automatically close a draft, a generating response, an explicitly protected tab, or a target whose activity probe is uncertain.
+
+## v3 pulse additions
+
+At each pulse, verify: cross-lane receipts are acknowledged; permission prompts produced execution evidence; room/tab identity is current; artifact hashes and reviewer verdicts match exact bytes; rejected work still has the same correction and closure owners; each completion created or unblocked the next bounded task; and marketing, monetization, analytics, and partnerships queues have one evidence-bounded next action.
+
+When a tab or dispatch is stale or uncertain, quarantine it, preserve the last verified target, assign a new recovery identity, and do not replay side effects. When a claimed successor artifact lacks exact integrity evidence, preserve the previous verified version and report the successor as unverified.
