@@ -1,5 +1,38 @@
 plugins { id 'com.android.application' }
 
+def repositoryRoot = new File(rootProject.projectDir, '../..').canonicalFile
+def sharedRendererAssets = file("$buildDir/generated/sharedRenderer")
+
+tasks.register('prepareSharedRenderer') {
+    inputs.dir(new File(repositoryRoot, 'src'))
+    inputs.dir(new File(repositoryRoot, 'assets'))
+    outputs.dir(sharedRendererAssets)
+
+    doLast {
+        delete sharedRendererAssets
+        copy {
+            from new File(repositoryRoot, 'src')
+            into new File(sharedRendererAssets, 'desktop')
+        }
+        copy {
+            from new File(repositoryRoot, 'assets')
+            into new File(sharedRendererAssets, 'assets')
+        }
+
+        File indexFile = new File(sharedRendererAssets, 'desktop/index.html')
+        String index = indexFile.getText('UTF-8')
+        index = index.replace(
+            '<link rel="stylesheet" href="styles.css">',
+            '<link rel="stylesheet" href="styles.css">\n  <link rel="stylesheet" href="android-overrides.css">'
+        )
+        index = index.replace(
+            '<script src="app.js"></script>',
+            '<script src="platform-android.js"></script>\n  <script src="app.js"></script>'
+        )
+        indexFile.write(index, 'UTF-8')
+    }
+}
+
 android {
     namespace 'io.gamedeck.mobile'
     compileSdk 36
@@ -8,12 +41,22 @@ android {
         applicationId 'io.gamedeck.mobile.preview'
         minSdk 26
         targetSdk 36
-        versionCode 3
-        versionName '0.2.1-preview'
+        versionCode 4
+        versionName '0.3.0-parity-preview'
+    }
+
+    sourceSets {
+        main {
+            assets.srcDir(sharedRendererAssets)
+        }
     }
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_11
         targetCompatibility JavaVersion.VERSION_11
     }
+}
+
+tasks.named('preBuild').configure {
+    dependsOn tasks.named('prepareSharedRenderer')
 }
