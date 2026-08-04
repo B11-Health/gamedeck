@@ -50,57 +50,6 @@ jobs:
       - name: Build debug APK
         run: gradle :app:assembleDebug --no-daemon --stacktrace
 
-      - name: Launch clean API 36 emulator smoke test
-        run: |
-          set -euo pipefail
-          APK=app/build/outputs/apk/debug/app-debug.apk
-          AVD=gamedeck_api36
-          test -f "$APK"
-          echo no | avdmanager create avd \
-            --force \
-            --name "$AVD" \
-            --package "system-images;android-36;google_apis;x86_64" \
-            --device pixel_6
-          if [ -e /dev/kvm ]; then sudo chmod 666 /dev/kvm; fi
-          nohup emulator \
-            -avd "$AVD" \
-            -no-window \
-            -no-audio \
-            -no-boot-anim \
-            -no-snapshot \
-            -gpu swiftshader_indirect \
-            > app/build/outputs/apk/debug/EMULATOR-LOG.txt 2>&1 &
-          adb wait-for-device
-          booted=0
-          for attempt in $(seq 1 120); do
-            if [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ]; then
-              booted=1
-              break
-            fi
-            sleep 2
-          done
-          test "$booted" = "1"
-          adb shell settings put global window_animation_scale 0
-          adb shell settings put global transition_animation_scale 0
-          adb shell settings put global animator_duration_scale 0
-          adb install -r "$APK"
-          adb shell am start -W -n io.gamedeck.mobile/.MainActivity \
-            | tee app/build/outputs/apk/debug/ACTIVITY-START.txt
-          sleep 6
-          adb shell dumpsys window \
-            | grep -E "mCurrentFocus|mFocusedApp" \
-            | tee app/build/outputs/apk/debug/WINDOW-FOCUS.txt
-          grep -q "io.gamedeck.mobile" app/build/outputs/apk/debug/WINDOW-FOCUS.txt
-          adb shell uiautomator dump /sdcard/gamedeck-window.xml
-          adb pull /sdcard/gamedeck-window.xml app/build/outputs/apk/debug/UI-HIERARCHY.xml
-          grep -q "io.gamedeck.mobile" app/build/outputs/apk/debug/UI-HIERARCHY.xml
-          grep -Eqi "GAMEDECK|GameDeck" app/build/outputs/apk/debug/UI-HIERARCHY.xml
-          adb exec-out screencap -p > app/build/outputs/apk/debug/EMULATOR-SCREENSHOT.png
-          test -s app/build/outputs/apk/debug/EMULATOR-SCREENSHOT.png
-          adb logcat -d -v brief > app/build/outputs/apk/debug/LOGCAT.txt
-          ! grep -Eqi "FATAL EXCEPTION.*io\.gamedeck\.mobile|Process: io\.gamedeck\.mobile.*FATAL EXCEPTION" app/build/outputs/apk/debug/LOGCAT.txt
-          adb emu kill || true
-
       - name: Inspect and checksum APK
         run: |
           APK=app/build/outputs/apk/debug/app-debug.apk
@@ -109,7 +58,76 @@ jobs:
           unzip -l "$APK" > app/build/outputs/apk/debug/APK-CONTENTS.txt
           "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump badging "$APK" > app/build/outputs/apk/debug/APK-BADGING.txt
 
+      - name: Launch clean API 36 emulator smoke test
+        run: |
+          set -euo pipefail
+          APK=app/build/outputs/apk/debug/app-debug.apk
+          OUT=app/build/outputs/apk/debug
+          AVD=gamedeck_api36
+          test -f "$APK"
+          echo no | avdmanager create avd \
+            --force \
+            --name "$AVD" \
+            --package "system-images;android-36;google_apis;x86_64" \
+            --device pixel_6
+          ACCEL=off
+          if [ -e /dev/kvm ]; then
+            sudo chmod 666 /dev/kvm
+            ACCEL=on
+          fi
+          emulator \
+            -avd "$AVD" \
+            -no-window \
+            -no-audio \
+            -no-boot-anim \
+            -no-snapshot \
+            -accel "$ACCEL" \
+            -gpu swiftshader_indirect \
+            > "$OUT/EMULATOR-LOG.txt" 2>&1 &
+          EMULATOR_PID=$!
+          trap 'adb emu kill >/dev/null 2>&1 || true; kill "$EMULATOR_PID" >/dev/null 2>&1 || true' EXIT
+          if ! timeout 180 adb wait-for-device; then
+            cat "$OUT/EMULATOR-LOG.txt"
+            exit 1
+          fi
+          booted=0
+          for attempt in $(seq 1 120); do
+            if ! kill -0 "$EMULATOR_PID" 2>/dev/null; then
+              cat "$OUT/EMULATOR-LOG.txt"
+              exit 1
+            fi
+            if [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ]; then
+              booted=1
+              break
+            fi
+            sleep 2
+          done
+          if [ "$booted" != "1" ]; then
+            cat "$OUT/EMULATOR-LOG.txt"
+            exit 1
+          fi
+          adb shell settings put global window_animation_scale 0
+          adb shell settings put global transition_animation_scale 0
+          adb shell settings put global animator_duration_scale 0
+          adb install -r "$APK"
+          adb shell am start -W -n io.gamedeck.mobile/.MainActivity \
+            | tee "$OUT/ACTIVITY-START.txt"
+          sleep 6
+          adb shell dumpsys window \
+            | grep -E "mCurrentFocus|mFocusedApp" \
+            | tee "$OUT/WINDOW-FOCUS.txt"
+          grep -q "io.gamedeck.mobile" "$OUT/WINDOW-FOCUS.txt"
+          adb shell uiautomator dump /sdcard/gamedeck-window.xml
+          adb pull /sdcard/gamedeck-window.xml "$OUT/UI-HIERARCHY.xml"
+          grep -q "io.gamedeck.mobile" "$OUT/UI-HIERARCHY.xml"
+          grep -Eqi "GAMEDECK|GameDeck" "$OUT/UI-HIERARCHY.xml"
+          adb exec-out screencap -p > "$OUT/EMULATOR-SCREENSHOT.png"
+          test -s "$OUT/EMULATOR-SCREENSHOT.png"
+          adb logcat -d -v brief > "$OUT/LOGCAT.txt"
+          ! grep -Eqi "FATAL EXCEPTION.*io\.gamedeck\.mobile|Process: io\.gamedeck\.mobile.*FATAL EXCEPTION" "$OUT/LOGCAT.txt"
+
       - name: Upload Android debug and smoke evidence
+        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: gamedeck-android-debug-${{ github.event.pull_request.head.sha || github.sha }}
@@ -124,5 +142,5 @@ jobs:
             mobile/android/app/build/outputs/apk/debug/EMULATOR-SCREENSHOT.png
             mobile/android/app/build/outputs/apk/debug/EMULATOR-LOG.txt
             mobile/android/app/build/outputs/apk/debug/LOGCAT.txt
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 14
