@@ -108,6 +108,8 @@ const state = {
 
 let playCaptureStream = null;
 let playCapturePromise = null;
+let playCaptureGeneration = 0;
+let playCaptureFallbackPending = false;
 let playAmbientTimer = null;
 let playAmbientCanvas = null;
 let playAmbientContext = null;
@@ -1631,6 +1633,7 @@ function updatePlayAmbientState() {
 }
 
 function stopPlayCapture() {
+  playCaptureGeneration += 1;
   stopPlayAmbient(true);
   resetPlayHapticBinding('idle');
   if (playCaptureStream) {
@@ -1794,6 +1797,7 @@ function resetPlaySessionUi() {
   document.body.classList.remove('play-session-open');
   const game = state.library.games.find(item => item.id === state.playGameId || item.file === state.playFile);
   setLaunchingState(game, false);
+  playCaptureFallbackPending = false;
   state.playSession = { active: false, phase: 'idle', sessionId: '', title: '', mode: 'docked', aspectRatio: 16 / 9, captureReady: false };
   state.playFile = '';
   state.playGameId = null;
@@ -1820,6 +1824,7 @@ async function acquirePlayCapture(status = state.playSession) {
       return null;
     }
     playCaptureStream = stream;
+    const captureGeneration = ++playCaptureGeneration;
     const video = $('#playVideo');
     video.srcObject = stream;
     video.muted = true;
@@ -1838,10 +1843,8 @@ async function acquirePlayCapture(status = state.playSession) {
     video.onresize = () => schedulePlaySourceAspect(video, sessionId);
     for (const track of stream.getVideoTracks()) {
       track.addEventListener('ended', () => {
-        if (state.playSession.active && state.playSession.mode !== 'popout') {
-          $('#playCaptureErrorMessage').textContent = 'The live game window stopped sharing. The game may still be running in Pop out.';
-          $('#playCaptureError').classList.remove('hidden');
-        }
+        if (captureGeneration !== playCaptureGeneration) return;
+        void fallbackPlayCaptureToPopout('The live game window stopped sharing. Continuing in Pop out.');
       }, { once: true });
     }
     const started = await window.deck.playSessionCaptureStarted(sessionId);
@@ -1860,10 +1863,8 @@ async function acquirePlayCapture(status = state.playSession) {
       return null;
     }
     $('#playLoading').classList.add('ready');
-    $('#playCaptureErrorMessage').textContent = error.message || 'The integrated game video could not start.';
-    $('#playCaptureError').classList.remove('hidden');
     hideLaunchCurtain();
-    toast('Integrated video needs attention. The game can continue in Pop out.', 'warning');
+    await fallbackPlayCaptureToPopout(error.message || 'The integrated game video could not start. Continuing in Pop out.');
     return null;
   } finally {
     playCapturePromise = null;
@@ -1891,6 +1892,21 @@ async function handlePlaySessionUpdate(status = {}) {
   if (failed && message) toast(message, 'warning');
   else if (wasActive && status.phase === 'ended') toast('Game closed. Welcome back to your library.', 'success');
   if (wasActive) loadLibrary(false);
+}
+
+async function fallbackPlayCaptureToPopout(message) {
+  const current = state.playSession;
+  if (playCaptureFallbackPending || !current?.active || current.mode === 'popout') return false;
+  playCaptureFallbackPending = true;
+  try {
+    $('#playCaptureErrorMessage').textContent = message || 'Integrated video was unavailable. Continuing in Pop out.';
+    $('#playCaptureError').classList.remove('hidden');
+    toast('Integrated video was unavailable. Continuing in Pop out.', 'warning');
+    await setPlayMode('popout');
+    return state.playSession?.mode === 'popout';
+  } finally {
+    playCaptureFallbackPending = false;
+  }
 }
 
 async function setPlayMode(mode) {

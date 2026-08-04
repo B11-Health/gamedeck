@@ -1899,7 +1899,8 @@ function setEmbeddedEngineWindowMode(session, mode) {
   const y = Math.round(mainBounds.y + (mainBounds.height - height) / 2);
   const applied = applyWindowsEngineWindow(pid, { style, exStyle, menu: 0, hideMenu: true, x, y, width, height, behind: true, activate: false });
   if (applied && mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.setAlwaysOnTop(true, mode === 'fullscreen' ? 'screen-saver' : 'floating');
+    mainWindow.setAlwaysOnTop(false);
+    mainWindow.show();
     mainWindow.moveTop();
     mainWindow.focus();
   }
@@ -1912,7 +1913,7 @@ const embeddedWindowController = {
     if (mainWindow.isMinimized()) mainWindow.restore();
     if (mainWindow.isFullScreen()) mainWindow.setFullScreen(false);
     mainWindow.show();
-    mainWindow.setAlwaysOnTop(true, 'screen-saver');
+    mainWindow.setAlwaysOnTop(false);
     mainWindow.focus();
   },
   async integrate(session, _source, requestedMode) {
@@ -1944,15 +1945,21 @@ const embeddedWindowController = {
     if (mode === 'popout') {
       mainWindow.setAlwaysOnTop(false);
       if (mainWindow.isFullScreen()) mainWindow.setFullScreen(false);
+      if (!mainWindow.isMinimized()) mainWindow.minimize();
       setEmbeddedEngineWindowMode(session, 'popout');
-      mainWindow.minimize();
+      setTimeout(() => {
+        const current = embeddedPlayManager?.status();
+        if (!current?.active || current.sessionId !== session.id || current.mode !== 'popout') return;
+        setEmbeddedEngineWindowMode(session, 'popout');
+      }, 180);
       return;
     }
     if (mainWindow.isMinimized()) mainWindow.restore();
     mainWindow.show();
     mainWindow.setFullScreen(mode === 'fullscreen');
-    mainWindow.setAlwaysOnTop(true, mode === 'fullscreen' ? 'screen-saver' : 'floating');
+    mainWindow.setAlwaysOnTop(false);
     setEmbeddedEngineWindowMode(session, mode);
+    mainWindow.moveTop();
     mainWindow.focus();
   },
   release(session) {
