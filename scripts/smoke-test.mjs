@@ -46,6 +46,23 @@ const [e2eReportText, e2eResultText] = await Promise.all([
 ]);
 const e2eResult = JSON.parse(e2eResultText);
 
+const systemThemeAssets = [
+  'assets/system-themes/nintendo-classic.webp',
+  'assets/system-themes/nintendo-polygon.webp',
+  'assets/system-themes/nintendo-handheld.webp',
+  'assets/system-themes/sega-16bit.webp',
+  'assets/system-themes/sega-3d.webp',
+  'assets/system-themes/playstation.webp',
+  'assets/system-themes/arcade.webp',
+  'assets/system-themes/retro.webp'
+];
+for (const asset of systemThemeAssets) {
+  try { await access(path.join(root, asset)); }
+  catch { fail(`console theme asset is missing: ${asset}`); }
+}
+if (!renderer.includes('SYSTEM_THEME_BACKGROUNDS') || !renderer.includes('applySystemTheme(game.system)')) fail('console-aware spotlight theme routing is missing');
+if (!styles.includes('--system-accent') || !styles.includes('.spotlight .feature-backdrop img.is-ready')) fail('console theme styling is missing');
+
 for (const id of [
   'games',
   'discover',
@@ -231,6 +248,9 @@ if (!main.includes('catalogFileIdentities') || !main.includes('installedCatalogF
 if (!main.includes('inspectArcadeArchive') || !renderer.includes('renderArcadeDeck')) fail('arcade health diagnostics are missing');
 if (!preload.includes('onArcadeAudit')) fail('arcade audit progress bridge is missing');
 if (!main.includes('createRuntimeManager') || !main.includes('queueManagedRuntimeLaunch')) fail('managed runtime launch recovery is missing');
+if (!main.includes('MANAGED_RUNTIME_PREFERRED') || !main.includes('managedRuntimeInstalled')) fail('an already installed managed runtime must take precedence over an unverified external core set');
+if (!main.includes("ARCADE_SUPPORT_ARCHIVES = new Set(['neogeo.zip'])") || !main.includes('isArcadeSupportArchive(file, system)')) fail('arcade BIOS support archives must stay out of the playable library');
+if (!styles.includes('body.density-compact .spotlight-primary-actions button') || !styles.includes('min-width: 0; flex: 1 1 0;')) fail('spotlight action rows must shrink without clipping Favorite or Remove');
 if (!preload.includes('ensureRuntime') || !preload.includes('onRuntime')) fail('managed runtime preload bridge is missing');
 if (!renderer.includes('Preparing game engines') || !renderer.includes('window.deck.ensureRuntime')) fail('first-run runtime setup UI is missing');
 if (!runtimeManager.includes('AbortSignal.timeout') || !runtimeManager.includes('content-range') || !runtimeManager.includes('SHA-256')) fail('managed runtime download safety or resume support is missing');
@@ -272,6 +292,15 @@ if (!String(pkg.scripts?.['dist:win'] || '').includes('runtime:cache') || !Strin
 if (!runtimeCacheBuilder.includes('cache-index.json') || !runtimeCacheBuilder.includes('darwin-universal') || !runtimeCacheBuilder.includes('.part')) fail('cross-platform resumable runtime cache builder is missing');
 if (!runtimeManager.includes('bundledCacheRoot') || !runtimeManager.includes("phase: 'retrying'") || !runtimeManager.includes('.part')) fail('managed runtime must prefer bundled assets and resume interrupted transfers');
 if (!main.includes('BUNDLED_RUNTIME_AVAILABLE') || !main.includes('MANAGED_RUNTIME_PATHS.retroArch')) fail('clean installs must target the managed runtime before extraction');
+if (!main.includes('libraryFolderSystems') || !main.includes('archiveContentExtensions') || !main.includes('discSystemForFile')) fail('shared-folder system classification is missing');
+if (!main.includes("id: 'sega32x'") || !main.includes("coreFile('picodrive_libretro')")) fail('Sega 32X library support is missing');
+if (!main.includes("id: 'fds'") || !main.includes("id: 'satellaview'") || !main.includes("id: 'sufami'") || !main.includes("bios: ['disksys.rom']") || !main.includes("bios: ['BS-X.bin']") || !main.includes("bios: ['STBIOS.bin']")) fail('firmware-backed add-on systems are not classified independently');
+if (!main.includes('playableArchiveIntegrity') || !main.includes('Unexpected end of archive') || !main.includes("biosMode: 'all'")) fail('game archive integrity or complete regional firmware checks are missing');
+if (!pkg.build?.files?.includes('library-system-classifier.js')) fail('library classifier must ship in desktop packages');
+for (const [platformKey, platformSpec] of Object.entries(managedRuntimeManifest.platforms || {})) {
+  const cores = (platformSpec.components || []).find(component => component.id === 'cores');
+  if (!cores?.expected?.some(value => value.includes('picodrive_libretro'))) fail(`${platformKey} runtime is missing the PicoDrive core`);
+}
 if (!main.includes('DOWNLOADS_FILE') || !main.includes('restorePersistedDownloads') || !main.includes('retryDownload') || !main.includes('pauseActiveDownloads')) fail('game transfer resume persistence is missing');
 if (!main.includes('shell.trashItem') || !main.includes("'delete-game'")) fail('safe operating-system Trash removal is missing');
 if (!main.includes('bundledSevenZip') || !String(pkg.build?.asarUnpack || []).includes('node_modules/7zip-bin/**/*')) fail('bundled archive extraction dependency is missing');

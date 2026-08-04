@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "project": "GameDeck",
   "createdAt": "2026-08-03T23:44:00.000Z",
-  "updatedAt": "2026-08-04T00:21:18.577Z",
+  "updatedAt": "2026-08-04T00:27:38.928Z",
   "policy": {
     "nonReplay": true,
     "visibleLaunchRequired": true,
@@ -39,12 +39,12 @@
     }
   },
   "counters": {
-    "E": 2,
+    "E": 3,
     "T": 2,
     "M": 2,
     "W": 2,
     "recovery": 0,
-    "event": 33
+    "event": 36
   },
   "tickets": [
     {
@@ -478,6 +478,29 @@
         "chainDisposition": "closed",
         "hash": "86261362ed0f87a9284fea198e89abcf936e76582ac2ede3d5e89138a73236be"
       },
+      "uncertainty": null,
+      "quarantine": null
+    },
+    {
+      "id": "E-0003",
+      "lane": "E",
+      "role": "builder",
+      "objective": "Integrate the approved console-theme, spotlight-layout, arcade-routing, and launch-repair sequence onto current main, preserve CADOps gates, and close remaining accessibility gaps.",
+      "assignee": "uiux-integration-builder-01",
+      "authorizedBy": "general-orchestrator",
+      "status": "active",
+      "chainId": "E-0003",
+      "predecessorTicketId": null,
+      "predecessorReceiptHash": null,
+      "successorTicketId": null,
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T00:27:20.848Z",
+      "acceptedAt": "2026-08-04T00:27:30.244Z",
+      "startedAt": "2026-08-04T00:27:38.928Z",
+      "completedAt": null,
+      "launchEvidence": "Authenticated Shell active in clean integration worktree gamedeck-uiux-integration; source 99c474b merged onto main 4633f2e with conflicts explicitly resolved.",
+      "receipt": null,
       "uncertainty": null,
       "quarantine": null
     }
@@ -919,6 +942,45 @@
         "softwareVersion": "e36b6177d96145fd8808a21ac10ac7cc9fb7cf59"
       },
       "hash": "983e39486ddc71c095a764f23bc8458e1ac23b53e8ecaeda7c22d65846268352"
+    },
+    {
+      "eventId": "EVT-000034",
+      "type": "ticket.issued",
+      "ticketId": "E-0003",
+      "actor": "general-orchestrator",
+      "at": "2026-08-04T00:27:20.848Z",
+      "previousHash": "983e39486ddc71c095a764f23bc8458e1ac23b53e8ecaeda7c22d65846268352",
+      "payload": {
+        "lane": "E",
+        "role": "builder",
+        "assignee": "uiux-integration-builder-01",
+        "objective": "Integrate the approved console-theme, spotlight-layout, arcade-routing, and launch-repair sequence onto current main, preserve CADOps gates, and close remaining accessibility gaps."
+      },
+      "hash": "c6d32983a17da539eee3fc6f0948a5a3af2233ce07d20a10e00fb2e1d15ba339"
+    },
+    {
+      "eventId": "EVT-000035",
+      "type": "ticket.accepted",
+      "ticketId": "E-0003",
+      "actor": "uiux-integration-builder-01",
+      "at": "2026-08-04T00:27:30.244Z",
+      "previousHash": "c6d32983a17da539eee3fc6f0948a5a3af2233ce07d20a10e00fb2e1d15ba339",
+      "payload": {
+        "role": "builder"
+      },
+      "hash": "a32e9504cba327ed8fc5502ffe2c823bb67a81ce29715c7b408720bafbcbf527"
+    },
+    {
+      "eventId": "EVT-000036",
+      "type": "ticket.started",
+      "ticketId": "E-0003",
+      "actor": "uiux-integration-builder-01",
+      "at": "2026-08-04T00:27:38.928Z",
+      "previousHash": "a32e9504cba327ed8fc5502ffe2c823bb67a81ce29715c7b408720bafbcbf527",
+      "payload": {
+        "launchEvidence": "Authenticated Shell active in clean integration worktree gamedeck-uiux-integration; source 99c474b merged onto main 4633f2e with conflicts explicitly resolved."
+      },
+      "hash": "fe60058b2ccd30d6be7f53c9f26f462831c51a4b7c13b4b679a58355dabcd4bb"
     }
   ]
 }

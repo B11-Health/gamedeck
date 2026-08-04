@@ -4,17 +4,17 @@ This file is the repository-level source of truth for parallel GameDeck work. Pr
 
 ## Active handoff
 
-**Handoff ID:** GD-20260803-OPS-V2
-**Updated:** 2026-08-03 13:44 ET
+**Handoff ID:** GD-20260803-UIUX-CADOPS
+**Updated:** 2026-08-03 20:22 ET
 **Repository:** `B11-Health/gamedeck`
-**Production branch / HEAD:** `main` / `62f3b3c2e6f2713ae3afd40bf0146e3c267ad92e`
-**Operations branch:** `ops/team-operating-system-v2`
+**Production branch / HEAD:** `main` / `4633f2eb00bd2be19b7b07914cd395d6e972d8ca`
+**Active integration branch:** `integration/uiux-console-cadops`
 **Primary objective:** Make GameDeck the most dependable local-first platform for playing legally owned games with friends while improving the internal multi-team delivery system.
 
 ## Current product truth
 
-- Aurora Focus is on `main` at `62f3b3c`.
-- `integration/console-themes-complete` exists at `99c474b` and must receive an exact-commit integration verdict before any merge.
+- CADOps and the team operating system are on `main` at `4633f2e`; the first complete Builder/Tester/Supervisor/Watcher chain is closed with valid receipts.
+- The approved console-theme, spotlight-layout, arcade-routing, and launch-repair sequence at `99c474b` is being integrated onto current `main` in `integration/uiux-console-cadops`.
 - Embedded/Runtime design work is contract-gated. V1.0.3 is invalid and superseded. V1.0.5 is the latest reported pure-design artifact; Security approval is recorded, but implementation may start only after the General Orchestrator independently confirms all required reviewer receipts and issues a fresh bounded handoff.
 - `feature/runtime-lifecycle-normalizer` and its dedicated worktree exist at `62f3b3c` but remain clean: no module, test, package change, commit, push, or implementation verdict exists.
 - The shared repository worktree contains an unrelated untracked `gamedeck-console-themes-complete/` directory. Do not delete, stage, absorb, or modify it without a separate ownership handoff.
@@ -41,8 +41,8 @@ Every active task has one owner, one reviewer, an exclusive scope, a rollback po
 
 ### Program Operations and Integration
 
-**Status:** Active
-**Branch:** `ops/team-operating-system-v2`
+**Status:** Integrated on `main`
+**Branch:** `main@4633f2e`
 **Scope:**
 
 - `COLLAB_HANDOFF.md`
@@ -63,9 +63,10 @@ Every active task has one owner, one reviewer, an exclusive scope, a rollback po
 
 ### Console themes integration
 
-**Status:** Independent integration review required
-**Candidate:** `integration/console-themes-complete@99c474b`
-**Required return:** Exact ancestry, approved source equivalence, changed-file boundary, full test gate, clean worktree, rollback, and concise APPROVE or actionable REJECT.
+**Status:** Active CADOps integration
+**Source:** `integration/console-themes-complete@99c474b`
+**Integration:** `integration/uiux-console-cadops` from `main@4633f2e`
+**Required return:** Combined CADOps and product test gate, visual/player-semantic review, clean exact commit, rollback, and Watcher-authorized merge.
 
 ### Multiplayer program
 
