@@ -103,6 +103,52 @@ export class HttpCdpBrowser {
   listTargets() { return this.request('/json/list'); }
   activateTarget(targetId) { return this.request('/json/activate/' + encodeURIComponent(required(targetId, 'targetId'))); }
   closeTarget(targetId) { return this.request('/json/close/' + encodeURIComponent(required(targetId, 'targetId'))); }
+
+  async evaluateTarget(target, expression) {
+    const websocketUrl = required(target?.webSocketDebuggerUrl, 'target websocket debugger URL');
+    const socket = new WebSocket(websocketUrl);
+    const requestId = 1;
+    return new Promise((resolve, reject) => {
+      let settled = false;
+      const finish = (callback, value) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        try { socket.close(); } catch {}
+        callback(value);
+      };
+      const timer = setTimeout(() => finish(reject, new Error('CDP target probe timed out')), this.requestTimeoutMs);
+      socket.addEventListener('open', () => {
+        socket.send(JSON.stringify({
+          id: requestId,
+          method: 'Runtime.evaluate',
+          params: { expression, awaitPromise: true, returnByValue: true }
+        }));
+      }, { once: true });
+      socket.addEventListener('message', (event) => {
+        let message;
+        try { message = JSON.parse(String(event.data)); } catch { return; }
+        if (message.id !== requestId) return;
+        if (message.error) return finish(reject, new Error(message.error.message || 'CDP target probe failed'));
+        if (message.result?.exceptionDetails) return finish(reject, new Error('CDP target probe raised an exception'));
+        finish(resolve, message.result?.result?.value);
+      });
+      socket.addEventListener('error', () => finish(reject, new Error('CDP target websocket failed')), { once: true });
+    });
+  }
+
+  async probeTargetActivity(target) {
+    const value = await this.evaluateTarget(target, `(() => {
+      const editor = document.querySelector('#prompt-textarea, textarea, [contenteditable="true"]');
+      const draft = editor ? ('value' in editor ? editor.value : editor.innerText || editor.textContent || '') : '';
+      const generating = Boolean(document.querySelector('[data-testid="stop-button"], button[aria-label*="Stop"]'));
+      return { draft: String(draft || '').trim(), generating };
+    })()`);
+    return {
+      draft: String(value?.draft || '').trim(),
+      generating: Boolean(value?.generating)
+    };
+  }
 }
 
 async function waitForSuccessor(browser, expected, {
@@ -257,6 +303,122 @@ export async function handoffTabs(browser, options = {}) {
   }
 }
 
+function defaultProtectedTitle(title) {
+  return /\broom watch\b/i.test(String(title || ''));
+}
+
+export async function auditTabHygiene(browser, options = {}) {
+  if (!browser || typeof browser.listTargets !== 'function' || typeof browser.probeTargetActivity !== 'function') {
+    throw new Error('browser adapter must implement listTargets and probeTargetActivity');
+  }
+  const rawTargets = await browser.listTargets();
+  const chats = listChatTargets(rawTargets);
+  const rawById = new Map(rawTargets.map((target) => [targetIdentity(target), target]));
+  const protectedTargetIds = new Set((options.protectedTargetIds || []).map(String));
+  const protectedConversationIds = new Set((options.protectedUrls || []).map(conversationIdentity).filter(Boolean));
+  const tabs = [];
+
+  for (const chat of chats) {
+    const reasons = [];
+    if (protectedTargetIds.has(chat.targetId)) reasons.push('protected-target');
+    if (protectedConversationIds.has(chat.conversationId)) reasons.push('protected-conversation');
+    if (options.protectRoomWatch !== false && defaultProtectedTitle(chat.title)) reasons.push('room-watch');
+    let activity = null;
+    let probeError = null;
+    try {
+      activity = await browser.probeTargetActivity(rawById.get(chat.targetId));
+    } catch (error) {
+      probeError = error.message;
+    }
+    const hasDraft = Boolean(String(activity?.draft || '').trim());
+    const generating = Boolean(activity?.generating);
+    let classification = 'stale';
+    if (reasons.length) classification = 'protected';
+    else if (hasDraft || generating) classification = 'busy';
+    else if (probeError) classification = 'unknown';
+    tabs.push({
+      ...chat,
+      classification,
+      reasons,
+      hasDraft,
+      generating,
+      probeError
+    });
+  }
+
+  const counts = {
+    open: tabs.length,
+    protected: tabs.filter((tab) => tab.classification === 'protected').length,
+    busy: tabs.filter((tab) => tab.classification === 'busy').length,
+    unknown: tabs.filter((tab) => tab.classification === 'unknown').length,
+    stale: tabs.filter((tab) => tab.classification === 'stale').length
+  };
+  return {
+    schemaVersion: 1,
+    generatedAt: new Date().toISOString(),
+    health: counts.stale || counts.unknown ? 'attention' : 'healthy',
+    counts,
+    tabs
+  };
+}
+
+export async function cleanTabHygiene(browser, options = {}) {
+  if (!browser || typeof browser.closeTarget !== 'function') throw new Error('browser adapter must implement closeTarget');
+  const before = await auditTabHygiene(browser, options);
+  if (options.dryRun) {
+    return { schemaVersion: 1, generatedAt: new Date().toISOString(), status: 'planned', before, closed: [], skipped: [], uncertain: [] };
+  }
+
+  const closed = [];
+  const skipped = [];
+  const uncertain = [];
+  const maxClose = Number.isFinite(Number(options.maxClose)) ? Math.max(0, Number(options.maxClose)) : 20;
+  for (const tab of before.tabs.filter((item) => item.classification === 'stale').slice(0, maxClose)) {
+    const currentTargets = await browser.listTargets();
+    const current = currentTargets.find((target) => targetIdentity(target) === tab.targetId);
+    if (!current) { skipped.push({ targetId: tab.targetId, reason: 'already-closed' }); continue; }
+    try {
+      const activity = await browser.probeTargetActivity(current);
+      if (String(activity?.draft || '').trim() || activity?.generating) {
+        skipped.push({ targetId: tab.targetId, reason: 'became-busy' });
+        continue;
+      }
+    } catch (error) {
+      skipped.push({ targetId: tab.targetId, reason: 'probe-uncertain', error: error.message });
+      continue;
+    }
+    try {
+      await browser.closeTarget(tab.targetId);
+    } catch (error) {
+      uncertain.push({ targetId: tab.targetId, reason: 'close-request-uncertain', error: error.message });
+      continue;
+    }
+    const remaining = await browser.listTargets();
+    if (remaining.some((target) => targetIdentity(target) === tab.targetId)) {
+      uncertain.push({ targetId: tab.targetId, reason: 'close-unverified' });
+    } else {
+      closed.push({ targetId: tab.targetId, conversationId: tab.conversationId, url: tab.url });
+    }
+  }
+  const after = await auditTabHygiene(browser, options);
+  const status = uncertain.length ? 'uncertain' : after.counts.stale ? 'partial' : 'clean';
+  return { schemaVersion: 1, generatedAt: new Date().toISOString(), status, before, after, closed, skipped, uncertain };
+}
+
+export function formatTabHygiene(report) {
+  const lines = [
+    'GAMEDECK CADOPS BROWSER HYGIENE',
+    `Generated: ${report.generatedAt}`,
+    `Health: ${report.health.toUpperCase()}`,
+    `Open: ${report.counts.open} | Protected: ${report.counts.protected} | Busy: ${report.counts.busy} | Unknown: ${report.counts.unknown} | Stale: ${report.counts.stale}`
+  ];
+  for (const tab of report.tabs.filter((item) => ['stale', 'unknown'].includes(item.classification))) {
+    lines.push(`- ${tab.classification.toUpperCase()} ${tab.targetId} ${tab.title || tab.url}`);
+  }
+  if (!report.counts.stale && !report.counts.unknown) lines.push('- no browser hygiene findings');
+  return lines.join('\n');
+}
+
 export function writeReceipt(file, receipt) {
   const absolute = path.resolve(required(file, 'receipt path'));
   fs.mkdirSync(path.dirname(absolute), { recursive: true });
@@ -272,10 +434,11 @@ function parseArgs(argv) {
     const token = argv[i];
     if (!token.startsWith('--')) { result._.push(token); continue; }
     const key = token.slice(2).replace(/-([a-z])/g, (_, c) => c.toUpperCase());
-    if (['json', 'dryRun'].includes(key)) result[key] = true;
-    else if (key === 'protectedTarget') {
-      result.protectedTargetIds ||= [];
-      result.protectedTargetIds.push(required(argv[++i], token));
+    if (['json', 'dryRun', 'apply'].includes(key)) result[key] = true;
+    else if (['protectedTarget', 'protectedUrl'].includes(key)) {
+      const field = key === 'protectedTarget' ? 'protectedTargetIds' : 'protectedUrls';
+      result[field] ||= [];
+      result[field].push(required(argv[++i], token));
     } else result[key] = required(argv[++i], token);
   }
   return result;
@@ -287,9 +450,12 @@ function help() {
     '',
     'Commands:',
     '  status --cdp http://127.0.0.1:9222',
+    '  audit --cdp URL [--protected-target ID] [--protected-url CHAT_URL] [--json]',
+    '  clean --cdp URL --apply [--protected-target ID] [--protected-url CHAT_URL] [--max-close N]',
     '  handoff --cdp URL --predecessor-target ID --successor-target ID [--receipt FILE]',
     '  handoff --cdp URL --predecessor-url CHAT_URL --successor-url CHAT_URL [--dry-run]',
     '',
+    'Room Watch, drafts, generating responses, protected targets, and uncertain probes are never cleaned.',
     'The predecessor closes only after the successor conversation is activated and stably verified.',
     'On uncertainty, the predecessor remains open or the result is reported as recovery-required.'
   ].join('\n');
@@ -304,6 +470,29 @@ async function runCli() {
   if (command === 'status') {
     const targets = listChatTargets(await browser.listTargets());
     console.log(args.json ? JSON.stringify(targets, null, 2) : targets.map((t) => t.targetId + ' ' + t.url).join('\n'));
+    return;
+  }
+  if (command === 'audit' || command === 'clean') {
+    const options = {
+      protectedTargetIds: args.protectedTargetIds,
+      protectedUrls: args.protectedUrls,
+      maxClose: args.maxClose ? Number(args.maxClose) : undefined
+    };
+    if (command === 'audit') {
+      const report = await auditTabHygiene(browser, options);
+      console.log(args.json ? JSON.stringify(report, null, 2) : formatTabHygiene(report));
+      if (report.health !== 'healthy') process.exitCode = 2;
+      return;
+    }
+    const receipt = await cleanTabHygiene(browser, { ...options, dryRun: !args.apply });
+    console.log(args.json ? JSON.stringify(receipt, null, 2) : [
+      'CADOps browser cleanup: ' + receipt.status,
+      'Closed: ' + receipt.closed.length,
+      'Skipped: ' + receipt.skipped.length,
+      'Uncertain: ' + receipt.uncertain.length,
+      receipt.after ? `Remaining stale: ${receipt.after.counts.stale}` : `Planned stale closures: ${receipt.before.counts.stale}`
+    ].join('\n'));
+    if (!['clean', 'planned'].includes(receipt.status)) process.exitCode = 2;
     return;
   }
   if (command !== 'handoff') throw new Error('unknown command: ' + command);

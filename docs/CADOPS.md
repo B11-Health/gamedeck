@@ -141,6 +141,8 @@ Inspect the system:
 ```bash
 npm run cadops:validate
 npm run cadops:watch
+npm run cadops:watch:live -- --cdp http://127.0.0.1:9944
+npm run cadops:browser:clean -- --cdp http://127.0.0.1:9944
 npm run cadops:status
 npm run cadops -- show --ticket E-0001
 ```
@@ -151,6 +153,8 @@ Add `--json` for machine-readable output. Repeat `--artifact` and `--check` as n
 
 The Watcher reports:
 
+- stale idle CDP conversation tabs that have no active custody, draft, generating response, or explicit protection;
+- browser targets whose activity cannot be inspected safely;
 - broken ledger or event-chain integrity,
 - stale accepted or active custody,
 - uncertain or quarantined work without a recovery identity,

@@ -50,6 +50,39 @@ The predecessor stays open when:
 
 A close request is issued at most once. If the connection ends after dispatch or closure cannot be verified, the result is `uncertain`. Do not resend the close request. Record recovery instead.
 
+## Continuous browser hygiene
+
+CADOps treats browser-tab sprawl as an operational defect. The live browser should contain only:
+
+- one permanent **GameDeck Room Watch** control tab;
+- one tab for each accepted, active, or review custody item that still needs interaction;
+- a verified successor during an in-progress handoff;
+- a tab with a non-empty draft or a response that is still generating.
+
+Everything else is stale. The Watcher audits the CDP session at every live pulse and closes stale tabs after rechecking them immediately before closure. The cleaner fails closed: Room Watch, explicit protected targets, explicit protected conversations, drafts, generating responses, and targets whose activity cannot be inspected are never automatically closed.
+
+A clean result means there are no idle, unprotected ChatGPT conversation tabs. A tab is not kept merely because its work was once important; its immutable CADOps receipt and Git evidence survive after the tab closes.
+
+Live audit:
+
+```bash
+npm run cadops:browser -- --cdp http://127.0.0.1:9944 --json
+```
+
+Apply safe cleanup:
+
+```bash
+npm run cadops:browser:clean -- --cdp http://127.0.0.1:9944 --protected-url https://chatgpt.com/c/ROOM-WATCH-ID --json
+```
+
+Run ledger and browser Watchers together:
+
+```bash
+npm run cadops:watch:live -- --cdp http://127.0.0.1:9944
+```
+
+The audit exits nonzero when stale or uninspectable tabs remain. Cleanup emits exact closed, skipped, uncertain, and remaining counts. A close request is never retried when its result is uncertain.
+
 ## Browser requirement
 
 The operator uses a Chromium DevTools HTTP endpoint, normally bound only to localhost. It does not bypass ChatGPT authentication and it does not create a conversation by itself. It rotates two already-open, authenticated conversation tabs.

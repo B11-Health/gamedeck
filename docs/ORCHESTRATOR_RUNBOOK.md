@@ -212,4 +212,6 @@ npm run team:pulse:json
 
 ## CADOps checkpoint
 
-Before dispatch, issue the lane ticket and record the assignee. After the teammate visibly accepts and starts, record launch evidence. On completion, record the exact version, checks, and artifact hashes, then create exactly one authorized successor. When dispatch or completion is uncertain, do not retry the ticket: mark it uncertain, quarantine it, and issue a distinct recovery identity. Run `npm run cadops:watch` with every orchestrator pulse.
+Before dispatch, issue the lane ticket and record the assignee. After the teammate visibly accepts and starts, record launch evidence. On completion, record the exact version, checks, and artifact hashes, then create exactly one authorized successor. When dispatch or completion is uncertain, do not retry the ticket: mark it uncertain, quarantine it, and issue a distinct recovery identity.
+
+Run `npm run cadops:watch` with every repository pulse and `npm run cadops:watch:live -- --cdp <local-endpoint>` whenever the authenticated CDP browser is active. Keep one Room Watch control tab plus only tabs tied to accepted, active, or review custody. After a verified handoff, close the predecessor. Never automatically close a draft, a generating response, an explicitly protected tab, or a target whose activity probe is uncertain.

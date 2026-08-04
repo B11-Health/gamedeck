@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "project": "GameDeck",
   "createdAt": "2026-08-03T23:44:00.000Z",
-  "updatedAt": "2026-08-04T02:01:14.618Z",
+  "updatedAt": "2026-08-04T02:05:10.642Z",
   "policy": {
     "nonReplay": true,
     "visibleLaunchRequired": true,
@@ -39,12 +39,12 @@
     }
   },
   "counters": {
-    "E": 5,
+    "E": 6,
     "T": 5,
     "M": 5,
     "W": 5,
     "recovery": 0,
-    "event": 81
+    "event": 84
   },
   "tickets": [
     {
@@ -1151,6 +1151,29 @@
       },
       "uncertainty": null,
       "quarantine": null
+    },
+    {
+      "id": "E-0006",
+      "lane": "E",
+      "role": "builder",
+      "objective": "Implement permanent CDP browser hygiene for CADOps: audit open ChatGPT tabs, protect active drafts and generating work, keep only active custody and Room Watch surfaces, and report stale tabs in every Watcher pulse.",
+      "assignee": "cadops-browser-hygiene-builder-01",
+      "authorizedBy": "general-orchestrator",
+      "status": "active",
+      "chainId": "E-0006",
+      "predecessorTicketId": null,
+      "predecessorReceiptHash": null,
+      "successorTicketId": null,
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T02:04:59.750Z",
+      "acceptedAt": "2026-08-04T02:05:05.351Z",
+      "startedAt": "2026-08-04T02:05:10.642Z",
+      "completedAt": null,
+      "launchEvidence": "Authenticated Shell active in clean worktree gamedeck-cadops-browser-hygiene at origin/main 3d265f1; live CDP session audited and nine idle tabs closed while two drafts, three generating tabs, one current ChatGPT tab, and Room Watch remained protected.",
+      "receipt": null,
+      "uncertainty": null,
+      "quarantine": null
     }
   ],
   "events": [
@@ -2226,6 +2249,45 @@
         "softwareVersion": "42fae5c"
       },
       "hash": "cf8f3e800737f97828707865f166d212174659018634c81f99cf6d68894485a9"
+    },
+    {
+      "eventId": "EVT-000082",
+      "type": "ticket.issued",
+      "ticketId": "E-0006",
+      "actor": "general-orchestrator",
+      "at": "2026-08-04T02:04:59.750Z",
+      "previousHash": "cf8f3e800737f97828707865f166d212174659018634c81f99cf6d68894485a9",
+      "payload": {
+        "lane": "E",
+        "role": "builder",
+        "assignee": "cadops-browser-hygiene-builder-01",
+        "objective": "Implement permanent CDP browser hygiene for CADOps: audit open ChatGPT tabs, protect active drafts and generating work, keep only active custody and Room Watch surfaces, and report stale tabs in every Watcher pulse."
+      },
+      "hash": "6f27acc4eede2d8741181feaba9b818803f806a43720737f2531feb22f45278e"
+    },
+    {
+      "eventId": "EVT-000083",
+      "type": "ticket.accepted",
+      "ticketId": "E-0006",
+      "actor": "cadops-browser-hygiene-builder-01",
+      "at": "2026-08-04T02:05:05.351Z",
+      "previousHash": "6f27acc4eede2d8741181feaba9b818803f806a43720737f2531feb22f45278e",
+      "payload": {
+        "role": "builder"
+      },
+      "hash": "8e1959d9d810ba2a207a761c077418a5af047e23ef2eaf6c7274ea57f78c6e59"
+    },
+    {
+      "eventId": "EVT-000084",
+      "type": "ticket.started",
+      "ticketId": "E-0006",
+      "actor": "cadops-browser-hygiene-builder-01",
+      "at": "2026-08-04T02:05:10.642Z",
+      "previousHash": "8e1959d9d810ba2a207a761c077418a5af047e23ef2eaf6c7274ea57f78c6e59",
+      "payload": {
+        "launchEvidence": "Authenticated Shell active in clean worktree gamedeck-cadops-browser-hygiene at origin/main 3d265f1; live CDP session audited and nine idle tabs closed while two drafts, three generating tabs, one current ChatGPT tab, and Room Watch remained protected."
+      },
+      "hash": "622f380ef2ff2c37413191e023c1f813014a7d217b0a847fc8f0d1e1a10c71e5"
     }
   ]
 }

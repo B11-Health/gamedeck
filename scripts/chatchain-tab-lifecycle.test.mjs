@@ -8,6 +8,8 @@ import {
   listChatTargets,
   HttpCdpBrowser,
   handoffTabs,
+  auditTabHygiene,
+  cleanTabHygiene,
   writeReceipt
 } from './chatchain-tab-lifecycle.mjs';
 
@@ -33,6 +35,12 @@ class FakeBrowser {
   async probeTargetReady(target) {
     this.calls.push('probe:' + target.id);
     return this.options.ready !== false;
+  }
+  async probeTargetActivity(target) {
+    this.calls.push('activity:' + target.id);
+    if (this.options.activityErrors?.[target.id]) throw new Error(this.options.activityErrors[target.id]);
+    const value = this.options.activity?.[target.id] || {};
+    return { draft: value.draft || '', generating: Boolean(value.generating) };
   }
   async activateTarget(id) {
     this.calls.push('activate:' + id);
@@ -195,6 +203,63 @@ console.log('ok - post-close successor loss is reported honestly');
 console.log('ok - dry run has no browser side effects');
 
 {
+  const browser = new FakeBrowser([
+    chat('watch', 'watch-conversation', { title: 'GameDeck Room Watch' }),
+    chat('draft', 'draft-conversation'),
+    chat('stream', 'stream-conversation'),
+    chat('idle', 'idle-conversation'),
+    chat('unknown', 'unknown-conversation')
+  ], {
+    activity: {
+      draft: { draft: 'unsent handoff' },
+      stream: { generating: true }
+    },
+    activityErrors: { unknown: 'target probe unavailable' }
+  });
+  const report = await auditTabHygiene(browser);
+  assert.equal(report.health, 'attention');
+  assert.deepEqual(report.counts, { open: 5, protected: 1, busy: 2, unknown: 1, stale: 1 });
+  assert.equal(report.tabs.find((tab) => tab.targetId === 'watch').classification, 'protected');
+  assert.equal(report.tabs.find((tab) => tab.targetId === 'draft').classification, 'busy');
+  assert.equal(report.tabs.find((tab) => tab.targetId === 'stream').classification, 'busy');
+  assert.equal(report.tabs.find((tab) => tab.targetId === 'unknown').classification, 'unknown');
+  assert.equal(report.tabs.find((tab) => tab.targetId === 'idle').classification, 'stale');
+}
+console.log('ok - hygiene audit protects Room Watch, drafts, generating work, and uncertain probes');
+
+{
+  const browser = new FakeBrowser([
+    chat('watch', 'watch-conversation', { title: 'GameDeck Room Watch' }),
+    chat('draft', 'draft-conversation'),
+    chat('stream', 'stream-conversation'),
+    chat('idle', 'idle-conversation')
+  ], {
+    activity: {
+      draft: { draft: 'unsent handoff' },
+      stream: { generating: true }
+    }
+  });
+  const receipt = await cleanTabHygiene(browser);
+  assert.equal(receipt.status, 'clean');
+  assert.deepEqual(receipt.closed.map((item) => item.targetId), ['idle']);
+  assert.equal(browser.targets.some((target) => target.id === 'idle'), false);
+  assert.equal(browser.targets.some((target) => target.id === 'watch'), true);
+  assert.equal(browser.targets.some((target) => target.id === 'draft'), true);
+  assert.equal(browser.targets.some((target) => target.id === 'stream'), true);
+  assert.equal(browser.calls.filter((call) => call === 'close:idle').length, 1);
+}
+console.log('ok - hygiene cleanup closes only idle unprotected tabs');
+
+{
+  const browser = new FakeBrowser([chat('idle', 'idle-conversation')]);
+  const receipt = await cleanTabHygiene(browser, { dryRun: true });
+  assert.equal(receipt.status, 'planned');
+  assert.equal(browser.targets.some((target) => target.id === 'idle'), true);
+  assert.equal(browser.calls.some((call) => call.startsWith('close:')), false);
+}
+console.log('ok - hygiene cleanup dry run has no browser side effects');
+
+{
   const folder = fs.mkdtempSync(path.join(os.tmpdir(), 'gamedeck-chatchain-'));
   const file = path.join(folder, 'receipt.json');
   const receipt = { schemaVersion: 1, status: 'closed', predecessorClosed: true };
@@ -239,4 +304,4 @@ console.log('ok - receipt writes atomically');
 }
 console.log('ok - HTTP CDP adapter performs verified handoff');
 
-console.log('chatchain tab lifecycle: 16 scenarios passed');
+console.log('chatchain tab lifecycle: 19 scenarios passed');
