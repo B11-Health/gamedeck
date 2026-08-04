@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "project": "GameDeck",
   "createdAt": "2026-08-03T23:44:00.000Z",
-  "updatedAt": "2026-08-04T06:48:23.184Z",
+  "updatedAt": "2026-08-04T06:51:37.645Z",
   "policy": {
     "nonReplay": true,
     "visibleLaunchRequired": true,
@@ -40,11 +40,11 @@
   },
   "counters": {
     "E": 10,
-    "T": 9,
+    "T": 10,
     "M": 9,
     "W": 9,
     "recovery": 0,
-    "event": 148
+    "event": 150
   },
   "tickets": [
     {
@@ -2061,18 +2061,85 @@
       "objective": "Correct state-dependent Team Operating System v3 negative tests so closure-state transitions cannot silently disable validator coverage, then rerun the full repository gate.",
       "assignee": "team-os-v3-test-correction-builder-01",
       "authorizedBy": "team-os-v3-watcher-01",
-      "status": "active",
+      "status": "completed",
       "chainId": "E-0010",
       "predecessorTicketId": null,
       "predecessorReceiptHash": null,
-      "successorTicketId": null,
+      "successorTicketId": "T-0010",
       "recoveryForTicketId": null,
       "recoveryTicketId": null,
       "createdAt": "2026-08-04T06:48:05.367Z",
       "acceptedAt": "2026-08-04T06:48:15.855Z",
       "startedAt": "2026-08-04T06:48:23.184Z",
-      "completedAt": null,
+      "completedAt": "2026-08-04T06:51:28.148Z",
       "launchEvidence": "Final exact-tree gate reproduced the ownership-collision fixture failure after OPS-001 transitioned to complete; bounded test correction started.",
+      "receipt": {
+        "ticketId": "E-0010",
+        "lane": "E",
+        "role": "builder",
+        "actor": "team-os-v3-test-correction-builder-01",
+        "objective": "Correct state-dependent Team Operating System v3 negative tests so closure-state transitions cannot silently disable validator coverage, then rerun the full repository gate.",
+        "outcome": "pass",
+        "summary": "Made Team Operating System validator and pulse tests closure-state independent by explicitly constructing ownership, scope, focus, stale, and ordering conditions.",
+        "softwareVersion": "06b8ac024b50a684a6213001d3791453701907d5",
+        "predecessorTicketId": null,
+        "predecessorReceiptHash": null,
+        "launchEvidence": "Final exact-tree gate reproduced the ownership-collision fixture failure after OPS-001 transitioned to complete; bounded test correction started.",
+        "startedAt": "2026-08-04T06:48:23.184Z",
+        "completedAt": "2026-08-04T06:51:28.148Z",
+        "artifacts": [
+          {
+            "path": "scripts/team-board-validate.test.mjs",
+            "source": "git-blob",
+            "commit": "06b8ac024b50a684a6213001d3791453701907d5",
+            "objectFormat": "sha1",
+            "objectId": "a742f73471c787ed1801c5cc9971d7bdd502faf5",
+            "bytes": 7428,
+            "sha256": "6cd6d0cc11a63fb1a3f2c04126cc93d9ae10181232e21b2f976f5aa4c62bbf39"
+          },
+          {
+            "path": "scripts/orchestrator-pulse.test.mjs",
+            "source": "git-blob",
+            "commit": "06b8ac024b50a684a6213001d3791453701907d5",
+            "objectFormat": "sha1",
+            "objectId": "0a6874e5faae6264fa0595a7261bd39a3c5f9940",
+            "bytes": 2911,
+            "sha256": "60510d5cb44b9e7301fa9c5b6afe6c2dc90defb8da1a58089cd0756eea5ec91a"
+          }
+        ],
+        "checks": [
+          "Full repository check chain passed after OPS-001 transitioned to complete.",
+          "Previously failing ownership, empty-scope, focus, stale, and ready-order fixtures now pass without weakening production logic.",
+          "git diff --check passed and correction scope is limited to two test files plus the custody ledger."
+        ],
+        "nextAuthorizedLanes": [
+          "T"
+        ],
+        "chainDisposition": "handoff-required",
+        "hash": "1a1bca229c7f7dc12c9be518e41e6a8addac4cf316adbe9e588d920bfd25803c"
+      },
+      "uncertainty": null,
+      "quarantine": null
+    },
+    {
+      "id": "T-0010",
+      "lane": "T",
+      "role": "tester",
+      "objective": "Independently verify correction 06b8ac0 fixes closure-state-dependent validator and pulse tests without weakening production logic, canonical receipts, exact scope, or full GameDeck gates.",
+      "assignee": "independent-team-os-v3-reviewer-02",
+      "authorizedBy": "team-os-v3-watcher-01",
+      "status": "prepared",
+      "chainId": "E-0010",
+      "predecessorTicketId": "E-0010",
+      "predecessorReceiptHash": "1a1bca229c7f7dc12c9be518e41e6a8addac4cf316adbe9e588d920bfd25803c",
+      "successorTicketId": null,
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T06:51:37.645Z",
+      "acceptedAt": null,
+      "startedAt": null,
+      "completedAt": null,
+      "launchEvidence": null,
       "receipt": null,
       "uncertainty": null,
       "quarantine": null
@@ -4038,6 +4105,35 @@
         "launchEvidence": "Final exact-tree gate reproduced the ownership-collision fixture failure after OPS-001 transitioned to complete; bounded test correction started."
       },
       "hash": "18872a596b3c24c6b9546e9cc717589043542b7bba5cfe507b59b8600c39db38"
+    },
+    {
+      "eventId": "EVT-000149",
+      "type": "ticket.completed",
+      "ticketId": "E-0010",
+      "actor": "team-os-v3-test-correction-builder-01",
+      "at": "2026-08-04T06:51:28.148Z",
+      "previousHash": "18872a596b3c24c6b9546e9cc717589043542b7bba5cfe507b59b8600c39db38",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "1a1bca229c7f7dc12c9be518e41e6a8addac4cf316adbe9e588d920bfd25803c",
+        "softwareVersion": "06b8ac024b50a684a6213001d3791453701907d5"
+      },
+      "hash": "518d09e622f483f51f8678e9e00b6bab3b8898c4f24c16a710b54dcd186d4856"
+    },
+    {
+      "eventId": "EVT-000150",
+      "type": "custody.handed-off",
+      "ticketId": "E-0010",
+      "actor": "team-os-v3-watcher-01",
+      "at": "2026-08-04T06:51:37.645Z",
+      "previousHash": "518d09e622f483f51f8678e9e00b6bab3b8898c4f24c16a710b54dcd186d4856",
+      "payload": {
+        "successorTicketId": "T-0010",
+        "successorLane": "T",
+        "predecessorReceiptHash": "1a1bca229c7f7dc12c9be518e41e6a8addac4cf316adbe9e588d920bfd25803c",
+        "assignee": "independent-team-os-v3-reviewer-02"
+      },
+      "hash": "e0570f7248d9a5ccb5bbd696df2e27165335171d1de855764d4b434c88a5fd56"
     }
   ]
 }
