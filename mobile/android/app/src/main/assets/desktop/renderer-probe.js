@@ -4,6 +4,8 @@
   const native = window.GameDeckAndroid;
   const startedAt = performance.now();
   let terminal = false;
+  let sawLoading = false;
+  let stableSince = 0;
 
   const send = (method, payload) => {
     if (terminal || !native || typeof native[method] !== 'function') return;
@@ -36,38 +38,73 @@
       return;
     }
 
-    const loadingPanel = document.querySelector('#appLoading');
-    const loading = document.body.classList.contains('is-loading')
-      || (loadingPanel && !loadingPanel.classList.contains('hidden'));
+    const stage = document.querySelector('#appLoading');
+    const bodyLoading = document.body.classList.contains('is-loading');
+    const stageVisible = Boolean(stage && !stage.classList.contains('hidden') && getComputedStyle(stage).display !== 'none');
+    if (bodyLoading && stageVisible) sawLoading = true;
+
+    const loadingComplete = Boolean(
+      sawLoading
+      && stage
+      && stage.classList.contains('hidden')
+      && !bodyLoading
+      && document.querySelector('#loadingPercent')?.textContent?.trim() === '100%'
+    );
     const header = document.querySelector('.app-header');
     const content = document.querySelector('.content');
-    const libraryView = document.querySelector('[data-view-panel="home"], #homeView, #games');
+    const hero = document.querySelector('.hero');
+    const libraryToolbar = document.querySelector('#libraryToolbar');
+    const games = document.querySelector('#games');
+    const emptyState = document.querySelector('#emptyState');
+    const activeLibrarySurface = Boolean(
+      header
+      && content
+      && hero
+      && libraryToolbar
+      && (games || emptyState)
+      && hero.getBoundingClientRect().height > 0
+      && content.getBoundingClientRect().height > 0
+    );
 
-    if (!loading && header && content && libraryView && window.deck) {
-      clearInterval(timer);
-      send('reportRendererReady', {
-        phase: 'ready',
-        title: document.title,
-        elapsedMs: Math.round(performance.now() - startedAt),
-        renderer: 'shared-desktop',
-        navigation: [...document.querySelectorAll('.nav[data-view]')].map(item => item.dataset.view),
-        gameCards: document.querySelectorAll('.game').length,
-        catalogCards: document.querySelectorAll('.catalog-game').length
-      });
-      return;
+    if (loadingComplete && activeLibrarySurface && window.deck) {
+      if (!stableSince) stableSince = performance.now();
+      if (performance.now() - stableSince >= 900) {
+        clearInterval(timer);
+        send('reportRendererReady', {
+          phase: 'ready',
+          title: document.title,
+          elapsedMs: Math.round(performance.now() - startedAt),
+          renderer: 'shared-desktop',
+          startupObserved: true,
+          loadingPercent: document.querySelector('#loadingPercent')?.textContent?.trim() || '',
+          navigation: [...document.querySelectorAll('.nav[data-view]')].map(item => item.dataset.view),
+          gameCards: document.querySelectorAll('.game').length,
+          catalogCards: document.querySelectorAll('.catalog-game').length,
+          emptyStateVisible: Boolean(emptyState && !emptyState.classList.contains('hidden'))
+        });
+      }
+    } else {
+      stableSince = 0;
     }
 
-    if (performance.now() - startedAt > 30000) {
+    if (performance.now() - startedAt > 45000) {
       clearInterval(timer);
       send('reportRendererError', {
         phase: 'startup-timeout',
         elapsedMs: Math.round(performance.now() - startedAt),
+        sawLoading,
+        bodyLoading,
+        stageClass: stage?.className || '',
+        loadingPercent: document.querySelector('#loadingPercent')?.textContent?.trim() || '',
         hasDeck: Boolean(window.deck),
         hasHeader: Boolean(header),
         hasContent: Boolean(content),
-        hasLibraryView: Boolean(libraryView),
+        hasHero: Boolean(hero),
+        hasToolbar: Boolean(libraryToolbar),
+        hasGames: Boolean(games),
+        hasEmptyState: Boolean(emptyState),
         bodyClass: document.body.className
       });
     }
-  }, 250);
+  }, 200);
 })();
