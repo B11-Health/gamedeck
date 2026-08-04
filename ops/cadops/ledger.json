@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "project": "GameDeck",
   "createdAt": "2026-08-03T23:44:00.000Z",
-  "updatedAt": "2026-08-04T02:16:41.109Z",
+  "updatedAt": "2026-08-04T02:30:46.656Z",
   "policy": {
     "nonReplay": true,
     "visibleLaunchRequired": true,
@@ -40,11 +40,11 @@
   },
   "counters": {
     "E": 7,
-    "T": 6,
+    "T": 7,
     "M": 6,
     "W": 6,
     "recovery": 0,
-    "event": 100
+    "event": 102
   },
   "tickets": [
     {
@@ -1382,18 +1382,102 @@
       "objective": "Harden CADOps ChatChains with ledger-bound room custody, explicit close eligibility, single-close locking, durable private receipts, and safer browser activity probes.",
       "assignee": "cadops-chatchain-workflow-builder-01",
       "authorizedBy": "general-orchestrator",
-      "status": "active",
+      "status": "completed",
       "chainId": "E-0007",
       "predecessorTicketId": null,
       "predecessorReceiptHash": null,
-      "successorTicketId": null,
+      "successorTicketId": "T-0007",
       "recoveryForTicketId": null,
       "recoveryTicketId": null,
       "createdAt": "2026-08-04T02:16:27.136Z",
       "acceptedAt": "2026-08-04T02:16:35.726Z",
       "startedAt": "2026-08-04T02:16:41.109Z",
-      "completedAt": null,
+      "completedAt": "2026-08-04T02:29:57.872Z",
       "launchEvidence": "Authenticated Shell active in dedicated clean worktree gamedeck-cadops-workflow-v2 at main 369fbd9; browser cleanup is fail-closed until ledger-bound room custody is implemented.",
+      "receipt": {
+        "ticketId": "E-0007",
+        "lane": "E",
+        "role": "builder",
+        "actor": "cadops-chatchain-workflow-builder-01",
+        "objective": "Harden CADOps ChatChains with ledger-bound room custody, explicit close eligibility, single-close locking, durable private receipts, and safer browser activity probes.",
+        "outcome": "pass",
+        "summary": "Implemented ledger-bound ChatChain room custody, explicit closure eligibility, loopback-only CDP, single-close locking, private durable receipts, and fail-closed browser hygiene.",
+        "softwareVersion": "7b937f9a3988f799d9b622707f7fdfefdd672370",
+        "predecessorTicketId": null,
+        "predecessorReceiptHash": null,
+        "launchEvidence": "Authenticated Shell active in dedicated clean worktree gamedeck-cadops-workflow-v2 at main 369fbd9; browser cleanup is fail-closed until ledger-bound room custody is implemented.",
+        "startedAt": "2026-08-04T02:16:41.109Z",
+        "completedAt": "2026-08-04T02:29:57.872Z",
+        "artifacts": [
+          {
+            "path": "scripts/chatchain-room-registry.mjs",
+            "source": "git-blob",
+            "commit": "7b937f9a3988f799d9b622707f7fdfefdd672370",
+            "objectFormat": "sha1",
+            "objectId": "4d118eafcf668a4ebb3027e2271f7e12d8b423bd",
+            "bytes": 15424,
+            "sha256": "316fb11a6a77e75884e2fabe88928b5b24cc64d852280f5ab00351e3a4e34832"
+          },
+          {
+            "path": "scripts/chatchain-tab-lifecycle.mjs",
+            "source": "git-blob",
+            "commit": "7b937f9a3988f799d9b622707f7fdfefdd672370",
+            "objectFormat": "sha1",
+            "objectId": "7625c82f0cea13153bea50bc94c8ee9278bc8fa9",
+            "bytes": 34012,
+            "sha256": "00c9493b8be1c964191ca00951ef404ccda28dd4647041253ed1862138c4adbd"
+          },
+          {
+            "path": "scripts/chatchain-room-registry.test.mjs",
+            "source": "git-blob",
+            "commit": "7b937f9a3988f799d9b622707f7fdfefdd672370",
+            "objectFormat": "sha1",
+            "objectId": "923f2abc228ecd192b1297d61a356865b7edfee0",
+            "bytes": 6382,
+            "sha256": "a121caa79592b8edc7f80b2dcbb28d4b3a43dbe17320b931df04178662b77f1c"
+          },
+          {
+            "path": "scripts/chatchain-tab-lifecycle.test.mjs",
+            "source": "git-blob",
+            "commit": "7b937f9a3988f799d9b622707f7fdfefdd672370",
+            "objectFormat": "sha1",
+            "objectId": "0d8ea8cae5a76ffc63b6aaed0c7704e8f815c0c6",
+            "bytes": 19872,
+            "sha256": "36b23bd26a70eab7e33a9758b634b6d5d940ada52921814d73b4cdc822423f6a"
+          }
+        ],
+        "checks": [
+          "Full GameDeck npm test passed; room registry 11 scenarios and browser lifecycle 27 scenarios passed.",
+          "Room CLI init, validate, status and git diff --check passed."
+        ],
+        "nextAuthorizedLanes": [
+          "T"
+        ],
+        "chainDisposition": "handoff-required",
+        "hash": "21da93ee3a0d2f3c26c13ff54798b3af82a3266b584c998a5104fc24c5c18c53"
+      },
+      "uncertainty": null,
+      "quarantine": null
+    },
+    {
+      "id": "T-0007",
+      "lane": "T",
+      "role": "tester",
+      "objective": "Independently verify ChatChain workflow commit 7b937f9a3988f799d9b622707f7fdfefdd672370, including ledger-bound room eligibility, private registry integrity, loopback-only CDP, single-close locking, non-replay uncertainty, and full repository compatibility.",
+      "assignee": "independent-cadops-chatchain-reviewer-01",
+      "authorizedBy": "general-orchestrator",
+      "status": "prepared",
+      "chainId": "E-0007",
+      "predecessorTicketId": "E-0007",
+      "predecessorReceiptHash": "21da93ee3a0d2f3c26c13ff54798b3af82a3266b584c998a5104fc24c5c18c53",
+      "successorTicketId": null,
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T02:30:46.656Z",
+      "acceptedAt": null,
+      "startedAt": null,
+      "completedAt": null,
+      "launchEvidence": null,
       "receipt": null,
       "uncertainty": null,
       "quarantine": null
@@ -2723,6 +2807,35 @@
         "launchEvidence": "Authenticated Shell active in dedicated clean worktree gamedeck-cadops-workflow-v2 at main 369fbd9; browser cleanup is fail-closed until ledger-bound room custody is implemented."
       },
       "hash": "f23e25164bd951fef4e279b268913db7a496c2f6f8160f8c3da9bbea58add797"
+    },
+    {
+      "eventId": "EVT-000101",
+      "type": "ticket.completed",
+      "ticketId": "E-0007",
+      "actor": "cadops-chatchain-workflow-builder-01",
+      "at": "2026-08-04T02:29:57.872Z",
+      "previousHash": "f23e25164bd951fef4e279b268913db7a496c2f6f8160f8c3da9bbea58add797",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "21da93ee3a0d2f3c26c13ff54798b3af82a3266b584c998a5104fc24c5c18c53",
+        "softwareVersion": "7b937f9a3988f799d9b622707f7fdfefdd672370"
+      },
+      "hash": "70240c73de2d272d943486f4f3c3481a6d94ddf11365a3048bfcd93e0c8d42f9"
+    },
+    {
+      "eventId": "EVT-000102",
+      "type": "custody.handed-off",
+      "ticketId": "E-0007",
+      "actor": "general-orchestrator",
+      "at": "2026-08-04T02:30:46.656Z",
+      "previousHash": "70240c73de2d272d943486f4f3c3481a6d94ddf11365a3048bfcd93e0c8d42f9",
+      "payload": {
+        "successorTicketId": "T-0007",
+        "successorLane": "T",
+        "predecessorReceiptHash": "21da93ee3a0d2f3c26c13ff54798b3af82a3266b584c998a5104fc24c5c18c53",
+        "assignee": "independent-cadops-chatchain-reviewer-01"
+      },
+      "hash": "bc6cd7880c696ce36e8aefcb946e79810a7fdc01f4e5e05bd0039b94f9716989"
     }
   ]
 }
