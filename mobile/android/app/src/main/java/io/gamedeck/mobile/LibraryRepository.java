@@ -200,9 +200,7 @@ final class LibraryRepository {
                 JSONObject details = metadataUri == null ? null : metadataCache.get(metadataUri.toString());
                 if (details == null && metadataUri != null) {
                     details = readMetadata(metadataUri);
-                    metadataCache.put(metadataUri.toString(), details == null ? JSONObject.NULL : details);
-                } else if (details == JSONObject.NULL) {
-                    details = null;
+                    if (details != null) metadataCache.put(metadataUri.toString(), details);
                 }
 
                 game.put("id", stableId(uri));
@@ -225,7 +223,7 @@ final class LibraryRepository {
                 game.put("region", details == null ? regionLabel(row.name) : firstString(details, "region", regionLabel(row.name)));
                 game.put("description", details == null ? "" : firstString(details, "description", "overview", "summary", ""));
                 game.put("releaseDate", details == null ? "" : firstString(details, "releaseDate", "release_date", "released", ""));
-                game.put("year", details == null ? yearLabel(row.name) : firstString(details, "year", yearFromDetails(details), yearLabel(row.name)));
+                game.put("year", metadataYear(details, row.name));
                 game.put("players", details == null ? "" : firstString(details, "players", "playerCount", ""));
                 game.put("rating", details == null ? "" : firstString(details, "rating", ""));
                 game.put("genre", details == null ? "" : firstString(details, "genre", ""));
@@ -488,9 +486,15 @@ final class LibraryRepository {
         return matcher.find() ? matcher.group() : "";
     }
 
-    private static String yearFromDetails(JSONObject details) {
-        String release = firstString(details, "releaseDate", "release_date", "released", "");
-        return yearLabel(release);
+    private static String metadataYear(JSONObject details, String fileName) {
+        if (details != null) {
+            String explicit = firstString(details, "year", "");
+            if (!explicit.isEmpty()) return explicit;
+            String release = firstString(details, "releaseDate", "release_date", "released", "");
+            String releaseYear = yearLabel(release);
+            if (!releaseYear.isEmpty()) return releaseYear;
+        }
+        return yearLabel(fileName);
     }
 
     private static String firstString(JSONObject value, String... keysAndFallback) {
