@@ -12,9 +12,9 @@ permissions:
 
 jobs:
   visual-qa:
-    name: Exercise phone UI and capture screenshots
+    name: Exercise portrait and landscape phone UI
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 45
     defaults:
       run:
         working-directory: mobile/android
@@ -50,7 +50,7 @@ jobs:
       - name: Build debug APK
         run: gradle :app:assembleDebug --no-daemon --stacktrace
 
-      - name: Launch, interact, and capture
+      - name: Launch, interact, rotate, and capture
         run: |
           set -euo pipefail
           APK=app/build/outputs/apk/debug/app-debug.apk
@@ -100,53 +100,133 @@ jobs:
           adb shell settings put global window_animation_scale 0
           adb shell settings put global transition_animation_scale 0
           adb shell settings put global animator_duration_scale 0
+          adb shell cmd window user-rotation lock 0 || true
           adb install "$APK"
           adb shell "run-as $PACKAGE sh -c 'mkdir -p files && touch files/renderer-fixture.enabled'"
           adb logcat -c
           adb shell am start -W -n "$PACKAGE/$ACTIVITY" | tee "$OUT/ACTIVITY-START.txt"
 
-          ready=0
-          for attempt in $(seq 1 55); do
-            adb logcat -d -v brief | grep -E "GAMEDECK_RENDERER_(READY|ERROR)" | tail -1 > "$OUT/RENDERER-STATUS.txt" || true
-            if grep -q "GAMEDECK_RENDERER_ERROR" "$OUT/RENDERER-STATUS.txt"; then
-              break
-            fi
-            if grep -q "GAMEDECK_RENDERER_READY" "$OUT/RENDERER-STATUS.txt"; then
-              ready=1
-              break
-            fi
+          wait_renderer() {
+            for attempt in $(seq 1 60); do
+              adb logcat -d -v brief | grep -E "GAMEDECK_RENDERER_(READY|ERROR)" | tail -1 > "$OUT/RENDERER-STATUS.txt" || true
+              if grep -q "GAMEDECK_RENDERER_ERROR" "$OUT/RENDERER-STATUS.txt"; then
+                cat "$OUT/RENDERER-STATUS.txt"
+                return 1
+              fi
+              if grep -q "GAMEDECK_RENDERER_READY" "$OUT/RENDERER-STATUS.txt"; then
+                return 0
+              fi
+              sleep 1
+            done
+            return 1
+          }
+
+          qa_command() {
+            adb shell am broadcast \
+              -a io.gamedeck.mobile.QA \
+              -p "$PACKAGE" \
+              --es command "$1" \
+              >/dev/null
+          }
+
+          wait_qa() {
+            local pattern="$1"
+            for attempt in $(seq 1 40); do
+              adb logcat -d -v brief \
+                | grep "GAMEDECK_QA_STATE" \
+                | tail -80 \
+                > "$OUT/QA-STATES.txt" || true
+              if grep -Fq "$pattern" "$OUT/QA-STATES.txt"; then
+                return 0
+              fi
+              sleep .5
+            done
+            echo "Missing QA state: $pattern"
+            tail -80 "$OUT/QA-STATES.txt" || true
+            return 1
+          }
+
+          capture() {
+            local name="$1"
+            local orientation="$2"
+            local file="$OUT/$name.png"
             sleep 1
-          done
-          test "$ready" = "1"
-          sleep 3
+            adb exec-out screencap -p > "$file"
+            test -s "$file"
+            python3 - "$file" "$orientation" <<'PY'
+          import struct, sys
+          path, expected = sys.argv[1], sys.argv[2]
+          data = open(path, 'rb').read(32)
+          if data[:8] != b'\x89PNG\r\n\x1a\n':
+              raise SystemExit('not a PNG')
+          width, height = struct.unpack('>II', data[16:24])
+          actual = 'landscape' if width > height else 'portrait'
+          print(f'{path}: {width}x{height} {actual}')
+          if actual != expected:
+              raise SystemExit(f'expected {expected}, got {actual}')
+          PY
+          }
 
-          adb exec-out screencap -p > "$OUT/01-library-top.png"
-
-          adb shell input swipe 540 2050 540 650 700
+          wait_renderer
+          wait_qa '"orientation":"portrait"'
+          wait_qa '"view":"home"'
           sleep 2
-          adb exec-out screencap -p > "$OUT/02-library-scrolled.png"
 
-          adb shell input swipe 540 650 540 2050 700
-          adb shell input swipe 540 650 540 2050 700
-          sleep 2
+          qa_command 'scroll:top'
+          wait_qa '"scrollBucket":"top"'
+          capture '01-portrait-library-top' portrait
 
-          adb shell input tap 326 255
-          sleep 3
-          adb exec-out screencap -p > "$OUT/03-discover-top.png"
-          adb shell input swipe 540 2050 540 650 700
-          sleep 2
-          adb exec-out screencap -p > "$OUT/04-discover-scrolled.png"
+          qa_command 'scroll:down'
+          wait_qa '"scrollBucket":"scrolled"'
+          capture '02-portrait-library-scrolled' portrait
 
-          adb shell input swipe 540 650 540 2050 700
-          adb shell input swipe 540 650 540 2050 700
-          sleep 2
-          adb shell input tap 974 255
-          sleep 3
-          adb exec-out screencap -p > "$OUT/05-community-top.png"
+          qa_command 'view:discover'
+          wait_qa '"view":"discover"'
+          wait_qa '"scrollBucket":"top"'
+          capture '03-portrait-discover-top' portrait
 
-          adb shell input tap 1024 132
+          qa_command 'scroll:down'
+          wait_qa '"scrollBucket":"scrolled"'
+          capture '04-portrait-discover-scrolled' portrait
+
+          qa_command 'view:community'
+          wait_qa '"view":"community"'
+          wait_qa '"scrollBucket":"top"'
+          capture '05-portrait-community-top' portrait
+
+          qa_command 'menu:open'
+          wait_qa '"menuOpen":true'
+          capture '06-portrait-overflow-menu' portrait
+          qa_command 'menu:close'
+          wait_qa '"menuOpen":false'
+
+          qa_command 'view:home'
+          wait_qa '"view":"home"'
+          qa_command 'scroll:top'
+          adb shell cmd window user-rotation lock 1 || adb shell settings put system user_rotation 1
+          wait_qa '"orientation":"landscape"'
+          wait_qa '"view":"home"'
           sleep 2
-          adb exec-out screencap -p > "$OUT/06-overflow-menu.png"
+          capture '07-landscape-library-top' landscape
+
+          qa_command 'scroll:down'
+          wait_qa '"scrollBucket":"scrolled"'
+          capture '08-landscape-library-scrolled' landscape
+
+          qa_command 'view:discover'
+          wait_qa '"view":"discover"'
+          wait_qa '"scrollBucket":"top"'
+          capture '09-landscape-discover-top' landscape
+
+          qa_command 'view:community'
+          wait_qa '"view":"community"'
+          wait_qa '"scrollBucket":"top"'
+          capture '10-landscape-community-top' landscape
+
+          qa_command 'menu:open'
+          wait_qa '"menuOpen":true'
+          capture '11-landscape-overflow-menu' landscape
+          qa_command 'menu:close'
 
           adb shell dumpsys window | grep -E "mCurrentFocus|mFocusedApp" > "$OUT/WINDOW-FOCUS.txt"
           grep -Fq "$PACKAGE" "$OUT/WINDOW-FOCUS.txt"
@@ -154,15 +234,21 @@ jobs:
           PACKAGE_REGEX=${PACKAGE//./\\.}
           ! grep -Eqi "FATAL EXCEPTION.*$PACKAGE_REGEX|Process: $PACKAGE_REGEX.*FATAL EXCEPTION" "$OUT/LOGCAT.txt"
 
-          for shot in "$OUT"/*.png; do
-            test -s "$shot"
-          done
+          test "$(find "$OUT" -maxdepth 1 -name '*.png' | wc -l)" -eq 11
+          test "$(sha256sum "$OUT"/*.png | awk '{print $1}' | sort -u | wc -l)" -ge 9
+          grep -Fq '"orientation":"portrait"' "$OUT/QA-STATES.txt"
+          grep -Fq '"orientation":"landscape"' "$OUT/QA-STATES.txt"
+          grep -Fq '"view":"discover"' "$OUT/QA-STATES.txt"
+          grep -Fq '"view":"community"' "$OUT/QA-STATES.txt"
+          grep -Fq '"menuOpen":true' "$OUT/QA-STATES.txt"
 
       - name: Upload visual QA evidence
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: gamedeck-android-visual-qa-${{ github.event.pull_request.head.sha || github.sha }}
-          path: mobile/android/app/build/outputs/apk/debug/visual-qa
+          path: |
+            mobile/android/app/build/outputs/apk/debug/app-debug.apk
+            mobile/android/app/build/outputs/apk/debug/visual-qa
           if-no-files-found: warn
           retention-days: 14
