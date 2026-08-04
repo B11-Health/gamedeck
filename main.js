@@ -7,6 +7,8 @@ const dgram = require('dgram');
 const zlib = require('zlib');
 const { spawn, spawnSync } = require('child_process');
 const { pathToFileURL } = require('url');
+const { handoffHostWindowForNativeGame, presentNativeGameWindow } = require('./native-window-presenter');
+const { prepareOpenBorLaunch } = require('./openbor-launch');
 const { path7za } = require('7zip-bin');
 const { createRuntimeManager, pathsFor: managedRuntimePathsFor, key: managedRuntimeKey } = require('./runtime-manager');
 const { createStreamServer } = require('./stream-server');
@@ -338,7 +340,7 @@ const systems = [
   { id: 'gamecube', name: 'Nintendo GameCube', short: 'GAMECUBE', color: '#7c3aed', folders: ['gamecube'], exts: ['.iso', '.gcm', '.rvz'], core: coreFile('dolphin_libretro'), exe: emulatorPaths.dolphin, preferExe: true, args: ['-b', '-e'], icon: 'GC' },
   { id: 'wii', name: 'Nintendo Wii', short: 'WII', color: '#0ea5e9', folders: ['wii'], exts: ['.wbfs', '.rvz'], core: coreFile('dolphin_libretro'), exe: emulatorPaths.dolphin, preferExe: true, args: ['-b', '-e'], icon: 'W' },
   { id: 'wiiu', name: 'Nintendo Wii U', short: 'WII U', color: '#00a2e8', folders: ['wiiu'], exts: ['.wud', '.wux', '.rpx'], exe: emulatorPaths.cemu, args: ['-f', '-g'], icon: 'WU' },
-  { id: 'openbor', name: 'OpenBOR', short: 'OPENBOR', color: '#f97316', folders: ['openbor'], exts: ['.pak'], exe: emulatorPaths.openbor, preferExe: true, launchMode: 'openbor', icon: 'OB' }
+  { id: 'openbor', name: 'OpenBOR', short: 'OPENBOR', color: '#f97316', folders: ['openbor'], exts: ['.pak'], exe: emulatorPaths.openbor, preferExe: true, launchMode: 'openbor', presentation: 'native-fullscreen', icon: 'OB' }
 ];
 
 const tgdbPlatforms = {
@@ -2085,8 +2087,22 @@ function launchGame(file, options = {}) {
 
   const emulator = selectLaunchEmulator(system, game);
   if (!emulator) throw Error(system.name + ' emulator is not installed or configured.');
+  let launchExecutable = emulator.executable;
+  let launchCwd = path.dirname(emulator.executable);
+  let presentation = system.presentation || '';
   let args;
-  if (emulator.kind === 'libretro') {
+  let openBorLaunch = null;
+  if (emulator.kind === 'openbor') {
+    openBorLaunch = prepareOpenBorLaunch({
+      engineExecutable: emulator.executable,
+      sourcePak: safeFile,
+      sessionsRoot: path.join(app.getPath('userData'), 'runtime', 'openbor', 'sessions')
+    });
+    launchExecutable = openBorLaunch.executable;
+    launchCwd = openBorLaunch.cwd;
+    presentation = openBorLaunch.presentation;
+    args = openBorLaunch.args;
+  } else if (emulator.kind === 'libretro') {
     const controllerConfig = isArcadeSystem(system) ? ensureRetroArchArcadeControllerConfig() : '';
     const managedConfig = emulator.executable === MANAGED_RUNTIME_PATHS.retroArch && fs.existsSync(MANAGED_RUNTIME_PATHS.config) ? ['--config', MANAGED_RUNTIME_PATHS.config] : [];
     args = ['-f', ...managedConfig, ...(controllerConfig ? ['--appendconfig=' + controllerConfig] : []), '-L', emulator.corePath, safeFile];
@@ -2096,18 +2112,37 @@ function launchGame(file, options = {}) {
     args = [...(system.args || []), safeFile];
   }
 
-  const child = spawn(emulator.executable, args, { cwd: path.dirname(emulator.executable), detached: true, stdio: 'ignore' });
+  const child = spawn(launchExecutable, args, { cwd: launchCwd, detached: true, stdio: 'ignore' });
+  const nativeHandoff = presentation ? handoffHostWindowForNativeGame({ hostWindow: mainWindow, child }) : null;
   child.once('error', error => {
     addActivity('error', system.name + ' launch failed: ' + error.message);
     emitLaunch({ file: safeFile, status: 'failed', message: error.message });
   });
+  if (presentation && child.pid) {
+    presentNativeGameWindow({ pid: child.pid, mode: presentation }).then(windowResult => {
+      if (windowResult?.ok) {
+        const detail = windowResult.status === 'native-fullscreen'
+          ? 'native fullscreen with preserved aspect ratio'
+          : windowResult.status === 'borderless-fullscreen'
+            ? 'borderless fullscreen'
+            : windowResult.status === 'centered-fallback'
+              ? 'centered window fallback'
+              : 'centered window';
+        addActivity('success', system.name + ' presentation ready: ' + detail + (nativeHandoff?.minimized ? '; GameDeck will return when the game closes.' : '.'));
+      } else {
+        addActivity('info', system.name + ' opened, but GameDeck could not confirm the native window: ' + (windowResult?.status || 'unknown result') + '.');
+      }
+    }).catch(error => addActivity('info', system.name + ' opened without window confirmation: ' + error.message));
+  }
   child.unref();
   const store = readStore();
   store.recent[safeFile] = Date.now();
   writeStore(store);
   const displayName = isArcadeSystem(system) ? arcadeDisplayTitle(game.shortName) : cleanName(safeFile);
+  if (openBorLaunch) addActivity('info', 'Prepared an isolated OpenBOR session using ' + openBorLaunch.stagingMethod + ' staging.');
   addActivity('success', 'Launched ' + displayName + ' with ' + emulator.label);
-  const result = { ok: true, launched: true, emulator: emulator.label, message: displayName + ' opened with ' + emulator.label + '.' };
+  const fullscreen = presentation === 'native-fullscreen' || presentation === 'borderless-fullscreen';
+  const result = { ok: true, launched: true, emulator: emulator.label, presentation, message: displayName + ' opened with ' + emulator.label + (fullscreen ? ' in fullscreen.' : '.') };
   if (options.automatic) emitLaunch({ file: safeFile, status: 'launched', emulator: emulator.label, message: result.message });
   return result;
 }

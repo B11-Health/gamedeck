@@ -81,6 +81,7 @@ const state = {
   donations: null,
   diagnostics: null,
   launchingFile: null,
+  launchHandoffTimer: null,
   inputMode: 'pointer',
   shelfMemory: {},
   setupCoachOpen: requestedCaptureView === 'setup' || readPreference('setup-coach', 'auto') === 'open',
@@ -1292,8 +1293,42 @@ async function toggleFavorite(game) {
   toast(wasFavorite ? 'Removed from favorites' : 'Added to favorites', 'success');
 }
 
+function updateLaunchHandoff(game, active) {
+  const panel = $('#launchHandoff');
+  if (!panel) return;
+  clearTimeout(state.launchHandoffTimer);
+  if (!active || !game) {
+    panel.classList.remove('visible');
+    state.launchHandoffTimer = setTimeout(() => panel.classList.add('hidden'), 220);
+    return;
+  }
+  const system = systemById(game.system);
+  const fullscreen = system?.id === 'openbor' || ['arcade', 'mame', 'ps1', 'ps2', 'gamecube', 'wii', 'wiiu'].includes(system?.id);
+  $('#launchHandoffKicker').textContent = fullscreen ? 'OPENING FULLSCREEN' : 'OPENING GAME';
+  $('#launchHandoffTitle').textContent = game.title || 'Preparing your game';
+  $('#launchHandoffDetail').textContent = system?.id === 'openbor'
+    ? 'GameDeck is opening an isolated OpenBOR session, preserving aspect ratio, and handing over controller focus.'
+    : `GameDeck is handing controller focus to ${system?.name || 'the selected engine'}.`;
+  $('#launchHandoffMode').textContent = fullscreen ? 'FULLSCREEN HANDOFF' : 'CENTERED HANDOFF';
+  const art = $('#launchHandoffArt');
+  art.replaceChildren();
+  const image = document.createElement('img');
+  image.src = gameArt(game);
+  image.alt = '';
+  image.addEventListener('error', () => {
+    art.replaceChildren();
+    const fallback = document.createElement('span');
+    fallback.textContent = system?.icon || '▶';
+    art.append(fallback);
+  }, { once: true });
+  art.append(image);
+  panel.classList.remove('hidden');
+  requestAnimationFrame(() => panel.classList.add('visible'));
+}
+
 function setLaunchingState(game, active) {
   state.launchingFile = active && game ? game.file : null;
+  updateLaunchHandoff(game, active);
   const card = game ? document.querySelector('.game[data-id="' + game.id + '"]') : null;
   card?.classList.toggle('launching', active);
   card?.setAttribute('aria-busy', String(active));
@@ -1329,7 +1364,7 @@ async function launch(file) {
     setTimeout(() => {
       setLaunchingState(game, false);
       loadLibrary(false);
-    }, 1100);
+    }, result.presentation ? 1800 : 1100);
   } catch (error) {
     setLaunchingState(game, false);
     toast(error.message || 'Could not launch this game', 'warning');
@@ -3192,6 +3227,13 @@ async function init() {
   } else if (captureView === 'arcade-attention') {
     state.arcadeFilter = 'attention';
     selectLibrarySystem('arcade');
+  } else if (captureView === 'launch-handoff') {
+    changeView('home');
+    const game = state.library.games.find(item => item.system === 'openbor') || state.library.games[0];
+    if (game) {
+      setFocusedGame(game);
+      setLaunchingState(game, true);
+    }
   }
   if (captureView) document.body.dataset.captureReady = 'true';
 }

@@ -641,6 +641,19 @@
     </div>
   </section>
 
+  <section class="launch-handoff hidden" id="launchHandoff" role="status" aria-live="polite" aria-atomic="true">
+    <div class="launch-handoff-card">
+      <div class="launch-handoff-art" id="launchHandoffArt" aria-hidden="true"><span>▶</span></div>
+      <div class="launch-handoff-copy">
+        <span class="launch-handoff-kicker" id="launchHandoffKicker">OPENING GAME</span>
+        <b id="launchHandoffTitle">Preparing your game</b>
+        <small id="launchHandoffDetail">GameDeck is handing focus to the selected engine.</small>
+      </div>
+      <span class="launch-handoff-spinner" aria-hidden="true"></span>
+    </div>
+    <div class="launch-handoff-foot"><span>CONTROLLER READY</span><span id="launchHandoffMode">FULLSCREEN HANDOFF</span><span>GAMEDECK STAYS OPEN</span></div>
+  </section>
+
   <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"><span class="toast-icon" aria-hidden="true">i</span><b class="toast-message"></b></div>
   <script src="app.js"></script>
   <script src="streaming.js"></script>
