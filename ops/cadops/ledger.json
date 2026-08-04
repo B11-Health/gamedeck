@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "project": "GameDeck",
   "createdAt": "2026-08-03T23:44:00.000Z",
-  "updatedAt": "2026-08-03T23:44:00.000Z",
+  "updatedAt": "2026-08-04T00:04:00.000Z",
   "policy": {
     "nonReplay": true,
     "visibleLaunchRequired": true,
@@ -39,14 +39,111 @@
     }
   },
   "counters": {
-    "E": 0,
-    "T": 0,
+    "E": 1,
+    "T": 1,
     "M": 0,
     "W": 0,
     "recovery": 0,
-    "event": 1
+    "event": 6
   },
-  "tickets": [],
+  "tickets": [
+    {
+      "id": "E-0001",
+      "lane": "E",
+      "role": "builder",
+      "objective": "Implement the GameDeck CADOps custody engine, CLI, ledger, documentation, and adversarial test gate.",
+      "assignee": "cadops-builder-01",
+      "authorizedBy": "general-orchestrator",
+      "status": "completed",
+      "chainId": "E-0001",
+      "predecessorTicketId": null,
+      "predecessorReceiptHash": null,
+      "successorTicketId": "T-0001",
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-03T23:50:00.000Z",
+      "acceptedAt": "2026-08-03T23:51:00.000Z",
+      "startedAt": "2026-08-03T23:52:00.000Z",
+      "completedAt": "2026-08-04T00:03:00.000Z",
+      "launchEvidence": "Authenticated Shell executed in dedicated clean worktree gamedeck-cadops on branch ops/cadops-foundation.",
+      "receipt": {
+        "ticketId": "E-0001",
+        "lane": "E",
+        "role": "builder",
+        "actor": "cadops-builder-01",
+        "objective": "Implement the GameDeck CADOps custody engine, CLI, ledger, documentation, and adversarial test gate.",
+        "outcome": "pass",
+        "summary": "Implemented the CADOps custody engine, CLI, Watcher, documentation, canonical ledger, and repository test integration.",
+        "softwareVersion": "677f842804f8ce556e47b2cdac33b8e2b86c1203",
+        "predecessorTicketId": null,
+        "predecessorReceiptHash": null,
+        "launchEvidence": "Authenticated Shell executed in dedicated clean worktree gamedeck-cadops on branch ops/cadops-foundation.",
+        "startedAt": "2026-08-03T23:52:00.000Z",
+        "completedAt": "2026-08-04T00:03:00.000Z",
+        "artifacts": [
+          {
+            "path": "scripts/cadops-core.mjs",
+            "bytes": 18284,
+            "sha256": "aa6b47f2b9b120655f8aa2ce7a8a40bf58699ecbdd76b26dc147012fad815e08"
+          },
+          {
+            "path": "scripts/cadops.mjs",
+            "bytes": 7216,
+            "sha256": "ac876afe467e6f5aabd44b7ab848e3b27a88d22e8b6d6f0ff6ff0c2e3c4eef88"
+          },
+          {
+            "path": "scripts/cadops.test.mjs",
+            "bytes": 5980,
+            "sha256": "c30c173fb6298a0f2cf1f072ae28b678a2e4ca628a03df29dbe909a09059ffc9"
+          },
+          {
+            "path": "docs/CADOPS.md",
+            "bytes": 5152,
+            "sha256": "c014cf523b541d009e9a56c6f73411bc7b4f3d45c8047a75aafb17e08fe3b2ab"
+          },
+          {
+            "path": "package.json",
+            "bytes": 6512,
+            "sha256": "a33861d34192914738593f799e006d888dde873eaf5bf71b553aceeb647486ec"
+          }
+        ],
+        "checks": [
+          "CADOps adversarial suite, ledger validation, and Watcher health passed.",
+          "Full npm test gate and git diff --check passed."
+        ],
+        "nextAuthorizedLanes": [
+          "T"
+        ],
+        "chainDisposition": "handoff-required",
+        "hash": "ddc7e1eaaa335c1d426a84485fb998c568aa79b0eb8dd9df143bc6830f8a9750"
+      },
+      "uncertainty": null,
+      "quarantine": null
+    },
+    {
+      "id": "T-0001",
+      "lane": "T",
+      "role": "tester",
+      "objective": "Independently black-box test commit 677f842804f8ce556e47b2cdac33b8e2b86c1203, verify the CADOps receipt and non-replay invariants, and return pass or bounded remediation.",
+      "assignee": "independent-cadops-reviewer",
+      "authorizedBy": "general-orchestrator",
+      "status": "prepared",
+      "chainId": "E-0001",
+      "predecessorTicketId": "E-0001",
+      "predecessorReceiptHash": "ddc7e1eaaa335c1d426a84485fb998c568aa79b0eb8dd9df143bc6830f8a9750",
+      "successorTicketId": null,
+      "recoveryForTicketId": null,
+      "recoveryTicketId": null,
+      "createdAt": "2026-08-04T00:04:00.000Z",
+      "acceptedAt": null,
+      "startedAt": null,
+      "completedAt": null,
+      "launchEvidence": null,
+      "receipt": null,
+      "uncertainty": null,
+      "quarantine": null
+    }
+  ],
   "events": [
     {
       "eventId": "EVT-000001",
@@ -60,6 +157,74 @@
         "schemaVersion": 1
       },
       "hash": "dd748d4509fd07fd12ca19527ec8694030cb86894628ba4c68a340b5f1d9ad33"
+    },
+    {
+      "eventId": "EVT-000002",
+      "type": "ticket.issued",
+      "ticketId": "E-0001",
+      "actor": "general-orchestrator",
+      "at": "2026-08-03T23:50:00.000Z",
+      "previousHash": "dd748d4509fd07fd12ca19527ec8694030cb86894628ba4c68a340b5f1d9ad33",
+      "payload": {
+        "lane": "E",
+        "role": "builder",
+        "assignee": "cadops-builder-01",
+        "objective": "Implement the GameDeck CADOps custody engine, CLI, ledger, documentation, and adversarial test gate."
+      },
+      "hash": "30a5e638cf3701415dbcd8163e762a1ea88da36b02add8731766e05f68e35ffe"
+    },
+    {
+      "eventId": "EVT-000003",
+      "type": "ticket.accepted",
+      "ticketId": "E-0001",
+      "actor": "cadops-builder-01",
+      "at": "2026-08-03T23:51:00.000Z",
+      "previousHash": "30a5e638cf3701415dbcd8163e762a1ea88da36b02add8731766e05f68e35ffe",
+      "payload": {
+        "role": "builder"
+      },
+      "hash": "5a7cd0dd1d13a58b3541d6ab7a33bd7e9ce9e2cfa76150e04025d441e623ad79"
+    },
+    {
+      "eventId": "EVT-000004",
+      "type": "ticket.started",
+      "ticketId": "E-0001",
+      "actor": "cadops-builder-01",
+      "at": "2026-08-03T23:52:00.000Z",
+      "previousHash": "5a7cd0dd1d13a58b3541d6ab7a33bd7e9ce9e2cfa76150e04025d441e623ad79",
+      "payload": {
+        "launchEvidence": "Authenticated Shell executed in dedicated clean worktree gamedeck-cadops on branch ops/cadops-foundation."
+      },
+      "hash": "acb22c7e614bea6a0e3c3ef6498afbc7177e85e7a169e89af9ab5bb1f2fc82f5"
+    },
+    {
+      "eventId": "EVT-000005",
+      "type": "ticket.completed",
+      "ticketId": "E-0001",
+      "actor": "cadops-builder-01",
+      "at": "2026-08-04T00:03:00.000Z",
+      "previousHash": "acb22c7e614bea6a0e3c3ef6498afbc7177e85e7a169e89af9ab5bb1f2fc82f5",
+      "payload": {
+        "outcome": "pass",
+        "receiptHash": "ddc7e1eaaa335c1d426a84485fb998c568aa79b0eb8dd9df143bc6830f8a9750",
+        "softwareVersion": "677f842804f8ce556e47b2cdac33b8e2b86c1203"
+      },
+      "hash": "b6d0f52ce3748c2deb7323ac395d779caf277989a636a3aaf64e9b52d685ae48"
+    },
+    {
+      "eventId": "EVT-000006",
+      "type": "custody.handed-off",
+      "ticketId": "E-0001",
+      "actor": "general-orchestrator",
+      "at": "2026-08-04T00:04:00.000Z",
+      "previousHash": "b6d0f52ce3748c2deb7323ac395d779caf277989a636a3aaf64e9b52d685ae48",
+      "payload": {
+        "successorTicketId": "T-0001",
+        "successorLane": "T",
+        "predecessorReceiptHash": "ddc7e1eaaa335c1d426a84485fb998c568aa79b0eb8dd9df143bc6830f8a9750",
+        "assignee": "independent-cadops-reviewer"
+      },
+      "hash": "9d50588a4d8e229251160ee6036c5f95225a35df6b5a292ba84ef65460c411fc"
     }
   ]
 }
