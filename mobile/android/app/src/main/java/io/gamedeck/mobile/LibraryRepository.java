@@ -11,10 +11,13 @@ import android.util.Base64;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -23,6 +26,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 final class LibraryRepository {
     private static final String PREFS = "gamedeck_mobile";
@@ -30,6 +35,15 @@ final class LibraryRepository {
     private static final String FAVORITES = "favorites";
     private static final int MAX_FILES = 5000;
     private static final int MAX_DEPTH = 16;
+    private static final int MAX_METADATA_BYTES = 1024 * 1024;
+    private static final Set<String> ART_EXTENSIONS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
+        ".png", ".jpg", ".jpeg", ".webp", ".gif"
+    )));
+    private static final Pattern TAG_PATTERN = Pattern.compile("\\(([^)]+)\\)");
+    private static final String[] REGIONS = new String[]{
+        "USA", "Europe", "Japan", "World", "Asia", "Australia", "Brazil", "Canada",
+        "France", "Germany", "Italy", "Korea", "Spain", "Sweden", "Taiwan"
+    };
 
     private static final String[] PROJECTION = new String[]{
         DocumentsContract.Document.COLUMN_DOCUMENT_ID,
@@ -57,19 +71,49 @@ final class LibraryRepository {
         final Uri uri;
         final String name;
         final String relativePath;
+        final String parentPath;
+        final String scope;
         final String mimeType;
         final long size;
         final long modified;
         final SystemRegistry.SystemDef system;
 
-        GameRow(Uri uri, String name, String relativePath, String mimeType, long size, long modified, SystemRegistry.SystemDef system) {
+        GameRow(Uri uri, String name, String relativePath, String parentPath, String scope, String mimeType,
+                long size, long modified, SystemRegistry.SystemDef system) {
             this.uri = uri;
             this.name = name;
             this.relativePath = relativePath;
+            this.parentPath = parentPath;
+            this.scope = scope;
             this.mimeType = mimeType;
             this.size = size;
             this.modified = modified;
             this.system = system;
+        }
+    }
+
+    private static final class MediaCandidate {
+        final Uri uri;
+        final int score;
+
+        MediaCandidate(Uri uri, int score) {
+            this.uri = uri;
+            this.score = score;
+        }
+    }
+
+    private static final class ScanResult {
+        final List<GameRow> rows;
+        final Map<String, MediaCandidate> artwork;
+        final Map<String, MediaCandidate> metadata;
+        final boolean truncated;
+
+        ScanResult(List<GameRow> rows, Map<String, MediaCandidate> artwork,
+                   Map<String, MediaCandidate> metadata, boolean truncated) {
+            this.rows = rows;
+            this.artwork = artwork;
+            this.metadata = metadata;
+            this.truncated = truncated;
         }
     }
 
@@ -122,6 +166,9 @@ final class LibraryRepository {
         JSONArray systems = new JSONArray();
         Map<String, Integer> counts = new HashMap<>();
         List<GameRow> rows = new ArrayList<>();
+        Map<String, MediaCandidate> artwork = new HashMap<>();
+        Map<String, MediaCandidate> metadata = new HashMap<>();
+        Map<String, JSONObject> metadataCache = new HashMap<>();
         boolean truncated = false;
         String rootName = "";
         String error = "";
@@ -131,6 +178,8 @@ final class LibraryRepository {
                 rootName = documentName(rootUri);
                 ScanResult result = scanRows(rootUri, rootName);
                 rows = result.rows;
+                artwork = result.artwork;
+                metadata = result.metadata;
                 truncated = result.truncated;
             } catch (Exception scanError) {
                 error = scanError.getMessage() == null ? "The selected library could not be read." : scanError.getMessage();
@@ -144,8 +193,20 @@ final class LibraryRepository {
             JSONObject game = new JSONObject();
             try {
                 String uri = row.uri.toString();
+                String rawTitle = rawName(row.name);
+                String displayTitle = cleanName(row.name);
+                Uri artworkUri = resolveMedia(artwork, row, rawTitle, displayTitle);
+                Uri metadataUri = resolveMedia(metadata, row, rawTitle, displayTitle);
+                JSONObject details = metadataUri == null ? null : metadataCache.get(metadataUri.toString());
+                if (details == null && metadataUri != null) {
+                    details = readMetadata(metadataUri);
+                    metadataCache.put(metadataUri.toString(), details == null ? JSONObject.NULL : details);
+                } else if (details == JSONObject.NULL) {
+                    details = null;
+                }
+
                 game.put("id", stableId(uri));
-                game.put("title", cleanName(row.name));
+                game.put("title", displayTitle);
                 game.put("file", uri);
                 game.put("contentUri", uri);
                 game.put("relativePath", row.relativePath);
@@ -155,7 +216,22 @@ final class LibraryRepository {
                 game.put("size", row.size);
                 game.put("modified", row.modified);
                 game.put("format", SystemRegistry.extension(row.name).replace(".", "").toUpperCase(Locale.US));
-                game.put("art", "");
+                game.put("art", artworkUri == null ? "" : artworkUri.toString());
+                game.put("artworkTitle", rawTitle);
+                game.put("metadataTitle", details == null ? displayTitle : firstString(details, "title", "name", displayTitle));
+                game.put("artworkFolder", row.scope);
+                game.put("shortName", rawTitle);
+                game.put("edition", editionLabel(row.name));
+                game.put("region", details == null ? regionLabel(row.name) : firstString(details, "region", regionLabel(row.name)));
+                game.put("description", details == null ? "" : firstString(details, "description", "overview", "summary", ""));
+                game.put("releaseDate", details == null ? "" : firstString(details, "releaseDate", "release_date", "released", ""));
+                game.put("year", details == null ? yearLabel(row.name) : firstString(details, "year", yearFromDetails(details), yearLabel(row.name)));
+                game.put("players", details == null ? "" : firstString(details, "players", "playerCount", ""));
+                game.put("rating", details == null ? "" : firstString(details, "rating", ""));
+                game.put("genre", details == null ? "" : firstString(details, "genre", ""));
+                game.put("developer", details == null ? "" : firstString(details, "developer", ""));
+                game.put("publisher", details == null ? "" : firstString(details, "publisher", ""));
+                game.put("detailsSource", details == null ? "GameDeck" : "Local metadata");
                 game.put("favorite", favorites.contains(uri));
                 game.put("lastPlayed", preferences.getLong("recent:" + stableId(uri), 0));
                 game.put("classification", externalRoute ? "integrated_external" : "blocked");
@@ -170,6 +246,7 @@ final class LibraryRepository {
                 item.put("id", system.id);
                 item.put("name", system.name);
                 item.put("short", system.shortName);
+                item.put("icon", system.shortName.length() > 3 ? system.shortName.substring(0, 3) : system.shortName);
                 item.put("color", system.color);
                 item.put("core", system.core);
                 item.put("count", count);
@@ -196,23 +273,16 @@ final class LibraryRepository {
         return output.toString();
     }
 
-    private static final class ScanResult {
-        final List<GameRow> rows;
-        final boolean truncated;
-
-        ScanResult(List<GameRow> rows, boolean truncated) {
-            this.rows = rows;
-            this.truncated = truncated;
-        }
-    }
-
     private ScanResult scanRows(Uri treeUri, String rootName) {
         ContentResolver resolver = context.getContentResolver();
         String rootId = DocumentsContract.getTreeDocumentId(treeUri);
         ArrayDeque<Node> queue = new ArrayDeque<>();
         queue.add(new Node(rootId, "", "", 0));
         List<GameRow> rows = new ArrayList<>();
+        Map<String, MediaCandidate> artwork = new HashMap<>();
+        Map<String, MediaCandidate> metadata = new HashMap<>();
         boolean truncated = false;
+        boolean rootIsSystem = SystemRegistry.forFolder(rootName) != null;
 
         while (!queue.isEmpty() && rows.size() < MAX_FILES) {
             Node node = queue.removeFirst();
@@ -235,12 +305,36 @@ final class LibraryRepository {
                         if (node.depth < MAX_DEPTH) queue.addLast(new Node(id, relative, topFolder, node.depth + 1));
                         continue;
                     }
-                    SystemRegistry.SystemDef system = SystemRegistry.classify(rootName, node.topFolder, name);
-                    if (system == null) continue;
+
                     Uri documentUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, id);
                     long size = sizeColumn >= 0 && !cursor.isNull(sizeColumn) ? cursor.getLong(sizeColumn) : 0;
                     long modified = modifiedColumn >= 0 && !cursor.isNull(modifiedColumn) ? cursor.getLong(modifiedColumn) : 0;
-                    rows.add(new GameRow(documentUri, name, relative, mime == null ? "application/octet-stream" : mime, size, modified, system));
+                    String scope = rootIsSystem ? rootName : node.topFolder;
+                    String extension = SystemRegistry.extension(name);
+
+                    if (ART_EXTENSIONS.contains(extension)) {
+                        indexMedia(artwork, scope, node.path, name, documentUri, mediaScore(node.path, true));
+                        continue;
+                    }
+                    if (".json".equals(extension) && size <= MAX_METADATA_BYTES) {
+                        indexMedia(metadata, scope, node.path, name, documentUri, mediaScore(node.path, false));
+                        continue;
+                    }
+
+                    SystemRegistry.SystemDef system = SystemRegistry.classify(rootName, node.topFolder, name);
+                    if (system == null) continue;
+                    String effectiveScope = scope == null || scope.isEmpty() ? system.folders.get(0) : scope;
+                    rows.add(new GameRow(
+                        documentUri,
+                        name,
+                        relative,
+                        node.path,
+                        effectiveScope,
+                        mime == null ? "application/octet-stream" : mime,
+                        size,
+                        modified,
+                        system
+                    ));
                     if (rows.size() >= MAX_FILES) {
                         truncated = true;
                         break;
@@ -252,7 +346,67 @@ final class LibraryRepository {
                 // One unreadable folder does not invalidate the rest of a local library.
             }
         }
-        return new ScanResult(rows, truncated);
+        return new ScanResult(rows, artwork, metadata, truncated);
+    }
+
+    private void indexMedia(Map<String, MediaCandidate> target, String scope, String parentPath,
+                            String fileName, Uri uri, int score) {
+        String base = mediaBase(fileName);
+        putPreferred(target, parentKey(parentPath, base), uri, score + 5);
+        putPreferred(target, scopeKey(scope, base), uri, score);
+        putPreferred(target, scopeKey(scope, cleanName(fileName)), uri, score - 1);
+    }
+
+    private void putPreferred(Map<String, MediaCandidate> target, String key, Uri uri, int score) {
+        if (key.isEmpty()) return;
+        MediaCandidate current = target.get(key);
+        if (current == null || score > current.score) target.put(key, new MediaCandidate(uri, score));
+    }
+
+    private Uri resolveMedia(Map<String, MediaCandidate> target, GameRow row, String rawTitle, String displayTitle) {
+        String[] keys = new String[]{
+            parentKey(row.parentPath, rawTitle),
+            parentKey(row.parentPath, displayTitle),
+            scopeKey(row.scope, rawTitle),
+            scopeKey(row.scope, displayTitle)
+        };
+        for (String key : keys) {
+            MediaCandidate candidate = target.get(key);
+            if (candidate != null) return candidate.uri;
+        }
+        return null;
+    }
+
+    private int mediaScore(String path, boolean artwork) {
+        String value = normalizePath(path);
+        int score = 10;
+        if (value.contains("/boxart/") || value.endsWith("/boxart") || value.contains("/boxarts/")) score += 12;
+        if (value.contains("/covers/") || value.endsWith("/covers")) score += 11;
+        if (value.contains("/artwork/") || value.endsWith("/artwork")) score += 10;
+        if (value.contains("/images/") || value.endsWith("/images")) score += 9;
+        if (value.contains("/media/")) score += 7;
+        if (!artwork && value.contains("/metadata/")) score += 14;
+        return score;
+    }
+
+    private JSONObject readMetadata(Uri uri) {
+        try (InputStream input = context.getContentResolver().openInputStream(uri);
+             ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+            if (input == null) return null;
+            byte[] buffer = new byte[8192];
+            int total = 0;
+            int read;
+            while ((read = input.read(buffer)) >= 0) {
+                total += read;
+                if (total > MAX_METADATA_BYTES) return null;
+                output.write(buffer, 0, read);
+            }
+            JSONObject value = new JSONObject(output.toString("UTF-8"));
+            String description = firstString(value, "description", "overview", "summary", "");
+            return description.isEmpty() && firstString(value, "title", "name", "").isEmpty() ? null : value;
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
     private String documentName(Uri treeUri) {
@@ -266,9 +420,7 @@ final class LibraryRepository {
     }
 
     static String cleanName(String fileName) {
-        String value = fileName == null ? "" : fileName;
-        int dot = value.lastIndexOf('.');
-        if (dot > 0) value = value.substring(0, dot);
+        String value = rawName(fileName);
         return value
             .replace('_', ' ')
             .replace('.', ' ')
@@ -276,6 +428,91 @@ final class LibraryRepository {
             .replaceAll("\\s*\\[[^\\]]*\\]|\\s*\\([^)]*\\)", "")
             .replaceAll("\\s+", " ")
             .trim();
+    }
+
+    private static String rawName(String fileName) {
+        String value = fileName == null ? "" : fileName;
+        int dot = value.lastIndexOf('.');
+        return dot > 0 ? value.substring(0, dot).trim() : value.trim();
+    }
+
+    private static String mediaBase(String fileName) {
+        String value = rawName(fileName);
+        return value.replaceFirst("(?i)\\.metadata$", "").trim();
+    }
+
+    private static String parentKey(String parentPath, String title) {
+        String parent = normalizePath(parentPath);
+        String name = normalizeTitle(title);
+        return name.isEmpty() ? "" : "parent:" + parent + ":" + name;
+    }
+
+    private static String scopeKey(String scope, String title) {
+        String folder = normalizeTitle(scope);
+        String name = normalizeTitle(title);
+        return name.isEmpty() ? "" : "scope:" + folder + ":" + name;
+    }
+
+    private static String normalizePath(String value) {
+        return (value == null ? "" : value.trim().toLowerCase(Locale.US).replace('\\', '/'))
+            .replaceAll("/+", "/")
+            .replaceAll("^/|/$", "");
+    }
+
+    private static String normalizeTitle(String value) {
+        return (value == null ? "" : value.toLowerCase(Locale.US)).replaceAll("[^a-z0-9]+", "");
+    }
+
+    private static String editionLabel(String value) {
+        Matcher matcher = TAG_PATTERN.matcher(value == null ? "" : value);
+        List<String> tags = new ArrayList<>();
+        while (matcher.find() && tags.size() < 3) tags.add(matcher.group(1).trim());
+        return join(tags, " / ");
+    }
+
+    private static String regionLabel(String value) {
+        Matcher matcher = TAG_PATTERN.matcher(value == null ? "" : value);
+        while (matcher.find()) {
+            String tag = matcher.group(1);
+            for (String region : REGIONS) {
+                if (Pattern.compile("(^|[, ])" + Pattern.quote(region) + "($|[, ])", Pattern.CASE_INSENSITIVE).matcher(tag).find()) {
+                    return tag.trim();
+                }
+            }
+        }
+        return "";
+    }
+
+    private static String yearLabel(String value) {
+        Matcher matcher = Pattern.compile("\\b(19|20)\\d{2}\\b").matcher(value == null ? "" : value);
+        return matcher.find() ? matcher.group() : "";
+    }
+
+    private static String yearFromDetails(JSONObject details) {
+        String release = firstString(details, "releaseDate", "release_date", "released", "");
+        return yearLabel(release);
+    }
+
+    private static String firstString(JSONObject value, String... keysAndFallback) {
+        if (value == null || keysAndFallback.length == 0) return "";
+        int last = keysAndFallback.length - 1;
+        for (int index = 0; index < last; index++) {
+            String key = keysAndFallback[index];
+            Object raw = value.opt(key);
+            if (raw == null || raw == JSONObject.NULL) continue;
+            String text = String.valueOf(raw).replaceAll("\\s+", " ").trim();
+            if (!text.isEmpty()) return text;
+        }
+        return keysAndFallback[last] == null ? "" : keysAndFallback[last];
+    }
+
+    private static String join(List<String> values, String separator) {
+        StringBuilder output = new StringBuilder();
+        for (String value : values) {
+            if (output.length() > 0) output.append(separator);
+            output.append(value);
+        }
+        return output.toString();
     }
 
     private static String stableId(String value) {
