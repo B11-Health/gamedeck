@@ -30,8 +30,21 @@
       document.body?.scrollTop || 0,
       scroller?.scrollTop || 0
     ));
+    const discoverVisible = visible(document.querySelector('#discover'));
+    const communityVisible = visible(document.querySelector('#community'));
+    const gamesVisible = visible(document.querySelector('#games'));
+    const surface = communityVisible
+      ? 'community'
+      : discoverVisible
+        ? 'discover'
+        : gamesVisible
+          ? 'library'
+          : 'unknown';
+    const header = document.querySelector('.app-shell-header');
+    const headerRect = header?.getBoundingClientRect();
     const payload = {
       view,
+      surface,
       menuOpen,
       orientation,
       width: innerWidth,
@@ -40,7 +53,9 @@
       gameCards: document.querySelectorAll('.game').length,
       catalogCards: document.querySelectorAll('.catalog-game').length,
       heroVisible: visible(document.querySelector('.hero')),
-      spotlightVisible: visible(document.querySelector('#spotlight'))
+      spotlightVisible: visible(document.querySelector('#spotlight')),
+      headerVisible: visible(header) && Boolean(headerRect && headerRect.bottom > 0 && headerRect.top < innerHeight),
+      headerTop: Math.round(headerRect?.top || 0)
     };
     const key = JSON.stringify(payload);
     if (key === lastKey) return;
