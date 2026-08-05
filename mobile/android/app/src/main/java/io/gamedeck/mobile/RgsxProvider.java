@@ -130,13 +130,19 @@ final class RgsxProvider {
     }
 
     private final Context context;
+    private final AndroidRuntimeManager runtime;
     private final SharedPreferences preferences;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Map<String, Job> jobs = new ConcurrentHashMap<>();
     private volatile JSONObject catalog;
 
     RgsxProvider(Context context) {
+        this(context, null);
+    }
+
+    RgsxProvider(Context context, AndroidRuntimeManager runtime) {
         this.context = context.getApplicationContext();
+        this.runtime = runtime;
         this.preferences = this.context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         restoreJobs();
     }
@@ -188,8 +194,9 @@ final class RgsxProvider {
                 item.put("image", system.optString("image", "../assets/system-themes/retro.webp"));
                 item.put("count", games == null ? 0 : games.length());
                 item.put("installedCount", installed);
-                item.put("playable", true);
-                item.put("issue", "");
+                boolean playable = runtime != null && runtime.externalAvailable();
+                item.put("playable", playable);
+                item.put("issue", playable ? "" : "Install a compatible Android runtime to launch this system.");
                 output.put(item);
             } catch (Exception ignored) {}
         }
@@ -228,7 +235,7 @@ final class RgsxProvider {
                 item.put("installedFile", file.isFile()
                     ? ManagedLibraryProvider.uriFor(context, folder, fileName).toString()
                     : "");
-                item.put("installedReady", file.isFile());
+                item.put("installedReady", file.isFile() && runtime != null && runtime.externalAvailable());
                 item.put("size", file.isFile() ? file.length() : game.optLong("size", 0));
                 output.put(item);
             } catch (Exception ignored) {}
@@ -326,6 +333,157 @@ final class RgsxProvider {
             response.put("taskId", taskId == null ? "" : taskId);
         } catch (Exception ignored) {}
         return response.toString();
+    }
+
+    JSONArray managedLibraryGames() {
+        JSONArray output = new JSONArray();
+        JSONArray systems = catalog().optJSONArray("systems");
+        if (systems == null) return output;
+        boolean playable = runtime != null && runtime.externalAvailable();
+        for (int systemIndex = 0; systemIndex < systems.length(); systemIndex++) {
+            JSONObject system = systems.optJSONObject(systemIndex);
+            if (system == null) continue;
+            JSONArray games = system.optJSONArray("games");
+            if (games == null) continue;
+            String folder = system.optString("folder", system.optString("systemId", "homebrew"));
+            String systemId = system.optString("systemId", folder);
+            String systemName = system.optString("name", systemId);
+            String systemImage = system.optString("image", "../assets/system-themes/retro.webp");
+            for (int gameIndex = 0; gameIndex < games.length(); gameIndex++) {
+                JSONObject source = games.optJSONObject(gameIndex);
+                if (source == null) continue;
+                String fileName = source.optString("fileName", "");
+                File file;
+                try {
+                    file = ManagedLibraryProvider.fileFor(context, folder, fileName);
+                } catch (Exception ignored) {
+                    continue;
+                }
+                if (!file.isFile()) continue;
+                Uri uri = ManagedLibraryProvider.uriFor(context, folder, fileName);
+                JSONObject game = new JSONObject();
+                try {
+                    String title = source.optString("title", fileName);
+                    String extension = SystemRegistry.extension(fileName).replace(".", "").toUpperCase(Locale.US);
+                    game.put("id", "managed-" + Integer.toUnsignedString(uri.toString().hashCode()));
+                    game.put("title", title);
+                    game.put("metadataTitle", title);
+                    game.put("artworkTitle", title);
+                    game.put("artworkFolder", folder);
+                    game.put("shortName", title);
+                    game.put("file", uri.toString());
+                    game.put("contentUri", uri.toString());
+                    game.put("relativePath", folder + "/" + fileName);
+                    game.put("mimeType", source.optString("mimeType", "application/octet-stream"));
+                    game.put("system", systemId);
+                    game.put("systemName", systemName);
+                    game.put("size", file.length());
+                    game.put("modified", file.lastModified());
+                    game.put("format", extension.isEmpty() ? "FILE" : extension);
+                    game.put("art", source.optString("art", systemImage));
+                    game.put("favorite", false);
+                    game.put("lastPlayed", 0);
+                    game.put("classification", playable ? "integrated_external" : "blocked");
+                    game.put("region", source.optString("region", ""));
+                    game.put("edition", source.optString("region", ""));
+                    game.put("description", source.optString("description", ""));
+                    game.put("releaseDate", "");
+                    game.put("year", "");
+                    game.put("players", "");
+                    game.put("rating", "");
+                    game.put("genre", "Homebrew");
+                    game.put("developer", "GameDeck");
+                    game.put("publisher", "GameDeck");
+                    game.put("detailsSource", source.optString("license", "GameDeck managed catalog"));
+                    game.put("managed", true);
+                    output.put(game);
+                } catch (Exception ignored) {}
+            }
+        }
+        return output;
+    }
+
+    String qaSnapshot() {
+        JSONObject output = new JSONObject();
+        try {
+            JSONArray systems = catalog().optJSONArray("systems");
+            JSONObject system = systems == null ? null : systems.optJSONObject(0);
+            JSONArray games = system == null ? null : system.optJSONArray("games");
+            JSONObject game = games == null ? null : games.optJSONObject(0);
+            output.put("catalogSystems", new JSONArray(catalogSystems()));
+            output.put("downloads", new JSONArray(downloads()));
+            if (system == null || game == null) {
+                output.put("ok", false);
+                output.put("error", "fixture-missing");
+                return output.toString();
+            }
+
+            String source = system.optString("source", system.optString("id", ""));
+            String folder = system.optString("folder", system.optString("systemId", "homebrew"));
+            String fileName = game.optString("fileName", "");
+            File file = ManagedLibraryProvider.fileFor(context, folder, fileName);
+            String expectedHash = game.optString("sha256", "").toLowerCase(Locale.US);
+            long expectedSize = game.optLong("size", 0);
+            String actualHash = file.isFile() ? sha256(file) : "";
+            long actualSize = file.isFile() ? file.length() : 0;
+
+            output.put("ok", true);
+            output.put("source", source);
+            output.put("folder", folder);
+            output.put("fileName", fileName);
+            output.put("installed", file.isFile());
+            output.put("expectedSize", expectedSize);
+            output.put("actualSize", actualSize);
+            output.put("sizeMatches", file.isFile() && expectedSize == actualSize);
+            output.put("expectedSha256", expectedHash);
+            output.put("actualSha256", actualHash);
+            output.put("sha256Matches", file.isFile() && !expectedHash.isEmpty() && expectedHash.equals(actualHash));
+            output.put("contentUri", ManagedLibraryProvider.uriFor(context, folder, fileName).toString());
+            output.put("catalogGames", new JSONArray(catalogGames(source)));
+        } catch (Exception error) {
+            try {
+                output.put("ok", false);
+                output.put("error", error.getClass().getSimpleName() + ": " + String.valueOf(error.getMessage()));
+            } catch (Exception ignored) {}
+        }
+        return output.toString();
+    }
+
+    String resetQaFixture() {
+        JSONObject output = new JSONObject();
+        try {
+            JSONArray systems = catalog().optJSONArray("systems");
+            JSONObject system = systems == null ? null : systems.optJSONObject(0);
+            JSONArray games = system == null ? null : system.optJSONArray("games");
+            JSONObject game = games == null ? null : games.optJSONObject(0);
+            if (system == null || game == null) return error("android_rgsx_catalog_empty", "No QA catalog entry exists.");
+
+            String source = system.optString("source", system.optString("id", ""));
+            String folder = system.optString("folder", system.optString("systemId", "homebrew"));
+            String fileName = game.optString("fileName", "");
+            File file = ManagedLibraryProvider.fileFor(context, folder, fileName);
+            File part = new File(file.getParentFile(), file.getName() + ".part");
+            boolean removedFile = !file.exists() || file.delete();
+            boolean removedPart = !part.exists() || part.delete();
+            for (Job job : new ArrayList<>(jobs.values())) {
+                if (job.source.equals(source) && job.folder.equals(folder) && job.fileName.equals(fileName)) {
+                    job.pauseRequested.set(true);
+                    jobs.remove(job.id);
+                }
+            }
+            persistJobs();
+            output.put("ok", removedFile && removedPart);
+            output.put("removedFile", removedFile);
+            output.put("removedPart", removedPart);
+            output.put("installed", file.isFile());
+            output.put("fileName", fileName);
+        } catch (Exception error) {
+            try {
+                output.put("ok", false);
+                output.put("error", error.getClass().getSimpleName() + ": " + String.valueOf(error.getMessage()));
+            } catch (Exception ignored) {}
+        }
+        return output.toString();
     }
 
     String qaDownloadDemo() {

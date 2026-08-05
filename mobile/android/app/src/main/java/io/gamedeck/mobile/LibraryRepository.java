@@ -154,6 +154,14 @@ final class LibraryRepository {
         return value.toString();
     }
 
+    boolean isFavorite(String contentUri) {
+        return preferences.getStringSet(FAVORITES, Collections.<String>emptySet()).contains(contentUri);
+    }
+
+    long lastPlayed(String contentUri) {
+        return preferences.getLong("recent:" + stableId(contentUri), 0);
+    }
+
     void markPlayed(String contentUri) {
         preferences.edit().putLong("recent:" + stableId(contentUri), System.currentTimeMillis()).apply();
     }

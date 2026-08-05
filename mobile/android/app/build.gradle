@@ -45,171 +45,22 @@ tasks.register('prepareSharedRenderer') {
         }
         File platformFile = new File(sharedRendererAssets, 'desktop/platform-android-native.js')
         String platform = platformSource.getText('UTF-8')
-        String originalLibrary = '''  async function getLibrary(force = false) {
-    if (!force && libraryCache) return libraryCache;
-    const method = force ? 'rescan' : 'library';
-    libraryCache = normalizeLibrary(parse(invoke(method, '{}'), { systems: [], games: [] }));
-    return libraryCache;
-  }'''
-        String managedLibrary = '''  async function getLibrary(force = false) {
-    if (!force && libraryCache) return libraryCache;
-    const method = force ? 'rescan' : 'library';
-    const base = normalizeLibrary(parse(invoke(method, '{}'), { systems: [], games: [] }));
-    const runtime = parse(invoke('runtimeStatus', '{}'), {});
-    const route = runtime.externalAvailable ? 'integrated_external' : 'blocked';
-    const systems = [...base.systems];
-    const games = [...base.games];
-    const knownFiles = new Set(games.map(game => game.file || game.contentUri).filter(Boolean));
-    const managedSystems = parse(invoke('catalogSystems', '[]'), []);
-    if (Array.isArray(managedSystems)) {
-      managedSystems.forEach(catalogSystem => {
-        const source = String(catalogSystem?.source || catalogSystem?.gamesFile || catalogSystem?.id || '');
-        const installed = parse(invoke('catalogGames', '[]', source), []).filter(game => game?.installedFile);
-        if (!installed.length) return;
-        const systemId = String(catalogSystem.systemId || catalogSystem.folder || catalogSystem.id || 'homebrew');
-        let system = systems.find(item => item.id === systemId);
-        if (!system) {
-          system = {
-            id: systemId,
-            name: catalogSystem.name || systemId,
-            short: String(catalogSystem.name || systemId).toUpperCase(),
-            icon: String(catalogSystem.name || systemId).slice(0, 3).toUpperCase(),
-            color: '#C8FF52',
-            image: catalogSystem.image || imageForSystem(systemId),
-            count: 0,
-            installedCount: 0,
-            ready: Boolean(runtime.externalAvailable),
-            route,
-            issue: runtime.externalAvailable ? '' : 'Install a compatible Android game engine to launch this title.'
-          };
-          systems.push(system);
-        }
-        installed.forEach(game => {
-          const file = String(game.installedFile || '');
-          if (!file || knownFiles.has(file)) return;
-          knownFiles.add(file);
-          const fileName = String(game.fileName || game.name || 'game');
-          const extension = fileName.includes('.') ? fileName.split('.').pop().toUpperCase() : 'FILE';
-          games.push({
-            id: `managed-${stableNumber(file)}`,
-            title: game.name || cleanTitle(fileName),
-            metadataTitle: game.name || cleanTitle(fileName),
-            artworkTitle: rawTitle(fileName),
-            artworkFolder: catalogSystem.folder || systemId,
-            file,
-            contentUri: file,
-            relativePath: `${catalogSystem.folder || systemId}/${fileName}`,
-            mimeType: game.mimeType || 'application/octet-stream',
-            system: systemId,
-            systemName: catalogSystem.name || system.name,
-            size: Number(game.size || 0),
-            modified: 0,
-            format: extension,
-            art: game.art || catalogSystem.image || imageForSystem(systemId),
-            region: game.region || '',
-            edition: 'Homebrew',
-            description: game.description || '',
-            favorite: false,
-            lastPlayed: 0,
-            classification: route,
-            detailsSource: 'Managed Discover install'
-          });
-        });
-        const count = games.filter(game => game.system === systemId).length;
-        system.count = count;
-        system.installedCount = count;
-        system.ready = Boolean(runtime.externalAvailable);
-        system.route = route;
-      });
-    }
-    libraryCache = normalizeLibrary({
-      ...base,
-      rootConfigured: Boolean(base.rootConfigured || games.some(game => String(game.file || '').includes('.managed/'))),
-      rootName: base.rootName || (games.length > base.games.length ? 'GameDeck managed library' : ''),
-      systems,
-      games
-    });
-    return libraryCache;
-  }'''
-        if (!platform.contains(originalLibrary)) {
-            throw new GradleException('Android library adapter signature changed; managed-install merge was not applied')
-        }
-        platform = platform.replace(originalLibrary, managedLibrary)
-
-        String downloadBridge = '''  const downloadListeners = new Set();
-  const downloadSnapshots = new Map();
-  const pollNativeDownloads = () => {
-    const rows = parse(invoke('downloads', '[]'), []);
-    if (!Array.isArray(rows)) return [];
-    rows.forEach(job => {
-      const id = String(job?.taskId || job?.id || '');
-      if (!id) return;
-      const snapshot = JSON.stringify([
-        job.status, job.stage, job.progress, job.downloadedSize, job.totalSize,
-        job.message, job.installedFile, job.updatedAt
-      ]);
-      if (downloadSnapshots.get(id) === snapshot) return;
-      downloadSnapshots.set(id, snapshot);
-      if (job.status === 'complete') {
-        libraryCache = null;
-        catalogCache.clear();
-      }
-      downloadListeners.forEach(listener => {
-        try { listener(job); } catch {}
-      });
-    });
-    return rows;
-  };
-  const onNativeDownload = listener => {
-    if (typeof listener !== 'function') return () => {};
-    downloadListeners.add(listener);
-    pollNativeDownloads();
-    return () => downloadListeners.delete(listener);
-  };
-  setInterval(pollNativeDownloads, 350);
-
-'''
-        if (!platform.contains('  window.deck = Object.freeze({')) {
-            throw new GradleException('Android deck bridge insertion point changed')
-        }
-        platform = platform.replace(
-            '  window.deck = Object.freeze({',
-            downloadBridge + '  window.deck = Object.freeze({'
-        )
-        platform = platform.replace(
-            '    catalogSystems,\n    catalogGames,',
-            '''    catalogSystems: async () => parse(invoke('catalogSystems', '[]'), []),
-    catalogGames: async source => parse(invoke('catalogGames', '[]', source || ''), []),'''
-        )
-        platform = platform.replace(
-            "    importOwned: async () => blocked('Discover downloads are not enabled in this preview.', 'android_discover_transfer_pending'),",
-            "    importOwned: async (source, folder, title, fileName) => parse(invoke('importOwned', '{}', source || '', folder || '', title || '', fileName || ''), { ok: false, message: 'Android transfer adapter unavailable.' }),"
-        )
-        platform = platform.replace(
-            '    retryDownload: async () => ({ ok: false }),',
-            "    retryDownload: async taskId => parse(invoke('retryDownload', '{}', taskId || ''), { ok: false }),"
-        )
-        platform = platform.replace(
-            '    pauseDownload: async () => ({ ok: false }),',
-            "    pauseDownload: async taskId => parse(invoke('pauseDownload', '{}', taskId || ''), { ok: false }),"
-        )
-        platform = platform.replace(
-            '    dismissDownload: async () => ({ ok: true }),',
-            "    dismissDownload: async taskId => parse(invoke('dismissDownload', '{\"ok\":true}', taskId || ''), { ok: true }),"
-        )
-        platform = platform.replace(
-            '    onDownload: noopSubscription,',
-            '    onDownload: onNativeDownload,'
-        )
-        platform = platform.replace(
-            "version: '0.3.0-parity-preview'",
+        List<String> requiredNativeContracts = [
+            "invoke('catalogSystems'",
+            "invoke('catalogGames'",
+            "invoke('downloads'",
+            "invoke('importOwned'",
+            "invoke('retryDownload'",
+            "invoke('pauseDownload'",
+            "invoke('dismissDownload'",
+            'onDownload: subscribeDownloads',
             "version: '0.4.1-controls'"
-        )
-        if (platform.contains('android_discover_transfer_pending')
-            || !platform.contains('Managed Discover install')
-            || !platform.contains('onDownload: onNativeDownload')
-            || !platform.contains("invoke('importOwned'")) {
-            throw new GradleException('Native Android RGSX adapter patch was incomplete')
+        ]
+        List<String> missingNativeContracts = requiredNativeContracts.findAll { !platform.contains(it) }
+        if (platform.contains('android_discover_transfer_pending') || !missingNativeContracts.isEmpty()) {
+            throw new GradleException(
+                "Native Android RGSX adapter contract is incomplete: ${missingNativeContracts.join(', ')}"
+            )
         }
         platformFile.write(platform, 'UTF-8')
     }

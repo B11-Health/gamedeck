@@ -3,18 +3,26 @@ package io.gamedeck.mobile;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.BroadcastReceiver;
+import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.ActivityInfo;
 import android.content.pm.ApplicationInfo;
+import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Insets;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.InputDevice;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
+import android.view.PixelCopy;
 import android.view.View;
 import android.view.WindowInsets;
 import android.webkit.WebChromeClient;
@@ -22,9 +30,19 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.provider.MediaStore;
 import android.widget.FrameLayout;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.Locale;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class MainActivity extends Activity {
     static final int REQUEST_LIBRARY = 4101;
@@ -44,6 +62,7 @@ public class MainActivity extends Activity {
     private int verticalDirection = 0;
     private boolean leftTriggerPressed = false;
     private boolean rightTriggerPressed = false;
+    private final ExecutorService qaIo = Executors.newSingleThreadExecutor();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -192,13 +211,16 @@ public class MainActivity extends Activity {
         return left == null ? right == null : left.equalsIgnoreCase(right);
     }
 
+    private boolean isDebugBuild() {
+        return (getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
+    }
+
     private boolean isDebugFixtureEnabled() {
-        boolean debuggable = (getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
-        return debuggable && new File(getFilesDir(), DEBUG_FIXTURE_FILE).isFile();
+        return isDebugBuild() && new File(getFilesDir(), DEBUG_FIXTURE_FILE).isFile();
     }
 
     private void registerQaReceiver() {
-        if (!isDebugFixtureEnabled()) return;
+        if (!isDebugBuild()) return;
         qaReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
@@ -214,8 +236,60 @@ public class MainActivity extends Activity {
     }
 
     private void runQaCommand(String rawCommand) {
-        if (!isDebugFixtureEnabled()) return;
+        if (!isDebugBuild()) return;
         String command = rawCommand == null ? "" : rawCommand.trim();
+        if ("fixture:on".equals(command)) {
+            try (OutputStream ignored = new FileOutputStream(new File(getFilesDir(), DEBUG_FIXTURE_FILE), false)) {
+                writeQaTextArtifact("fixture-status.json", "{\"enabled\":true}");
+            } catch (Exception error) {
+                writeQaTextArtifact("fixture-status.json", "{\"enabled\":false,\"error\":\"write-failed\"}");
+            }
+            return;
+        }
+        if ("fixture:off".equals(command)) {
+            File marker = new File(getFilesDir(), DEBUG_FIXTURE_FILE);
+            boolean removed = !marker.exists() || marker.delete();
+            writeQaTextArtifact("fixture-status.json", "{\"enabled\":false,\"removed\":" + removed + "}");
+            return;
+        }
+        if (command.startsWith("screenshot:")) {
+            captureQaScreenshot(command.substring("screenshot:".length()));
+            return;
+        }
+        if (command.startsWith("orientation:")) {
+            String orientation = command.substring("orientation:".length());
+            if ("portrait".equals(orientation)) {
+                setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+            } else if ("landscape".equals(orientation)) {
+                setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+            }
+            return;
+        }
+        if ("app:restart".equals(command)) {
+            recreate();
+            return;
+        }
+        if ("rgsx:snapshot".equals(command)) {
+            bridge.writeRgsxQaSnapshot();
+            return;
+        }
+        if ("rgsx:reset-fixture".equals(command)) {
+            bridge.resetRgsxQaFixture();
+            return;
+        }
+        if ("input-devices".equals(command)) {
+            writeInputDevicesArtifact();
+            return;
+        }
+        if (command.startsWith("key:")) {
+            try {
+                int keyCode = Integer.parseInt(command.substring("key:".length()));
+                long now = android.os.SystemClock.uptimeMillis();
+                dispatchKeyEvent(new KeyEvent(now, now, KeyEvent.ACTION_DOWN, keyCode, 0));
+                dispatchKeyEvent(new KeyEvent(now, now, KeyEvent.ACTION_UP, keyCode, 0));
+            } catch (NumberFormatException ignored) {}
+            return;
+        }
         if (command.startsWith("view:")) {
             String view = command.substring(5);
             if (!("home".equals(view) || "discover".equals(view) || "favorites".equals(view)
@@ -244,6 +318,147 @@ public class MainActivity extends Activity {
         }
     }
 
+    private void writeInputDevicesArtifact() {
+        JSONArray devices = new JSONArray();
+        for (int id : InputDevice.getDeviceIds()) {
+            InputDevice device = InputDevice.getDevice(id);
+            if (device == null) continue;
+            JSONObject item = new JSONObject();
+            try {
+                int sources = device.getSources();
+                item.put("id", id);
+                item.put("name", device.getName());
+                item.put("descriptor", device.getDescriptor());
+                item.put("vendorId", device.getVendorId());
+                item.put("productId", device.getProductId());
+                item.put("sources", sources);
+                item.put("gamepad", (sources & InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD);
+                item.put("joystick", (sources & InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK);
+                item.put("keyboard", (sources & InputDevice.SOURCE_KEYBOARD) == InputDevice.SOURCE_KEYBOARD);
+                devices.put(item);
+            } catch (Exception ignored) {}
+        }
+        JSONObject output = new JSONObject();
+        try {
+            output.put("count", devices.length());
+            output.put("devices", devices);
+        } catch (Exception ignored) {}
+        writeQaTextArtifact("input-devices.json", output.toString());
+    }
+
+    private void captureQaScreenshot(String rawName) {
+        if (!isDebugBuild()) return;
+        String name = sanitizeArtifactName(rawName, "capture") + ".png";
+        runOnUiThread(() -> {
+            View decor = getWindow().getDecorView();
+            int width = decor.getWidth();
+            int height = decor.getHeight();
+            if (width <= 0 || height <= 0) {
+                writeQaTextArtifact("capture-status.json", "{\"ok\":false,\"error\":\"window-not-laid-out\"}");
+                return;
+            }
+            Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+            PixelCopy.request(getWindow(), bitmap, result -> {
+                if (result != PixelCopy.SUCCESS) {
+                    bitmap.recycle();
+                    writeQaTextArtifact(
+                        "capture-status.json",
+                        String.format(Locale.US, "{\"ok\":false,\"name\":\"%s\",\"pixelCopyResult\":%d}", name, result)
+                    );
+                    return;
+                }
+                qaIo.execute(() -> {
+                    boolean saved = writeQaBitmapNow(name, bitmap);
+                    bitmap.recycle();
+                    writeQaTextArtifactNow(
+                        "capture-status.json",
+                        String.format(
+                            Locale.US,
+                            "{\"ok\":%s,\"name\":\"%s\",\"width\":%d,\"height\":%d}",
+                            saved,
+                            name,
+                            width,
+                            height
+                        )
+                    );
+                });
+            }, new Handler(Looper.getMainLooper()));
+        });
+    }
+
+    void writeQaTextArtifact(String rawName, String text) {
+        if (!isDebugBuild()) return;
+        String name = sanitizeArtifactName(rawName, "qa-state.json");
+        String payload = text == null ? "" : text;
+        qaIo.execute(() -> writeQaTextArtifactNow(name, payload));
+    }
+
+    private boolean writeQaTextArtifactNow(String name, String text) {
+        byte[] data = text.getBytes(StandardCharsets.UTF_8);
+        return writeQaBytesNow(name, "application/json", output -> output.write(data));
+    }
+
+    private boolean writeQaBitmapNow(String name, Bitmap bitmap) {
+        return writeQaBytesNow(name, "image/png", output -> {
+            if (!bitmap.compress(Bitmap.CompressFormat.PNG, 100, output)) {
+                throw new IllegalStateException("PNG compression failed.");
+            }
+        });
+    }
+
+    private interface QaWriter {
+        void write(OutputStream output) throws Exception;
+    }
+
+    private boolean writeQaBytesNow(String name, String mimeType, QaWriter writer) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                ContentResolver resolver = getContentResolver();
+                String relativePath = Environment.DIRECTORY_DOWNLOADS + "/GameDeck-QA/";
+                resolver.delete(
+                    MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                    MediaStore.MediaColumns.DISPLAY_NAME + "=? AND " + MediaStore.MediaColumns.RELATIVE_PATH + "=?",
+                    new String[]{name, relativePath}
+                );
+                ContentValues values = new ContentValues();
+                values.put(MediaStore.MediaColumns.DISPLAY_NAME, name);
+                values.put(MediaStore.MediaColumns.MIME_TYPE, mimeType);
+                values.put(MediaStore.MediaColumns.RELATIVE_PATH, relativePath);
+                values.put(MediaStore.MediaColumns.IS_PENDING, 1);
+                Uri uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
+                if (uri == null) return false;
+                try (OutputStream output = resolver.openOutputStream(uri, "w")) {
+                    if (output == null) return false;
+                    writer.write(output);
+                }
+                values.clear();
+                values.put(MediaStore.MediaColumns.IS_PENDING, 0);
+                resolver.update(uri, values, null, null);
+                return true;
+            }
+
+            File base = getExternalFilesDir(Environment.DIRECTORY_PICTURES);
+            if (base == null) return false;
+            File directory = new File(base, "GameDeck-QA");
+            if (!directory.isDirectory() && !directory.mkdirs()) return false;
+            File file = new File(directory, name);
+            try (OutputStream output = new FileOutputStream(file, false)) {
+                writer.write(output);
+            }
+            return true;
+        } catch (Exception error) {
+            return false;
+        }
+    }
+
+    private String sanitizeArtifactName(String raw, String fallback) {
+        String value = raw == null ? "" : raw.trim();
+        value = value.replaceAll("[^A-Za-z0-9._-]+", "-");
+        value = value.replaceAll("^-+|-+$", "");
+        if (value.isEmpty()) value = fallback;
+        return value.length() > 96 ? value.substring(0, 96) : value;
+    }
+
     private void runRgsxUiQa() {
         evaluate(
             "(()=>{" +
@@ -257,8 +472,12 @@ public class MainActivity extends Activity {
             "for(let i=0;i<100&&!system;i++){system=document.querySelector('.console-card:not(.catalog-skeleton)');if(!system)await wait(100);}" +
             "if(!system){report('rgsx-get-error','Catalog system card missing');return;}" +
             "system.click();" +
+            "let game=null;" +
+            "for(let i=0;i<100&&!game;i++){game=document.querySelector('.catalog-game:not(.catalog-skeleton)');if(!game)await wait(100);}" +
+            "if(!game){report('rgsx-get-error','Catalog game card missing');return;}" +
+            "game.click();" +
             "let button=null;" +
-            "for(let i=0;i<100&&!button;i++){const candidate=document.querySelector('#catalogFeatureAction');if(candidate&&!candidate.disabled&&!/Working|Downloading|Play now|Finish setup/i.test(candidate.textContent||''))button=candidate;if(!button)await wait(100);}" +
+            "for(let i=0;i<100&&!button;i++){const candidate=document.querySelector('#catalogFeatureAction');const visible=!!candidate&&candidate.getClientRects().length>0;if(visible&&!candidate.disabled&&!/Working|Downloading|Play now|Finish setup/i.test(candidate.textContent||''))button=candidate;if(!button)await wait(100);}" +
             "if(!button){report('rgsx-get-error','Discover Get action missing');return;}" +
             "const label=(button.textContent||'').trim();" +
             "button.click();" +
@@ -451,6 +670,7 @@ public class MainActivity extends Activity {
             hideBridge();
             webView.destroy();
         }
+        qaIo.shutdown();
         super.onDestroy();
     }
 }

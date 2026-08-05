@@ -116,6 +116,17 @@
       initialFocus();
       if (!state.current || !visible(state.current)) return;
     }
+    if ((direction === 'LEFT' || direction === 'RIGHT') && state.current?.matches('.primary-nav .nav')) {
+      const tabs = [...document.querySelectorAll('.primary-nav .nav')].filter(visible);
+      const index = tabs.indexOf(state.current);
+      const next = tabs[index + (direction === 'RIGHT' ? 1 : -1)];
+      if (next) {
+        setFocus(next, { smooth: true });
+        return;
+      }
+      haptic('edge');
+      return;
+    }
     const from = center(state.current);
     let best = null;
     let bestScore = Infinity;

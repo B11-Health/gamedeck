@@ -14,6 +14,10 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.File;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 final class DeckBridge {
     private static final String RENDERER_TAG = "GameDeckRenderer";
@@ -29,7 +33,7 @@ final class DeckBridge {
         this.activity = activity;
         this.runtime = new AndroidRuntimeManager(activity);
         this.library = new LibraryRepository(activity, runtime);
-        this.rgsx = new RgsxProvider(activity);
+        this.rgsx = new RgsxProvider(activity, runtime);
     }
 
     @JavascriptInterface
@@ -50,12 +54,70 @@ final class DeckBridge {
 
     @JavascriptInterface
     public String library() {
-        return library.scan();
+        return librarySnapshot();
     }
 
     @JavascriptInterface
     public String rescan() {
-        return library.scan();
+        return librarySnapshot();
+    }
+
+    private String librarySnapshot() {
+        try {
+            JSONObject output = new JSONObject(library.scan());
+            JSONArray games = output.optJSONArray("games");
+            JSONArray systems = output.optJSONArray("systems");
+            if (games == null) games = new JSONArray();
+            if (systems == null) systems = new JSONArray();
+
+            Set<String> existing = new HashSet<>();
+            for (int index = 0; index < games.length(); index++) {
+                JSONObject game = games.optJSONObject(index);
+                if (game != null) existing.add(game.optString("contentUri", game.optString("file", "")));
+            }
+            Map<String, JSONObject> systemsById = new HashMap<>();
+            for (int index = 0; index < systems.length(); index++) {
+                JSONObject system = systems.optJSONObject(index);
+                if (system != null) systemsById.put(system.optString("id", ""), system);
+            }
+
+            JSONArray managed = rgsx.managedLibraryGames();
+            boolean external = runtime.externalAvailable();
+            int added = 0;
+            for (int index = 0; index < managed.length(); index++) {
+                JSONObject game = managed.optJSONObject(index);
+                if (game == null) continue;
+                String uri = game.optString("contentUri", game.optString("file", ""));
+                if (uri.isEmpty() || existing.contains(uri)) continue;
+                game.put("favorite", library.isFavorite(uri));
+                game.put("lastPlayed", library.lastPlayed(uri));
+                game.put("classification", external ? "integrated_external" : "blocked");
+                games.put(game);
+                existing.add(uri);
+                added++;
+
+                String systemId = game.optString("system", "");
+                JSONObject system = systemsById.get(systemId);
+                if (system != null) {
+                    system.put("count", system.optInt("count", 0) + 1);
+                    system.put("installedCount", system.optInt("installedCount", 0) + 1);
+                    system.put("ready", external);
+                    system.put("route", external ? "integrated_external" : "blocked");
+                    system.put("issue", external
+                        ? "External RetroArch route detected; exact title compatibility is not yet verified."
+                        : "Install a compatible Android runtime to launch this system.");
+                }
+            }
+            if (added > 0) {
+                output.put("rootConfigured", true);
+                if (output.optString("rootName", "").isEmpty()) output.put("rootName", "GameDeck managed library");
+            }
+            output.put("systems", systems);
+            output.put("games", games);
+            return output.toString();
+        } catch (Exception error) {
+            return library.scan();
+        }
     }
 
     @JavascriptInterface
@@ -196,18 +258,34 @@ final class DeckBridge {
 
     @JavascriptInterface
     public void reportRendererReady(String payload) {
-        Log.i(RENDERER_TAG, "GAMEDECK_RENDERER_READY " + safeLog(payload));
+        String safe = safeLog(payload);
+        Log.i(RENDERER_TAG, "GAMEDECK_RENDERER_READY " + safe);
+        activity.writeQaTextArtifact("renderer-status.json", "{\"ready\":true,\"payload\":" + JSONObject.quote(safe) + "}");
     }
 
     @JavascriptInterface
     public void reportRendererError(String payload) {
-        Log.e(RENDERER_TAG, "GAMEDECK_RENDERER_ERROR " + safeLog(payload));
+        String safe = safeLog(payload);
+        Log.e(RENDERER_TAG, "GAMEDECK_RENDERER_ERROR " + safe);
+        activity.writeQaTextArtifact("renderer-status.json", "{\"ready\":false,\"payload\":" + JSONObject.quote(safe) + "}");
     }
 
     @JavascriptInterface
     public void reportQaState(String payload) {
         if (!isDebugFixtureEnabled()) return;
-        Log.i(QA_TAG, "GAMEDECK_QA_STATE " + safeLog(payload));
+        String safe = safeLog(payload);
+        Log.i(QA_TAG, "GAMEDECK_QA_STATE " + safe);
+        activity.writeQaTextArtifact("qa-state.json", safe);
+    }
+
+    void writeRgsxQaSnapshot() {
+        if (!isDebugFixtureEnabled()) return;
+        activity.writeQaTextArtifact("rgsx-state.json", rgsx.qaSnapshot());
+    }
+
+    void resetRgsxQaFixture() {
+        if (!isDebugFixtureEnabled()) return;
+        activity.writeQaTextArtifact("rgsx-reset.json", rgsx.resetQaFixture());
     }
 
     void runRgsxQaDownload() {

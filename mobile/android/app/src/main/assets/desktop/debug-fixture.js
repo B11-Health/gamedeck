@@ -59,7 +59,7 @@
     count: 1, installedCount: 1, ready: true, route: 'integrated_external', emulatorLabel: 'RetroArch', issue: ''
   };
 
-  const library = () => ({
+  const fixtureLibrary = () => ({
     rootConfigured: true,
     rootUri: 'content://io.gamedeck.fixture/tree/library',
     rootName: 'GameDeck Parity Fixture',
@@ -83,25 +83,45 @@
     source: game.detailsSource
   });
   const base = window.deck;
+  const library = async () => {
+    const fixture = fixtureLibrary();
+    const actual = await base.library();
+    const managed = (actual?.games || []).filter(item => String(item?.contentUri || item?.file || '').includes('.managed/files/'));
+    if (!managed.length) return fixture;
+    const systems = [...fixture.systems];
+    for (const item of managed) {
+      let target = systems.find(system => system.id === item.system);
+      if (!target) {
+        const actualSystem = (actual?.systems || []).find(system => system.id === item.system) || {};
+        target = { ...actualSystem, id: item.system, name: item.systemName || actualSystem.name || item.system, count: 0, installedCount: 0 };
+        systems.push(target);
+      }
+      target.count = Number(target.count || 0) + 1;
+      target.installedCount = Number(target.installedCount || 0) + 1;
+    }
+    return { ...fixture, systems, games: [...fixture.games, ...managed] };
+  };
   window.deck = Object.freeze({
     ...base,
-    library: async () => library(),
-    rescan: async () => library(),
+    library,
+    rescan: library,
     favorite: async () => { favorite = !favorite; return library(); },
     artwork: async () => cover,
     gameDetails: async () => details(),
     refreshGameDetails: async () => details(),
-    diagnostics: async () => ({
-      platform: 'android', arch: 'x86_64', library: 'GameDeck Parity Fixture', libraryExists: true,
-      rgsxRuntime: true, retroarch: true, mame: false,
-      managedRuntime: { supported: false, ready: false, embeddedReady: false, externalAvailable: true, phase: 'external-detected', progress: 0 },
-      systems: [{ ...system }], downloads: [], activity: [], controllers: []
-    }),
-    catalogSystems: async () => [{ ...system, folder: 'snes', gamesFile: 'snes', playable: true }],
-    catalogGames: async () => [{
-      id: 1995, name: game.title, fileName: game.artworkTitle, region: game.region,
-      tags: [game.genre, game.year], art: cover, installedFile: game.file, installedReady: true, size: game.size
-    }],
+    diagnostics: async () => {
+      const baseDiagnostics = await base.diagnostics();
+      const current = await library();
+      return {
+        ...baseDiagnostics,
+        platform: 'android', arch: 'x86_64', library: 'GameDeck Parity Fixture', libraryExists: true,
+        rgsxRuntime: true,
+        systems: current.systems,
+        downloads: baseDiagnostics?.downloads || [],
+        activity: baseDiagnostics?.activity || [],
+        controllers: baseDiagnostics?.controllers || []
+      };
+    },
     settings: async () => ({
       platform: 'android', arch: 'x86_64', version: appInfo.version || 'debug', libraryRoot: 'GameDeck Parity Fixture',
       rgsxRoot: 'Automatic', retroArchPath: 'Detected', retroArchCores: '', retroArchSystem: '', mamePath: '', sponsorsEnabled: false

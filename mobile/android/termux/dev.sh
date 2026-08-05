@@ -8,6 +8,8 @@ APK="$ANDROID_DIR/app/build/outputs/apk/debug/app-debug.apk"
 PACKAGE="io.gamedeck.mobile.desktoppreview"
 ACTIVITY="io.gamedeck.mobile.MainActivity"
 QA_ROOT="$ANDROID_DIR/app/build/outputs/termux-qa"
+QA_ACTION="io.gamedeck.mobile.QA"
+NATIVE_QA_PUBLIC="$HOME/storage/downloads/GameDeck-QA"
 AAPT2="${GAMEDECK_AAPT2:-${PREFIX:-/data/data/com.termux/files/usr}/bin/aapt2}"
 
 if [[ -f "$ENV_FILE" ]]; then
@@ -29,7 +31,7 @@ Commands:
   install        Install through paired wireless ADB, or open Package Installer
   run            Launch the installed app
   install-run    Build, install, and launch
-  qa             Capture portrait/landscape screenshots and app logs through ADB
+  qa             Run ADB QA, or the debug app native QA bridge when ADB is unavailable
   logs           Stream GameDeck renderer/RGSX/runtime logs
   screenshot     Capture the current device screen through ADB
   watch          Rebuild/install/run whenever Android or shared renderer files change
@@ -124,8 +126,163 @@ capture_screen() {
   test -s "$file"
 }
 
+native_qa_command() {
+  local command="$1"
+  am broadcast -a "$QA_ACTION" -p "$PACKAGE" --es command "$command" > /dev/null
+}
+
+wait_native_artifact() {
+  local file="$1"
+  local attempts="${2:-80}"
+  for _ in $(seq 1 "$attempts"); do
+    [[ -s "$file" ]] && return 0
+    sleep .25
+  done
+  echo "Native QA artifact was not produced: $file" >&2
+  return 1
+}
+
+native_capture() {
+  local name="$1"
+  local file="$NATIVE_QA_PUBLIC/$name.png"
+  rm -f "$file"
+  native_qa_command "screenshot:$name"
+  wait_native_artifact "$file"
+}
+
+native_rgsx_snapshot() {
+  rm -f "$NATIVE_QA_PUBLIC/rgsx-state.json"
+  native_qa_command "rgsx:snapshot"
+  wait_native_artifact "$NATIVE_QA_PUBLIC/rgsx-state.json" 40
+}
+
+native_qa_app() {
+  local stamp out
+  stamp="$(date +%Y%m%d-%H%M%S)"
+  out="$QA_ROOT/$stamp"
+  mkdir -p "$out" "$NATIVE_QA_PUBLIC"
+  rm -f "$NATIVE_QA_PUBLIC/renderer-status.json" "$NATIVE_QA_PUBLIC/input-devices.json"
+  am start -W -n "$PACKAGE/$ACTIVITY" | tee "$out/start.txt"
+  sleep 1
+  native_qa_command fixture:on
+  native_qa_command app:restart
+  wait_native_artifact "$NATIVE_QA_PUBLIC/renderer-status.json" 80
+  grep -q '"ready":true' "$NATIVE_QA_PUBLIC/renderer-status.json"
+  sleep 1
+
+  native_qa_command input-devices
+  wait_native_artifact "$NATIVE_QA_PUBLIC/input-devices.json" 40
+
+  native_qa_command orientation:portrait
+  sleep 1
+  native_qa_command view:home
+  native_qa_command scroll:top
+  sleep .5
+  native_capture 01-portrait-library-top
+  native_qa_command scroll:down
+  sleep .5
+  native_capture 02-portrait-library-scrolled
+  native_qa_command view:discover
+  native_qa_command scroll:top
+  sleep .5
+  native_capture 03-portrait-discover-top
+  native_qa_command scroll:down
+  sleep .5
+  native_capture 04-portrait-discover-scrolled
+  native_qa_command view:community
+  native_qa_command scroll:top
+  sleep .5
+  native_capture 05-portrait-community-top
+  native_qa_command menu:open
+  sleep .4
+  native_capture 06-portrait-overflow-menu
+  native_qa_command menu:close
+
+  native_qa_command orientation:landscape
+  sleep 1.5
+  native_qa_command view:home
+  native_qa_command scroll:top
+  native_capture 07-landscape-library-top
+  native_qa_command scroll:down
+  sleep .4
+  native_capture 08-landscape-library-scrolled
+  native_qa_command view:discover
+  native_qa_command scroll:top
+  sleep .4
+  native_capture 09-landscape-discover-top
+  native_qa_command view:community
+  native_qa_command scroll:top
+  sleep .4
+  native_capture 10-landscape-community-top
+  native_qa_command key:109
+  sleep .4
+  native_capture 11-landscape-overflow-menu
+  native_qa_command key:97
+
+  native_qa_command orientation:portrait
+  sleep 1
+  rm -f "$NATIVE_QA_PUBLIC/rgsx-reset.json"
+  native_qa_command rgsx:reset-fixture
+  wait_native_artifact "$NATIVE_QA_PUBLIC/rgsx-reset.json" 40
+  native_qa_command view:discover
+  native_qa_command scroll:top
+  native_qa_command rgsx:get-ui
+  for _ in $(seq 1 100); do
+    native_rgsx_snapshot || true
+    if grep -q '"installed":true' "$NATIVE_QA_PUBLIC/rgsx-state.json" 2>/dev/null \
+      && grep -q '"sizeMatches":true' "$NATIVE_QA_PUBLIC/rgsx-state.json" 2>/dev/null \
+      && grep -q '"sha256Matches":true' "$NATIVE_QA_PUBLIC/rgsx-state.json" 2>/dev/null; then
+      break
+    fi
+    sleep .25
+  done
+  grep -q '"installed":true' "$NATIVE_QA_PUBLIC/rgsx-state.json"
+  grep -q '"sizeMatches":true' "$NATIVE_QA_PUBLIC/rgsx-state.json"
+  grep -q '"sha256Matches":true' "$NATIVE_QA_PUBLIC/rgsx-state.json"
+  native_capture 12-discover-after-get
+  native_qa_command app:restart
+  sleep 2
+  native_rgsx_snapshot
+  grep -q '"installed":true' "$NATIVE_QA_PUBLIC/rgsx-state.json"
+  grep -q '"sha256Matches":true' "$NATIVE_QA_PUBLIC/rgsx-state.json"
+  native_qa_command view:home
+  native_qa_command scroll:top
+  sleep .5
+  native_capture 13-library-after-get
+
+  native_qa_command key:22
+  native_qa_command key:20
+  native_qa_command key:23
+  native_qa_command key:100
+  native_qa_command key:99
+  sleep .35
+  native_capture 14-controller-focus-portrait
+  native_qa_command key:103
+  native_qa_command key:105
+  native_qa_command key:109
+  native_qa_command key:97
+  native_qa_command orientation:landscape
+  sleep 1.2
+  native_qa_command key:22
+  native_capture 15-controller-focus-landscape
+
+  cp -f "$NATIVE_QA_PUBLIC"/*.png "$out/"
+  cp -f "$NATIVE_QA_PUBLIC"/*.json "$out/" 2>/dev/null || true
+  sha256sum "$APK" > "$out/apk-sha256.txt"
+  native_qa_command fixture:off
+  native_qa_command orientation:portrait
+  native_qa_command app:restart
+  sleep 1
+  file "$out"/*.png > "$out/image-dimensions.txt"
+  grep -q '1080 x 2340\|2340 x 1080' "$out/image-dimensions.txt" || true
+  echo "Native QA evidence: $out"
+}
+
 qa_app() {
-  connect_adb || { echo "QA requires paired wireless ADB." >&2; exit 1; }
+  if ! connect_adb; then
+    native_qa_app
+    return
+  fi
   local stamp out
   stamp="$(date +%Y%m%d-%H%M%S)"
   out="$QA_ROOT/$stamp"
@@ -204,10 +361,15 @@ case "${1:-}" in
   qa) qa_app ;;
   logs) stream_logs ;;
   screenshot)
-    connect_adb || { echo "Screenshot requires paired wireless ADB." >&2; exit 1; }
-    mkdir -p "$QA_ROOT"
-    capture_screen "$QA_ROOT/current.png"
-    echo "$QA_ROOT/current.png"
+    if connect_adb; then
+      mkdir -p "$QA_ROOT"
+      capture_screen "$QA_ROOT/current.png"
+      echo "$QA_ROOT/current.png"
+    else
+      mkdir -p "$NATIVE_QA_PUBLIC"
+      native_capture current
+      echo "$NATIVE_QA_PUBLIC/current.png"
+    fi
     ;;
   watch) watch_loop ;;
   clean)

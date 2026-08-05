@@ -205,26 +205,20 @@
       mame: false,
       managedRuntime: runtime,
       systems: library.systems,
-      downloads: [],
+      downloads: nativeDownloads(),
       activity: [],
       controllers: []
     };
   }
 
+  function nativeDownloads() {
+    const rows = parse(invoke('downloads', '[]'), []);
+    return Array.isArray(rows) ? rows : [];
+  }
+
   async function catalogSystems() {
-    const library = await getLibrary();
-    return library.systems.map(system => ({
-      id: system.id,
-      systemId: system.id,
-      folder: system.id,
-      gamesFile: system.id,
-      name: system.name,
-      image: system.image || imageForSystem(system.id),
-      count: Number(system.count || 0),
-      installedCount: Number(system.installedCount || 0),
-      playable: Boolean(system.ready),
-      issue: system.issue || ''
-    }));
+    const rows = parse(invoke('catalogSystems', '[]'), []);
+    return Array.isArray(rows) ? rows : [];
   }
 
   async function remoteCatalog(systemId) {
@@ -265,46 +259,41 @@
   }
 
   async function catalogGames(source) {
-    const library = await getLibrary();
-    const installed = library.games.filter(game => game.system === source);
-    const installedByTitle = new Map();
-    installed.forEach(game => {
-      [game.title, game.metadataTitle, game.artworkTitle, game.relativePath].forEach(value => {
-        const key = normalizedIdentity(value);
-        if (key) installedByTitle.set(key, game);
+    const rows = parse(invoke('catalogGames', '[]', source || ''), []);
+    return Array.isArray(rows) ? rows : [];
+  }
+
+  function subscribeDownloads(callback) {
+    if (typeof callback !== 'function') return () => {};
+    let stopped = false;
+    let timer = 0;
+    const previous = new Map();
+    const poll = () => {
+      if (stopped) return;
+      const rows = nativeDownloads();
+      let active = false;
+      rows.forEach(row => {
+        const id = String(row?.id || row?.taskId || '');
+        if (!id) return;
+        const signature = JSON.stringify(row);
+        if (previous.get(id) !== signature) callback(row);
+        previous.set(id, signature);
+        if (['queued', 'running', 'pausing'].includes(String(row?.status || ''))) active = true;
       });
-    });
-    const remote = await remoteCatalog(source);
-    if (remote.length) {
-      return remote.map(game => {
-        const local = installedByTitle.get(normalizedIdentity(game.fileName)) || installedByTitle.get(normalizedIdentity(game.name));
-        return {
-          ...game,
-          art: local?.art || game.art,
-          installedFile: local?.file || '',
-          installedReady: Boolean(local && local.classification !== 'blocked'),
-          size: Number(local?.size || 0)
-        };
-      });
-    }
-    return installed.map(game => ({
-      id: stableNumber(game.id || game.file),
-      name: game.title,
-      fileName: game.artworkTitle || game.relativePath || game.title,
-      region: game.region || '',
-      tags: [game.format, game.systemName].filter(Boolean),
-      art: game.art || '',
-      installedFile: game.file,
-      installedReady: game.classification !== 'blocked',
-      size: Number(game.size || 0)
-    }));
+      timer = window.setTimeout(poll, active ? 120 : 700);
+    };
+    poll();
+    return () => {
+      stopped = true;
+      window.clearTimeout(timer);
+    };
   }
 
   async function settingsSnapshot() {
     const library = await getLibrary();
     const runtime = getRuntimeStatus();
     return {
-      platform: 'android', arch: 'arm64', version: '0.3.0-parity-preview',
+      platform: 'android', arch: 'arm64', version: '0.4.1-controls',
       libraryRoot: library.rootName || '', rgsxRoot: 'Automatic',
       retroArchPath: runtime.externalPackage || '', retroArchCores: '', retroArchSystem: '', mamePath: '', sponsorsEnabled: false
     };
@@ -334,10 +323,17 @@
 
     catalogSystems,
     catalogGames,
-    importOwned: async () => blocked('Discover downloads are not enabled in this preview.', 'android_discover_transfer_pending'),
-    retryDownload: async () => ({ ok: false }),
-    pauseDownload: async () => ({ ok: false }),
-    dismissDownload: async () => ({ ok: true }),
+    importOwned: async (source, folder, title, fileName) => {
+      const result = parse(invoke('importOwned', '{}', source || '', folder || '', title || '', fileName || ''), {
+        ok: false,
+        error: 'Android could not start this managed transfer.'
+      });
+      if (result?.ok) libraryCache = null;
+      return result;
+    },
+    retryDownload: async taskId => parse(invoke('retryDownload', '{}', taskId || ''), { ok: false }),
+    pauseDownload: async taskId => parse(invoke('pauseDownload', '{}', taskId || ''), { ok: false }),
+    dismissDownload: async taskId => parse(invoke('dismissDownload', '{}', taskId || ''), { ok: false }),
 
     diagnostics,
     runtimeStatus: async () => getRuntimeStatus(),
@@ -406,11 +402,60 @@
     onArcadeAudit: noopSubscription,
     onRuntime: noopSubscription,
     onLaunch: noopSubscription,
-    onDownload: noopSubscription,
+    onDownload: subscribeDownloads,
     onStream: noopSubscription,
     onRemotePlay: noopSubscription,
     onNetplay: noopSubscription
   });
+
+  function installAndroidPresentationGuard() {
+    const apply = () => {
+      document.documentElement.classList.add('gamedeck-android');
+      const legend = document.querySelector('#controlLegend, .control-legend');
+      if (legend) {
+        legend.classList.add('hidden');
+        legend.setAttribute('aria-hidden', 'true');
+      }
+
+      const replacements = [
+        ['#setupCoachTitle', 'Connect your library and play route.'],
+        ['#setupCoachMessage', 'Choose games you legally own. GameDeck keeps them local; a compatible Android runtime is still required to play.'],
+        ['#setupPrimary', 'Review Android setup']
+      ];
+      replacements.forEach(([selector, value]) => {
+        const element = document.querySelector(selector);
+        if (element && element.textContent !== value) element.textContent = value;
+      });
+
+      document.querySelectorAll('#setupSteps small, #setupCoach p, .runtime-copy, .settings-field p').forEach(element => {
+        const text = String(element.textContent || '');
+        let next = text;
+        if (/full emulator stack is included/i.test(text) || /no separate emulator installation/i.test(text)) {
+          next = 'GameDeck manages the local library and catalog. A compatible Android runtime is still required to launch games.';
+        } else if (/keyboard and mouse are ready/i.test(text)) {
+          next = 'Touch controls are ready; connect a gamepad at any time.';
+        } else if (/included with gamedeck\. finish setup once/i.test(text)) {
+          next = 'Managed library support is ready. Install a compatible Android runtime to launch this system.';
+        }
+        if (next !== text) element.textContent = next;
+      });
+    };
+
+    let scheduled = false;
+    const schedule = () => {
+      if (scheduled) return;
+      scheduled = true;
+      requestAnimationFrame(() => {
+        scheduled = false;
+        apply();
+      });
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', schedule, { once: true });
+    else schedule();
+    new MutationObserver(schedule).observe(document.documentElement, { childList: true, subtree: true, characterData: true });
+  }
+
+  installAndroidPresentationGuard();
 
   const keyMap = Object.freeze({ UP: 'ArrowUp', DOWN: 'ArrowDown', LEFT: 'ArrowLeft', RIGHT: 'ArrowRight', A: 'Enter', B: 'Escape' });
   window.GameDeckInput = {
