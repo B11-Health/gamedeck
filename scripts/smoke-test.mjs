@@ -11,7 +11,7 @@ const fail = message => {
   process.exitCode = 1;
 };
 
-const [main, preload, renderer, html, styles, pkgText, donations, runtimeManager, runtimeManifest, runtimeCacheBuilder, streamServer, streamingRenderer, netplayManager, netplayRenderer, mobileReceiver, mobileManifestText, mobileSw, androidActivity, iosContent, iosInfo, siteHtml, siteStyles, siteApp] = await Promise.all([
+const [main, preload, renderer, html, styles, pkgText, donations, runtimeManager, runtimeManifest, runtimeCacheBuilder, streamServer, streamingRenderer, netplayManager, netplayRenderer, mobileReceiver, mobileStyles, mobileManifestText, mobileSw, androidActivity, iosContent, iosInfo, siteHtml, siteStyles, siteApp] = await Promise.all([
   read('main.js'),
   read('preload.js'),
   read('src/app.js'),
@@ -27,6 +27,7 @@ const [main, preload, renderer, html, styles, pkgText, donations, runtimeManager
   read('netplay-manager.js'),
   read('src/netplay.js'),
   read('mobile/web/app.js'),
+  read('mobile/web/styles.css'),
   read('mobile/web/manifest.webmanifest'),
   read('mobile/web/sw.js'),
   read('mobile/android/app/src/main/java/io/gamedeck/mobile/MainActivity.java'),
@@ -320,6 +321,7 @@ if (!mobileReceiver.includes('function pairingError') || !mobileReceiver.include
 if (!mobileReceiver.includes('gamedeck-control') || !mobileReceiver.includes('onNativeInput') || !mobileReceiver.includes('/api/input')) fail('mobile low-latency controller forwarding is missing');
 if (!mobileReceiver.includes('/api/community/rooms') || !mobileReceiver.includes('/api/community/chat') || !mobileReceiver.includes('/api/community/join')) fail('mobile community rooms or chat are missing');
 if (!mobileReceiver.includes('controller-connected') || !mobileReceiver.includes('releaseTouchInputs')) fail('mobile adaptive controller overlay behavior is missing');
+if (!mobileStyles.includes('grid-template-columns:auto minmax(0,1fr)') || !mobileStyles.includes('@media(max-width:480px)') || !mobileStyles.includes('.video-shell{min-height:0}')) fail('mobile paired receiver narrow-layout containment is missing');
 if (!streamServer.includes('/api/input') || !streamServer.includes('/api/community/chat') || !streamServer.includes('viewerInput')) fail('authenticated mobile gameplay/community server APIs are missing');
 if (!streamingRenderer.includes("createDataChannel('gamedeck-control'") || !streamingRenderer.includes('streamViewerInput')) fail('host low-latency mobile controller data channel is missing');
 if (!main.includes('input_overlay_enable = "false"') || !main.includes('ensureRetroArchMobileInputConfig') || !main.includes('queueStreamViewerInput')) fail('RetroArch overlay suppression or Android RetroPad routing is missing');
