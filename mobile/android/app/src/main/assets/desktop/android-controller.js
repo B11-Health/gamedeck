@@ -114,7 +114,7 @@
     if (!items.length) return;
     if (!state.current || !visible(state.current) || !items.includes(state.current)) {
       initialFocus();
-      return;
+      if (!state.current || !visible(state.current)) return;
     }
     const from = center(state.current);
     let best = null;
@@ -208,7 +208,7 @@
     const active = Math.max(0, tabs.findIndex(tab => tab.classList.contains('active')));
     const next = tabs[(active + delta + tabs.length) % tabs.length];
     next.click();
-    setTimeout(() => setFocus(next), 80);
+    setTimeout(() => setFocus(next, { silent: true }), 80);
     haptic('tab');
   };
 
@@ -224,7 +224,7 @@
     document.querySelector('#headerMenuToggle')?.click();
     setTimeout(() => {
       const first = [...document.querySelectorAll('#headerMenu button, #headerMenu a')].find(visible);
-      if (first) setFocus(first);
+      if (first) setFocus(first, { silent: true });
     }, 80);
     haptic('confirm');
   };
