@@ -33,6 +33,11 @@
   let syncInfo = null;
   let syncRelays = [];
   let syncBusy = false;
+  let communityRooms = [];
+  let communityRoomsLoading = false;
+  let communityRoomsLoadedFor = '';
+  let communityRoomsError = '';
+  let communityRoomJoining = '';
   let modalGamepadState = { buttons: [], direction: null, nextRepeat: 0 };
   let netplayReturnFocus = null;
   let hostCapture = null;
@@ -350,6 +355,98 @@
     $('#syncJoinTab').setAttribute('aria-selected', String(!host));
   }
 
+  function roomExpiryLabel(room) {
+    const remaining = Math.max(0, Number(room.expiresAt || 0) - Date.now());
+    const minutes = Math.max(1, Math.ceil(remaining / 60000));
+    return minutes >= 60 ? `${Math.ceil(minutes / 60)}h left` : `${minutes}m left`;
+  }
+
+  function renderCommunityRooms() {
+    const list = $('#communityRoomList');
+    const status = $('#communityRoomsStatus');
+    if (!list || !status) return;
+    if (!selectedGame() || !syncInfo?.supported) {
+      status.textContent = 'Select a verified netplay game to search.';
+      list.innerHTML = '<div class="community-room-empty">Open Rooms appear only for an exact game and core match.</div>';
+      return;
+    }
+    if (communityRoomsLoading && !communityRooms.length) {
+      status.textContent = 'Searching the GameDeck community…';
+      list.innerHTML = '<div class="community-room-empty">Looking for compatible players…</div>';
+      return;
+    }
+    if (communityRoomsError && !communityRooms.length) {
+      status.textContent = communityRoomsError;
+      list.innerHTML = '<div class="community-room-empty">Open Rooms will retry automatically.</div>';
+      return;
+    }
+    status.textContent = communityRoomsLoading
+      ? `Refreshing ${communityRooms.length} compatible room${communityRooms.length === 1 ? '' : 's'}…`
+      : communityRooms.length
+        ? `${communityRooms.length} compatible room${communityRooms.length === 1 ? '' : 's'} available now.`
+        : 'No compatible public rooms right now. Create one and become the host.';
+    if (!communityRooms.length) {
+      list.innerHTML = '<div class="community-room-empty">No open rooms for this exact game yet.</div>';
+      return;
+    }
+    list.innerHTML = communityRooms.map(room => {
+      const busy = communityRoomJoining === room.roomId;
+      const occupancy = `${Number(room.playerCount || 1)}/${Number(room.maxPlayers || 2)} players`;
+      return `<article class="community-room-card"><div><b>${escapeHtml(room.hostName || 'Player')} is hosting</b><span>${escapeHtml(occupancy)} · ${escapeHtml(roomExpiryLabel(room))}</span><small>Exact game and core verified by GameDeck</small></div><button type="button" data-community-room="${escapeHtml(room.roomId)}" ${busy ? 'disabled' : ''}>${busy ? 'Joining…' : 'Join'}</button></article>`;
+    }).join('');
+    list.querySelectorAll('[data-community-room]').forEach(button => {
+      button.onclick = () => joinCommunityRoom(button.dataset.communityRoom);
+    });
+  }
+
+  async function loadCommunityRooms(force = false) {
+    const game = selectedGame();
+    if (!game || !syncInfo?.supported) {
+      communityRooms = [];
+      communityRoomsLoadedFor = '';
+      renderCommunityRooms();
+      return;
+    }
+    const key = `${game.file}:${syncInfo.contentSha256}:${syncInfo.coreSha256}`;
+    if (!force && (communityRoomsLoading || communityRoomsLoadedFor === key)) {
+      renderCommunityRooms();
+      return;
+    }
+    communityRoomsLoading = true;
+    communityRoomsError = '';
+    renderCommunityRooms();
+    try {
+      const result = await window.deck.communityRooms(game.file);
+      if (!result?.ok) throw Error(result?.error || 'Open Rooms are temporarily unavailable.');
+      communityRooms = Array.isArray(result.rooms) ? result.rooms : [];
+      communityRoomsLoadedFor = key;
+      communityRoomsError = '';
+    } catch (error) {
+      communityRooms = [];
+      communityRoomsLoadedFor = '';
+      communityRoomsError = error.message || 'Open Rooms are temporarily unavailable.';
+    } finally {
+      communityRoomsLoading = false;
+      renderCommunityRooms();
+    }
+  }
+
+  async function joinCommunityRoom(roomId) {
+    const room = communityRooms.find(item => item.roomId === roomId);
+    if (!room || !room.invite) return toast('This room is no longer available.', 'warning');
+    communityRoomJoining = roomId;
+    renderCommunityRooms();
+    $('#syncJoinInvite').value = room.invite;
+    syncTab = 'join';
+    renderSyncTabs();
+    try {
+      await joinSyncRoom(room.invite);
+    } finally {
+      communityRoomJoining = '';
+      renderCommunityRooms();
+    }
+  }
+
   function connectedHostPeers() {
     return [...hostPeers.values()].filter(entry => entry.peer.connectionState === 'connected' || entry.channel?.readyState === 'open').length;
   }
@@ -418,6 +515,9 @@
       card.classList.add('unsupported');
       updatePlayerSlots(2);
       updateSyncPlayerSlots(2);
+      communityRooms = [];
+      communityRoomsLoadedFor = '';
+      renderCommunityRooms();
       renderReadiness();
       renderRemotePlay();
       return;
@@ -467,6 +567,7 @@
       $('#netplayHost').disabled = !supported || remoteStatus.active || syncStatus.active;
       $('#syncHost').disabled = !verified || remoteStatus.active || syncStatus.active;
       $('#multiplayerCouchLaunch').disabled = false;
+      if (modalOpen()) void loadCommunityRooms(true);
     } catch (error) {
       card.classList.add('unsupported');
       $('#netplayGameMeta').textContent = error.message || 'Multiplayer compatibility check failed.';
@@ -885,9 +986,13 @@
     const button = $('#syncHost');
     button.querySelector('b').textContent = 'Opening synchronized room…';
     try {
+      const hostName = $('#syncHostName').value.trim() || 'Player';
+      localStorage.setItem('gamedeck.multiplayer.name', hostName);
       const result = await window.deck.netplayHost(game.file, {
         relayId: $('#syncRelay').value || 'nyc',
-        maxPlayers: Number($('#syncMaxPlayers').value || syncInfo.maxPlayers || 2)
+        maxPlayers: Number($('#syncMaxPlayers').value || syncInfo.maxPlayers || 2),
+        nickname: hostName,
+        discoverable: $('#syncDiscoverable').checked
       });
       if (!result?.ok) throw Error(result?.error || 'The synchronized room could not start.');
       syncStatus = result.status || syncStatus;
@@ -902,8 +1007,9 @@
     }
   }
 
-  async function joinSyncRoom() {
-    const invite = $('#syncJoinInvite').value.trim();
+  async function joinSyncRoom(inviteOverride = '', preferredFileOverride = '') {
+    const invite = String(inviteOverride || $('#syncJoinInvite').value).trim();
+    if (inviteOverride) $('#syncJoinInvite').value = invite;
     if (!invite) return toast('Paste the host invitation first.', 'warning');
     if (remoteStatus.active || guestPeer) await endSession(true);
     syncBusy = true;
@@ -915,7 +1021,7 @@
     button.querySelector('b').textContent = 'Verifying game and core…';
     try {
       const game = selectedGame();
-      const result = await window.deck.netplayJoin(invite, game?.file || '', { nickname: $('#syncNickname').value.trim() || 'Player 2' });
+      const result = await window.deck.netplayJoin(invite, preferredFileOverride || game?.file || '', { nickname: $('#syncNickname').value.trim() || 'Player 2' });
       if (!result?.ok) throw Error(result?.error || 'The synchronized room could not be joined.');
       syncStatus = result.status || syncStatus;
       toast('Exact match verified. Connecting to the host.', 'success');
@@ -951,6 +1057,7 @@
       syncTab = button.dataset.syncTab;
       renderSyncTabs();
       renderRemotePlay();
+      if (syncTab === 'join') void loadCommunityRooms(true);
     };
   });
   $('#netplayHost').onclick = startHost;
@@ -971,7 +1078,8 @@
   };
   $('#multiplayerCouchLaunch').onclick = launchCouchCoop;
   $('#syncHost').onclick = startSyncHost;
-  $('#syncJoin').onclick = joinSyncRoom;
+  $('#syncJoin').onclick = () => joinSyncRoom();
+  $('#communityRoomsRefresh').onclick = () => loadCommunityRooms(true);
   $('#netplayStop').onclick = endActiveSession;
   $('#syncCopyInvite').onclick = async () => {
     const value = $('#syncInviteValue').value;
@@ -1071,16 +1179,38 @@
     if (syncStatus.invite && modalOpen()) $('#syncCopyInvite')?.focus();
   });
 
+  window.deck.onCommunityRooms(() => {
+    communityRoomsLoadedFor = '';
+    if (modalOpen() && currentPlayStyle === 'sync') void loadCommunityRooms(true);
+  });
+
   window.GameDeckMultiplayer = {
     open: (style = currentPlayStyle) => openStudio('host', style),
     close: closeStudio,
-    refresh: refreshSelectedGame
+    refresh: refreshSelectedGame,
+    joinCommunityRoom: async room => {
+      if (!room?.invite) throw Error('This community room is no longer available.');
+      openStudio('host', 'sync');
+      syncTab = 'join';
+      renderSyncTabs();
+      $('#syncJoinInvite').value = room.invite;
+      await joinSyncRoom(room.invite, room.gameFile || '');
+    }
   };
 
   setInterval(handleModalGamepad, 90);
   setInterval(() => { if (modalOpen()) renderReadiness(); }, 900);
+  setInterval(() => {
+    if (modalOpen() && currentPlayStyle === 'sync' && syncTab === 'join' && !syncBusy) {
+      communityRoomsLoadedFor = '';
+      void loadCommunityRooms();
+    }
+  }, 12000);
 
   (async () => {
+    const savedName = localStorage.getItem('gamedeck.multiplayer.name') || '';
+    $('#syncHostName').value = savedName;
+    if (!$('#syncNickname').value) $('#syncNickname').value = savedName;
     try { remoteStatus = await window.deck.remotePlayStatus(); } catch {}
     try { syncStatus = await window.deck.netplayStatus(); } catch {}
     try {

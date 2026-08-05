@@ -157,6 +157,11 @@ function applySystemTheme(systemId) {
 const views = ['home', 'discover', 'favorites', 'recent', 'community'];
 const CATALOG_PAGE_SIZE = 120;
 let toastTimer = null;
+let communityHubRooms = [];
+let communityHubLoading = false;
+let communityHubError = '';
+let communityHubJoining = '';
+let communityHubLoadedAt = 0;
 let catalogRequest = 0;
 let artworkObserver = null;
 let artworkActive = 0;
@@ -1393,9 +1398,9 @@ function renderCatalogFeature(game) {
   feature.classList.remove('feature-loading');
   $('#catalogFeatureArt').innerHTML = `<img src="${escapeHtml(art)}" alt="${escapeHtml(game.name)} cover">`;
   $('#catalogFeatureBackdrop').src = art;
-  $('#catalogFeatureSystem').textContent = `${state.catalogSystem.name.toUpperCase()} / ${ready ? 'IN YOUR LIBRARY' : downloading ? 'FINISHING SETUP' : installed ? 'DOWNLOADED' : 'RGSX CATALOG'}`;
+  $('#catalogFeatureSystem').textContent = `${state.catalogSystem.name.toUpperCase()} / ${ready ? 'IN YOUR LIBRARY' : downloading ? 'FINISHING SETUP' : installed ? 'DOWNLOADED' : 'GAMEDECK CATALOG'}`;
   $('#catalogFeatureTitle').textContent = game.name;
-  $('#catalogFeatureFacts').innerHTML = factMarkup([game.region || game.tags?.[0], cached?.year, game.size || 'RGSX managed', ready ? 'Ready' : installed ? 'Downloaded' : 'Available']);
+  $('#catalogFeatureFacts').innerHTML = factMarkup([game.region || game.tags?.[0], cached?.year, game.size || 'GameDeck verified', ready ? 'Ready' : installed ? 'Downloaded' : 'Available']);
   $('#catalogFeatureDescription').textContent = cached?.description || description;
   $('#catalogFeatureMeta').textContent = !state.catalogSystem.playable
     ? `Console setup needed · ${state.catalogSystem.issue} You can still add this title now.`
@@ -1405,7 +1410,7 @@ function renderCatalogFeature(game) {
         ? `${downloading.stage || 'Downloading'} · ${Math.round(Number(downloading.progress || 0))}% complete`
         : installed
           ? 'Download complete · Unpack locally once to finish setup. The original archive will be kept.'
-        : 'One-click RGSX transfer · Progress stays visible while you keep browsing.';
+        : 'One-click GameDeck download · Progress stays visible while you keep browsing.';
   $('#catalogFeatureAction').textContent = ready ? 'Play now' : downloading ? `${downloading.stage || 'Working'} ${Math.round(Number(downloading.progress || 0))}%` : installed ? 'Finish setup' : 'Add to my deck';
   $('#catalogFeatureAction').disabled = Boolean(downloading);
   $('#catalogSetup').classList.toggle('hidden', state.catalogSystem.playable);
@@ -1423,7 +1428,7 @@ function renderCatalogFeature(game) {
     const isFeatured = state.focusedCatalogId === game.id || (state.focusedCatalogId == null && currentCatalogGames()[0]?.id === game.id);
     if (!isFeatured) return;
     $('#catalogFeatureDescription').textContent = details.description || description;
-    $('#catalogFeatureFacts').innerHTML = factMarkup([game.region || game.tags?.[0], details.year, details.genre, details.players && `${details.players} player${details.players === '1' ? '' : 's'}`, game.size || 'RGSX managed', ready ? 'Ready' : installed ? 'Downloaded' : 'Available']);
+    $('#catalogFeatureFacts').innerHTML = factMarkup([game.region || game.tags?.[0], details.year, details.genre, details.players && `${details.players} player${details.players === '1' ? '' : 's'}`, game.size || 'GameDeck verified', ready ? 'Ready' : installed ? 'Downloaded' : 'Available']);
     $('#catalogFeatureSource').textContent = String(details.source || 'GameDeck').toUpperCase();
     feature.classList.remove('details-loading');
   });
@@ -1457,7 +1462,7 @@ function renderCatalogGames() {
     const installed = Boolean(game.installedFile);
     const ready = installed && game.installedReady !== false;
     const art = game.art || assetFallback(game.name, '#263347', '#10141c', state.catalogSystem?.name || 'DISCOVER');
-    const facts = [game.region || game.tags?.[0] || 'Catalog', game.size || 'RGSX'].filter(Boolean);
+    const facts = [game.region || game.tags?.[0] || 'Catalog', game.size || 'GameDeck'].filter(Boolean);
     const action = ready ? 'Play' : downloading ? `${Math.round(Number(downloading.progress || 0))}%` : installed ? 'Finish' : 'Add';
     const cardState = ready ? 'IN LIBRARY' : downloading ? escapeHtml(downloading.stage || 'WORKING') : installed ? 'DOWNLOADED' : 'AVAILABLE';
     return `<article class="catalog-game ${game.art ? 'has-art' : 'art-pending'} ${active ? 'active' : ''} ${ready ? 'installed' : ''} ${installed && !ready ? 'downloaded' : ''} ${downloading ? 'downloading' : ''}" tabindex="0" role="listitem" aria-current="${active}" aria-label="Select ${escapeHtml(game.name)} for ${escapeHtml(state.catalogSystem?.name || 'this console')}" style="--delay:${Math.min(index, 14) * 18}ms" data-id="${game.id}"><div class="catalog-media"><img class="catalog-media-backdrop" data-catalog-art="${game.id}" src="${escapeHtml(art)}" alt="" loading="lazy"><img class="catalog-poster" data-catalog-art="${game.id}" src="${escapeHtml(art)}" alt="${escapeHtml(game.name)} artwork" loading="lazy"><span class="catalog-platform">${escapeHtml(state.catalogSystem?.name || 'GAME')}</span><span class="catalog-state">${cardState}</span></div><div class="catalog-info"><b title="${escapeHtml(game.name)}">${escapeHtml(game.name)}</b><small>${facts.map(fact => `<span>${escapeHtml(fact)}</span>`).join('')}</small><p>${escapeHtml(cardDescription(game, state.catalogSystem))}</p><button type="button" class="import" data-id="${game.id}" ${downloading ? 'disabled' : ''}>${action}</button></div></article>`;
@@ -1567,9 +1572,9 @@ async function catalogAction(game) {
   }
 
   try {
-    toast(`Sending ${game.name} to RGSX...`);
+    toast(`Getting ${game.name}...`);
     const result = await window.deck.importOwned(state.catalogSystem.source, state.catalogSystem.folder, game.name, game.fileName);
-    if (!result.ok) throw Error(result.error || 'RGSX could not start the download');
+    if (!result.ok) throw Error(result.error || 'GameDeck could not start the download');
     if (result.installedFile) {
       game.installedFile = result.installedFile;
       game.installedReady = result.installedReady !== false;
@@ -1581,9 +1586,9 @@ async function catalogAction(game) {
     renderCatalogGames();
     state.transferExpanded = true;
     renderDownloads();
-    toast('Download started — keep browsing while RGSX works');
+    toast('Download started — keep browsing while GameDeck works');
   } catch (error) {
-    toast(error.message || 'RGSX download failed');
+    toast(error.message || 'GameDeck download failed');
     openConsole(true);
   }
 }
@@ -2341,7 +2346,7 @@ async function setupFocusedSystem() {
     return;
   }
   if (result.queued) {
-    toast('Firmware download started through RGSX');
+    toast('Firmware download started');
     state.transferExpanded = true;
     renderDownloads();
   } else toast(result.issue || 'Console is already configured');
@@ -2400,6 +2405,86 @@ function changeView(view) {
   prepareRememberedShelf();
   render();
   restoreShelfPosition();
+  if (view === 'community') void refreshCommunityHubRooms();
+}
+
+function communityHubExpiry(room) {
+  const minutes = Math.max(1, Math.ceil((Number(room.expiresAt || 0) - Date.now()) / 60000));
+  return minutes >= 60 ? `${Math.ceil(minutes / 60)}h left` : `${minutes}m left`;
+}
+
+function renderCommunityHubRooms() {
+  const container = $('#communityPlayRooms');
+  const status = $('#communityPlayStatus');
+  const refresh = $('#communityPlayRefresh');
+  if (!container || !status || !refresh) return;
+  refresh.disabled = communityHubLoading;
+  refresh.textContent = communityHubLoading ? 'Searching…' : 'Find players';
+  if (communityHubLoading && !communityHubRooms.length) {
+    status.textContent = 'Checking your favorite and recently played games for compatible rooms…';
+    container.innerHTML = '<div class="community-play-empty">Searching your deck for players…</div>';
+    return;
+  }
+  if (communityHubError && !communityHubRooms.length) {
+    status.textContent = communityHubError;
+    container.innerHTML = '<div class="community-play-empty">GameDeck will retry the community network automatically.</div>';
+    return;
+  }
+  status.textContent = communityHubRooms.length
+    ? `${communityHubRooms.length} compatible room${communityHubRooms.length === 1 ? '' : 's'} available for games in your deck.`
+    : communityHubLoadedAt
+      ? 'No compatible rooms are open right now. Start one from any game’s Multiplayer screen.'
+      : 'GameDeck can scan your most-played and favorite games for compatible players.';
+  if (!communityHubRooms.length) {
+    container.innerHTML = '<div class="community-play-empty">Open Rooms will appear here when compatible hosts are online.</div>';
+    return;
+  }
+  container.innerHTML = communityHubRooms.map((room, index) => {
+    const art = room.art ? `<img src="${escapeHtml(room.art)}" alt="">` : escapeHtml(String(room.gameTitle || 'GD').slice(0, 2).toUpperCase());
+    const busy = communityHubJoining === room.roomId;
+    return `<article class="community-play-card"><div class="community-play-art">${art}</div><div class="community-play-copy"><b>${escapeHtml(room.gameTitle)}</b><span>${escapeHtml(room.hostName || 'Player')} · ${Number(room.playerCount || 1)}/${Number(room.maxPlayers || 2)} players</span><small>Exact match · ${escapeHtml(communityHubExpiry(room))}</small></div><button type="button" data-community-hub-room="${index}" ${busy ? 'disabled' : ''}>${busy ? 'Joining…' : 'Join'}</button></article>`;
+  }).join('');
+  container.querySelectorAll('[data-community-hub-room]').forEach(button => {
+    button.onclick = async () => {
+      const room = communityHubRooms[Number(button.dataset.communityHubRoom)];
+      if (!room) return;
+      communityHubJoining = room.roomId;
+      renderCommunityHubRooms();
+      try {
+        if (!window.GameDeckMultiplayer?.joinCommunityRoom) throw Error('Multiplayer is still starting. Try again in a moment.');
+        await window.GameDeckMultiplayer.joinCommunityRoom(room);
+      } catch (error) {
+        toast(error.message || 'This room could not be joined.', 'warning');
+      } finally {
+        communityHubJoining = '';
+        renderCommunityHubRooms();
+      }
+    };
+  });
+}
+
+async function refreshCommunityHubRooms(force = false) {
+  if (communityHubLoading) return;
+  if (!force && communityHubLoadedAt && Date.now() - communityHubLoadedAt < 12000) {
+    renderCommunityHubRooms();
+    return;
+  }
+  communityHubLoading = true;
+  communityHubError = '';
+  renderCommunityHubRooms();
+  try {
+    const result = await window.deck.communityLibraryRooms();
+    if (!result?.ok) throw Error(result?.error || 'Community rooms are temporarily unavailable.');
+    communityHubRooms = Array.isArray(result.rooms) ? result.rooms : [];
+    communityHubLoadedAt = Date.now();
+  } catch (error) {
+    communityHubRooms = [];
+    communityHubLoadedAt = 0;
+    communityHubError = error.message || 'Community rooms are temporarily unavailable.';
+  } finally {
+    communityHubLoading = false;
+    renderCommunityHubRooms();
+  }
 }
 
 function cycleView(delta = 1) {
@@ -2839,13 +2924,14 @@ $('#rescan').onclick = async () => {
     artworkEnrichmentTried.clear();
     scheduleArtworkEnrichment(1800);
     refreshArcadeAudit(false);
-    toast('RGSX library refreshed');
+    toast('GameDeck library refreshed');
   } finally {
     setLoading(false);
     setRescanBusy(false);
   }
 };
 $('#arcadeAuditButton').onclick = () => refreshArcadeAudit(true);
+$('#communityPlayRefresh').onclick = () => refreshCommunityHubRooms(true);
 $$('[data-arcade-filter]').forEach(button => {
   button.onclick = () => {
     state.arcadeFilter = button.dataset.arcadeFilter;
@@ -3042,10 +3128,15 @@ window.addEventListener('gamepaddisconnected', () => {
   gamepadState.initialized = false;
   setControllerStatus();
 });
+window.deck.onCommunityRooms(() => {
+  communityHubLoadedAt = 0;
+  if (state.view === 'community') void refreshCommunityHubRooms(true);
+});
+
 window.deck.onActivity(entry => {
   state.activities = [...state.activities.slice(-399), entry];
   renderActivity();
-  if (entry.message.startsWith('RGSX finished:')) refreshCatalogAfterDownload(entry.taskId);
+  if (entry.message.startsWith('GameDeck finished:')) refreshCatalogAfterDownload(entry.taskId);
 });
 window.deck.onArcadeAudit(progress => {
   state.arcadeAuditProgress = {
@@ -3143,6 +3234,7 @@ async function init() {
   setControllerStatus();
   setLoading(true, 'Couch mode ready', 'Keyboard and controller navigation are lined up.', 94);
   setInterval(handleGamepad, 90);
+setInterval(() => { if (state.view === 'community') void refreshCommunityHubRooms(); }, 15000);
   setLoading(false);
   refreshArcadeAudit(false);
   const captureView = requestedCaptureView;
@@ -3169,7 +3261,7 @@ async function init() {
     const now = Date.now();
     state.transferExpanded = true;
     state.downloads = [{
-      id: 'qa-ready-transfer', source: 'RGSX QA', folder: 'snes', systemId: 'snes', systemName: 'Super Nintendo',
+      id: 'qa-ready-transfer', source: 'GameDeck QA', folder: 'snes', systemId: 'snes', systemName: 'Super Nintendo',
       title: 'Chrono Trigger', fileName: 'Chrono Trigger (USA).sfc', status: 'complete', stage: 'Complete',
       message: 'Added to your library and ready to play.', progress: 100, startedAt: now - 42000, finishedAt: now
     }];
@@ -3188,7 +3280,7 @@ async function init() {
       platform: 'win32', arch: 'x64', library: 'C:\\Games\\GameDeck', rgsxRuntime: true, retroarch: true, mame: false,
       settings: { version: '1.1.0' }, systems: [{ name: 'Super Nintendo', ready: false, issue: 'Core missing' }]
     };
-    $('#debugHealth').innerHTML = '<span class="ok">RGSX READY</span><span class="ok">RETROARCH READY</span><span class="bad">MAME MISSING</span><span>1 ACTIVE</span>';
+    $('#debugHealth').innerHTML = '<span class="ok">GAMEDECK READY</span><span class="ok">RETROARCH READY</span><span class="bad">MAME MISSING</span><span>1 ACTIVE</span>';
     $('#debugConsole').classList.remove('hidden');
     $('#consoleToggle').classList.add('active');
     renderActivity();
@@ -3198,7 +3290,7 @@ async function init() {
     state.transferExpanded = true;
     state.downloads = [{
       id: 'qa-transfer',
-      source: 'RGSX QA',
+      source: 'GameDeck QA',
       folder: 'ps2',
       systemId: 'ps2',
       systemName: 'PlayStation 2',

@@ -1,0 +1,12 @@
+{
+  "payload": {
+    "version": 1,
+    "generatedAt": 1785950520156,
+    "assets": []
+  },
+  "signature": {
+    "algorithm": "ed25519",
+    "keyId": "gamedeck-bootstrap",
+    "value": "o1WbrLANS4MQ1Du0Wt56umn8xflckosw6JbHEHMy7l3VBSaQDBucu6G9F73khQE8BV+9nrOl3vlDXEuBNCQmAg=="
+  }
+}

@@ -8,6 +8,8 @@ const crypto = require('crypto');
 
 const MAX_PAIR_BODY_BYTES = 8 * 1024;
 const MAX_SIGNAL_BODY_BYTES = 64 * 1024;
+const MAX_INPUT_BODY_BYTES = 16 * 1024;
+const MAX_CHAT_BODY_BYTES = 16 * 1024;
 const MAX_HOST_QUEUE = 128;
 const PAIR_FAILURE_LIMIT = 8;
 const PAIR_WINDOW_MS = 60 * 1000;
@@ -84,6 +86,11 @@ function createStreamServer(options = {}) {
   const mobileRoot = path.resolve(options.mobileRoot);
   const onUpdate = typeof options.onUpdate === 'function' ? options.onUpdate : () => {};
   const onLog = typeof options.onLog === 'function' ? options.onLog : () => {};
+  const onInput = typeof options.onInput === 'function' ? options.onInput : () => false;
+  const onCommunityRooms = typeof options.onCommunityRooms === 'function' ? options.onCommunityRooms : async () => ({ ok: true, rooms: [] });
+  const onCommunityJoin = typeof options.onCommunityJoin === 'function' ? options.onCommunityJoin : async () => ({ ok: false, error: 'Community joining is unavailable.' });
+  const onCommunityChatList = typeof options.onCommunityChatList === 'function' ? options.onCommunityChatList : async () => ({ ok: true, messages: [] });
+  const onCommunityChatSend = typeof options.onCommunityChatSend === 'function' ? options.onCommunityChatSend : async () => ({ ok: false, error: 'Community chat is unavailable.' });
   let server = null;
   let active = false;
   let code = '';
@@ -104,7 +111,10 @@ function createStreamServer(options = {}) {
       label: viewer.label,
       joinedAt: viewer.joinedAt,
       lastSeenAt: viewer.lastSeenAt,
-      connected: viewer.connected !== false
+      connected: viewer.connected !== false,
+      playerIndex: Number(viewer.playerIndex || 0),
+      controllerConnected: Boolean(viewer.controllerConnected),
+      inputEventCount: Number(viewer.inputEventCount || 0)
     };
   }
 
@@ -125,7 +135,8 @@ function createStreamServer(options = {}) {
       quality,
       audio,
       localOnly: true,
-      protocol: 'GameDeck WebRTC LAN'
+      protocol: 'GameDeck WebRTC LAN',
+      capabilities: { input: true, haptics: true, communityRooms: true, communityChat: true }
     };
   }
 
@@ -216,11 +227,24 @@ function createStreamServer(options = {}) {
       pairAttempts.delete(requestAddress(request));
       const id = randomId();
       const label = String(body.label || 'Mobile viewer').trim().slice(0, 64) || 'Mobile viewer';
-      const viewer = { id, label, joinedAt: Date.now(), lastSeenAt: Date.now(), connected: true, queue: [] };
+      const usedSlots = new Set([...viewers.values()].map(item => Number(item.playerIndex || 0)));
+      let playerIndex = 0;
+      while (playerIndex < 3 && usedSlots.has(playerIndex)) playerIndex += 1;
+      const viewer = {
+        id,
+        label,
+        playerIndex,
+        joinedAt: Date.now(),
+        lastSeenAt: Date.now(),
+        connected: true,
+        controllerConnected: Boolean(body.controllerConnected),
+        inputEventCount: 0,
+        queue: []
+      };
       viewers.set(id, viewer);
-      pushHost({ type: 'viewer-joined', viewerId: id, label });
+      pushHost({ type: 'viewer-joined', viewerId: id, label, playerIndex });
       emit({ event: 'viewer-joined', viewer: publicViewer(viewer) });
-      safeJson(response, 200, { ok: true, viewerId: id, stream: receiverStatus() });
+      safeJson(response, 200, { ok: true, viewerId: id, viewer: publicViewer(viewer), stream: receiverStatus() });
       return true;
     }
     if (request.method === 'POST' && url.pathname === '/api/signal') {
@@ -232,6 +256,67 @@ function createStreamServer(options = {}) {
       }
       pushHost({ type: 'signal', viewerId: viewer.id, payload: body.payload || {} });
       safeJson(response, 200, { ok: true });
+      return true;
+    }
+    if (request.method === 'POST' && url.pathname === '/api/input') {
+      const body = await readBody(request, MAX_INPUT_BODY_BYTES);
+      const viewer = viewerFor(body.viewerId);
+      if (!viewer || !validCode(body.code)) {
+        safeJson(response, 403, { ok: false, error: 'Viewer session expired.' });
+        return true;
+      }
+      viewer.controllerConnected = Boolean(body.controllerConnected);
+      const accepted = Boolean(onInput(viewer, {
+        playerIndex: viewer.playerIndex,
+        events: Array.isArray(body.events) ? body.events.slice(0, 32) : []
+      }));
+      if (accepted) viewer.inputEventCount = Number(viewer.inputEventCount || 0) + Math.min(32, body.events?.length || 0);
+      safeJson(response, 200, { ok: true, accepted, viewer: publicViewer(viewer) });
+      return true;
+    }
+    if (request.method === 'GET' && url.pathname === '/api/community/rooms') {
+      const viewer = viewerFor(url.searchParams.get('viewerId'));
+      if (!viewer || !validCode(url.searchParams.get('code'))) {
+        safeJson(response, 403, { ok: false, error: 'Viewer session expired.' });
+        return true;
+      }
+      const result = await onCommunityRooms(viewer);
+      safeJson(response, result?.ok === false ? 503 : 200, result || { ok: true, rooms: [] });
+      return true;
+    }
+    if (request.method === 'POST' && url.pathname === '/api/community/join') {
+      const body = await readBody(request, MAX_INPUT_BODY_BYTES);
+      const viewer = viewerFor(body.viewerId);
+      if (!viewer || !validCode(body.code)) {
+        safeJson(response, 403, { ok: false, error: 'Viewer session expired.' });
+        return true;
+      }
+      const result = await onCommunityJoin(viewer, { roomId: String(body.roomId || '').slice(0, 80) });
+      safeJson(response, result?.ok === false ? 400 : 200, result || { ok: false, error: 'Room could not be joined.' });
+      return true;
+    }
+    if (request.method === 'GET' && url.pathname === '/api/community/chat') {
+      const viewer = viewerFor(url.searchParams.get('viewerId'));
+      if (!viewer || !validCode(url.searchParams.get('code'))) {
+        safeJson(response, 403, { ok: false, error: 'Viewer session expired.' });
+        return true;
+      }
+      const result = await onCommunityChatList(viewer);
+      safeJson(response, result?.ok === false ? 503 : 200, result || { ok: true, messages: [] });
+      return true;
+    }
+    if (request.method === 'POST' && url.pathname === '/api/community/chat') {
+      const body = await readBody(request, MAX_CHAT_BODY_BYTES);
+      const viewer = viewerFor(body.viewerId);
+      if (!viewer || !validCode(body.code)) {
+        safeJson(response, 403, { ok: false, error: 'Viewer session expired.' });
+        return true;
+      }
+      const result = await onCommunityChatSend(viewer, {
+        text: String(body.text || '').trim().slice(0, 600),
+        authorName: String(body.authorName || viewer.label || 'Player').trim().slice(0, 40)
+      });
+      safeJson(response, result?.ok === false ? 400 : 200, result || { ok: false, error: 'Message could not be sent.' });
       return true;
     }
     if (request.method === 'GET' && url.pathname === '/api/messages') {
@@ -276,7 +361,9 @@ function createStreamServer(options = {}) {
       'x-content-type-options': 'nosniff',
       'cross-origin-opener-policy': 'same-origin',
       'cross-origin-resource-policy': 'same-origin',
-      'permissions-policy': 'camera=(), microphone=(), geolocation=()'
+      'permissions-policy': 'camera=(), microphone=(), geolocation=()',
+      'content-security-policy': "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self' blob:; connect-src 'self'; object-src 'none'; frame-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
+      'x-frame-options': 'DENY'
     });
     fs.createReadStream(file).pipe(response);
   }
@@ -370,6 +457,16 @@ function createStreamServer(options = {}) {
     return { ok: true };
   }
 
+  function viewerInput(viewerId, payload = {}) {
+    const viewer = viewerFor(viewerId);
+    if (!viewer) return { ok: false, error: 'Viewer is no longer connected.' };
+    viewer.controllerConnected = Boolean(payload.controllerConnected);
+    const events = Array.isArray(payload.events) ? payload.events.slice(0, 32) : [];
+    const accepted = Boolean(onInput(viewer, { playerIndex: viewer.playerIndex, events }));
+    if (accepted) viewer.inputEventCount = Number(viewer.inputEventCount || 0) + events.length;
+    return { ok: true, accepted, viewer: publicViewer(viewer) };
+  }
+
   function close() {
     stop();
     if (cleanupTimer) clearInterval(cleanupTimer);
@@ -382,7 +479,7 @@ function createStreamServer(options = {}) {
     });
   }
 
-  return { status, start, stop, hostPull, hostSend, close };
+  return { status, start, stop, hostPull, hostSend, viewerInput, close };
 }
 
 module.exports = { createStreamServer, localAddresses };

@@ -13,6 +13,10 @@ const { path7za } = require('7zip-bin');
 const { createRuntimeManager, pathsFor: managedRuntimePathsFor, key: managedRuntimeKey } = require('./runtime-manager');
 const { createStreamServer } = require('./stream-server');
 const { createNetplayManager } = require('./netplay-manager');
+const { createFreenetContentProvider } = require('./freenet-content-provider');
+const { createFreenetNodeManager } = require('./freenet-node-manager');
+const { createCommunityMatchmaking } = require('./community-matchmaking');
+const { createCommunityChat } = require('./community-chat');
 const {
   buildCapabilityFailure,
   buildStatusFailure,
@@ -34,6 +38,9 @@ const HOME_DIR = os.homedir();
 const DOCUMENTS_DIR = app.getPath('documents');
 const SETTINGS_FILE = path.join(app.getPath('userData'), 'settings.json');
 const NETPLAY_ROOT = path.join(app.getPath('userData'), 'netplay');
+const MOBILE_INPUT_ROOT = path.join(app.getPath('userData'), 'mobile-input');
+const MOBILE_INPUT_CONFIG = path.join(MOBILE_INPUT_ROOT, 'retroarch-mobile-input.cfg');
+const MOBILE_INPUT_BASE_PORT = 55400;
 const MANAGED_RUNTIME_ROOT = path.join(app.getPath('userData'), 'runtime');
 const MANAGED_RUNTIME_PATHS = managedRuntimePathsFor(MANAGED_RUNTIME_ROOT, process.platform);
 const BUNDLED_RUNTIME_ROOT = path.join(process.resourcesPath, 'runtime-cache', managedRuntimeKey());
@@ -191,6 +198,19 @@ const RGSX_FIRMWARE_PACK = firstExisting([
 ], path.join(RGSX_ROOT, 'Retrobat V8.0.0.zip'));
 const STORE = path.join(app.getPath('userData'), 'library.json');
 const DOWNLOADS_FILE = path.join(app.getPath('userData'), 'downloads.json');
+const COMMUNITY_CACHE_ROOT = path.join(app.getPath('userData'), 'community-cache');
+const COMMUNITY_MANIFEST_CACHE = path.join(COMMUNITY_CACHE_ROOT, 'manifest.json');
+const COMMUNITY_MANIFEST_BOOTSTRAP = process.env.GAMEDECK_COMMUNITY_MANIFEST || path.join(__dirname, 'config', 'community-content.json');
+const COMMUNITY_BLOB_CONTRACT = path.join(__dirname, 'contracts', 'gamedeck-blob.wasm');
+const COMMUNITY_ROOMS_CONTRACT = path.join(__dirname, 'contracts', 'gamedeck-rooms.wasm');
+const COMMUNITY_CHAT_CONTRACT = path.join(__dirname, 'contracts', 'gamedeck-chat.wasm');
+const COMMUNITY_MATCHMAKING_ROOT = path.join(app.getPath('userData'), 'community-matchmaking');
+const COMMUNITY_CHAT_ROOT = path.join(app.getPath('userData'), 'community-chat');
+const COMMUNITY_NETWORK_CONFIG = readJson(path.join(__dirname, 'config', 'community-network.json'), {});
+const COMMUNITY_TRUSTED_KEYS = readJson(path.join(__dirname, 'config', 'community-public-keys.json'), {});
+const COMMUNITY_NODE_URL = process.env.GAMEDECK_FREENET_NODE || COMMUNITY_NETWORK_CONFIG.nodeUrl || 'ws://127.0.0.1:7509/v1/contract/command';
+const COMMUNITY_NODE_ENDPOINT = new URL(COMMUNITY_NODE_URL);
+const COMMUNITY_RUNTIME_ROOT = path.join(app.getPath('userData'), 'community-runtime');
 const ART_CACHE = path.join(app.getPath('userData'), 'artwork');
 const DETAILS_CACHE = path.join(app.getPath('userData'), 'details');
 const ARCADE_AUDIT_FILE = path.join(app.getPath('userData'), 'arcade-audit.json');
@@ -352,6 +372,7 @@ const tgdbPlatforms = {
 
 const AUTOMATION_MODE = process.argv.some(argument => String(argument).startsWith('--remote-debugging-port'));
 let appIsQuitting = false;
+let quitCleanupStarted = false;
 let mainWindow = null;
 let activity = [];
 const downloads = new Map();
@@ -383,6 +404,12 @@ let streamCaptureAudio = true;
 let streamServer = null;
 let netplayManager = null;
 let playSessionManager = null;
+let communityContentProvider = null;
+let communityNodeManager = null;
+let communityMatchmaking = null;
+let communityChat = null;
+let communityRoomSync = Promise.resolve();
+let publishedCommunityRoom = { id: '', playerCount: 0 };
 let remotePlayProcess = null;
 let remotePlaySession = null;
 let remoteInputSocket = null;
@@ -396,8 +423,125 @@ function remotePlayStatus() {
     ? { ...remotePlaySession, active: Boolean(remotePlaySession.active), pid: remotePlayProcess?.pid || 0 }
     : { active: false, phase: 'idle', title: '', playerCount: 1, maxPlayers: 0, message: 'Ready for Remote Play Together.' };
 }
+function emitCommunityRooms(update) {
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('community-room-update', update);
+}
+
+function syncCommunityRoom(update = {}) {
+  communityRoomSync = communityRoomSync.then(async () => {
+    if (!communityMatchmaking) return;
+    const shouldPublish = Boolean(
+      update.active
+      && update.role === 'host'
+      && update.phase === 'ready'
+      && update.invite
+      && update.discoverable !== false
+      && update.contentSha256
+      && update.coreSha256
+    );
+    if (!shouldPublish) {
+      if (publishedCommunityRoom.id && (!update.active || update.role !== 'host' || update.discoverable === false)) {
+        await communityMatchmaking.closeActiveRoom();
+        publishedCommunityRoom = { id: '', playerCount: 0 };
+      }
+      return;
+    }
+    if (publishedCommunityRoom.id !== update.id) {
+      const invite = netplayManager?.decodeInvite(update.invite) || {};
+      await communityMatchmaking.publishRoom({
+        roomId: update.id,
+        contentSha256: update.contentSha256,
+        coreSha256: update.coreSha256,
+        systemId: update.systemId,
+        title: update.title,
+        hostName: update.displayName || 'Player',
+        maxPlayers: update.maxPlayers,
+        playerCount: update.playerCount,
+        createdAt: update.startedAt,
+        expiresAt: invite.expiresAt,
+        invite: update.invite
+      });
+      publishedCommunityRoom = { id: update.id, playerCount: Number(update.playerCount || 1) };
+      emitCommunityRooms({ type: 'published', roomId: update.id, at: Date.now() });
+      return;
+    }
+    const playerCount = Number(update.playerCount || 1);
+    if (playerCount !== publishedCommunityRoom.playerCount) {
+      await communityMatchmaking.updateActiveRoom(playerCount);
+      publishedCommunityRoom.playerCount = playerCount;
+      emitCommunityRooms({ type: 'updated', roomId: update.id, playerCount, at: Date.now() });
+    }
+  }).catch(error => {
+    addActivity('info', `Community room update was deferred: ${error.message}`);
+    emitCommunityRooms({ type: 'error', error: error.message, at: Date.now() });
+  });
+}
+
+async function communityLibraryRoomsSnapshot(limit = 16) {
+  try {
+    const games = getLibrary().games
+      .sort((a, b) => Number(Boolean(b.favorite)) - Number(Boolean(a.favorite)) || Number(b.lastPlayed || 0) - Number(a.lastPlayed || 0) || a.title.localeCompare(b.title))
+      .slice(0, Math.max(1, Math.min(32, Number(limit || 16))));
+    const results = [];
+    for (let offset = 0; offset < games.length; offset += 3) {
+      const batch = games.slice(offset, offset + 3);
+      const found = await Promise.all(batch.map(async game => {
+        const info = await netplayMatchInfo(game.file);
+        if (!info?.supported) return [];
+        const rooms = await communityMatchmaking.listRooms(info);
+        return rooms.map(room => ({
+          roomId: room.roomId,
+          hostName: room.hostName,
+          maxPlayers: room.maxPlayers,
+          playerCount: room.playerCount,
+          createdAt: room.createdAt,
+          expiresAt: room.expiresAt,
+          invite: room.invite,
+          gameId: game.id,
+          gameFile: game.file,
+          gameTitle: game.title,
+          systemId: game.system,
+          art: game.art || ''
+        }));
+      }));
+      results.push(...found.flat());
+    }
+    return {
+      ok: true,
+      rooms: results.sort((a, b) => Number(b.createdAt) - Number(a.createdAt)),
+      scanned: games.length,
+      status: communityMatchmaking.status()
+    };
+  } catch (error) {
+    addActivity('info', `Community game search is temporarily unavailable: ${error.message}`);
+    return { ok: false, error: error.message, rooms: [], scanned: 0, status: communityMatchmaking?.status() || {} };
+  }
+}
+
+async function joinCommunityRoomFromMobile(_viewer, request = {}) {
+  const roomId = String(request.roomId || '').trim();
+  if (!roomId) return { ok: false, error: 'Choose an open GameDeck room.' };
+  const snapshot = await communityLibraryRoomsSnapshot(32);
+  if (!snapshot.ok) return snapshot;
+  const room = snapshot.rooms.find(item => item.roomId === roomId);
+  if (!room) return { ok: false, error: 'That room is no longer available.' };
+  try {
+    const file = await findNetplayGame(room.invite, room.gameFile || '');
+    const spec = await netplaySpecForFile(file);
+    const status = await netplayManager.join(room.invite, { ...spec, nickname: 'Android Player' });
+    const store = readStore();
+    store.recent[spec.contentFile] = Date.now();
+    writeStore(store);
+    return { ok: true, roomId, status };
+  } catch (error) {
+    addActivity('error', `Android room join failed: ${error.message}`);
+    return { ok: false, error: error.message };
+  }
+}
+
 function emitNetplay(update) {
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('netplay-update', update);
+  void syncCommunityRoom(update);
 }
 function gameDeckNetplayStatus() {
   return netplayManager ? netplayManager.status() : { active: false, phase: 'idle', message: 'Multiplayer is starting.' };
@@ -743,7 +887,7 @@ function restoreFirmwareFromExistingPack(system) {
     });
     if (extraction.status === 0) invalidateFirmwareInventory(destination);
     if (extraction.status === 0 && systemBiosReady(system)) {
-      addActivity('success', `${system.name} firmware restored from the existing RGSX BIOS pack.`);
+      addActivity('success', `${system.name} firmware restored from an existing GameDeck package.`);
       return true;
     }
   } catch (error) {
@@ -1054,7 +1198,7 @@ function fallbackGameDetails(title, systemId, context = {}) {
   const releaseLabel = [region && `${region} release`, edition && !edition.includes(region) ? edition : ''].filter(Boolean).join(' · ');
   const availability = context.installed
     ? 'It is installed and ready to launch with the emulator already configured for this system.'
-    : 'Add it to your deck through RGSX, then GameDeck will match it with the configured emulator automatically.';
+    : 'Add it to your deck, then GameDeck will match it with the configured emulator automatically.';
   return {
     title: gameTitle,
     description: `${gameTitle} is part of the ${systemName} collection${releaseLabel ? ` (${releaseLabel})` : ''}. ${availability}`,
@@ -1253,7 +1397,7 @@ async function inspectArcadeArchive(game) {
     return { ...base, status: 'repairable', dependencies: missingDependencies.map(item => item.fileName), message: 'GameDeck will install ' + missingDependencies.map(item => item.label).join(', ') + ' automatically on first launch.' };
   }
   if (!SEVEN_ZIP || !fs.existsSync(SEVEN_ZIP)) {
-    return { ...base, status: 'unchecked', message: 'Install 7-Zip or configure RGSX to enable integrity checks.' };
+    return { ...base, status: 'unchecked', message: 'GameDeck needs its extraction helper before it can verify this archive.' };
   }
   const container = await processResult(SEVEN_ZIP, ['t', '-bso0', '-bsp0', '-bse1', '--', game.file], { timeout: 30000 });
   if (!container.ok) {
@@ -1395,7 +1539,7 @@ function getLibrary() {
       format: path.extname(file).replace('.', '').toUpperCase(),
       archiveHealth: archive?.status || '',
       archiveHealthMessage: archive?.message || '',
-      autoRepair: Boolean(isArcadeSystem(system) && ['damaged', 'incomplete'].includes(archive?.status) && findRgsxCatalogAsset(path.basename(file), folder)),
+      autoRepair: Boolean(isArcadeSystem(system) && ['damaged', 'incomplete'].includes(archive?.status) && findCatalogAsset(path.basename(file), folder)),
       favorite: state.favorites.includes(file),
       lastPlayed: state.recent[file] || null
     };
@@ -1418,8 +1562,27 @@ function getLibrary() {
   };
 }
 
+function providerBlindText(value) {
+  return String(value || '')
+    .replace(/\bRGSX\b/gi, 'GameDeck')
+    .replace(/\bFreeNet\b/gi, 'GameDeck community')
+    .replace(/\bFreenet\b/gi, 'GameDeck community');
+}
+
+function publicDownloadJob(job) {
+  const output = {
+    ...job,
+    source: 'GameDeck',
+    message: providerBlindText(job?.message),
+    error: providerBlindText(job?.error)
+  };
+  delete output.provider;
+  delete output.communityAsset;
+  return output;
+}
+
 function addActivity(level, message, taskId = null) {
-  const clean = String(message || '')
+  const clean = providerBlindText(message)
     .replace(/\u001b\[[0-9;]*m/g, '')
     .replace(/\r/g, '')
     .trim();
@@ -1428,6 +1591,67 @@ function addActivity(level, message, taskId = null) {
   activity = [...activity.slice(-399), entry];
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('activity', entry);
 }
+
+const managedCommunityNode = ['127.0.0.1', 'localhost', '::1', '[::1]'].includes(COMMUNITY_NODE_ENDPOINT.hostname);
+communityNodeManager = managedCommunityNode ? createFreenetNodeManager({
+  root: COMMUNITY_RUNTIME_ROOT,
+  manifestPath: path.join(__dirname, 'config', 'freenet-runtime-manifest.json'),
+  host: COMMUNITY_NODE_ENDPOINT.hostname.replace(/^\[|\]$/g, ''),
+  port: Number(COMMUNITY_NODE_ENDPOINT.port || 7509),
+  appVersion: app.getVersion(),
+  onUpdate: update => emitCommunityRooms({ type: 'network-status', status: update, at: Date.now() }),
+  onLog: (level, message) => {
+    if (level !== 'debug') addActivity(level, message);
+  }
+}) : null;
+
+communityContentProvider = createFreenetContentProvider({
+  libraryRoot: LIBRARY,
+  cacheRoot: COMMUNITY_CACHE_ROOT,
+  bootstrapManifestPath: COMMUNITY_MANIFEST_BOOTSTRAP,
+  manifestCachePath: COMMUNITY_MANIFEST_CACHE,
+  manifestContractKey: process.env.GAMEDECK_COMMUNITY_MANIFEST_KEY || COMMUNITY_NETWORK_CONFIG.manifestContractKey || '',
+  contractWasmPath: COMMUNITY_BLOB_CONTRACT,
+  nodeUrl: COMMUNITY_NODE_URL,
+  authToken: process.env.GAMEDECK_FREENET_AUTH_TOKEN || '',
+  trustedKeys: {
+    ...COMMUNITY_TRUSTED_KEYS,
+    ...(process.env.GAMEDECK_COMMUNITY_PUBLIC_KEY
+      ? { [process.env.GAMEDECK_COMMUNITY_PUBLIC_KEY_ID || 'gamedeck-release']: process.env.GAMEDECK_COMMUNITY_PUBLIC_KEY }
+      : {})
+  },
+  allowUnsigned: process.env.GAMEDECK_ALLOW_UNSIGNED_COMMUNITY_MANIFEST === '1',
+  allowLocalSources: process.env.GAMEDECK_COMMUNITY_QA_LOCAL_SOURCES === '1',
+  appVersion: app.getVersion(),
+  onLog: (level, message) => {
+    if (level !== 'debug') addActivity(level, message);
+  }
+});
+void communityContentProvider.refresh?.();
+
+communityMatchmaking = createCommunityMatchmaking({
+  root: COMMUNITY_MATCHMAKING_ROOT,
+  contractWasmPath: COMMUNITY_ROOMS_CONTRACT,
+  nodeUrl: COMMUNITY_NODE_URL,
+  authToken: process.env.GAMEDECK_FREENET_AUTH_TOKEN || '',
+  appVersion: app.getVersion(),
+  onUpdate: emitCommunityRooms,
+  onLog: (level, message) => {
+    if (level !== 'debug') addActivity(level, message);
+  }
+});
+
+communityChat = createCommunityChat({
+  root: COMMUNITY_CHAT_ROOT,
+  contractWasmPath: COMMUNITY_CHAT_CONTRACT,
+  nodeUrl: COMMUNITY_NODE_URL,
+  authToken: process.env.GAMEDECK_FREENET_AUTH_TOKEN || '',
+  appVersion: app.getVersion(),
+  onUpdate: update => emitCommunityRooms({ type: 'chat', ...update }),
+  onLog: (level, message) => {
+    if (level !== 'debug') addActivity(level, message);
+  }
+});
 
 runtimeManager = createRuntimeManager({
   root: MANAGED_RUNTIME_ROOT,
@@ -1440,7 +1664,15 @@ runtimeManager = createRuntimeManager({
 streamServer = createStreamServer({
   mobileRoot: path.join(__dirname, 'mobile', 'web'),
   onUpdate: emitStream,
-  onLog: addActivity
+  onLog: addActivity,
+  onInput: queueStreamViewerInput,
+  onCommunityRooms: () => communityLibraryRoomsSnapshot(),
+  onCommunityJoin: joinCommunityRoomFromMobile,
+  onCommunityChatList: () => communityChat?.listMessages?.() || Promise.resolve({ ok: true, messages: [] }),
+  onCommunityChatSend: (viewer, message) => communityChat?.postMessage?.({
+    text: message.text,
+    authorName: message.authorName || viewer.label || 'Player'
+  }) || Promise.resolve({ ok: false, error: 'Community chat is unavailable.' })
 });
 netplayManager = createNetplayManager({
   root: NETPLAY_ROOT,
@@ -1456,7 +1688,7 @@ function emitDownload(job) {
   if (!job?.id) return;
   downloads.set(job.id, job);
   persistDownloads();
-  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('download-update', { ...job });
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('download-update', publicDownloadJob(job));
 }
 
 function emitLaunch(update) {
@@ -1494,7 +1726,7 @@ function unitBytes(value, unit) {
 }
 
 function updateDownloadFromLine(job, line) {
-  const clean = String(line || '').replace(/\u001b\[[0-9;]*m/g, '').replace(/\r/g, '').trim();
+  const clean = providerBlindText(line).replace(/\u001b\[[0-9;]*m/g, '').replace(/\r/g, '').trim();
   if (!clean) return;
 
   const percent = clean.match(/(\d{1,3}(?:\.\d+)?)\s*%/);
@@ -1531,7 +1763,7 @@ function safeLibraryFile(file) {
   const resolved = path.resolve(String(file || ''));
   const relative = path.relative(path.resolve(LIBRARY), resolved);
   if (relative.startsWith('..') || path.isAbsolute(relative) || !fs.existsSync(resolved)) {
-    throw Error('The selected game is not inside the RGSX library.');
+    throw Error('The selected game is not inside the GameDeck library.');
   }
   if (activeManagedDownloadFile(resolved)) {
     throw Error('This game is still downloading. Wait for the transfer to finish before launching.');
@@ -1561,6 +1793,31 @@ function ensureRetroArchArcadeControllerConfig() {
   }
 }
 
+function ensureRetroArchMobileInputConfig() {
+  const lines = [
+    'input_overlay_enable = "false"',
+    'input_overlay_hide_in_menu = "true"',
+    'input_overlay_opacity = "0.000000"',
+    'network_remote_enable = "true"',
+    `network_remote_base_port = "${MOBILE_INPUT_BASE_PORT}"`,
+    'network_remote_enable_user_p1 = "true"',
+    'network_remote_enable_user_p2 = "true"',
+    'network_remote_enable_user_p3 = "true"',
+    'network_remote_enable_user_p4 = "true"'
+  ];
+  const content = `${lines.join('\n')}\n`;
+  try {
+    fs.mkdirSync(MOBILE_INPUT_ROOT, { recursive: true });
+    if (!fs.existsSync(MOBILE_INPUT_CONFIG) || fs.readFileSync(MOBILE_INPUT_CONFIG, 'utf8') !== content) {
+      fs.writeFileSync(MOBILE_INPUT_CONFIG, content);
+    }
+    return MOBILE_INPUT_CONFIG;
+  } catch (error) {
+    addActivity('info', `Mobile input profile could not be refreshed: ${error.message}`);
+    return '';
+  }
+}
+
 function arcadeDependencySpecs(file) {
   const folder = path.relative(LIBRARY, file).split(path.sep)[0]?.toLowerCase() || '';
   if (folder === 'neogeo') {
@@ -1583,23 +1840,44 @@ function installedArcadeDependency(file, dependency) {
   return candidates.find(candidate => candidate && fs.existsSync(candidate)) || '';
 }
 
-function findRgsxCatalogAsset(fileName, preferredFolder = '') {
+function findCatalogAsset(fileName, preferredFolder = '') {
   const target = String(fileName || '').toLowerCase();
-  const catalog = getCatalogSystems().sort((a, b) => Number(b.folder === preferredFolder) - Number(a.folder === preferredFolder));
-  for (const platform of catalog) {
+  const preferred = String(preferredFolder || '').toLowerCase();
+  const communityAssets = communityContentProvider?.manifest?.().assets || [];
+  const community = communityAssets
+    .filter(asset => String(asset.fileName || '').toLowerCase() === target)
+    .sort((a, b) => Number(String(b.folder || '').toLowerCase() === preferred) - Number(String(a.folder || '').toLowerCase() === preferred))[0] || null;
+  const primaryCatalog = getCatalogSystems()
+    .filter(platform => !String(platform.source || '').startsWith('community:') && platform.gamesFile && fs.existsSync(platform.gamesFile))
+    .sort((a, b) => Number(String(b.folder || '').toLowerCase() === preferred) - Number(String(a.folder || '').toLowerCase() === preferred));
+  for (const platform of primaryCatalog) {
     const row = readCatalogRows(platform.gamesFile).find(item => String(item?.[0] || '').toLowerCase() === target);
-    if (row) return { source: platform.source, folder: platform.folder, fileName: row[0], size: row[2] || '' };
+    if (row) {
+      return {
+        source: platform.source,
+        folder: platform.folder,
+        fileName: row[0],
+        size: row[2] || community?.size || '',
+        expectedSha256: community?.sha256 || ''
+      };
+    }
   }
-  return null;
+  return community ? {
+    source: `community:${community.folder.toLowerCase()}`,
+    folder: community.folder,
+    fileName: community.fileName,
+    size: community.size,
+    expectedSha256: community.sha256
+  } : null;
 }
 
 function queueLaunchDependency(file, dependency) {
   const installed = installedArcadeDependency(file, dependency);
   if (installed) return { ok: true, ready: true, installedFile: installed };
-  const asset = findRgsxCatalogAsset(dependency.fileName, dependency.folder);
-  if (!asset) return { ok: false, error: dependency.label + ' are missing and no managed RGSX source is available.' };
+  const asset = findCatalogAsset(dependency.fileName, dependency.folder);
+  if (!asset) return { ok: false, error: dependency.label + ' are missing and no verified GameDeck copy is currently available.' };
   const title = dependency.label;
-  const result = queueRgsxDownload(asset.source, asset.folder, title, asset.fileName);
+  const result = queueGameDownload(asset.source, asset.folder, title, asset.fileName, { expectedSha256: asset.expectedSha256 || '' });
   if (result?.installedFile) return { ok: true, ready: true, installedFile: result.installedFile };
   if (result?.queued) {
     const job = downloads.get(result.taskId);
@@ -1622,13 +1900,13 @@ function queueLaunchDependency(file, dependency) {
 
 function queueManagedGameRepair(file, audit) {
   const folder = path.relative(LIBRARY, file).split(path.sep)[0]?.toLowerCase() || '';
-  const asset = findRgsxCatalogAsset(path.basename(file), folder);
+  const asset = findCatalogAsset(path.basename(file), folder);
   if (!asset) return { ok: false, error: audit?.message || 'This game needs a verified replacement archive.' };
   const gameTitle = isArcadeSystem(detectSystem(file)) ? arcadeDisplayTitle(rawGameName(file)) : cleanName(file);
-  const result = queueRgsxDownload(asset.source, asset.folder, gameTitle, asset.fileName, { force: true, repair: true });
+  const result = queueGameDownload(asset.source, asset.folder, gameTitle, asset.fileName, { force: true, repair: true, expectedSha256: asset.expectedSha256 || '' });
   if (result?.queued) {
     const job = downloads.get(result.taskId);
-    const message = 'Repairing ' + gameTitle + ' from its managed RGSX source. It will open automatically.';
+    const message = 'Repairing ' + gameTitle + ' from a verified GameDeck copy. It will open automatically.';
     if (job) {
       job.autoLaunch = true;
       job.launchFile = file;
@@ -1737,6 +2015,7 @@ async function netplaySpecForFile(file) {
   }
 
   const controllerConfig = isArcadeSystem(system) ? ensureRetroArchArcadeControllerConfig() : '';
+  const mobileInputConfig = ensureRetroArchMobileInputConfig();
   const managedConfig = RA === MANAGED_RUNTIME_PATHS.retroArch && fs.existsSync(MANAGED_RUNTIME_PATHS.config)
     ? ['--config', MANAGED_RUNTIME_PATHS.config]
     : [];
@@ -1746,7 +2025,7 @@ async function netplaySpecForFile(file) {
   return {
     executable: RA,
     baseArgs: ['-f', ...managedConfig],
-    appendConfigs: controllerConfig ? [controllerConfig] : [],
+    appendConfigs: [controllerConfig, mobileInputConfig].filter(Boolean),
     corePath,
     coreLabel: system.id === 'arcade' ? 'FinalBurn Neo' : system.name,
     contentFile: safeFile,
@@ -1857,44 +2136,64 @@ function remoteInputPacket(playerIndex, buttonId, state) {
   return packet;
 }
 
+function activeRemoteInputPort() {
+  return Number(remotePlaySession?.basePort || MOBILE_INPUT_BASE_PORT);
+}
+
 function ensureRemoteInputPump() {
   if (remoteInputTimer) return;
   if (!remoteInputSocket) remoteInputSocket = dgram.createSocket('udp4');
   remoteInputTimer = setInterval(() => {
-    if (!remotePlaySession?.active) return;
+    const basePort = activeRemoteInputPort();
     for (const [playerIndex, queue] of remoteInputQueues) {
       const event = queue.shift();
       if (!event) continue;
       const packet = remoteInputPacket(playerIndex, event.id, event.state);
-      remoteInputSocket.send(packet, remotePlaySession.basePort + playerIndex, '127.0.0.1');
+      remoteInputSocket.send(packet, basePort + playerIndex, '127.0.0.1');
     }
   }, 17);
   remoteInputTimer.unref?.();
 }
 
-function queueRemotePlayInput(payload = {}) {
-  if (!remotePlaySession?.active || payload.sessionId !== remotePlaySession.sessionId) return false;
-  const playerIndex = Number(payload.playerIndex);
-  if (!Number.isInteger(playerIndex) || playerIndex < 1 || playerIndex >= remotePlaySession.maxPlayers) return false;
-  const events = Array.isArray(payload.events) ? payload.events.slice(0, 32) : [];
+function queueRetroPadEvents(playerIndex, rawEvents, source = 'remote') {
+  if (!Number.isInteger(playerIndex) || playerIndex < 0 || playerIndex > 3) return false;
+  const events = Array.isArray(rawEvents) ? rawEvents.slice(0, 32) : [];
   if (!events.length) return false;
   const queue = remoteInputQueues.get(playerIndex) || [];
   let accepted = 0;
   for (const event of events) {
     const id = Number(event?.id);
     if (!Number.isInteger(id) || id < 0 || id > 15) continue;
-    queue.push({ id, state: event.state ? 1 : 0 });
+    queue.push({ id, state: event.state ? 1 : 0, source });
     accepted += 1;
   }
   if (!accepted) return false;
   if (queue.length > 180) queue.splice(0, queue.length - 180);
   remoteInputQueues.set(playerIndex, queue);
-  remotePlaySession.inputEventCount = Number(remotePlaySession.inputEventCount || 0) + accepted;
-  remotePlaySession.lastInputAt = Date.now();
-  remotePlaySession.lastInputPlayer = playerIndex + 1;
-  emitRemotePlay(remotePlaySession);
+  if (remotePlaySession?.active) {
+    remotePlaySession.inputEventCount = Number(remotePlaySession.inputEventCount || 0) + accepted;
+    remotePlaySession.lastInputAt = Date.now();
+    remotePlaySession.lastInputPlayer = playerIndex + 1;
+    emitRemotePlay(remotePlaySession);
+  }
   ensureRemoteInputPump();
   return true;
+}
+
+function queueRemotePlayInput(payload = {}) {
+  if (!remotePlaySession?.active || payload.sessionId !== remotePlaySession.sessionId) return false;
+  const playerIndex = Number(payload.playerIndex);
+  if (!Number.isInteger(playerIndex) || playerIndex < 0 || playerIndex >= remotePlaySession.maxPlayers) return false;
+  return queueRetroPadEvents(playerIndex, payload.events, 'desktop-remote-play');
+}
+
+function queueStreamViewerInput(viewer, payload = {}) {
+  if (!streamServer?.status?.().active || !viewer?.id) return false;
+  const requested = Number(payload.playerIndex);
+  const playerIndex = Number.isInteger(requested) && requested === Number(viewer.playerIndex)
+    ? requested
+    : Number(viewer.playerIndex || 0);
+  return queueRetroPadEvents(playerIndex, payload.events, 'mobile-stream');
 }
 
 function stopRemotePlay(reason = 'Remote Play Together ended.') {
@@ -1926,7 +2225,7 @@ async function startRemotePlay(file, config = {}) {
   netplayManager?.stop('Switching to Remote Play Together.');
   const spec = await netplaySpecForFile(file);
   const maxPlayers = Math.max(2, Math.min(spec.maxPlayers || 2, Number(config.maxPlayers || spec.maxPlayers || 2)));
-  const basePort = 55400;
+  const basePort = MOBILE_INPUT_BASE_PORT;
   const id = `remote-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
   const sessionId = crypto.randomBytes(18).toString('base64url');
   fs.mkdirSync(NETPLAY_ROOT, { recursive: true });
@@ -1935,7 +2234,7 @@ async function startRemotePlay(file, config = {}) {
     'network_remote_enable = "true"',
     `network_remote_base_port = "${basePort}"`,
     `input_max_users = "${maxPlayers}"`,
-    'network_remote_enable_user_p1 = "false"'
+    'network_remote_enable_user_p1 = "true"'
   ];
   for (let player = 2; player <= maxPlayers; player += 1) lines.push(`network_remote_enable_user_p${player} = "true"`);
   fs.writeFileSync(configFile, `${lines.join('\n')}\n`);
@@ -2104,8 +2403,10 @@ function launchGame(file, options = {}) {
     args = openBorLaunch.args;
   } else if (emulator.kind === 'libretro') {
     const controllerConfig = isArcadeSystem(system) ? ensureRetroArchArcadeControllerConfig() : '';
+    const mobileInputConfig = ensureRetroArchMobileInputConfig();
+    const appendConfig = [controllerConfig, mobileInputConfig].filter(Boolean).join('|');
     const managedConfig = emulator.executable === MANAGED_RUNTIME_PATHS.retroArch && fs.existsSync(MANAGED_RUNTIME_PATHS.config) ? ['--config', MANAGED_RUNTIME_PATHS.config] : [];
-    args = ['-f', ...managedConfig, ...(controllerConfig ? ['--appendconfig=' + controllerConfig] : []), '-L', emulator.corePath, safeFile];
+    args = ['-f', ...managedConfig, ...(appendConfig ? ['--appendconfig=' + appendConfig] : []), '-L', emulator.corePath, safeFile];
   } else if (emulator.kind === 'mame') {
     args = [game.shortName, '-rompath', mameRomSearchPath(safeFile), '-joystick', ...(process.platform === 'win32' ? ['-joystickprovider', 'winhybrid'] : []), '-skip_gameinfo', '-noconfirm_quit', '-nowindow'];
   } else {
@@ -2154,7 +2455,7 @@ function openSystemSetup(systemId) {
     return firmwareResult;
   }
   if (system.bios || system.biosPattern) {
-    return { ok: false, error: firmwareResult.error || `${system.name} firmware is required. Download via RGSX is unavailable.` };
+    return { ok: false, error: firmwareResult.error || `${system.name} firmware is required and no verified GameDeck copy is currently available.` };
   }
   const emulator = configuredEmulator(system);
   const folder = (system.biosDirs || []).find(directory => directory)
@@ -2238,7 +2539,7 @@ function getCatalogSystems() {
   const list = getRgsxSystems();
   const seen = new Set();
 
-  return list.filter(platform => !platform.platform_name.toLowerCase().includes('bios')).map(platform => {
+  const primarySystems = list.filter(platform => !platform.platform_name.toLowerCase().includes('bios')).map(platform => {
     const key = platform.folder || platform.platform_name.toLowerCase();
     if (seen.has(key)) return null;
     seen.add(key);
@@ -2265,16 +2566,22 @@ function getCatalogSystems() {
       playable: systemReady(system),
       issue: systemSetupIssue(system)
     };
-  }).filter(Boolean).filter(item => item.count > 0).sort((a, b) => a.name.localeCompare(b.name));
+  }).filter(Boolean).filter(item => item.count > 0);
+  const primaryFolders = new Set(primarySystems.map(item => String(item.folder || '').toLowerCase()));
+  const communitySystems = (communityContentProvider?.catalogSystems?.() || [])
+    .filter(item => !primaryFolders.has(String(item.folder || '').toLowerCase()));
+  return [...primarySystems, ...communitySystems].sort((a, b) => a.name.localeCompare(b.name));
 }
 
 function getCatalogGames(source) {
-  const file = path.resolve(path.isAbsolute(source) ? source : path.join(RGSX_GAMES, `${path.basename(source)}.json`));
-  const catalogSystem = getCatalogSystems().find(system => path.resolve(system.gamesFile) === file);
+  const sourceValue = String(source || '');
+  if (sourceValue.startsWith('community:')) return communityContentProvider?.catalogGames(sourceValue) || [];
+  const file = path.resolve(path.isAbsolute(sourceValue) ? sourceValue : path.join(RGSX_GAMES, `${path.basename(sourceValue)}.json`));
+  const catalogSystem = getCatalogSystems().find(system => !String(system.source || '').startsWith('community:') && path.resolve(system.gamesFile) === file);
   if (!catalogSystem || !fs.existsSync(file)) return [];
   const folder = catalogSystem.folder;
   const installed = installedFiles(folder);
-  return readCatalogRows(file).map((row, index) => {
+  const primaryGames = readCatalogRows(file).map((row, index) => {
     const tags = gameTags(row[0]);
     const installedFile = installedCatalogFile(installed, row[0]);
     return {
@@ -2289,19 +2596,111 @@ function getCatalogGames(source) {
       installedReady: Boolean(installedFile && isPlayableFile(installedFile, systemForFolder(folder)))
     };
   });
+  const seen = new Set(primaryGames.map(game => String(game.fileName || '').toLowerCase()));
+  const communityGames = (communityContentProvider?.catalogGames?.(`community:${folder}`) || [])
+    .filter(game => !seen.has(String(game.fileName || '').toLowerCase()))
+    .map((game, index) => ({ ...game, id: primaryGames.length + index }));
+  return [...primaryGames, ...communityGames];
+}
+
+function queueCommunityDownload(asset, source, folder, title, fileName, options = {}) {
+  if (!asset) return { ok: false, error: 'This game is not currently available.' };
+  const resume = options.resumeFrom?.id ? options.resumeFrom : null;
+  const id = resume?.id || `content-${Date.now()}`;
+  const job = options.existingJob || {
+    ...(resume || {}),
+    id,
+    source: 'GameDeck',
+    folder,
+    title,
+    fileName,
+    startedAt: resume?.startedAt || Date.now(),
+    progress: Number(resume?.progress || 0),
+    downloadedBytes: Number(resume?.downloadedBytes || 0)
+  };
+  Object.assign(job, {
+    provider: 'community',
+    expectedSha256: asset.sha256,
+    status: 'running',
+    stage: options.existingJob ? 'Recovering' : 'Preparing',
+    message: options.existingJob ? 'Switching to another available copy...' : 'Finding the fastest available copy...',
+    totalBytes: asset.size,
+    repair: Boolean(options.repair || job.repair),
+    resumable: true,
+    updatedAt: Date.now()
+  });
+  delete job.error;
+  delete job.finishedAt;
+  downloads.set(id, job);
+  emitDownload(job);
+  const token = { cancelled: false };
+  downloadProcesses.set(id, { kill: () => { token.cancelled = true; } });
+  communityContentProvider.downloadAsset(asset, {
+    isCancelled: () => token.cancelled || Boolean(job.pauseRequested),
+    onProgress: update => {
+      job.stage = update.phase === 'verifying' ? 'Verifying' : 'Downloading';
+      job.progress = Number(update.progress ?? job.progress);
+      job.downloadedBytes = Number(update.downloadedBytes ?? job.downloadedBytes);
+      job.totalBytes = Number(update.totalBytes ?? job.totalBytes);
+      job.message = String(update.message || 'Downloading game...');
+      job.updatedAt = Date.now();
+      emitDownload(job);
+    }
+  }).then(() => {
+    downloadProcesses.delete(id);
+    job.status = 'complete';
+    job.stage = job.dependency || job.repair ? 'Launching' : 'Ready to play';
+    job.progress = 100;
+    job.finishedAt = Date.now();
+    job.message = job.dependency
+      ? 'Required files installed. Launching automatically.'
+      : job.repair
+        ? 'Fresh verified copy installed. Launching automatically.'
+        : 'Download complete. The game is ready in your library.';
+    emitDownload(job);
+    addActivity('success', `GameDeck finished: ${title}`, id);
+    completePendingLaunch(id, true, job.message);
+  }).catch(error => {
+    downloadProcesses.delete(id);
+    if (job.pauseRequested || token.cancelled) {
+      delete job.pauseRequested;
+      job.status = 'paused';
+      job.stage = 'Paused';
+      job.message = 'Paused. Resume whenever you are ready.';
+    } else {
+      job.status = 'error';
+      job.stage = 'Failed';
+      job.error = error.message;
+      job.message = error.message;
+      job.finishedAt = Date.now();
+      completePendingLaunch(id, false, error.message);
+    }
+    job.updatedAt = Date.now();
+    emitDownload(job);
+  });
+  return { ok: true, queued: true, taskId: id };
+}
+
+function queueGameDownload(source, folder, title, fileName, options = {}) {
+  const asset = communityContentProvider?.findAsset({ folder, fileName, expectedSha256: options.expectedSha256 || '' });
+  if (fs.existsSync(RGSX_PYTHON) && fs.existsSync(RGSX_CLI) && !String(source || '').startsWith('community:')) {
+    const primary = queueRgsxDownload(source, folder, title, fileName, { ...options, communityAsset: asset });
+    if (primary?.ok || !asset) return primary;
+  }
+  return queueCommunityDownload(asset, source, folder, title, fileName, options);
 }
 
 function queueRgsxDownload(source, folder, title, fileName, options = {}) {
   if (!fs.existsSync(RGSX_PYTHON) || !fs.existsSync(RGSX_CLI)) {
-    return { ok: false, error: 'RGSX runtime is not installed correctly. Open Activity for details.' };
+    return { ok: false, error: 'GameDeck could not start this download. Open Activity for details.' };
   }
 
   const catalog = getCatalogSystems();
   const platform = catalog.find(item => item.source === source && item.folder === folder);
-  if (!platform) return { ok: false, error: 'The selected RGSX platform is no longer available.' };
+  if (!platform) return { ok: false, error: 'This game is no longer available from the selected catalog.' };
 
   const available = readJson(platform.gamesFile, []).some(row => row[0] === fileName);
-  if (!available) return { ok: false, error: 'The selected game is not present in the current RGSX catalog.' };
+  if (!available) return { ok: false, error: 'This game is no longer present in the current GameDeck catalog.' };
 
   const installed = installedCatalogFile(installedFiles(folder), fileName);
   if (installed && !options.force && !options.resumeFrom) {
@@ -2330,7 +2729,7 @@ function queueRgsxDownload(source, folder, title, fileName, options = {}) {
     fileName,
     status: 'running',
     stage: resume ? 'Resuming' : 'Preparing',
-    message: resume ? 'Resuming from saved progress.' : 'RGSX is preparing the transfer.',
+    message: resume ? 'Resuming from saved progress.' : 'GameDeck is preparing the transfer.',
     startedAt: resume?.startedAt || Date.now(),
     updatedAt: Date.now(),
     progress: Number(resume?.progress || 0),
@@ -2341,7 +2740,7 @@ function queueRgsxDownload(source, folder, title, fileName, options = {}) {
     resumable: true
   };
   downloads.set(id, job);
-  addActivity('info', `RGSX started: ${title}`, id);
+  addActivity('info', `GameDeck started: ${title}`, id);
   emitDownload(job);
 
   const child = spawn(RGSX_PYTHON, [RGSX_CLI, 'download', '--platform', source, '--game', fileName, '--force'], {
@@ -2357,6 +2756,19 @@ function queueRgsxDownload(source, folder, title, fileName, options = {}) {
     stdio: ['ignore', 'pipe', 'pipe']
   });
   downloadProcesses.set(id, child);
+  let fallbackStarted = false;
+  const tryCommunityFallback = reason => {
+    if (fallbackStarted || job.pauseRequested || !options.communityAsset) return false;
+    fallbackStarted = true;
+    downloadProcesses.delete(id);
+    addActivity('info', `GameDeck switched download sources for ${title}.`, id);
+    queueCommunityDownload(options.communityAsset, source, folder, title, fileName, {
+      ...options,
+      existingJob: job,
+      resumeFrom: job
+    });
+    return true;
+  };
 
   const consume = (level, chunk) => {
     for (const line of String(chunk).split(/[\r\n]+/)) {
@@ -2367,6 +2779,7 @@ function queueRgsxDownload(source, folder, title, fileName, options = {}) {
   child.stdout.on('data', chunk => consume('info', chunk));
   child.stderr.on('data', chunk => consume('error', chunk));
   child.on('error', error => {
+    if (tryCommunityFallback(error.message)) return;
     downloadProcesses.delete(id);
     job.status = 'error';
     job.stage = 'Failed';
@@ -2374,9 +2787,10 @@ function queueRgsxDownload(source, folder, title, fileName, options = {}) {
     job.message = error.message;
     job.finishedAt = Date.now();
     emitDownload(job);
-    addActivity('error', `RGSX failed to start: ${error.message}`, id);
+    addActivity('error', `GameDeck download failed to start: ${error.message}`, id);
   });
   child.on('close', code => {
+    if (fallbackStarted) return;
     downloadProcesses.delete(id);
     if (job.pauseRequested) {
       delete job.pauseRequested;
@@ -2388,15 +2802,22 @@ function queueRgsxDownload(source, folder, title, fileName, options = {}) {
       emitDownload(job);
       return;
     }
+    if (code !== 0 && tryCommunityFallback(`Primary source exited with code ${code}.`)) return;
     job.status = code === 0 ? 'complete' : 'error';
     job.stage = code === 0 ? (job.dependency || job.repair ? 'Launching' : 'Ready to play') : 'Failed';
     job.finishedAt = Date.now();
     job.progress = code === 0 ? 100 : job.progress;
     job.message = code === 0
       ? (job.dependency ? 'Required files installed. Launching automatically.' : job.repair ? 'Fresh managed copy installed. Launching automatically.' : 'Download complete. The game is ready in your library.')
-      : `RGSX exited with code ${code}.`;
+      : `GameDeck could not complete the download (code ${code}).`;
     emitDownload(job);
-    addActivity(code === 0 ? 'success' : 'error', code === 0 ? `RGSX finished: ${title}` : `RGSX exited with code ${code}: ${title}`, id);
+    addActivity(code === 0 ? 'success' : 'error', code === 0 ? `GameDeck finished: ${title}` : `GameDeck download failed with code ${code}: ${title}`, id);
+    if (code === 0 && options.communityAsset) {
+      const installedFile = installedCatalogFile(installedFiles(folder), fileName);
+      if (installedFile) void communityContentProvider.seedAsset(options.communityAsset, installedFile).catch(error => {
+        addActivity('info', `Community cache contribution was skipped: ${error.message}`, id);
+      });
+    }
     completePendingLaunch(id, code === 0, job.message);
   });
 
@@ -2416,7 +2837,7 @@ function prepareGameArchive(file, options = {}) {
   if (!['.zip', '.rar', '.7z'].includes(path.extname(safeFile).toLowerCase())) {
     return Promise.resolve({ ok: false, error: `${path.extname(safeFile) || 'This file type'} cannot be prepared automatically.` });
   }
-  if (!fs.existsSync(SEVEN_ZIP)) return Promise.resolve({ ok: false, error: 'The RGSX extraction tool is missing.' });
+  if (!fs.existsSync(SEVEN_ZIP)) return Promise.resolve({ ok: false, error: "GameDeck's extraction helper is missing." });
 
   const existing = walk(path.dirname(safeFile)).find(candidate => isPlayableFile(candidate, system) && fileIdentity(candidate) === fileIdentity(safeFile));
   if (existing) return Promise.resolve({ ok: true, file: existing, alreadyReady: true });
@@ -2517,13 +2938,13 @@ function queueRgsxFirmwareDownload(systemId, options = {}) {
 
   const biosPlatform = getRgsxBiosPlatform();
   if (!biosPlatform) {
-    return { ok: false, error: 'RGSX BIOS pack is not available.' };
+    return { ok: false, error: 'No verified firmware package is currently available.' };
   }
 
   const [fileName] = biosPlatform.rows[0] || [];
-  if (!fileName) return { ok: false, error: 'RGSX BIOS pack is empty.' };
+  if (!fileName) return { ok: false, error: 'The available firmware package is empty.' };
   if (!fs.existsSync(RGSX_PYTHON) || !fs.existsSync(RGSX_CLI)) {
-    return { ok: false, error: 'RGSX runtime is not installed correctly. Open Activity for details.' };
+    return { ok: false, error: 'GameDeck could not start this download. Open Activity for details.' };
   }
 
   const active = [...downloads.values()].find(job => job.source === biosPlatform.platform_name && job.fileName === fileName && job.status === 'running');
@@ -2553,7 +2974,7 @@ function queueRgsxFirmwareDownload(systemId, options = {}) {
     resumable: true
   };
   downloads.set(id, job);
-  addActivity('info', `RGSX started: ${system.name} BIOS`, id);
+  addActivity('info', `GameDeck started: ${system.name} firmware`, id);
   emitDownload(job);
 
   const child = spawn(RGSX_PYTHON, [RGSX_CLI, 'download', '--platform', biosPlatform.platform_name, '--game', fileName, '--force'], {
@@ -2586,7 +3007,7 @@ function queueRgsxFirmwareDownload(systemId, options = {}) {
     job.message = error.message;
     job.finishedAt = Date.now();
     emitDownload(job);
-    addActivity('error', `RGSX failed to start: ${error.message}`, id);
+    addActivity('error', `GameDeck download failed to start: ${error.message}`, id);
   });
   child.on('close', code => {
     downloadProcesses.delete(id);
@@ -2604,9 +3025,9 @@ function queueRgsxFirmwareDownload(systemId, options = {}) {
     job.stage = code === 0 ? 'Ready to use' : 'Failed';
     job.finishedAt = Date.now();
     job.progress = code === 0 ? 100 : job.progress;
-    job.message = code === 0 ? `${system.name} firmware is ready.` : `RGSX exited with code ${code}.`;
+    job.message = code === 0 ? `${system.name} firmware is ready.` : `GameDeck could not complete the download (code ${code}).`;
     emitDownload(job);
-    addActivity(code === 0 ? 'success' : 'error', code === 0 ? `RGSX finished: ${system.name} BIOS` : `RGSX exited with code ${code}: ${system.name} BIOS`, id);
+    addActivity(code === 0 ? 'success' : 'error', code === 0 ? `GameDeck finished: ${system.name} firmware` : `GameDeck download failed with code ${code}: ${system.name} firmware`, id);
     completePendingLaunch(id, code === 0, job.message);
   });
 
@@ -2644,7 +3065,7 @@ function retryDownload(id) {
   if (job.localInstall && job.archiveFile) return prepareGameArchive(job.archiveFile, { resumeFrom: job });
   if (job.firmware && job.systemId) return Promise.resolve(queueRgsxFirmwareDownload(job.systemId, { resumeFrom: job }));
   if (job.source && job.folder && job.fileName) {
-    return Promise.resolve(queueRgsxDownload(job.source, job.folder, job.title, job.fileName, {
+    return Promise.resolve(queueGameDownload(job.source, job.folder, job.title, job.fileName, {
       force: Boolean(job.repair),
       repair: Boolean(job.repair),
       resumeFrom: job
@@ -2957,7 +3378,7 @@ function inspectSettings(changes = {}) {
   const values = { ...current, ...changes };
   const specs = {
     libraryRoot: { kind: 'directory', label: 'Game library', required: true, ready: 'Library folder found', missing: 'Choose an existing game-library folder' },
-    rgsxRoot: { kind: 'directory', label: 'RGSX', required: false, ready: 'RGSX folder found', missing: 'Optional · Discover transfers unavailable' },
+    rgsxRoot: { kind: 'directory', label: 'Discover sources', required: false, ready: 'Game sources detected', missing: 'Optional · Discover transfers unavailable' },
     retroArchPath: { kind: 'file', label: 'RetroArch', required: false, ready: 'RetroArch executable found', missing: 'Optional · standalone emulators may still work' },
     retroArchCores: { kind: 'directory', label: 'RetroArch cores', required: false, ready: 'Core folder found', missing: 'Optional · needed for RetroArch systems' },
     retroArchSystem: { kind: 'directory', label: 'System / BIOS', required: false, ready: 'System folder found', missing: 'Optional · firmware checks may need this folder' },
@@ -3102,7 +3523,7 @@ async function refreshGameDetails(title, systemId, context = {}) {
 async function chooseDirectory(kind) {
   const titles = {
     libraryRoot: 'Choose your game library',
-    rgsxRoot: 'Choose your RGSX folder',
+    rgsxRoot: 'Choose your optional game-source folder',
     emulationRoot: 'Choose your emulation folder',
     retroArchPath: 'Choose the RetroArch executable',
     retroArchCores: 'Choose the RetroArch cores folder',
@@ -3234,7 +3655,7 @@ function diagnostics(includeLibrary = true) {
       const emulator = configuredEmulator(system);
       return { id: system.id, name: system.name, ready: systemReady(system), issue: systemSetupIssue(system), emulatorKind: emulator?.kind || '', emulatorLabel: emulator?.label || '', count, installedCount: count };
     }),
-    downloads: [...downloads.values()],
+    downloads: [...downloads.values()].map(publicDownloadJob),
     activity
   };
 }
@@ -3334,7 +3755,7 @@ ipcMain.handle('open-library', () => shell.openPath(LIBRARY));
 ipcMain.handle('rescan', () => getLibrary());
 ipcMain.handle('catalog-systems', () => getCatalogSystems());
 ipcMain.handle('catalog-games', (_, source) => getCatalogGames(source));
-ipcMain.handle('import-owned', (_, source, folder, title, fileName) => queueRgsxDownload(source, folder, title, fileName));
+ipcMain.handle('import-owned', (_, source, folder, title, fileName) => queueGameDownload(source, folder, title, fileName));
 ipcMain.handle('prepare-game', (_, file) => prepareGameArchive(file));
 ipcMain.handle('retry-download', (_, id) => retryDownload(id));
 ipcMain.handle('pause-download', (_, id) => pauseDownload(id));
@@ -3376,9 +3797,13 @@ ipcMain.handle('stream-start', async (_, config = {}) => {
   });
   return { ok: true, source: selected, stream };
 });
-ipcMain.handle('stream-stop', () => ({ ok: true, stream: streamServer.stop() }));
+ipcMain.handle('stream-stop', () => {
+  remoteInputQueues.clear();
+  return { ok: true, stream: streamServer.stop() };
+});
 ipcMain.handle('stream-host-pull', () => streamServer.hostPull());
 ipcMain.handle('stream-host-send', (_, viewerId, payload) => streamServer.hostSend(viewerId, payload));
+ipcMain.handle('stream-viewer-input', (_, viewerId, payload) => streamServer.viewerInput(viewerId, payload));
 ipcMain.handle('remote-play-code-encode', (_, prefix, payload) => encodeRemotePlayCode(prefix, payload));
 ipcMain.handle('remote-play-code-decode', (_, value, acceptedPrefixes) => decodeRemotePlayCode(value, acceptedPrefixes));
 ipcMain.handle('remote-play-status', () => remotePlayStatus());
@@ -3396,13 +3821,45 @@ ipcMain.handle('netplay-status', () => gameDeckNetplayStatus());
 ipcMain.handle('netplay-game-info', (_, file) => netplayGameInfo(file));
 ipcMain.handle('netplay-match-info', (_, file) => netplayMatchInfo(file));
 ipcMain.handle('netplay-relays', () => netplayManager?.relays() || []);
+ipcMain.handle('community-matchmaking-status', () => ({
+  ...(communityMatchmaking?.status() || { connected: false, active: false, lastError: '' }),
+  network: communityNodeManager?.status() || { running: true, external: true, nodeUrl: COMMUNITY_NODE_URL }
+}));
+ipcMain.handle('community-rooms', async (_, file) => {
+  try {
+    const spec = await netplaySpecForFile(file);
+    const rooms = await communityMatchmaking.listRooms(spec);
+    return {
+      ok: true,
+      rooms: rooms.map(room => ({
+        roomId: room.roomId,
+        title: room.title,
+        systemId: room.systemId,
+        hostName: room.hostName,
+        maxPlayers: room.maxPlayers,
+        playerCount: room.playerCount,
+        createdAt: room.createdAt,
+        expiresAt: room.expiresAt,
+        invite: room.invite
+      })),
+      status: communityMatchmaking.status()
+    };
+  } catch (error) {
+    addActivity('info', `Community rooms are temporarily unavailable: ${error.message}`);
+    return { ok: false, error: error.message, rooms: [], status: communityMatchmaking?.status() || {} };
+  }
+});
+ipcMain.handle('community-library-rooms', () => communityLibraryRoomsSnapshot());
+
 ipcMain.handle('netplay-host', async (_, file, config = {}) => {
   try {
     const spec = await netplaySpecForFile(file);
     const status = await netplayManager.host({
       ...spec,
       relayId: config.relayId || 'nyc',
-      maxPlayers: Math.max(2, Math.min(spec.maxPlayers, Number(config.maxPlayers || spec.maxPlayers)))
+      maxPlayers: Math.max(2, Math.min(spec.maxPlayers, Number(config.maxPlayers || spec.maxPlayers))),
+      nickname: config.nickname || 'Player',
+      discoverable: config.discoverable !== false
     });
     const store = readStore();
     store.recent[spec.contentFile] = Date.now();
@@ -3467,12 +3924,25 @@ ipcMain.handle('clear-activity', () => {
   return true;
 });
 
-app.on('before-quit', () => {
+app.on('before-quit', event => {
   appIsQuitting = true;
+  if (quitCleanupStarted) return;
+  quitCleanupStarted = true;
+  event.preventDefault();
   pauseActiveDownloads();
   stopRemotePlay('GameDeck closed.');
   netplayManager?.stop('GameDeck closed.');
-  streamServer?.close().catch(() => {});
+  const timeout = new Promise(resolve => setTimeout(resolve, 1800));
+  Promise.race([
+    Promise.allSettled([
+      communityMatchmaking?.close?.(),
+      communityChat?.close?.(),
+      communityContentProvider?.close?.(),
+      communityNodeManager?.close?.(),
+      streamServer?.close?.()
+    ]),
+    timeout
+  ]).finally(() => app.quit());
 });
 
 app.whenReady().then(() => {
@@ -3481,6 +3951,9 @@ app.whenReady().then(() => {
   primeFirmwareFolders();
   ensureRetroArchArcadeControllerConfig();
   createWindow();
+  void communityNodeManager?.start().then(network => {
+    if (network?.running) void communityContentProvider?.refresh?.();
+  });
 });
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow();

@@ -58,10 +58,48 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+
+  android:
+    name: Build · android
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK
+        run: sdkmanager "platforms;android-36" "build-tools;36.1.0" "platform-tools"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.6.1'
+      - name: Build installable preview APK
+        working-directory: mobile/android
+        run: gradle --no-daemon lintDebug assembleDebug
+      - name: Inspect and name Android artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist/android
+          APK="dist/android/GameDeck-Android-${GITHUB_REF_NAME:-preview}.apk"
+          cp mobile/android/app/build/outputs/apk/debug/app-debug.apk "$APK"
+          "$ANDROID_HOME/build-tools/36.1.0/aapt" dump badging "$APK" | tee dist/android/APK-METADATA.txt
+          grep -F "package: name='io.gamedeck.mobile.preview'" dist/android/APK-METADATA.txt
+          grep -F "sdkVersion:'26'" dist/android/APK-METADATA.txt
+          grep -F "targetSdkVersion:'36'" dist/android/APK-METADATA.txt
+          "$ANDROID_HOME/build-tools/36.1.0/apksigner" verify --verbose --print-certs "$APK" | tee dist/android/APK-SIGNATURE.txt
+          sha256sum "$APK" > dist/android/SHA256SUMS-android.txt
+      - uses: actions/upload-artifact@v7
+        with:
+          name: gamedeck-android-${{ github.sha }}
+          path: dist/android/*
+          retention-days: 30
+
   release:
     name: Publish GitHub release
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: build
+    needs: [build, android]
     runs-on: ubuntu-latest
     permissions:
       contents: write

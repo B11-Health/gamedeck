@@ -1,0 +1,40 @@
+{
+  "version": "0.2.120",
+  "allowedHosts": [
+    "github.com",
+    "release-assets.githubusercontent.com",
+    "objects.githubusercontent.com"
+  ],
+  "platforms": {
+    "win32-x64": {
+      "url": "https://github.com/freenet/freenet-core/releases/download/v0.2.120/freenet-x86_64-pc-windows-msvc.zip",
+      "sha256": "feb782f515a46a034e04a8796cfa92f765377549b00938d5ce84a3f27c3f56b2",
+      "size": 16647237,
+      "executable": "freenet.exe"
+    },
+    "linux-x64": {
+      "url": "https://github.com/freenet/freenet-core/releases/download/v0.2.120/freenet-x86_64-unknown-linux-musl.tar.gz",
+      "sha256": "1f47852a42cc53fb5ef51dbfbe94ccb5758c39465918d306720e55d97cc8f29f",
+      "size": 19644444,
+      "executable": "freenet"
+    },
+    "linux-arm64": {
+      "url": "https://github.com/freenet/freenet-core/releases/download/v0.2.120/freenet-aarch64-unknown-linux-musl.tar.gz",
+      "sha256": "c558087b683ae87c2901d654dde7912cc77b155cafe0582cadf3a094f662dd5f",
+      "size": 18372828,
+      "executable": "freenet"
+    },
+    "darwin-x64": {
+      "url": "https://github.com/freenet/freenet-core/releases/download/v0.2.120/freenet-x86_64-apple-darwin.tar.gz",
+      "sha256": "b96cdfd755a766744eef45d969c2b2395a2055fdf6a390096c61d6fdc38a3efa",
+      "size": 19398155,
+      "executable": "freenet"
+    },
+    "darwin-arm64": {
+      "url": "https://github.com/freenet/freenet-core/releases/download/v0.2.120/freenet-aarch64-apple-darwin.tar.gz",
+      "sha256": "e17eed91eec04ac8f35bdf5d00ab84d5c979f19fa019b7f4bf9739aa4e047151",
+      "size": 17249139,
+      "executable": "freenet"
+    }
+  }
+}

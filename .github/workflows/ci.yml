@@ -45,3 +45,41 @@ jobs:
           name: linux-unpacked-${{ github.sha }}
           path: dist/linux-unpacked
           retention-days: 7
+
+  android:
+    name: Android preview APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK
+        run: sdkmanager "platforms;android-36" "build-tools;36.1.0" "platform-tools"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.6.1'
+      - name: Compile and lint Android
+        working-directory: mobile/android
+        run: gradle --no-daemon lintDebug assembleDebug
+      - name: Inspect Android package
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist/android
+          cp mobile/android/app/build/outputs/apk/debug/app-debug.apk dist/android/GameDeck-Android-preview.apk
+          "$ANDROID_HOME/build-tools/36.1.0/aapt" dump badging dist/android/GameDeck-Android-preview.apk | tee dist/android/APK-METADATA.txt
+          grep -F "package: name='io.gamedeck.mobile.preview'" dist/android/APK-METADATA.txt
+          grep -F "sdkVersion:'26'" dist/android/APK-METADATA.txt
+          grep -F "targetSdkVersion:'36'" dist/android/APK-METADATA.txt
+          grep -F "uses-permission: name='android.permission.INTERNET'" dist/android/APK-METADATA.txt
+          grep -F "uses-permission: name='android.permission.VIBRATE'" dist/android/APK-METADATA.txt
+          "$ANDROID_HOME/build-tools/36.1.0/apksigner" verify --verbose --print-certs dist/android/GameDeck-Android-preview.apk | tee dist/android/APK-SIGNATURE.txt
+          sha256sum dist/android/GameDeck-Android-preview.apk > dist/android/SHA256SUMS-android.txt
+      - uses: actions/upload-artifact@v7
+        with:
+          name: gamedeck-android-preview-${{ github.sha }}
+          path: dist/android/*
+          retention-days: 14
