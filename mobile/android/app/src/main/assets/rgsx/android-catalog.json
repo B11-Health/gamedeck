@@ -13,7 +13,7 @@
         {
           "id": "gamedeck-diagnostics-nes",
           "title": "GameDeck Diagnostics",
-          "fileName": "GameDeck Diagnostics (World) [Homebrew].nes",
+          "fileName": "GameDeck-Diagnostics-Homebrew.nes",
           "region": "World",
           "tags": ["Homebrew", "CC0", "GameDeck"],
           "size": 24592,
