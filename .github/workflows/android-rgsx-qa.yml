@@ -1,0 +1,144 @@
+name: Android RGSX Get QA
+
+on:
+  pull_request:
+    paths:
+      - "mobile/android/**"
+      - ".github/workflows/android-rgsx-qa.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rgsx-get:
+    name: Install catalog item through native Get flow
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: mobile/android
+    steps:
+      - name: Checkout exact source revision
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install emulator image
+        run: |
+          sdkmanager \
+            "platform-tools" \
+            "emulator" \
+            "platforms;android-36" \
+            "build-tools;36.0.0" \
+            "system-images;android-36;google_apis;x86_64"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: "9.6.1"
+
+      - name: Build debug APK
+        run: gradle :app:assembleDebug --no-daemon --stacktrace
+
+      - name: Verify one-tap native transfer
+        run: |
+          set -euo pipefail
+          APK=app/build/outputs/apk/debug/app-debug.apk
+          OUT=app/build/outputs/apk/debug/rgsx-qa
+          mkdir -p "$OUT"
+          BADGING="$OUT/APK-BADGING.txt"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump badging "$APK" > "$BADGING"
+          PACKAGE=$(sed -n "s/^package: name='\([^']*\)'.*/\1/p" "$BADGING" | head -1)
+          ACTIVITY=$(sed -n "s/^launchable-activity: name='\([^']*\)'.*/\1/p" "$BADGING" | head -1)
+          test -n "$PACKAGE"
+          test -n "$ACTIVITY"
+
+          export ANDROID_AVD_HOME="$RUNNER_TEMP/android-rgsx-avd"
+          mkdir -p "$ANDROID_AVD_HOME"
+          echo no | avdmanager create avd \
+            --force \
+            --name gamedeck_rgsx_api36 \
+            --path "$ANDROID_AVD_HOME/gamedeck_rgsx_api36.avd" \
+            --package "system-images;android-36;google_apis;x86_64" \
+            --device pixel_6
+
+          ACCEL=off
+          if [ -e /dev/kvm ]; then
+            sudo chmod 666 /dev/kvm
+            ACCEL=on
+          fi
+          "$ANDROID_HOME/emulator/emulator" \
+            -avd gamedeck_rgsx_api36 \
+            -no-window \
+            -no-audio \
+            -no-boot-anim \
+            -no-snapshot \
+            -accel "$ACCEL" \
+            -gpu swiftshader_indirect \
+            > "$OUT/EMULATOR-LOG.txt" 2>&1 &
+          EMULATOR_PID=$!
+          trap 'adb emu kill >/dev/null 2>&1 || true; kill "$EMULATOR_PID" >/dev/null 2>&1 || true' EXIT
+          timeout 180 adb wait-for-device
+          for attempt in $(seq 1 120); do
+            if [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ]; then
+              break
+            fi
+            sleep 2
+          done
+          test "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1"
+
+          adb install "$APK"
+          adb shell "run-as $PACKAGE sh -c 'mkdir -p files && touch files/renderer-fixture.enabled'"
+          adb logcat -c
+          adb shell am start -W -n "$PACKAGE/$ACTIVITY" | tee "$OUT/ACTIVITY-START.txt"
+          adb shell am broadcast \
+            -a io.gamedeck.mobile.RGSX_QA \
+            -n "$PACKAGE/io.gamedeck.mobile.RgsxQaReceiver" \
+            | tee "$OUT/BROADCAST.txt"
+
+          for attempt in $(seq 1 100); do
+            adb logcat -d -v brief > "$OUT/LOGCAT.txt"
+            if grep -q "GAMEDECK_RGSX_QA error\|GAMEDECK_RGSX_QA exception\|GAMEDECK_RGSX_QA timeout" "$OUT/LOGCAT.txt"; then
+              grep "GAMEDECK_RGSX_QA" "$OUT/LOGCAT.txt"
+              exit 1
+            fi
+            if grep -q "GAMEDECK_RGSX_QA complete" "$OUT/LOGCAT.txt"; then
+              break
+            fi
+            sleep .25
+          done
+          grep -q "GAMEDECK_RGSX_QA complete" "$OUT/LOGCAT.txt"
+
+          FILE=files/managed-library/nes/GameDeck-Diagnostics-Homebrew.nes
+          SIZE=$(adb shell "run-as $PACKAGE wc -c $FILE" | awk '{print $1}' | tr -d '\r')
+          test "$SIZE" = "24592"
+          HASH=$(adb shell "run-as $PACKAGE sha256sum $FILE" | awk '{print $1}' | tr -d '\r')
+          test "$HASH" = "c0e0d5205db6de971fc69963133dc21f2ed771528debdae583d3c127db4f2cdb"
+          printf 'size=%s\nsha256=%s\n' "$SIZE" "$HASH" > "$OUT/INSTALLED-FILE.txt"
+
+          adb shell am force-stop "$PACKAGE"
+          adb shell am start -W -n "$PACKAGE/$ACTIVITY" | tee "$OUT/RESTART.txt"
+          sleep 3
+          adb logcat -d -v brief > "$OUT/LOGCAT-AFTER-RESTART.txt"
+          adb shell "run-as $PACKAGE test -f $FILE"
+
+      - name: Upload RGSX QA evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: gamedeck-android-rgsx-qa-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            mobile/android/app/build/outputs/apk/debug/app-debug.apk
+            mobile/android/app/build/outputs/apk/debug/rgsx-qa
+          if-no-files-found: warn
+          retention-days: 14
