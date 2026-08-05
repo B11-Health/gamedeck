@@ -60,6 +60,38 @@
   let catalogSystemsCache = null;
   let runtimeCache = null;
   const runtimeListeners = new Set();
+  const nativeArtworkRequests = new Map();
+  let nativeArtworkSequence = 0;
+
+  window.GameDeckArtworkNative = Object.freeze({
+    resolve(requestId, artworkUri) {
+      const key = String(requestId || '');
+      const pending = nativeArtworkRequests.get(key);
+      if (!pending) return;
+      nativeArtworkRequests.delete(key);
+      window.clearTimeout(pending.timer);
+      pending.resolve(String(artworkUri || ''));
+    }
+  });
+
+  function requestNativeArtwork(title, systemId, folder = '') {
+    if (!native || typeof native.requestArtwork !== 'function') return Promise.resolve('');
+    const requestId = `art-${Date.now().toString(36)}-${(++nativeArtworkSequence).toString(36)}`;
+    return new Promise(resolve => {
+      const timer = window.setTimeout(() => {
+        nativeArtworkRequests.delete(requestId);
+        resolve('');
+      }, 24000);
+      nativeArtworkRequests.set(requestId, { resolve, timer });
+      try {
+        native.requestArtwork(requestId, title || '', systemId || '', folder || '');
+      } catch {
+        window.clearTimeout(timer);
+        nativeArtworkRequests.delete(requestId);
+        resolve('');
+      }
+    });
+  }
 
   function normalizeLibrary(library) {
     const source = library && typeof library === 'object' ? library : { systems: [], games: [] };
@@ -200,6 +232,8 @@
     const request = (async () => {
       const cached = invoke('cachedArtwork', '', title || '', systemId || '', folder || '');
       if (cached) return cached;
+      const nativeArtwork = await requestNativeArtwork(title, systemId, folder);
+      if (nativeArtwork) return nativeArtwork;
       for (const candidate of thumbnailNames(title)) {
         const url = `https://raw.githubusercontent.com/libretro-thumbnails/${repo}/master/Named_Boxarts/${encodeURIComponent(candidate + '.png')}`;
         try {
@@ -322,7 +356,7 @@
     const library = await getLibrary();
     const runtime = getRuntimeStatus();
     return {
-      platform: 'android', arch: 'arm64', version: '0.5.8-latest',
+      platform: 'android', arch: 'arm64', version: '0.5.9-artwork',
       libraryRoot: library.rootName || '', rgsxRoot: 'Automatic',
       retroArchPath: runtime.externalPackage || '', retroArchCores: '', retroArchSystem: '', mamePath: '', sponsorsEnabled: false
     };

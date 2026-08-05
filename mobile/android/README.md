@@ -4,7 +4,7 @@ This module packages GameDeck's shared desktop renderer with an Android platform
 
 ## Current development build
 
-`0.5.8-latest` includes:
+`0.5.9-artwork` includes:
 
 - binary-safe exact RetroArch launch profiles in public Downloads storage, preventing Android MediaStore from rewriting `.cfg` names;
 

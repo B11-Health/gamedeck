@@ -18,6 +18,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 final class DeckBridge {
     private static final String RENDERER_TAG = "GameDeckRenderer";
@@ -29,6 +31,7 @@ final class DeckBridge {
     private final LibraryRepository library;
     private final RgsxProvider rgsx;
     private final LibretroArtworkProvider artwork;
+    private final ExecutorService artworkIo = Executors.newFixedThreadPool(3);
 
     DeckBridge(MainActivity activity) {
         this.activity = activity;
@@ -45,7 +48,7 @@ final class DeckBridge {
             boolean debuggable = (activity.getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
             value.put("platform", "android");
             value.put("platformKey", AndroidRuntimeManager.PLATFORM_KEY);
-            value.put("version", "0.5.8-latest");
+            value.put("version", "0.5.9-artwork");
             value.put("localFirst", true);
             value.put("accountRequired", false);
             value.put("embeddedRuntimeReady", runtime.externalAvailable());
@@ -176,6 +179,25 @@ final class DeckBridge {
             systemId == null ? "" : systemId,
             folder == null ? "" : folder
         );
+    }
+
+    @JavascriptInterface
+    public void requestArtwork(String requestId, String title, String systemId, String folder) {
+        String id = requestId == null ? "" : requestId.trim();
+        if (id.isEmpty()) return;
+        artworkIo.execute(() -> {
+            String result = "";
+            try {
+                result = artwork.artwork(
+                    title == null ? "" : title,
+                    systemId == null ? "" : systemId,
+                    folder == null ? "" : folder
+                );
+            } catch (Exception error) {
+                Log.w(RENDERER_TAG, "Artwork request failed for " + safeLog(title), error);
+            }
+            activity.deliverArtworkResult(id, result);
+        });
     }
 
     @JavascriptInterface
@@ -474,6 +496,7 @@ final class DeckBridge {
     }
 
     void shutdown() {
+        artworkIo.shutdownNow();
         rgsx.shutdown();
         runtime.shutdown();
     }

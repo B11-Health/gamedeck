@@ -99,7 +99,7 @@ public class MainActivity extends Activity {
         settings.setBuiltInZoomControls(false);
         settings.setDisplayZoomControls(false);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) settings.setOffscreenPreRaster(true);
-        settings.setUserAgentString(settings.getUserAgentString() + " GameDeckAndroid/0.5.8-latest");
+        settings.setUserAgentString(settings.getUserAgentString() + " GameDeckAndroid/0.5.9-artwork");
 
         bridge = new DeckBridge(this);
         exposeBridge();
@@ -373,7 +373,7 @@ public class MainActivity extends Activity {
             + "capturedAt:Date.now(),"
             + "view:document.body.dataset.view||'',"
             + "loading:{visible:!document.querySelector('#appLoading')?.classList.contains('hidden'),title:document.querySelector('#loadingTitle')?.textContent||'',message:document.querySelector('#loadingMessage')?.textContent||'',progress:document.querySelector('#loadingPercent')?.textContent||''},"
-            + "catalog:{system:document.querySelector('#catalogTitle')?.textContent||'',count:document.querySelector('#catalogCount')?.textContent||'',cards:[...document.querySelectorAll('#catalogGames .catalog-game')].slice(0,12).map(card=>{const image=card.querySelector('.catalog-poster');return{title:card.querySelector('.catalog-info b')?.textContent||image?.alt||'',src:image?.currentSrc||image?.src||'',complete:!!image?.complete,width:Number(image?.naturalWidth||0),height:Number(image?.naturalHeight||0),hasArt:card.classList.contains('has-art'),pending:card.classList.contains('art-pending')}})},"
+            + "catalog:(()=>{const cards=[...document.querySelectorAll('#catalogGames .catalog-game')].slice(0,12).map(card=>{const image=card.querySelector('.catalog-poster');const src=image?.currentSrc||image?.src||'';const generated=src.startsWith('data:image/svg+xml');const real=card.classList.contains('has-art')&&!generated&&Number(image?.naturalWidth||0)>0&&Number(image?.naturalHeight||0)>0;return{title:card.querySelector('.catalog-info b')?.textContent||image?.alt||'',src,complete:!!image?.complete,width:Number(image?.naturalWidth||0),height:Number(image?.naturalHeight||0),hasArt:card.classList.contains('has-art'),pending:card.classList.contains('art-pending'),generated,real}});return{system:document.querySelector('#catalogTitle')?.textContent||'',count:document.querySelector('#catalogCount')?.textContent||'',realCount:cards.filter(card=>card.real).length,cards}})(),"
             + "controller:window.GameDeckInputStatus||null,"
             + "runtime:window.GameDeckNative?JSON.parse(window.GameDeckNative.runtimeStatus()):null"
             + "}))()";
@@ -707,6 +707,13 @@ public class MainActivity extends Activity {
     void notifyRuntimeChanged(String runtimeJson) {
         String payload = runtimeJson == null || runtimeJson.trim().isEmpty() ? "{}" : runtimeJson;
         evaluate("window.GameDeckNative&&window.GameDeckNative.onRuntimeChanged(" + payload + ")");
+    }
+
+    void deliverArtworkResult(String requestId, String artworkUri) {
+        String id = requestId == null ? "" : requestId;
+        String uri = artworkUri == null ? "" : artworkUri;
+        evaluate("window.GameDeckArtworkNative&&window.GameDeckArtworkNative.resolve("
+            + JSONObject.quote(id) + "," + JSONObject.quote(uri) + ")");
     }
 
     @Override

@@ -206,7 +206,7 @@ final class LibretroArtworkProvider {
         connection.setInstanceFollowRedirects(false);
         connection.setConnectTimeout(8_000);
         connection.setReadTimeout(12_000);
-        connection.setRequestProperty("User-Agent", "GameDeck-Android/0.5.8-latest");
+        connection.setRequestProperty("User-Agent", "GameDeck-Android/0.5.9-artwork");
         connection.setRequestProperty("Accept", "image/png,image/*;q=0.8");
         int status = connection.getResponseCode();
         if (status == 404) {
