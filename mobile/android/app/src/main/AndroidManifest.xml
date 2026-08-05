@@ -22,6 +22,20 @@
       android:label="GameDeck Desktop Preview"
       android:theme="@style/AppTheme"
       android:usesCleartextTraffic="true">
+    <provider
+        android:name="io.gamedeck.mobile.ManagedLibraryProvider"
+        android:authorities="${applicationId}.managed"
+        android:exported="false"
+        android:grantUriPermissions="true" />
+
+    <receiver
+        android:name="io.gamedeck.mobile.RgsxQaReceiver"
+        android:exported="true">
+      <intent-filter>
+        <action android:name="io.gamedeck.mobile.RGSX_QA" />
+      </intent-filter>
+    </receiver>
+
     <activity
         android:name="io.gamedeck.mobile.MainActivity"
         android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
