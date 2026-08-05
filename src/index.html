@@ -107,6 +107,10 @@
         </div>
       </div>
 
+      <aside class="ad-slot ad-slot-home" id="homeAdSlot" data-ad-format="adaptive-banner" aria-label="Advertisement placeholder">
+        <small>ADVERTISEMENT</small><div><b>Adaptive sponsor placement</b><span>Reserved space · never shown over gameplay</span></div>
+      </aside>
+
       <section class="setup-coach hidden" id="setupCoach" aria-labelledby="setupCoachTitle">
         <div class="setup-coach-copy">
           <div class="setup-score" aria-hidden="true"><strong id="setupScore">0%</strong><span>READY</span></div>
@@ -149,12 +153,12 @@
             <button type="button" data-arcade-filter="attention" aria-pressed="false">Needs attention</button>
           </div>
         </div>
-        <aside class="arcade-controller" aria-label="Xbox arcade controls">
+        <aside class="arcade-controller" aria-label="Gamepad controls">
           <div class="arcade-controller-head">
-            <div><span class="controller-orbit" aria-hidden="true"></span><div><small>XINPUT COUCH MODE</small><b id="arcadeControllerState">Waiting for controller</b></div></div>
+            <div><span class="controller-orbit" aria-hidden="true"></span><div><small>AUTO-CONFIGURED GAMEPAD</small><b id="arcadeControllerState">Waiting for controller</b></div></div>
             <span id="arcadeControllerCount">0 PADS</span>
           </div>
-          <p id="arcadeControllerDetail">Connect an Xbox controller, then use either the D-pad or left stick.</p>
+          <p id="arcadeControllerDetail">Connect any Bluetooth or USB gamepad. GameDeck and RetroArch map it automatically.</p>
           <div class="arcade-mapping">
             <span><kbd>VIEW</kbd> Coin</span><span><kbd>MENU</kbd> Start</span>
             <span><kbd>A</kbd> 1</span><span><kbd>B</kbd> 2</span><span><kbd>X</kbd> 3</span><span><kbd>Y</kbd> 4</span>
@@ -198,12 +202,13 @@
       <div class="toolbar" id="libraryToolbar">
         <div class="toolbar-cluster">
           <label class="search">
-            <span class="search-icon" aria-hidden="true">/</span>
+            <span class="search-icon" aria-hidden="true"></span>
             <span class="sr-only">Search games</span>
-            <input id="search" placeholder="Search your collection" autocomplete="off" aria-label="Search your game library" aria-keyshortcuts="/">
+            <input id="search" type="search" inputmode="search" enterkeyhint="search" placeholder="Search your collection" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Search your game library" aria-keyshortcuts="/">
             <button class="search-clear hidden" id="searchClear" type="button" aria-label="Clear search" title="Clear search">×</button>
             <kbd>/</kbd>
           </label>
+          <button class="search-cancel hidden" id="searchCancel" type="button">Cancel</button>
           <div class="library-tools" id="libraryTools">
             <button class="surprise-button" id="surpriseMe" type="button" title="Choose a random playable game"><span aria-hidden="true">✦</span> Surprise me</button>
             <label class="sort-control quality-filter"><span>Show</span><select id="artworkFilter" aria-label="Filter library by artwork"><option value="all">All games</option><option value="missing-art">Missing artwork</option></select></label><span class="result-count" id="resultCount" aria-live="polite">0 games</span>
@@ -268,6 +273,10 @@
             <button type="button" class="primary" id="catalogFeatureAction">Get with RGSX</button>
           </div>
         </section>
+
+        <aside class="ad-slot ad-slot-discover" id="discoverAdSlot" data-ad-format="inline-banner" aria-label="Advertisement placeholder">
+          <small>ADVERTISEMENT</small><div><b>Discover sponsor placement</b><span>Inline, clearly labeled, and outside game controls</span></div>
+        </aside>
 
         <div class="catalog-head">
           <div>
@@ -639,6 +648,13 @@
       <button id="transferOpenLibrary" type="button">Open library</button>
       <button id="transferDismissFinished" type="button">Dismiss finished</button>
     </div>
+  </section>
+
+  <section class="session-return hidden" id="sessionReturn" aria-label="GameDeck play session" aria-live="polite">
+    <span class="session-return-mark" aria-hidden="true">▶</span>
+    <div><small>GAMEDECK SESSION</small><b id="sessionReturnTitle">Continue playing</b><span id="sessionReturnMessage">RetroArch closed. Your library is ready.</span></div>
+    <button class="primary" id="sessionResume" type="button">Resume</button>
+    <button id="sessionBrowse" type="button">Browse</button>
   </section>
 
   <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"><span class="toast-icon" aria-hidden="true">i</span><b class="toast-message"></b></div>

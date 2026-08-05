@@ -1,6 +1,7 @@
 package io.gamedeck.mobile;
 
 import android.app.Activity;
+import android.app.ActivityManager;
 import android.content.ActivityNotFoundException;
 import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
@@ -98,7 +99,7 @@ public class MainActivity extends Activity {
         settings.setBuiltInZoomControls(false);
         settings.setDisplayZoomControls(false);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) settings.setOffscreenPreRaster(true);
-        settings.setUserAgentString(settings.getUserAgentString() + " GameDeckAndroid/0.4.4-console");
+        settings.setUserAgentString(settings.getUserAgentString() + " GameDeckAndroid/0.5.8-latest");
 
         bridge = new DeckBridge(this);
         exposeBridge();
@@ -269,8 +270,53 @@ public class MainActivity extends Activity {
             recreate();
             return;
         }
+        if ("e2e:return".equals(command)) {
+            returnToFront();
+            return;
+        }
+        if ("e2e:matrix".equals(command)) {
+            qaIo.execute(bridge::writeE2eMatrix);
+            return;
+        }
+        if ("e2e:state".equals(command)) {
+            qaIo.execute(bridge::writeE2eState);
+            return;
+        }
+        if ("e2e:renderer".equals(command)) {
+            writeRendererQaSnapshot();
+            return;
+        }
+        if (command.startsWith("e2e:queue:")) {
+            String[] parts = command.substring("e2e:queue:".length()).split(":", 2);
+            String folder = parts.length > 0 ? parts[0] : "";
+            int rank = parts.length > 1 ? parseQaRank(parts[1]) : 0;
+            qaIo.execute(() -> bridge.queueE2eCandidate(folder, rank));
+            return;
+        }
+        if (command.startsWith("e2e:launch:")) {
+            String[] parts = command.substring("e2e:launch:".length()).split(":", 2);
+            String folder = parts.length > 0 ? parts[0] : "";
+            int rank = parts.length > 1 ? parseQaRank(parts[1]) : 0;
+            qaIo.execute(() -> bridge.launchE2eCandidate(folder, rank));
+            return;
+        }
+        if (command.startsWith("e2e:artwork:")) {
+            String[] parts = command.substring("e2e:artwork:".length()).split(":", 2);
+            String folder = parts.length > 0 ? parts[0] : "";
+            int rank = parts.length > 1 ? parseQaRank(parts[1]) : 0;
+            qaIo.execute(() -> bridge.probeE2eArtwork(folder, rank));
+            return;
+        }
         if ("rgsx:snapshot".equals(command)) {
             bridge.writeRgsxQaSnapshot();
+            return;
+        }
+        if ("runtime:snapshot".equals(command)) {
+            bridge.writeRuntimeQaSnapshot();
+            return;
+        }
+        if ("runtime:launch-managed".equals(command)) {
+            bridge.runManagedRuntimeQaLaunch();
             return;
         }
         if ("rgsx:reset-fixture".equals(command)) {
@@ -318,23 +364,111 @@ public class MainActivity extends Activity {
         }
     }
 
+
+
+
+    private void writeRendererQaSnapshot() {
+        if (webView == null) return;
+        String script = "(()=>JSON.stringify({"
+            + "capturedAt:Date.now(),"
+            + "view:document.body.dataset.view||'',"
+            + "loading:{visible:!document.querySelector('#appLoading')?.classList.contains('hidden'),title:document.querySelector('#loadingTitle')?.textContent||'',message:document.querySelector('#loadingMessage')?.textContent||'',progress:document.querySelector('#loadingPercent')?.textContent||''},"
+            + "catalog:{system:document.querySelector('#catalogTitle')?.textContent||'',count:document.querySelector('#catalogCount')?.textContent||'',cards:[...document.querySelectorAll('#catalogGames .catalog-game')].slice(0,12).map(card=>{const image=card.querySelector('.catalog-poster');return{title:card.querySelector('.catalog-info b')?.textContent||image?.alt||'',src:image?.currentSrc||image?.src||'',complete:!!image?.complete,width:Number(image?.naturalWidth||0),height:Number(image?.naturalHeight||0),hasArt:card.classList.contains('has-art'),pending:card.classList.contains('art-pending')}})},"
+            + "controller:window.GameDeckInputStatus||null,"
+            + "runtime:window.GameDeckNative?JSON.parse(window.GameDeckNative.runtimeStatus()):null"
+            + "}))()";
+        webView.post(() -> webView.evaluateJavascript(script, raw -> {
+            try {
+                String decoded = new JSONArray("[" + (raw == null ? "null" : raw) + "]").optString(0, "{}");
+                writeQaTextArtifact("e2e-renderer.json", decoded == null || decoded.isEmpty() ? "{}" : decoded);
+            } catch (Exception error) {
+                writeQaTextArtifact("e2e-renderer.json", "{\"ok\":false,\"error\":\"renderer-snapshot-failed\"}");
+            }
+        }));
+    }
+
+    private void returnToFront() {
+        runOnUiThread(() -> {
+            try {
+                ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+                if (manager != null) manager.moveTaskToFront(getTaskId(), ActivityManager.MOVE_TASK_WITH_HOME);
+                if (webView != null) webView.requestFocus(View.FOCUS_DOWN);
+            } catch (Exception ignored) {
+                Intent intent = new Intent(this, MainActivity.class)
+                    .addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                try { startActivity(intent); } catch (Exception ignoredAgain) {}
+            }
+        });
+    }
+
+    private int parseQaRank(String value) {
+        try { return Math.max(0, Math.min(9, Integer.parseInt(value == null ? "0" : value.trim()))); }
+        catch (Exception ignored) { return 0; }
+    }
+
     private void writeInputDevicesArtifact() {
+        writeQaTextArtifact("input-devices.json", inputDevicesSnapshot(false));
+    }
+
+    String controllerSnapshot() {
+        return inputDevicesSnapshot(true);
+    }
+
+    boolean hasActiveGameController() {
+        return activeGameControllerCount() > 0;
+    }
+
+    int activeGameControllerCount() {
+        int count = 0;
+        for (int id : InputDevice.getDeviceIds()) {
+            InputDevice device = InputDevice.getDevice(id);
+            if (isGameController(device)) count++;
+        }
+        return count;
+    }
+
+    String activeGameControllerLabel() {
+        for (int id : InputDevice.getDeviceIds()) {
+            InputDevice device = InputDevice.getDevice(id);
+            if (!isGameController(device)) continue;
+            String layout = controllerLayout(device);
+            return controllerLabel(layout);
+        }
+        return "Touch controls";
+    }
+
+    private boolean isGameController(InputDevice device) {
+        if (device == null) return false;
+        int sources = device.getSources();
+        return (sources & InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD
+            || (sources & InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK;
+    }
+
+    private String inputDevicesSnapshot(boolean controllersOnly) {
         JSONArray devices = new JSONArray();
         for (int id : InputDevice.getDeviceIds()) {
             InputDevice device = InputDevice.getDevice(id);
             if (device == null) continue;
+            int sources = device.getSources();
+            boolean gamepad = (sources & InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD;
+            boolean joystick = (sources & InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK;
+            if (controllersOnly && !gamepad && !joystick) continue;
             JSONObject item = new JSONObject();
             try {
-                int sources = device.getSources();
+                String layout = controllerLayout(device);
                 item.put("id", id);
                 item.put("name", device.getName());
+                item.put("label", controllerLabel(layout));
+                item.put("layout", layout);
                 item.put("descriptor", device.getDescriptor());
                 item.put("vendorId", device.getVendorId());
                 item.put("productId", device.getProductId());
                 item.put("sources", sources);
-                item.put("gamepad", (sources & InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD);
-                item.put("joystick", (sources & InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK);
+                item.put("gamepad", gamepad);
+                item.put("joystick", joystick);
                 item.put("keyboard", (sources & InputDevice.SOURCE_KEYBOARD) == InputDevice.SOURCE_KEYBOARD);
+                item.put("retroArchAutoconfig", gamepad || joystick);
+                item.put("mapping", "RetroArch Android autoconfig");
                 devices.put(item);
             } catch (Exception ignored) {}
         }
@@ -342,8 +476,33 @@ public class MainActivity extends Activity {
         try {
             output.put("count", devices.length());
             output.put("devices", devices);
+            output.put("retroArchProfiles", 212);
+            output.put("defaultMapping", "RetroArch Android autoconfig");
+            output.put("fallback", "RetroArch standard controller");
         } catch (Exception ignored) {}
-        writeQaTextArtifact("input-devices.json", output.toString());
+        return output.toString();
+    }
+
+    private String controllerLayout(InputDevice device) {
+        String name = device == null || device.getName() == null ? "" : device.getName().toLowerCase(Locale.US);
+        int vendor = device == null ? 0 : device.getVendorId();
+        if (vendor == 1118 || name.contains("xbox") || name.contains("xinput") || name.contains("microsoft")) return "xbox";
+        if (vendor == 1356 || name.contains("dualsense") || name.contains("dualshock") || name.contains("playstation") || name.contains("sony wireless")) return "playstation";
+        if (vendor == 1406 || name.contains("joy-con") || name.contains("nintendo") || name.contains("switch pro")) return "nintendo";
+        if (name.contains("8bitdo")) return "8bitdo";
+        if (name.contains("gamesir")) return "gamesir";
+        return "generic";
+    }
+
+    private String controllerLabel(String layout) {
+        switch (layout) {
+            case "xbox": return "Xbox controller";
+            case "playstation": return "PlayStation controller";
+            case "nintendo": return "Nintendo controller";
+            case "8bitdo": return "8BitDo controller";
+            case "gamesir": return "GameSir controller";
+            default: return "Standard gamepad";
+        }
     }
 
     private void captureQaScreenshot(String rawName) {
@@ -553,7 +712,10 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        if (bridge != null) new Handler(Looper.getMainLooper()).postDelayed(bridge::resumeRuntimeProvisioning, 650);
+        if (bridge != null) new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            bridge.resumeRuntimeProvisioning();
+            notifyRuntimeChanged(bridge.runtimeStatus());
+        }, 650);
     }
 
     private void evaluate(String script) {

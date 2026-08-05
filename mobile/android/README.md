@@ -4,11 +4,26 @@ This module packages GameDeck's shared desktop renderer with an Android platform
 
 ## Current development build
 
-`0.4.5-console` includes:
+`0.5.8-latest` includes:
+
+- binary-safe exact RetroArch launch profiles in public Downloads storage, preventing Android MediaStore from rewriting `.cfg` names;
+
+- controller-aware RetroArch handoff: physical gamepads suppress touch overlays, while touch controls remain available when no gamepad is present;
+- a desktop-aligned branded launch stage before the native game activity;
+- direct repeat launches that bypass RetroArch’s sideload screen after each console core is prepared once;
+- browser-first parallel Libretro artwork loading with a native cache-only fast path;
+
+
+- a debug-only console-by-console E2E QA matrix for deterministic RGSX, artwork, runtime, orientation, and controller acceptance;
+- native Libretro artwork caching paired with the live RGSX game catalog;
+- automatic Android gamepad classification with RetroArch autoconfig fallback;
+- a GameDeck return/resume session shell and non-overlapping ad inventory placeholders;
+- a document-flow mobile search surface that never floats over the catalog;
 
 - portrait and landscape layouts designed independently for phones;
 - GPU-composited WebView rendering and a reduced-effects mobile performance profile;
-- complete browseable public title indexes in Discover, with lawful local imports kept separate from verified downloads;
+- the real RGSX OTA catalog in Discover, with automatic managed download and RetroArch launch from the same Play action;
+- a single GPU-composited vertical content scroller with directional touch handoff for portrait and landscape navigation;
 - one-time verified GameDeck Console provisioning followed by direct one-tap title launch;
 - automatic per-system core selection, verified core downloads, and reusable local game staging;
 - persistent compact navigation and Android safe-area handling;
@@ -98,3 +113,5 @@ Pull-request validation includes:
 - controller focus visibility, spatial movement, L1/R1 navigation, Select menu, B back, and landscape retention.
 
 The QA fixture is activated only by a marker inside the debuggable app's private sandbox and is inactive for normal installations.
+
+- mobile search stays in normal document flow, aligns to the top on focus, and uses dedicated portrait/landscape layouts

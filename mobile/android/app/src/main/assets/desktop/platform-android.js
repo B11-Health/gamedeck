@@ -35,23 +35,6 @@
   });
 
   const imageForSystem = id => `../assets/system-themes/${SYSTEM_IMAGES[id] || 'retro'}.webp`;
-  const REMOTE_SYSTEMS = Object.freeze([
-    ['snes', 'Super Nintendo'], ['satellaview', 'Satellaview'], ['sufami', 'Sufami Turbo'],
-    ['nes', 'Nintendo Entertainment System'], ['fds', 'Famicom Disk System'],
-    ['n64', 'Nintendo 64'], ['n64dd', 'Nintendo 64DD'],
-    ['gb', 'Game Boy'], ['gbc', 'Game Boy Color'], ['gba', 'Game Boy Advance'], ['nds', 'Nintendo DS'],
-    ['genesis', 'Sega Genesis'], ['sega32x', 'Sega 32X'], ['mastersystem', 'Sega Master System'],
-    ['gamegear', 'Sega Game Gear'], ['segacd', 'Sega CD'], ['pce', 'PC Engine / TurboGrafx-16'],
-    ['supergrafx', 'PC Engine SuperGrafx'], ['saturn', 'Sega Saturn'], ['dreamcast', 'Dreamcast'],
-    ['atari2600', 'Atari 2600'], ['fbneo', 'FinalBurn Neo'], ['mame', 'MAME'], ['neogeo', 'Neo Geo'],
-    ['ps1', 'PlayStation'], ['ps2', 'PlayStation 2'], ['psp', 'PlayStation Portable'],
-    ['gamecube', 'Nintendo GameCube'], ['wii', 'Nintendo Wii'], ['wiiu', 'Nintendo Wii U']
-  ].map(([systemId, name]) => Object.freeze({ systemId, name })));
-  const stableNumber = value => {
-    let hash = 2166136261;
-    for (const character of String(value || '')) hash = Math.imul(hash ^ character.charCodeAt(0), 16777619);
-    return Math.abs(hash >>> 0);
-  };
   const normalizedIdentity = value => String(value || '')
     .replace(/\\/g, '/')
     .split('/').pop()
@@ -74,8 +57,6 @@
 
   let libraryCache = null;
   const artworkCache = new Map();
-  const catalogCache = new Map();
-  const catalogSourceMap = new Map();
   let catalogSystemsCache = null;
   let runtimeCache = null;
   const runtimeListeners = new Set();
@@ -173,13 +154,42 @@
   }
 
   function thumbnailNames(value) {
-    const original = rawTitle(value);
-    return [...new Set([
-      original,
-      original.replace(/\s*\[[^\]]*\]/g, '').trim(),
-      original.replace(/\s*\(Rev[^)]*\)/ig, '').trim(),
-      original.replace(/\s*\([^)]*\)/g, '').trim()
-    ].filter(Boolean))];
+    const raw = rawTitle(value).replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!raw) return [];
+    const output = new Set([raw]);
+    output.add(raw.replace(/\s*\[[^\]]*\]/g, '').trim());
+    output.add(raw.replace(/\s*\((Rev|Beta|Proto|Sample|Demo|Unl|Alt|En|Fr|De|Es|It|Ja)[^)]*\)/ig, '').trim());
+    let progressivelyCleaned = raw;
+    while (/\s+\([^()]+\)$/.test(progressivelyCleaned)) {
+      progressivelyCleaned = progressivelyCleaned.replace(/\s+\([^()]+\)$/, '').trim();
+      if (progressivelyCleaned) output.add(progressivelyCleaned);
+    }
+    const noTags = raw.replace(/\s*\[[^\]]*\]/g, '').replace(/\s*\([^)]*\)/g, '').replace(/\s+/g, ' ').trim();
+    if (noTags) output.add(noTags);
+    if (raw.includes(' & ')) output.add(raw.replace(' & ', ' and '));
+    if (raw.includes(' and ')) output.add(raw.replace(' and ', ' & '));
+    output.delete('');
+    return [...output];
+  }
+
+  function loadRemoteArtwork(url, timeoutMs = 6500) {
+    return new Promise(resolve => {
+      const image = new Image();
+      let settled = false;
+      const finish = value => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        image.onload = null;
+        image.onerror = null;
+        resolve(value);
+      };
+      const timer = setTimeout(() => finish(''), timeoutMs);
+      image.onload = () => finish(url);
+      image.onerror = () => finish('');
+      image.decoding = 'async';
+      image.src = url;
+    });
   }
 
   async function remoteArtwork(title, systemId, folder = '') {
@@ -188,15 +198,21 @@
     const key = `${repo}:${rawTitle(title)}`;
     if (artworkCache.has(key)) return artworkCache.get(key);
     const request = (async () => {
+      const cached = invoke('cachedArtwork', '', title || '', systemId || '', folder || '');
+      if (cached) return cached;
       for (const candidate of thumbnailNames(title)) {
         const url = `https://raw.githubusercontent.com/libretro-thumbnails/${repo}/master/Named_Boxarts/${encodeURIComponent(candidate + '.png')}`;
         try {
-          const response = await fetch(url, { cache: 'force-cache' });
-          if (!response.ok) continue;
-          const blob = await response.blob();
-          if (!blob.type.startsWith('image/') || blob.size < 128) continue;
-          return URL.createObjectURL(blob);
+          const response = await fetch(url, { cache: 'force-cache', credentials: 'omit', mode: 'cors' });
+          if (response.ok) {
+            const blob = await response.blob();
+            if (blob.type.startsWith('image/') && blob.size >= 128 && blob.size <= 8 * 1024 * 1024) {
+              return URL.createObjectURL(blob);
+            }
+          }
         } catch {}
+        const loaded = await loadRemoteArtwork(url);
+        if (loaded) return loaded;
       }
       return '';
     })();
@@ -213,6 +229,8 @@
   async function diagnostics() {
     const library = await getLibrary();
     const runtime = getRuntimeStatus();
+    const controllerSnapshot = parse(invoke('controllers', '{"devices":[]}'), { devices: [], retroArchProfiles: 212, defaultMapping: 'RetroArch Android autoconfig' });
+    const controllerProfiles = Array.isArray(controllerSnapshot.devices) ? controllerSnapshot.devices : [];
     return {
       platform: 'android',
       arch: 'arm64',
@@ -225,7 +243,11 @@
       systems: library.systems,
       downloads: nativeDownloads(),
       activity: [],
-      controllers: []
+      controllers: controllerProfiles.map(controller => controller.name || controller.label || 'Controller'),
+      controllerProfiles,
+      controllerAutoconfig: true,
+      controllerProfileCount: Number(controllerSnapshot.retroArchProfiles || 212),
+      controllerDefaultMapping: controllerSnapshot.defaultMapping || 'RetroArch Android autoconfig'
     };
   }
 
@@ -236,132 +258,38 @@
 
   async function catalogSystems() {
     if (catalogSystemsCache) return catalogSystemsCache;
-    const nativeRows = parse(invoke('catalogSystems', '[]'), []);
-    const safeNativeRows = Array.isArray(nativeRows) ? nativeRows : [];
+    const rows = parse(invoke('catalogSystems', '[]'), []);
     const runtime = getRuntimeStatus();
-    const nativeBySystem = new Map();
-    safeNativeRows.forEach(row => {
-      const systemId = String(row?.systemId || row?.folder || row?.id || '').toLowerCase();
-      if (!systemId) return;
-      const current = nativeBySystem.get(systemId) || [];
-      current.push(row);
-      nativeBySystem.set(systemId, current);
-    });
-
-    catalogSourceMap.clear();
-    const remoteRows = REMOTE_SYSTEMS
-      .filter(system => thumbnailRepo(system.systemId, system.systemId))
-      .map(system => {
-        const source = `public:${system.systemId}`;
-        const nativeSources = (nativeBySystem.get(system.systemId) || []).map(row => String(row.source || row.gamesFile || row.id || '')).filter(Boolean);
-        const installedCount = (nativeBySystem.get(system.systemId) || []).reduce((total, row) => total + Number(row.installedCount || 0), 0);
-        catalogSourceMap.set(source, { systemId: system.systemId, nativeSources });
-        return {
-          id: `public-${system.systemId}`,
-          source,
-          gamesFile: source,
-          systemId: system.systemId,
-          folder: system.systemId,
-          name: system.name,
-          image: imageForSystem(system.systemId),
-          count: 0,
-          countKnown: false,
-          installedCount,
-          playable: Boolean(runtime.externalAvailable || runtime.embeddedReady),
-          issue: runtime.externalAvailable || runtime.embeddedReady ? '' : 'Add a legally owned copy now; an Android play route is still required.'
-        };
-      });
-
-    const covered = new Set(REMOTE_SYSTEMS.map(system => system.systemId));
-    const nativeOnly = safeNativeRows.filter(row => {
-      const systemId = String(row?.systemId || row?.folder || row?.id || '').toLowerCase();
-      if (covered.has(systemId)) return false;
-      const source = String(row.source || row.gamesFile || row.id || '');
-      if (source) catalogSourceMap.set(source, { systemId, nativeSources: [source] });
-      return true;
-    });
-
-    catalogSystemsCache = [...remoteRows, ...nativeOnly].sort((left, right) => String(left.name || '').localeCompare(String(right.name || '')));
+    catalogSystemsCache = (Array.isArray(rows) ? rows : [])
+      .map(row => ({
+        ...row,
+        id: String(row.id || row.folder || row.source || ''),
+        gamesFile: String(row.gamesFile || row.source || ''),
+        image: row.image || imageForSystem(row.systemId),
+        count: Number(row.count || 0),
+        countKnown: true,
+        installedCount: Number(row.installedCount || 0),
+        rgsxCount: Number(row.count || 0),
+        playable: row.playable !== false,
+        issue: row.issue || '',
+        transferAvailable: true,
+        distribution: 'rgsx',
+        runtimeReady: Boolean(runtime.externalAvailable || runtime.embeddedReady)
+      }))
+      .filter(row => row.id && row.gamesFile && row.count > 0)
+      .sort((left, right) => String(left.name || '').localeCompare(String(right.name || '')));
     return catalogSystemsCache;
   }
 
-  async function remoteCatalog(systemId) {
-    const repo = thumbnailRepo(systemId, systemId);
-    if (!repo) return [];
-    if (catalogCache.has(repo)) return catalogCache.get(repo);
-    const request = (async () => {
-      try {
-        const requestJson = async url => {
-          const response = await fetch(url, {
-            headers: { Accept: 'application/vnd.github+json' },
-            cache: 'force-cache'
-          });
-          return response.ok ? response.json() : null;
-        };
-        let branch = 'master';
-        let root = await requestJson(`https://api.github.com/repos/libretro-thumbnails/${repo}/git/trees/${branch}`);
-        if (!root) {
-          branch = 'main';
-          root = await requestJson(`https://api.github.com/repos/libretro-thumbnails/${repo}/git/trees/${branch}`);
-        }
-        const boxartTree = Array.isArray(root?.tree)
-          ? root.tree.find(row => row?.type === 'tree' && row.path === 'Named_Boxarts')
-          : null;
-        if (!boxartTree?.sha) return [];
-        const payload = await requestJson(`https://api.github.com/repos/libretro-thumbnails/${repo}/git/trees/${boxartTree.sha}?recursive=1`);
-        const rows = Array.isArray(payload?.tree) ? payload.tree : [];
-        const encodedPath = path => String(path || '').split('/').map(encodeURIComponent).join('/');
-        return rows
-          .filter(row => row?.type === 'blob' && /\.png$/i.test(row.path || ''))
-          .map(row => {
-            const fileName = String(row.path || '');
-            const title = rawTitle(fileName);
-            return {
-              id: stableNumber(`${systemId}:${title}`),
-              name: cleanTitle(title),
-              fileName: title,
-              region: inferRegion(title),
-              tags: [systemId.toUpperCase(), 'Public title index'],
-              art: `https://raw.githubusercontent.com/libretro-thumbnails/${repo}/${branch}/Named_Boxarts/${encodedPath(fileName)}`,
-              installedFile: '',
-              installedReady: false,
-              size: 0,
-              transferAvailable: false,
-              catalogOnly: true
-            };
-          })
-          .filter(game => game.name)
-          .sort((left, right) => left.name.localeCompare(right.name, undefined, { numeric: true, sensitivity: 'base' }));
-      } catch {
-        return [];
-      }
-    })();
-    catalogCache.set(repo, request);
-    return request;
-  }
-
   async function catalogGames(source) {
-    if (!catalogSystemsCache) await catalogSystems();
-    const descriptor = catalogSourceMap.get(String(source || ''));
-    if (!descriptor) {
-      const rows = parse(invoke('catalogGames', '[]', source || ''), []);
-      return Array.isArray(rows) ? rows : [];
-    }
-
-    const nativeRows = descriptor.nativeSources.flatMap(nativeSource => {
-      const rows = parse(invoke('catalogGames', '[]', nativeSource), []);
-      return Array.isArray(rows) ? rows.map(row => ({
-        ...row,
-        id: Number.isFinite(Number(row.id)) ? Number(row.id) : stableNumber(`${descriptor.systemId}:${row.fileName || row.name || row.title}`),
-        transferAvailable: true,
-        catalogOnly: false
-      })) : [];
-    });
-    const publicRows = await remoteCatalog(descriptor.systemId);
-    const merged = new Map();
-    publicRows.forEach(row => merged.set(normalizedIdentity(row.fileName || row.name), row));
-    nativeRows.forEach(row => merged.set(normalizedIdentity(row.fileName || row.name), row));
-    return [...merged.values()].sort((left, right) => String(left.name || left.title || '').localeCompare(String(right.name || right.title || ''), undefined, { numeric: true, sensitivity: 'base' }));
+    const rows = parse(invoke('catalogGames', '[]', source || ''), []);
+    return (Array.isArray(rows) ? rows : []).map(row => ({
+      ...row,
+      id: Number.isFinite(Number(row.id)) ? Number(row.id) : Math.abs(String(row.fileName || row.name || '').split('').reduce((hash, character) => Math.imul(hash ^ character.charCodeAt(0), 16777619), 2166136261) >>> 0),
+      transferAvailable: true,
+      catalogOnly: false,
+      distribution: 'rgsx'
+    }));
   }
 
   function subscribeDownloads(callback) {
@@ -394,7 +322,7 @@
     const library = await getLibrary();
     const runtime = getRuntimeStatus();
     return {
-      platform: 'android', arch: 'arm64', version: '0.4.5-console',
+      platform: 'android', arch: 'arm64', version: '0.5.8-latest',
       libraryRoot: library.rootName || '', rgsxRoot: 'Automatic',
       retroArchPath: runtime.externalPackage || '', retroArchCores: '', retroArchSystem: '', mamePath: '', sponsorsEnabled: false
     };
@@ -439,8 +367,8 @@
     diagnostics,
     runtimeStatus: async () => getRuntimeStatus(true),
     ensureRuntime: async () => parse(invoke('ensureRuntime', '{}', ''), { ok: false, error: 'GameDeck Console setup could not start.' }),
-    playSessionCapabilities: async () => ({ supported: false, reasonCode: 'android_play_session_pending' }),
-    playSessionStatus: async () => ({ active: false, supported: false }),
+    playSessionCapabilities: async () => ({ supported: true, embedded: false, mode: 'external-return-shell', nextArchitecture: 'in-process-libretro-host' }),
+    playSessionStatus: async () => ({ active: Boolean(getRuntimeStatus().lastSession), supported: true, embedded: false, session: getRuntimeStatus().lastSession || null }),
     arcadeAudit: async () => {
       const games = (await getLibrary()).games.filter(game => ['arcade', 'mame'].includes(game.system));
       return { total: games.length, verified: 0, attention: 0, unchecked: games.length, items: games.map(game => ({ file: game.file, status: 'unchecked', message: 'Android archive audit is pending.' })) };

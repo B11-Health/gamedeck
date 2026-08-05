@@ -28,12 +28,14 @@ final class DeckBridge {
     private final AndroidRuntimeManager runtime;
     private final LibraryRepository library;
     private final RgsxProvider rgsx;
+    private final LibretroArtworkProvider artwork;
 
     DeckBridge(MainActivity activity) {
         this.activity = activity;
         this.runtime = new AndroidRuntimeManager(activity);
         this.library = new LibraryRepository(activity, runtime);
         this.rgsx = new RgsxProvider(activity, runtime);
+        this.artwork = new LibretroArtworkProvider(activity);
     }
 
     @JavascriptInterface
@@ -43,7 +45,7 @@ final class DeckBridge {
             boolean debuggable = (activity.getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
             value.put("platform", "android");
             value.put("platformKey", AndroidRuntimeManager.PLATFORM_KEY);
-            value.put("version", "0.4.5-console");
+            value.put("version", "0.5.8-latest");
             value.put("localFirst", true);
             value.put("accountRequired", false);
             value.put("embeddedRuntimeReady", runtime.externalAvailable());
@@ -151,6 +153,29 @@ final class DeckBridge {
             } catch (Exception ignored) {}
             return value.toString();
         }
+    }
+
+    @JavascriptInterface
+    public String controllers() {
+        return activity.controllerSnapshot();
+    }
+
+    @JavascriptInterface
+    public String cachedArtwork(String title, String systemId, String folder) {
+        return artwork.cachedArtwork(
+            title == null ? "" : title,
+            systemId == null ? "" : systemId,
+            folder == null ? "" : folder
+        );
+    }
+
+    @JavascriptInterface
+    public String artwork(String title, String systemId, String folder) {
+        return artwork.artwork(
+            title == null ? "" : title,
+            systemId == null ? "" : systemId,
+            folder == null ? "" : folder
+        );
     }
 
     @JavascriptInterface
@@ -292,9 +317,108 @@ final class DeckBridge {
         activity.writeQaTextArtifact("qa-state.json", safe);
     }
 
+
+    void writeE2eMatrix() {
+        if (!isDebugFixtureEnabled()) return;
+        activity.writeQaTextArtifact("e2e-matrix.json", rgsx.qaMatrix());
+    }
+
+    void queueE2eCandidate(String folder, int rank) {
+        if (!isDebugFixtureEnabled()) return;
+        String safeFolder = safeArtifactPart(folder);
+        activity.writeQaTextArtifact(
+            "e2e-queue-" + safeFolder + "-" + Math.max(0, rank) + ".json",
+            rgsx.qaQueueCandidate(folder, Math.max(0, rank))
+        );
+    }
+
+    void launchE2eCandidate(String folder, int rank) {
+        if (!isDebugFixtureEnabled()) return;
+        String safeFolder = safeArtifactPart(folder);
+        activity.writeQaTextArtifact(
+            "e2e-launch-" + safeFolder + "-" + Math.max(0, rank) + ".json",
+            rgsx.qaLaunchCandidate(folder, Math.max(0, rank))
+        );
+    }
+
+    void probeE2eArtwork(String folder, int rank) {
+        if (!isDebugFixtureEnabled()) return;
+        JSONObject output = new JSONObject();
+        try {
+            JSONObject candidate = rgsx.qaCandidate(folder, Math.max(0, rank));
+            if (candidate == null) {
+                output.put("ok", false);
+                output.put("error", "No compatible QA candidate was found.");
+            } else {
+                String uri = artwork.artwork(
+                    candidate.optString("originalName", candidate.optString("title", "")),
+                    candidate.optString("systemId", ""),
+                    candidate.optString("folder", "")
+                );
+                output.put("ok", uri != null && !uri.isEmpty());
+                output.put("candidate", candidate);
+                output.put("artwork", uri == null ? "" : uri);
+            }
+        } catch (Exception error) {
+            try {
+                output.put("ok", false);
+                output.put("error", error.getMessage() == null ? error.getClass().getSimpleName() : error.getMessage());
+            } catch (Exception ignored) {}
+        }
+        activity.writeQaTextArtifact(
+            "e2e-artwork-" + safeArtifactPart(folder) + "-" + Math.max(0, rank) + ".json",
+            output.toString()
+        );
+    }
+
+    void writeE2eState() {
+        if (!isDebugFixtureEnabled()) return;
+        activity.writeQaTextArtifact("e2e-state.json", rgsx.qaSnapshot());
+        activity.writeQaTextArtifact("e2e-runtime.json", runtime.status());
+        activity.writeQaTextArtifact("e2e-controllers.json", activity.controllerSnapshot());
+    }
+
+    private String safeArtifactPart(String value) {
+        String safe = value == null ? "console" : value.trim().toLowerCase().replaceAll("[^a-z0-9._-]+", "-");
+        return safe.isEmpty() ? "console" : safe;
+    }
+
     void writeRgsxQaSnapshot() {
         if (!isDebugFixtureEnabled()) return;
         activity.writeQaTextArtifact("rgsx-state.json", rgsx.qaSnapshot());
+    }
+
+    void writeRuntimeQaSnapshot() {
+        if (!isDebugFixtureEnabled()) return;
+        activity.writeQaTextArtifact("runtime-state.json", runtime.status());
+    }
+
+    void runManagedRuntimeQaLaunch() {
+        if (!isDebugFixtureEnabled()) return;
+        JSONObject output = new JSONObject();
+        try {
+            JSONArray games = rgsx.managedLibraryGames();
+            JSONObject game = games.optJSONObject(0);
+            if (game == null) {
+                output.put("ok", false);
+                output.put("error", "No managed RGSX game is installed.");
+            } else {
+                String result = runtime.launch(
+                    game.optString("contentUri", game.optString("file", "")),
+                    game.optString("mimeType", "application/octet-stream"),
+                    game.optString("system", "")
+                );
+                output.put("ok", true);
+                output.put("game", game);
+                output.put("launchResult", new JSONObject(result));
+            }
+        } catch (Exception error) {
+            try {
+                output.put("ok", false);
+                output.put("error", error.getMessage() == null ? error.getClass().getSimpleName() : error.getMessage());
+            } catch (Exception ignored) {}
+        }
+        activity.writeQaTextArtifact("runtime-launch.json", output.toString());
     }
 
     void resetRgsxQaFixture() {
@@ -350,6 +474,7 @@ final class DeckBridge {
     }
 
     void shutdown() {
+        rgsx.shutdown();
         runtime.shutdown();
     }
 

@@ -49,13 +49,15 @@ tasks.register('prepareSharedRenderer') {
         List<String> requiredNativeContracts = [
             "invoke('catalogSystems'",
             "invoke('catalogGames'",
+            "invoke('cachedArtwork'",
+            "invoke('controllers'",
             "invoke('downloads'",
             "invoke('importOwned'",
             "invoke('retryDownload'",
             "invoke('pauseDownload'",
             "invoke('dismissDownload'",
             'onDownload: subscribeDownloads',
-            "version: '0.4.5-console'"
+            "version: '0.5.8-latest'"
         ]
         List<String> missingNativeContracts = requiredNativeContracts.findAll { !platform.contains(it) }
         if (platform.contains('android_discover_transfer_pending') || !missingNativeContracts.isEmpty()) {
@@ -75,8 +77,8 @@ android {
         applicationId applicationIdOverride ?: 'io.gamedeck.mobile.desktoppreview'
         minSdk 26
         targetSdk 36
-        versionCode 13
-        versionName '0.4.5-console'
+        versionCode 26
+        versionName '0.5.8-latest'
     }
 
     sourceSets {

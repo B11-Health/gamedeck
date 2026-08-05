@@ -81,6 +81,7 @@ const state = {
   donations: null,
   diagnostics: null,
   launchingFile: null,
+  lastSession: null,
   inputMode: 'pointer',
   shelfMemory: {},
   setupCoachOpen: requestedCaptureView === 'setup' || readPreference('setup-coach', 'auto') === 'open',
@@ -90,6 +91,7 @@ const state = {
   arcadeFilter: 'all',
   artworkFilter: readPreference('artwork-filter', 'all') === 'missing-art' ? 'missing-art' : 'all',
   controllerHints: [],
+  controllerProfiles: [],
   sponsorTarget: '',
   transferExpanded: false,
   catalogLimit: 120,
@@ -335,6 +337,14 @@ function setLoading(active, title = 'Starting GameDeck', message = 'Checking you
       setTimeout(() => {
         stage.classList.add('hidden');
         document.body.classList.remove('is-loading');
+        $('#loadingStepLibrary b').textContent = 'Game engines';
+        $('#loadingStepLibrary small').textContent = 'Included and verified';
+        $('#loadingStepLaunchers b').textContent = 'Library';
+        $('#loadingStepLaunchers small').textContent = 'Finding your games';
+        $('#loadingStepArtwork b').textContent = 'Artwork';
+        $('#loadingStepArtwork small').textContent = 'Building the shelves';
+        $('#loadingStepControls b').textContent = 'Controls';
+        $('#loadingStepControls small').textContent = 'Preparing couch mode';
       }, 340);
     }, 260);
     return;
@@ -675,27 +685,54 @@ function catalogTaskKey(game) {
   return `${state.catalogSystem?.id || 'none'}:${game.id}`;
 }
 
+function controllerLayout(value = '') {
+  const name = String(value || '').toLowerCase();
+  if (/xbox|xinput|microsoft/.test(name)) return { key: 'xbox', label: 'Xbox' };
+  if (/dualsense|dualshock|playstation|sony wireless/.test(name)) return { key: 'playstation', label: 'PlayStation' };
+  if (/joy-con|nintendo|switch pro/.test(name)) return { key: 'nintendo', label: 'Nintendo' };
+  if (/8bitdo/.test(name)) return { key: '8bitdo', label: '8BitDo' };
+  if (/gamesir/.test(name)) return { key: 'gamesir', label: 'GameSir' };
+  return { key: 'generic', label: 'Standard gamepad' };
+}
+
 function setControllerStatus() {
   const pads = navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean) : [];
   const pad = pads[0];
-  const paired = !pad && state.controllerHints.length > 0;
+  const nativeProfile = state.controllerProfiles[0] || null;
+  const hintedName = nativeProfile?.name || state.controllerHints[0] || '';
+  const paired = !pad && Boolean(hintedName);
+  const identity = pad?.id || hintedName;
+  const layout = nativeProfile?.layout
+    ? { key: nativeProfile.layout, label: nativeProfile.label || controllerLayout(identity).label }
+    : controllerLayout(identity);
   const pill = $('#controllerStatus');
-  pill.textContent = pad ? `${String(pad.id || 'Controller').split('(')[0].trim().slice(0, 25)} connected` : paired ? 'Xbox paired · press a button' : 'No controller';
+  pill.textContent = pad
+    ? `${layout.label} ready`
+    : paired
+      ? `${layout.label} detected`
+      : 'Gamepad auto-config';
   pill.classList.toggle('connected', Boolean(pad));
   pill.classList.toggle('paired', paired);
   const panel = $('.arcade-controller');
   if (!panel) return;
   panel.classList.toggle('connected', Boolean(pad));
   panel.classList.toggle('paired', paired);
-  $('#arcadeControllerState').textContent = pad ? (pad.mapping === 'standard' ? 'Xbox layout ready' : 'Controller detected') : paired ? 'Xbox paired — wake to play' : 'Waiting for controller';
-  const controllerCount = pad ? pads.length : paired ? state.controllerHints.length : 0;
-  window.GameDeckInputStatus = Object.freeze({ activeControllers: pads.length, pairedControllers: paired ? state.controllerHints.length : 0, effectiveControllers: controllerCount, label: pad ? 'connected' : paired ? 'paired' : 'none' });
-  $('#arcadeControllerCount').textContent = `${controllerCount} ${pad ? (controllerCount === 1 ? 'PAD' : 'PADS') : paired ? 'PAIRED' : 'PADS'}`;
+  $('#arcadeControllerState').textContent = pad || paired ? `${layout.label} mapping ready` : 'RetroArch mapping ready';
+  const controllerCount = pad ? pads.length : paired ? state.controllerProfiles.length || state.controllerHints.length : 0;
+  window.GameDeckInputStatus = Object.freeze({
+    activeControllers: pads.length,
+    pairedControllers: paired ? controllerCount : 0,
+    effectiveControllers: controllerCount,
+    label: pad ? 'connected' : paired ? 'detected' : 'automatic',
+    layout: layout.key,
+    autoconfig: true
+  });
+  $('#arcadeControllerCount').textContent = `${controllerCount} ${controllerCount === 1 ? 'PAD' : 'PADS'}`;
   $('#arcadeControllerDetail').textContent = pad
-    ? `${String(pad.id || 'Controller').split('(')[0].trim().slice(0, 36)} · D-pad and left stick enabled for arcade movement.`
+    ? `${String(pad.id || layout.label).split('(')[0].trim().slice(0, 42)} · RetroArch Android autoconfig is active.`
     : paired
-      ? `${state.controllerHints[0]} is available. Press any button so the app can claim the active gamepad slot.`
-      : 'Connect an Xbox controller, then use either the D-pad or left stick.';
+      ? `${identity} is detected. Press any button to activate it in GameDeck; RetroArch will use its bundled profile.`
+      : 'Connect any Bluetooth or USB gamepad. RetroArch falls back to its standard Android controller mapping.';
 }
 
 function applyArcadeAudit(snapshot) {
@@ -808,7 +845,7 @@ function queueArtwork(key, work, priority = false) {
 }
 
 function pumpArtworkQueue() {
-  while (artworkActive < 3 && artworkQueue.length) {
+  while (artworkActive < 6 && artworkQueue.length) {
     const item = artworkQueue.shift();
     artworkActive += 1;
     Promise.resolve(item.work()).finally(() => {
@@ -880,18 +917,19 @@ function updateCatalogArtwork(game, url) {
   if (isFeatured) {
     $('#catalogFeatureArt').innerHTML = `<img src="${escapeHtml(url)}" alt="${escapeHtml(game.name)} cover">`;
     $('#catalogFeatureBackdrop').src = url;
+    $('#catalogFeatureSource').textContent = 'LIBRETRO ARTWORK';
   }
   renderDownloads();
 }
 
-function requestCatalogArtwork(game) {
+function requestCatalogArtwork(game, priority = false) {
   if (!game || game.art || !state.catalogSystem?.systemId) return;
   const key = `catalog:${state.catalogSystem.id}:${game.id}`;
   const system = state.catalogSystem;
   queueArtwork(key, async () => {
     const url = await window.deck.artwork(game.fileName || game.name, system.systemId, system.folder);
     updateCatalogArtwork(game, url);
-  });
+  }, priority);
 }
 
 function observeVisibleArtwork() {
@@ -1316,7 +1354,29 @@ async function launch(file) {
     game = state.library.games.find(item => item.file === file);
     if (game && gameLaunchBlocked(game)) throw Error(game.archiveHealthMessage || 'This ROM set needs attention before launch');
     setLaunchingState(game, true);
-    toast('Opening ' + (game?.title || 'your game') + ' — GameDeck is checking everything automatically…', 'progress');
+    const controller = state.controllerProfiles[0] || null;
+    const controllerName = controller?.label || controller?.name || state.controllerHints[0] || '';
+    const launchTitle = game?.title || 'your game';
+    setLoading(
+      true,
+      `Starting ${launchTitle}`,
+      controllerName
+        ? `${controllerName} detected. Touch controls will stay hidden while GameDeck opens the game.`
+        : 'No physical gamepad detected. GameDeck is preparing the touch controller and correct console core.',
+      14
+    );
+    $('#loadingStepLibrary b').textContent = 'Game';
+    $('#loadingStepLibrary small').textContent = launchTitle;
+    $('#loadingStepLaunchers b').textContent = 'Console';
+    $('#loadingStepLaunchers small').textContent = 'Choosing the verified core';
+    $('#loadingStepArtwork b').textContent = 'Handoff';
+    $('#loadingStepArtwork small').textContent = 'Keeping the transition inside GameDeck';
+    $('#loadingStepControls b').textContent = 'Controls';
+    $('#loadingStepControls small').textContent = controllerName
+      ? `${controllerName} · no touch overlay`
+      : 'RetroArch touch layout ready';
+    toast('Opening ' + launchTitle + ' — GameDeck is checking everything automatically…', 'progress');
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(resolve, 140))));
     const result = await window.deck.launch(file);
     if (result?.queued) {
       setLaunchingState(game, false);
@@ -1331,6 +1391,7 @@ async function launch(file) {
       loadLibrary(false);
     }, 1100);
   } catch (error) {
+    setLoading(false);
     setLaunchingState(game, false);
     toast(error.message || 'Could not launch this game', 'warning');
     openConsole(true);
@@ -1359,24 +1420,18 @@ function renderCatalogFeature(game) {
   feature.classList.remove('feature-loading');
   $('#catalogFeatureArt').innerHTML = `<img src="${escapeHtml(art)}" alt="${escapeHtml(game.name)} cover">`;
   $('#catalogFeatureBackdrop').src = art;
-  $('#catalogFeatureSystem').textContent = `${state.catalogSystem.name.toUpperCase()} / ${ready ? 'IN YOUR LIBRARY' : downloading ? 'FINISHING SETUP' : installed ? 'DOWNLOADED' : transferable ? 'RGSX CATALOG' : 'PUBLIC TITLE INDEX'}`;
+  $('#catalogFeatureSystem').textContent = `${state.catalogSystem.name.toUpperCase()} / ${ready ? 'IN YOUR LIBRARY' : downloading ? 'FINISHING SETUP' : installed ? 'DOWNLOADED' : 'RGSX CATALOG'}`;
   $('#catalogFeatureTitle').textContent = game.name;
-  $('#catalogFeatureFacts').innerHTML = factMarkup([game.region || game.tags?.[0], cached?.year, game.size || (transferable ? 'RGSX managed' : 'Public title index'), ready ? 'Ready' : installed ? 'Downloaded' : 'Available']);
+  $('#catalogFeatureFacts').innerHTML = factMarkup([game.region || game.tags?.[0], cached?.year, game.size || 'RGSX managed', ready ? 'Ready' : installed ? 'Downloaded' : 'Available']);
   $('#catalogFeatureDescription').textContent = cached?.description || description;
-  $('#catalogFeatureMeta').textContent = !state.catalogSystem.playable
-    ? transferable
-      ? `Console setup needed · ${state.catalogSystem.issue} You can still add this title now.`
-      : `Add a legally owned copy through your local library. ${state.catalogSystem.issue}`
-    : ready
-      ? 'Ready to play · GameDeck will choose the configured emulator automatically.'
-      : downloading
-        ? `${downloading.stage || 'Downloading'} · ${Math.round(Number(downloading.progress || 0))}% complete`
-        : installed
-          ? 'Download complete · Unpack locally once to finish setup. The original archive will be kept.'
-        : transferable
-          ? 'One-click RGSX transfer · Progress stays visible while you keep browsing.'
-          : 'Browse the complete public title index, then add a legally owned copy through your local library.';
-  $('#catalogFeatureAction').textContent = ready ? 'Play now' : downloading ? `${downloading.stage || 'Working'} ${Math.round(Number(downloading.progress || 0))}%` : installed ? 'Finish setup' : transferable ? 'Add to my deck' : 'Add owned copy';
+  $('#catalogFeatureMeta').textContent = ready
+    ? 'Ready to play · GameDeck opens this title through RetroArch automatically.'
+    : downloading
+      ? `${downloading.stage || 'Downloading'} · ${Math.round(Number(downloading.progress || 0))}% complete`
+      : installed
+        ? 'Download complete · GameDeck is preparing RetroArch now.'
+        : 'One-tap RGSX play · GameDeck downloads the title and opens RetroArch automatically.';
+  $('#catalogFeatureAction').textContent = ready ? 'Play now' : downloading ? `${downloading.stage || 'Working'} ${Math.round(Number(downloading.progress || 0))}%` : installed ? 'Open in RetroArch' : 'Play with RGSX';
   $('#catalogFeatureAction').disabled = Boolean(downloading);
   $('#catalogSetup').classList.toggle('hidden', state.catalogSystem.playable);
   $('#catalogSetup').textContent = systemNeedsFirmware(state.catalogSystem) ? 'Download firmware' : 'Setup console';
@@ -1428,9 +1483,9 @@ function renderCatalogGames() {
     const ready = installed && game.installedReady !== false;
     const transferable = game.transferAvailable !== false;
     const art = game.art || assetFallback(game.name, '#263347', '#10141c', state.catalogSystem?.name || 'DISCOVER');
-    const facts = [game.region || game.tags?.[0] || 'Catalog', game.size || (transferable ? 'RGSX' : 'Title index')].filter(Boolean);
-    const action = ready ? 'Play' : downloading ? `${Math.round(Number(downloading.progress || 0))}%` : installed ? 'Finish' : transferable ? 'Add' : 'Owned copy';
-    const cardState = ready ? 'IN LIBRARY' : downloading ? escapeHtml(downloading.stage || 'WORKING') : installed ? 'DOWNLOADED' : transferable ? 'AVAILABLE' : 'TITLE INDEX';
+    const facts = [game.region || game.tags?.[0] || 'RGSX', game.size || 'RGSX'].filter(Boolean);
+    const action = ready ? 'Play' : downloading ? `${Math.round(Number(downloading.progress || 0))}%` : installed ? 'Open' : 'Play';
+    const cardState = ready ? 'IN LIBRARY' : downloading ? escapeHtml(downloading.stage || 'WORKING') : installed ? 'OPENING' : 'RGSX READY';
     return `<article class="catalog-game ${game.art ? 'has-art' : 'art-pending'} ${active ? 'active' : ''} ${ready ? 'installed' : ''} ${installed && !ready ? 'downloaded' : ''} ${downloading ? 'downloading' : ''}" tabindex="0" role="listitem" aria-current="${active}" aria-label="Select ${escapeHtml(game.name)} for ${escapeHtml(state.catalogSystem?.name || 'this console')}" style="--delay:${Math.min(index, 14) * 18}ms" data-id="${game.id}"><div class="catalog-media"><img class="catalog-media-backdrop" data-catalog-art="${game.id}" src="${escapeHtml(art)}" alt="" loading="lazy"><img class="catalog-poster" data-catalog-art="${game.id}" src="${escapeHtml(art)}" alt="${escapeHtml(game.name)} artwork" loading="lazy"><span class="catalog-platform">${escapeHtml(state.catalogSystem?.name || 'GAME')}</span><span class="catalog-state">${cardState}</span></div><div class="catalog-info"><b title="${escapeHtml(game.name)}">${escapeHtml(game.name)}</b><small>${facts.map(fact => `<span>${escapeHtml(fact)}</span>`).join('')}</small><p>${escapeHtml(cardDescription(game, state.catalogSystem))}</p><button type="button" class="import" data-id="${game.id}" ${downloading ? 'disabled' : ''}>${action}</button></div></article>`;
   }).join('');
 
@@ -1477,6 +1532,7 @@ function renderCatalogGames() {
   }
   renderCatalogProgress();
   observeVisibleArtwork();
+  games.slice(0, 8).forEach((game, index) => queueMicrotask(() => requestCatalogArtwork(game, index === 0)));
 }
 
 function renderCatalogProgress() {
@@ -1505,11 +1561,6 @@ function showMoreCatalog(focusNext = false) {
 
 async function catalogAction(game) {
   if (!game || !state.catalogSystem) return;
-  if (game.transferAvailable === false && !game.installedFile) {
-    await window.deck.openLibrary();
-    toast(`Add your legally owned copy of ${game.name} through the selected GameDeck library.`);
-    return;
-  }
   if (game.installedFile) {
     if (game.installedReady !== false) {
       await launch(game.installedFile);
@@ -1593,7 +1644,8 @@ function applyCatalogCollection(system, games, enterGames = false) {
   system.count = games.length;
   system.countKnown = true;
   system.installedCount = games.filter(game => game.installedFile).length;
-  $('#catalogCount').textContent = `${system.installedCount.toLocaleString()} installed · ${games.length.toLocaleString()} available · ${system.playable ? 'emulator ready' : 'setup needed'}`;
+  system.rgsxCount = games.length;
+  $('#catalogCount').textContent = `${system.installedCount.toLocaleString()} installed · ${games.length.toLocaleString()} RGSX titles · one-tap RetroArch play`;
   renderConsoleRail();
   if (enterGames && games.length && !state.focusedCatalogId) {
     state.discoverZone = 'games';
@@ -1641,8 +1693,10 @@ function renderConsoleRail() {
     const active = state.catalogSystem?.id === system.id;
     const focused = state.discoverZone === 'systems' && state.focusedConsoleId === system.id;
     const installed = Number(system.installedCount || 0);
-    const titleCount = system.countKnown === false ? 'BROWSE ALL' : `${Number(system.count || 0).toLocaleString()} TITLES`;
-    return `<button type="button" class="console-card ${system.playable ? 'playable' : 'needs-setup'} ${active ? 'active' : ''} ${focused ? 'controller-focus' : ''}" data-id="${escapeHtml(system.id)}" title="${escapeHtml(system.issue || '')}"><span class="console-state">${system.playable ? 'READY' : 'SETUP'}</span><b>${escapeHtml(system.name)}</b><small><span>${titleCount}</span>${installed ? `<span>${installed.toLocaleString()} ON DECK</span>` : ''}</small><img src="${escapeHtml(system.image)}" alt=""></button>`;
+    const rgsxCount = Number(system.count || system.rgsxCount || 0);
+    const titleCount = `${rgsxCount.toLocaleString()} RGSX TITLES`;
+    const consoleState = 'READY';
+    return `<button type="button" class="console-card ${system.playable ? 'playable' : 'needs-setup'} ${active ? 'active' : ''} ${focused ? 'controller-focus' : ''}" data-id="${escapeHtml(system.id)}" title="${escapeHtml(system.issue || '')}"><span class="console-state">${consoleState}</span><b>${escapeHtml(system.name)}</b><small><span>${titleCount}</span>${installed ? `<span>${installed.toLocaleString()} ON DECK</span>` : ''}</small><img src="${escapeHtml(system.image)}" alt=""></button>`;
   }).join('');
   $$('.console-card').forEach(card => {
     card.onclick = () => selectCatalog(card.dataset.id, true);
@@ -1662,8 +1716,8 @@ async function renderDiscover() {
   if (!state.catalogSystem && state.focusedConsoleId) await selectCatalog(state.focusedConsoleId, false);
   else if (state.catalogSystem) {
     $('#catalogTitle').textContent = state.catalogSystem.name;
-    const available = state.catalogSystem.countKnown === false ? 'browse to load' : `${Number(state.catalogSystem.count || 0).toLocaleString()} available`;
-    $('#catalogCount').textContent = `${Number(state.catalogSystem.installedCount || 0).toLocaleString()} installed · ${available} · ${state.catalogSystem.playable ? 'emulator ready' : 'setup needed'}`;
+    const available = `${Number(state.catalogSystem.count || 0).toLocaleString()} RGSX titles`;
+    $('#catalogCount').textContent = `${Number(state.catalogSystem.installedCount || 0).toLocaleString()} installed · ${available} · one-tap RetroArch play`;
     renderCatalogGames();
   }
 }
@@ -2058,6 +2112,8 @@ function render() {
   renderArcadeDeck();
   $('.control-legend').classList.toggle('hidden', community);
   $('.toolbar').classList.toggle('hidden', community);
+  $('#homeAdSlot')?.classList.toggle('hidden', discover || community);
+  $('#discoverAdSlot')?.classList.toggle('hidden', !discover || community);
   $('#libraryTools').classList.toggle('hidden', discover || community);
   $('#discoverTools').classList.toggle('hidden', !discover || community);
   $('#catalogFilter').value = state.catalogFilter;
@@ -2329,11 +2385,16 @@ async function setupFocusedSystem() {
 function updateSearchChrome() {
   const search = $('#search');
   const clear = $('#searchClear');
+  const cancel = $('#searchCancel');
+  const toolbar = $('#libraryToolbar');
   if (!search || !clear) return;
   const hasQuery = Boolean(search.value.trim());
+  const focused = document.activeElement === search;
   clear.classList.toggle('hidden', !hasQuery);
   clear.setAttribute('aria-hidden', String(!hasQuery));
   search.closest('.search')?.classList.toggle('has-query', hasQuery);
+  toolbar?.classList.toggle('search-active', focused || hasQuery);
+  cancel?.classList.toggle('hidden', !focused);
 }
 
 function clearSearch(options = {}) {
@@ -2351,7 +2412,8 @@ function clearSearch(options = {}) {
   }
   updateSearchChrome();
   render();
-  if (options.focus) $('#search').focus();
+  if (options.focus) $('#search').focus({ preventScroll: true });
+  if (options.blur) $('#search').blur();
 }
 
 function setRescanBusy(active) {
@@ -2364,7 +2426,8 @@ function setRescanBusy(active) {
 
 function updateScrollChrome(content = $('.content')) {
   const scrolled = Number(content?.scrollTop || 0) > 24;
-  $('#libraryToolbar')?.classList.toggle('is-stuck', scrolled);
+  const mobile = window.matchMedia('(max-width: 820px), (max-height: 620px) and (orientation: landscape)').matches;
+  $('#libraryToolbar')?.classList.toggle('is-stuck', !mobile && scrolled);
   document.body.classList.toggle('content-scrolled', scrolled);
 }
 
@@ -2372,6 +2435,8 @@ function changeView(view) {
   rememberShelfPosition();
   if (state.view === 'discover' && view !== 'discover') rememberCatalogContext();
   state.view = view;
+  document.body.classList.remove('search-active');
+  $('#search')?.blur();
   state.query = '';
   $('#search').value = view === 'discover' ? state.catalogQuery : '';
   if (view === 'discover') state.discoverZone = 'systems';
@@ -2582,6 +2647,7 @@ async function refreshDiagnostics(includeLibrary = false) {
   const diagnostics = await window.deck.diagnostics(includeLibrary);
   state.diagnostics = diagnostics;
   state.controllerHints = diagnostics.controllers || [];
+  state.controllerProfiles = diagnostics.controllerProfiles || [];
   state.activities = diagnostics.activity || [];
   state.downloads = diagnostics.downloads || [];
   $('#debugHealth').innerHTML = `<span class="${diagnostics.rgsxRuntime ? 'ok' : ''}">DISCOVER ${diagnostics.rgsxRuntime ? 'CONNECTED' : 'OPTIONAL'}</span><span class="${diagnostics.retroarch ? 'ok' : 'bad'}">RETROARCH ${diagnostics.retroarch ? 'READY' : 'MISSING'}</span><span class="${diagnostics.mame ? 'ok' : 'bad'}">MAME ${diagnostics.mame ? 'READY' : 'MISSING'}</span><span>${state.arcadeAudit?.verified || diagnostics.arcade?.verified || 0}/${state.arcadeAudit?.total || diagnostics.arcade?.total || 0} ARCADE VERIFIED</span><span>${diagnostics.systems.filter(system => system.ready).length} EMULATORS</span><span>${diagnostics.downloads.filter(download => download.status === 'running').length} ACTIVE</span>`;
@@ -2748,9 +2814,11 @@ $('#gameSort').onchange = event => {
   writePreference('sort', state.sort);
   render();
 };
-$('#search').oninput = event => {
+let searchRenderTimer = 0;
+
+function commitSearchQuery(value) {
   if (state.view === 'discover') {
-    state.catalogQuery = event.target.value.toLowerCase();
+    state.catalogQuery = value;
     state.focusedCatalogId = null;
     state.catalogLimit = CATALOG_PAGE_SIZE;
     if (state.catalogSystem) {
@@ -2759,12 +2827,56 @@ $('#search').oninput = event => {
     }
     renderCatalogGames();
   } else {
-    state.query = event.target.value.toLowerCase();
+    state.query = value;
     render();
   }
+}
+
+$('#search').onfocus = () => {
+  document.body.classList.add('search-active');
+  updateSearchChrome();
 };
 
-$('#searchClear').onclick = () => clearSearch({ focus: true });
+$('#search').onblur = () => {
+  window.setTimeout(() => {
+    document.body.classList.remove('search-active');
+    updateSearchChrome();
+  }, 80);
+};
+
+$('#search').onkeydown = event => {
+  if (event.key !== 'Enter') return;
+  event.preventDefault();
+  clearTimeout(searchRenderTimer);
+  commitSearchQuery(event.currentTarget.value.trim().toLowerCase());
+  event.currentTarget.blur();
+};
+
+$('#search').oninput = event => {
+  const value = event.target.value.toLowerCase();
+  updateSearchChrome();
+  clearTimeout(searchRenderTimer);
+  searchRenderTimer = window.setTimeout(() => commitSearchQuery(value), 90);
+};
+
+$('#search').onsearch = event => {
+  clearTimeout(searchRenderTimer);
+  commitSearchQuery(event.currentTarget.value.toLowerCase());
+};
+
+$('#searchClear').onclick = event => {
+  event.preventDefault();
+  clearTimeout(searchRenderTimer);
+  clearSearch({ focus: true });
+};
+
+$('#searchCancel').onclick = event => {
+  event.preventDefault();
+  clearTimeout(searchRenderTimer);
+  if ($('#search').value) clearSearch({ blur: true });
+  else $('#search').blur();
+  updateSearchChrome();
+};
 
 document.onkeydown = event => {
   setInputMode('keyboard');
@@ -3008,8 +3120,17 @@ window.addEventListener('pointermove', event => {
 }, { passive: true });
 window.addEventListener('pointerdown', () => setInputMode('pointer'), { passive: true });
 
-document.addEventListener('visibilitychange', () => {
-  if (!document.hidden) scheduleArtworkEnrichment(1000);
+document.addEventListener('visibilitychange', async () => {
+  if (document.hidden) {
+    $('#sessionReturn')?.classList.add('hidden');
+    return;
+  }
+  scheduleArtworkEnrichment(1000);
+  try {
+    state.runtime = await window.deck.runtimeStatus();
+    renderSessionReturn(state.runtime);
+    await refreshDiagnostics();
+  } catch {}
 });
 
 window.addEventListener('gamepadconnected', () => {
@@ -3036,8 +3157,38 @@ window.deck.onArcadeAudit(progress => {
   if (progress.items) applyArcadeAudit(progress);
   renderArcadeDeck();
 });
+function renderSessionReturn(runtime = state.runtime) {
+  const shell = $('#sessionReturn');
+  if (!shell) return;
+  const session = runtime?.lastSession || null;
+  state.lastSession = session;
+  const dismissed = session ? sessionStorage.getItem('gamedeck-session-dismissed') === String(session.launchedAt || '') : false;
+  const recent = session && Number(session.launchedAt || 0) > Date.now() - 24 * 60 * 60 * 1000;
+  shell.classList.toggle('hidden', !recent || dismissed || document.hidden);
+  if (!recent || dismissed) return;
+  $('#sessionReturnTitle').textContent = session.title || 'Continue your game';
+  $('#sessionReturnMessage').textContent = runtime?.embeddedGameplay
+    ? 'Gameplay is running inside GameDeck.'
+    : 'Back in GameDeck · resume instantly or choose another title.';
+  $('#sessionResume').disabled = !session.resumeAvailable;
+}
+
+$('#sessionResume').onclick = () => {
+  const session = state.lastSession;
+  if (!session?.uri) return;
+  $('#sessionReturn').classList.add('hidden');
+  launch(session.uri);
+};
+
+$('#sessionBrowse').onclick = () => {
+  const session = state.lastSession;
+  if (session) sessionStorage.setItem('gamedeck-session-dismissed', String(session.launchedAt || ''));
+  $('#sessionReturn').classList.add('hidden');
+};
+
 window.deck.onRuntime(update => {
   state.runtime = update;
+  renderSessionReturn(update);
   const activePhases = [
     'downloading', 'retrying', 'verifying', 'installing', 'preparing',
     'runtime-download', 'runtime-confirmation', 'core-download', 'core-install',
@@ -3045,7 +3196,12 @@ window.deck.onRuntime(update => {
   ];
   if (activePhases.includes(update.phase)) {
     const progress = Math.max(8, Math.min(98, Number(update.progress || 0)));
-    const title = update.phase === 'runtime-confirmation' ? 'Confirm GameDeck Console' : 'Preparing game engines for one-tap play';
+    const activeGame = state.library.games.find(item => item.file === state.launchingFile) || state.lastSession;
+    const title = update.phase === 'runtime-confirmation'
+      ? 'Confirm GameDeck Console'
+      : update.phase === 'launching'
+        ? `Starting ${activeGame?.title || 'your game'}`
+        : `Preparing ${activeGame?.title || 'your game'}`;
     setLoading(true, title, update.message || 'GameDeck is preparing the correct console automatically.', progress);
   } else if (update.phase === 'ready') {
     setLoading(false);
@@ -3124,8 +3280,9 @@ async function init() {
   setLoading(true, 'Opening your deck', 'Checking local launchers and active transfers.', 10);
   await refreshDiagnostics();
   state.runtime = state.diagnostics?.managedRuntime || await window.deck.runtimeStatus();
+  renderSessionReturn(state.runtime);
   if (state.runtime?.supported && !state.runtime.ready && (state.runtime.bundled || !state.diagnostics?.retroarch)) {
-    setLoading(true, 'Installing the complete GameDeck runtime', 'Preparing the included RetroArch engine and compatible cores. No separate installers are needed.', 14);
+    setLoading(true, 'Preparing game engines', 'Installing the included RetroArch engine and compatible cores. No separate installers are needed.', 14);
     const runtimeResult = await window.deck.ensureRuntime(false);
     state.runtime = runtimeResult;
     await refreshDiagnostics();

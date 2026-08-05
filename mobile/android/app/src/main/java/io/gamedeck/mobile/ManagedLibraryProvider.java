@@ -19,6 +19,7 @@ public final class ManagedLibraryProvider extends ContentProvider {
     private static final String ROOT = "managed-library";
     private static final String PATH_FILES = "files";
     private static final String PATH_RUNTIME = "runtime";
+    private static final String PATH_ARTWORK = "artwork";
 
     static File root(Context context) {
         return new File(context.getFilesDir(), ROOT);
@@ -53,6 +54,29 @@ public final class ManagedLibraryProvider extends ContentProvider {
     }
 
 
+
+    static File artworkRoot(Context context) throws IOException {
+        File root = new File(context.getCacheDir(), "libretro-artwork").getCanonicalFile();
+        if (!root.isDirectory() && !root.mkdirs()) throw new IOException("Could not create artwork cache.");
+        return root;
+    }
+
+    static File artworkFileFor(Context context, String fileName) throws IOException {
+        File root = artworkRoot(context);
+        File file = new File(root, requireSegment(fileName)).getCanonicalFile();
+        if (!file.getPath().startsWith(root.getPath() + File.separator)) throw new IOException("Artwork path escaped its root.");
+        return file;
+    }
+
+    static Uri artworkUriFor(Context context, String fileName) {
+        return new Uri.Builder()
+            .scheme("content")
+            .authority(context.getPackageName() + ".managed")
+            .appendPath(PATH_ARTWORK)
+            .appendPath(requireSegment(fileName))
+            .build();
+    }
+
     static File fileFor(Context context, String folder, String fileName) throws IOException {
         File root = root(context).getCanonicalFile();
         File directory = new File(root, requireSegment(folder)).getCanonicalFile();
@@ -82,6 +106,8 @@ public final class ManagedLibraryProvider extends ContentProvider {
                 file = fileFor(context, segments.get(1), segments.get(2));
             } else if (segments.size() == 2 && PATH_RUNTIME.equals(segments.get(0))) {
                 file = runtimeFileFor(context, segments.get(1));
+            } else if (segments.size() == 2 && PATH_ARTWORK.equals(segments.get(0))) {
+                file = artworkFileFor(context, segments.get(1));
             } else {
                 throw new FileNotFoundException("Unknown managed library URI.");
             }
@@ -113,6 +139,8 @@ public final class ManagedLibraryProvider extends ContentProvider {
         if (name.endsWith(".gb") || name.endsWith(".gbc")) return "application/x-gameboy-rom";
         if (name.endsWith(".zip")) return "application/zip";
         if (name.endsWith(".apk")) return "application/vnd.android.package-archive";
+        if (name.endsWith(".png")) return "image/png";
+        if (name.endsWith(".jpg") || name.endsWith(".jpeg")) return "image/jpeg";
         return "application/octet-stream";
     }
 

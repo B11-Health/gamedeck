@@ -151,3 +151,411 @@ main > aside,
     height: 100% !important;
   }
 }
+
+
+/* One vertical owner: the content pane. This avoids WebView body/content scroll arbitration. */
+html,
+body {
+  overscroll-behavior: none !important;
+}
+
+.content,
+.content article,
+.content section,
+.content .game,
+.content .catalog-game,
+.content .community-card,
+.content .settings-card {
+  touch-action: pan-y pinch-zoom !important;
+}
+
+main > aside,
+.console-rail,
+.app-header .primary-nav,
+.library-tools,
+.discover-tools {
+  touch-action: pan-x pan-y !important;
+  overscroll-behavior-x: contain !important;
+  overscroll-behavior-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (orientation: portrait) and (max-width: 820px) {
+  html,
+  body {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  body {
+    position: fixed !important;
+    inset: 0 !important;
+  }
+
+  main {
+    width: 100% !important;
+    height: 100dvh !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    padding-top: var(--android-header) !important;
+    overflow: hidden !important;
+  }
+
+  main > aside {
+    position: relative !important;
+    top: auto !important;
+    width: 100% !important;
+    height: 64px !important;
+    min-height: 64px !important;
+    flex: 0 0 64px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+  }
+
+  .content {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    flex: 1 1 auto !important;
+    overflow-x: hidden !important;
+    overflow-y: scroll !important;
+    overscroll-behavior-x: none !important;
+    overscroll-behavior-y: auto !important;
+    touch-action: pan-y pinch-zoom !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 620px) {
+  .content {
+    min-height: 0 !important;
+    overflow-y: scroll !important;
+    overscroll-behavior-y: auto !important;
+    touch-action: pan-y pinch-zoom !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+}
+
+/* Mobile search: one predictable document-flow surface. */
+.search-cancel { display: none; }
+
+@media (max-width: 820px), (hover: none) and (pointer: coarse) {
+  #libraryToolbar,
+  #libraryToolbar.is-stuck {
+    position: static !important;
+    z-index: auto !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+    width: 100% !important;
+    margin: 0 0 12px !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+  }
+
+  #libraryToolbar .toolbar-cluster {
+    width: 100% !important;
+    min-width: 0 !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    align-items: center !important;
+    gap: 8px !important;
+  }
+
+  #libraryToolbar.search-active .toolbar-cluster {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+  }
+
+  #libraryToolbar .search {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: 48px !important;
+    padding: 0 9px 0 13px !important;
+    border: 1px solid #344154 !important;
+    border-radius: 15px !important;
+    color: #9aa7b8 !important;
+    background: #0d141d !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+  }
+
+  #libraryToolbar .search:focus-within {
+    border-color: #70d8f2 !important;
+    background: #101a25 !important;
+    box-shadow: 0 0 0 2px #70d8f21f !important;
+  }
+
+  #libraryToolbar .search-icon {
+    position: relative;
+    width: 18px !important;
+    height: 18px !important;
+    flex: 0 0 18px;
+    border: 0 !important;
+    border-radius: 0 !important;
+    color: #7f8da0 !important;
+    background: transparent !important;
+  }
+
+  #libraryToolbar .search-icon::before {
+    content: '';
+    position: absolute;
+    top: 1px;
+    left: 1px;
+    width: 10px;
+    height: 10px;
+    border: 1.8px solid currentColor;
+    border-radius: 50%;
+  }
+
+  #libraryToolbar .search-icon::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    bottom: 3px;
+    width: 7px;
+    height: 1.8px;
+    border-radius: 2px;
+    background: currentColor;
+    transform: rotate(45deg);
+    transform-origin: right center;
+  }
+
+  #libraryToolbar .search:focus-within .search-icon { color: #70d8f2 !important; }
+
+  #libraryToolbar .search input {
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 100% !important;
+    padding: 0 9px !important;
+    border: 0 !important;
+    outline: 0 !important;
+    color: #f4f7fb !important;
+    background: transparent !important;
+    font-size: 16px !important;
+    line-height: 1.2 !important;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  #libraryToolbar .search input::-webkit-search-cancel-button,
+  #libraryToolbar .search input::-webkit-search-decoration { display: none; }
+  #libraryToolbar .search input::placeholder { color: #7f8da0 !important; opacity: 1; }
+  #libraryToolbar .search > kbd,
+  #libraryToolbar .toolbar-context { display: none !important; }
+
+  #libraryToolbar .search-clear {
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    min-height: 32px !important;
+    border: 0 !important;
+    border-radius: 50% !important;
+    color: #c4cfdd !important;
+    background: #1a2532 !important;
+    box-shadow: none !important;
+    font-size: 19px !important;
+  }
+
+  #libraryToolbar .search-cancel:not(.hidden) {
+    min-width: 58px;
+    min-height: 44px;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px !important;
+    border: 0 !important;
+    color: #8edfff;
+    background: transparent !important;
+    box-shadow: none !important;
+    font-size: 12px !important;
+    font-weight: 750;
+  }
+
+  #libraryToolbar .library-tools,
+  #libraryToolbar .discover-tools {
+    grid-column: 1 / -1;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 40px;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    padding: 0 0 2px !important;
+    scrollbar-width: none;
+  }
+
+  #libraryToolbar .library-tools::-webkit-scrollbar,
+  #libraryToolbar .discover-tools::-webkit-scrollbar { display: none; }
+  #libraryToolbar .library-tools.hidden,
+  #libraryToolbar .discover-tools.hidden { display: none !important; }
+
+  #libraryToolbar .result-count {
+    min-width: 0 !important;
+    overflow: hidden;
+    color: #93a0b2 !important;
+    font-size: 10px !important;
+    line-height: 1.2 !important;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  #libraryToolbar .catalog-filter-control {
+    min-width: 126px !important;
+    min-height: 40px !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+  }
+
+  #libraryToolbar .catalog-filter-control > span { display: none !important; }
+  #libraryToolbar .catalog-filter-control select {
+    width: 100% !important;
+    min-width: 126px !important;
+    height: 40px !important;
+    padding: 0 30px 0 11px !important;
+    border: 1px solid #2d3949 !important;
+    border-radius: 12px !important;
+    color: #d9e1eb !important;
+    background-color: #101823 !important;
+    font-size: 12px !important;
+  }
+}
+
+@media (orientation: portrait) and (max-width: 820px) {
+  #libraryToolbar .library-tools {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 7px !important;
+  }
+
+  #libraryToolbar .discover-tools {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    align-items: center !important;
+    gap: 8px !important;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 620px) {
+  #libraryToolbar,
+  #libraryToolbar.is-stuck {
+    position: static !important;
+    top: auto !important;
+    margin: 0 0 9px !important;
+    padding: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  #libraryToolbar .toolbar-cluster {
+    grid-template-columns: minmax(220px, .8fr) minmax(0, 1.2fr) !important;
+    gap: 8px !important;
+  }
+
+  #libraryToolbar.search-active .toolbar-cluster {
+    grid-template-columns: minmax(220px, .8fr) auto minmax(0, 1.2fr) !important;
+  }
+
+  #libraryToolbar .search { height: 44px !important; }
+  #libraryToolbar .library-tools,
+  #libraryToolbar .discover-tools {
+    grid-column: auto;
+    width: auto !important;
+    min-width: 0 !important;
+  }
+}
+
+/* Ad placeholders reserve stable, non-interruptive inventory. No ads overlay gameplay. */
+.ad-slot { display: none; }
+.gamedeck-android .ad-slot:not(.hidden) {
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border: 1px dashed #3a4657;
+  border-radius: 14px;
+  color: #7d899a;
+  background: #0b1118;
+  contain: layout paint;
+}
+.gamedeck-android .ad-slot small {
+  flex: none;
+  color: #687487;
+  font-size: 7px;
+  font-weight: 850;
+  letter-spacing: 1.1px;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+.gamedeck-android .ad-slot div { min-width: 0; }
+.gamedeck-android .ad-slot b,
+.gamedeck-android .ad-slot span { display: block; }
+.gamedeck-android .ad-slot b { color: #aab5c3; font-size: 10px; }
+.gamedeck-android .ad-slot span { margin-top: 2px; font-size: 8px; line-height: 1.35; }
+body.search-active .ad-slot { display: none !important; }
+
+/* External RetroArch returns into one compact GameDeck continuation surface. */
+.session-return {
+  position: fixed;
+  z-index: 115;
+  right: 12px;
+  bottom: max(12px, env(safe-area-inset-bottom));
+  left: 12px;
+  min-height: 70px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid #3a4b5f;
+  border-radius: 17px;
+  background: #0a111af5;
+  box-shadow: 0 16px 45px #000b;
+}
+.session-return.hidden { display: none !important; }
+.session-return-mark {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  color: #071116;
+  background: #72e7ff;
+  font-size: 13px;
+}
+.session-return div { min-width: 0; }
+.session-return small,
+.session-return b,
+.session-return div > span { display: block; }
+.session-return small { color: #72e7ff; font-size: 7px; font-weight: 850; letter-spacing: 1px; }
+.session-return b { overflow: hidden; margin-top: 2px; color: #edf4fb; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.session-return div > span { margin-top: 2px; color: #8794a6; font-size: 8px; }
+.session-return button { min-height: 42px; padding-inline: 12px; }
+
+@media (max-width: 560px) {
+  .gamedeck-android .ad-slot:not(.hidden) { min-height: 58px; margin-bottom: 11px; }
+  .session-return {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 8px;
+  }
+  .session-return #sessionBrowse { grid-column: 2 / -1; min-height: 34px; }
+  .session-return div > span { white-space: normal; }
+}
+
+@media (orientation: landscape) and (max-height: 620px) {
+  .gamedeck-android .ad-slot:not(.hidden) { min-height: 50px; padding-block: 7px; }
+  .session-return { right: 16px; bottom: 8px; left: 16px; min-height: 58px; padding: 7px 9px; }
+  .session-return-mark { width: 34px; height: 34px; }
+  .session-return button { min-height: 36px; }
+}

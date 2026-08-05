@@ -1,16 +1,25 @@
 package io.gamedeck.mobile;
 
 import android.app.Activity;
+import android.app.ActivityOptions;
+import android.app.PendingIntent;
 import android.content.ComponentName;
+import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.Build;
+import android.os.Environment;
+import android.provider.MediaStore;
 import android.provider.OpenableColumns;
 import android.provider.Settings;
+import android.window.SplashScreen;
 
 import org.json.JSONObject;
 
@@ -29,9 +38,12 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -43,6 +55,16 @@ final class AndroidRuntimeManager {
     private static final String PENDING_MIME = "runtime_pending_mime";
     private static final String PENDING_SYSTEM = "runtime_pending_system";
     private static final String PENDING_INSTALLER_PRESENTED = "runtime_installer_presented";
+    private static final String LAST_SESSION_URI = "runtime_last_session_uri";
+    private static final String LAST_SESSION_MIME = "runtime_last_session_mime";
+    private static final String LAST_SESSION_SYSTEM = "runtime_last_session_system";
+    private static final String LAST_SESSION_TITLE = "runtime_last_session_title";
+    private static final String LAST_SESSION_AT = "runtime_last_session_at";
+    private static final String CORE_SIDELOAD_PREFIX = "runtime_core_sideloaded_";
+    private static final String LAST_CONTROLLER_LABEL = "runtime_last_controller_label";
+    private static final String LAST_TOUCH_OVERLAY = "runtime_last_touch_overlay";
+    private static final String LAST_LAUNCH_ROUTE = "runtime_last_launch_route";
+    private static final String LAST_LAUNCH_CONFIG = "runtime_last_launch_config";
     private static final String RUNTIME_PACKAGE = "com.retroarch.aarch64";
     private static final String RUNTIME_APK = "RetroArch_aarch64.apk";
     private static final String RUNTIME_VERSION = "1.22.2";
@@ -135,6 +157,28 @@ final class AndroidRuntimeManager {
             value.put("message", message);
             value.put("oneClickPlay", true);
             value.put("pendingLaunch", hasPendingLaunch());
+            value.put("sessionMode", "external-return-shell");
+            value.put("embeddedGameplay", false);
+            boolean controllerDetected = activity instanceof MainActivity && ((MainActivity) activity).hasActiveGameController();
+            value.put("controllerDetected", controllerDetected);
+            value.put("controllerLabel", controllerDetected
+                ? ((MainActivity) activity).activeGameControllerLabel()
+                : preferences.getString(LAST_CONTROLLER_LABEL, "Touch controls"));
+            value.put("touchOverlay", preferences.getBoolean(LAST_TOUCH_OVERLAY, !controllerDetected));
+            value.put("launchRoute", preferences.getString(LAST_LAUNCH_ROUTE, "automatic"));
+            value.put("launchConfig", preferences.getString(LAST_LAUNCH_CONFIG, ""));
+            value.put("launchPresentation", "gamedeck-splash");
+            String lastUri = preferences.getString(LAST_SESSION_URI, "");
+            if (lastUri != null && !lastUri.isEmpty()) {
+                JSONObject lastSession = new JSONObject();
+                lastSession.put("uri", lastUri);
+                lastSession.put("mimeType", preferences.getString(LAST_SESSION_MIME, "application/octet-stream"));
+                lastSession.put("systemId", preferences.getString(LAST_SESSION_SYSTEM, ""));
+                lastSession.put("title", preferences.getString(LAST_SESSION_TITLE, "Last game"));
+                lastSession.put("launchedAt", preferences.getLong(LAST_SESSION_AT, 0));
+                lastSession.put("resumeAvailable", ready);
+                value.put("lastSession", lastSession);
+            }
         } catch (Exception ignored) {}
         return value.toString();
     }
@@ -272,12 +316,41 @@ final class AndroidRuntimeManager {
         }
 
         File core = ensureCore(artifact);
-        File content = stageContent(Uri.parse(uriValue), mimeType, system.id);
+        Uri contentUri = Uri.parse(uriValue);
+        String sessionTitle = displayName(contentUri);
+        File content = stageContent(contentUri, mimeType, system.id);
+        boolean controllerDetected = activity instanceof MainActivity && ((MainActivity) activity).hasActiveGameController();
+        String controllerLabel = controllerDetected
+            ? ((MainActivity) activity).activeGameControllerLabel()
+            : "Touch controls";
+        boolean previouslyLaunched = system.id.equals(preferences.getString(LAST_SESSION_SYSTEM, ""))
+            && preferences.getLong(LAST_SESSION_AT, 0) > 0;
+        boolean directReady = preferences.getBoolean(coreSideloadKey(runtimePackage, artifact), false) || previouslyLaunched;
+        File config = writeLaunchConfig(runtimePackage, controllerDetected);
+        String launchRoute = directReady ? "direct-native" : "first-core-sideload";
+        preferences.edit()
+            .putString(LAST_SESSION_URI, uriValue)
+            .putString(LAST_SESSION_MIME, mimeType)
+            .putString(LAST_SESSION_SYSTEM, system.id)
+            .putString(LAST_SESSION_TITLE, sessionTitle == null || sessionTitle.trim().isEmpty() ? content.getName() : sessionTitle)
+            .putLong(LAST_SESSION_AT, System.currentTimeMillis())
+            .putString(LAST_CONTROLLER_LABEL, controllerLabel)
+            .putBoolean(LAST_TOUCH_OVERLAY, !controllerDetected)
+            .putString(LAST_LAUNCH_ROUTE, launchRoute)
+            .putString(LAST_LAUNCH_CONFIG, config.getAbsolutePath())
+            .apply();
         phase = "launching";
-        progress = 100;
-        message = "Opening " + content.getName() + " with GameDeck Console.";
+        progress = directReady ? 96 : 90;
+        message = controllerDetected
+            ? controllerLabel + " detected — touch controls are hidden. Starting " + content.getName() + "."
+            : "Starting " + content.getName() + " with touch controls ready.";
         notifyRuntimeChanged();
-        startRetroSideloadActivity(runtimePackage, core, content);
+        if (directReady) {
+            startRetroNativeActivity(runtimePackage, artifact, content, config);
+        } else {
+            startRetroSideloadActivity(runtimePackage, core, content);
+            preferences.edit().putBoolean(coreSideloadKey(runtimePackage, artifact), true).apply();
+        }
         clearPending();
         installing = false;
         phase = "ready";
@@ -375,6 +448,70 @@ final class AndroidRuntimeManager {
         return output;
     }
 
+    private String coreSideloadKey(String packageName, Artifact artifact) throws Exception {
+        return CORE_SIDELOAD_PREFIX + shortDigest(packageName + ":" + artifact.sha256);
+    }
+
+    private void startRetroNativeActivity(String packageName, Artifact artifact, File content, File config) throws Exception {
+        ApplicationInfo application = context.getPackageManager().getApplicationInfo(packageName, 0);
+        String dataDir = application.dataDir;
+        File targetCore = new File(new File(dataDir, "cores"), artifact.library);
+        Intent intent = new Intent();
+        intent.setComponent(new ComponentName(packageName, "com.retroarch.browser.retroactivity.RetroActivityFuture"));
+        intent.putExtra("ROM", content.getAbsolutePath());
+        intent.putExtra("LIBRETRO", targetCore.getAbsolutePath());
+        intent.putExtra("CONFIGFILE", config.getAbsolutePath());
+        intent.putExtra("IME", Settings.Secure.getString(context.getContentResolver(), "default_input_method"));
+        intent.putExtra("DATADIR", dataDir);
+        intent.putExtra("APK", application.sourceDir);
+        intent.putExtra("SDCARD", Environment.getExternalStorageDirectory().getAbsolutePath());
+        File external = new File(Environment.getExternalStorageDirectory(), "Android/data/" + packageName + "/files");
+        intent.putExtra("EXTERNAL", external.getAbsolutePath());
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP
+            | Intent.FLAG_ACTIVITY_SINGLE_TOP
+            | Intent.FLAG_ACTIVITY_NEW_TASK
+            | Intent.FLAG_ACTIVITY_NO_ANIMATION);
+        sendRetroIntent(intent, artifact.library, content.getAbsolutePath());
+    }
+
+    private File writeLaunchConfig(String packageName, boolean controllerDetected) throws IOException {
+        String fileName = controllerDetected ? "gamedeck-gamepad.cfg" : "gamedeck-touch.cfg";
+        String retroarchDefault = new File(
+            new File(Environment.getExternalStorageDirectory(), "Android/data/" + packageName + "/files"),
+            "retroarch.cfg"
+        ).getAbsolutePath();
+        String escapedDefault = retroarchDefault.replace("\\", "\\\\").replace("\"", "\\\"");
+        String overlayEnabled = controllerDetected ? "false" : "true";
+        String autoPreferred = controllerDetected ? "false" : "true";
+        String overlayOpacity = controllerDetected ? "0.000000" : "0.700000";
+        String config = "# GameDeck per-launch RetroArch profile\n"
+            + "#include \"" + escapedDefault + "\"\n"
+            + "input_overlay_hide_when_gamepad_connected = \"true\"\n"
+            + "input_overlay_enable_autopreferred = \"" + autoPreferred + "\"\n"
+            + "input_overlay_enable = \"" + overlayEnabled + "\"\n"
+            + "input_overlay_opacity = \"" + overlayOpacity + "\"\n"
+            + "input_overlay_hide_in_menu = \"true\"\n"
+            + "input_osk_overlay_enable = \"false\"\n"
+            + "menu_show_load_content_animation = \"false\"\n"
+            + "notification_show_autoconfig = \"false\"\n"
+            + "notification_show_autoconfig_fails = \"false\"\n"
+            + "notification_show_remap_load = \"false\"\n"
+            + "pause_nonactive = \"false\"\n"
+            + "video_fullscreen = \"true\"\n"
+            + "config_save_on_exit = \"false\"\n";
+
+        File profileDir = new File(sharedRuntimeRoot(), "profiles");
+        if (!profileDir.isDirectory() && !profileDir.mkdirs()) {
+            throw new IOException("Could not create the GameDeck launch profile directory.");
+        }
+        File profile = new File(profileDir, fileName);
+        writeSmallText(profile, config);
+        if (!profile.setReadable(true, false) && !profile.canRead()) {
+            throw new IOException("The GameDeck RetroArch profile is not readable.");
+        }
+        return profile;
+    }
+
     private void startRetroSideloadActivity(String packageName, File core, File content) throws Exception {
         if (!core.setReadable(true, false) && !core.canRead()) {
             throw new IOException("The staged console core is not readable.");
@@ -386,14 +523,55 @@ final class AndroidRuntimeManager {
         intent.setComponent(new ComponentName(packageName, "com.retroarch.browser.debug.CoreSideloadActivity"));
         intent.putExtra("LIBRETRO", core.getAbsolutePath());
         intent.putExtra("ROM", content.getAbsolutePath());
-        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP
+            | Intent.FLAG_ACTIVITY_SINGLE_TOP
+            | Intent.FLAG_ACTIVITY_NEW_TASK
+            | Intent.FLAG_ACTIVITY_NO_ANIMATION);
+        sendRetroIntent(intent, core.getAbsolutePath(), content.getAbsolutePath());
+
+    }
+
+    private void sendRetroIntent(Intent intent, String routeKey, String contentKey) throws Exception {
+        ActivityOptions creatorOptions = ActivityOptions.makeBasic();
+        ActivityOptions senderOptions = ActivityOptions.makeBasic();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            creatorOptions.setSplashScreenStyle(SplashScreen.SPLASH_SCREEN_STYLE_SOLID_COLOR);
+            senderOptions.setSplashScreenStyle(SplashScreen.SPLASH_SCREEN_STYLE_SOLID_COLOR);
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            int mode = Build.VERSION.SDK_INT >= 36
+                ? ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOW_IF_VISIBLE
+                : ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED;
+            creatorOptions.setPendingIntentCreatorBackgroundActivityStartMode(mode);
+            senderOptions.setPendingIntentBackgroundActivityStartMode(mode);
+        }
+        int requestCode = 0x4744 ^ routeKey.hashCode() ^ contentKey.hashCode();
+        PendingIntent pendingLaunch = PendingIntent.getActivity(
+            activity,
+            requestCode,
+            intent,
+            PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE,
+            creatorOptions.toBundle()
+        );
+        CountDownLatch launched = new CountDownLatch(1);
+        AtomicReference<Exception> failure = new AtomicReference<>();
         activity.runOnUiThread(() -> {
             try {
-                activity.startActivity(intent);
+                pendingLaunch.send(activity, 0, null, null, null, null, senderOptions.toBundle());
+                activity.overridePendingTransition(0, 0);
             } catch (Exception error) {
-                fail("The installed console does not expose the required GameDeck core handoff.");
+                failure.set(error);
+            } finally {
+                launched.countDown();
             }
         });
+        if (!launched.await(8, TimeUnit.SECONDS)) {
+            throw new IOException("Android timed out while opening RetroArch.");
+        }
+        Exception error = failure.get();
+        if (error != null) {
+            throw new IOException("Android rejected the RetroArch handoff: " + safeMessage(error));
+        }
     }
 
     private void presentRuntimeInstaller(File apk) {
@@ -472,7 +650,7 @@ final class AndroidRuntimeManager {
         connection.setConnectTimeout(20_000);
         connection.setReadTimeout(60_000);
         connection.setInstanceFollowRedirects(false);
-        connection.setRequestProperty("User-Agent", "GameDeck-Android/0.4.4-console");
+        connection.setRequestProperty("User-Agent", "GameDeck-Android/0.5.7-overlay");
         int status = connection.getResponseCode();
         if (status >= 300 && status < 400) {
             String location = connection.getHeaderField("Location");

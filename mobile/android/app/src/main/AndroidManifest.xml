@@ -3,6 +3,7 @@
   <uses-permission android:name="android.permission.INTERNET" />
   <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
   <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+  <uses-permission android:name="android.permission.REORDER_TASKS" />
   <uses-feature android:name="android.hardware.gamepad" android:required="false" />
   <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
 
@@ -20,7 +21,7 @@
   <application
       android:allowBackup="true"
       android:hardwareAccelerated="true"
-      android:label="GameDeck Desktop Preview"
+      android:label="GameDeck Latest QA"
       android:theme="@style/AppTheme"
       android:usesCleartextTraffic="true">
     <provider
