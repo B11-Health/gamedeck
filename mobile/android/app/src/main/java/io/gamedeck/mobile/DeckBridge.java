@@ -8,6 +8,7 @@ import android.net.Uri;
 import android.util.Log;
 import android.webkit.JavascriptInterface;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.File;
@@ -15,6 +16,7 @@ import java.io.File;
 final class DeckBridge {
     private static final String RENDERER_TAG = "GameDeckRenderer";
     private static final String QA_TAG = "GameDeckVisualQA";
+    private static final String RGSX_TAG = "GameDeckRgsx";
     private static final String DEBUG_FIXTURE_FILE = "renderer-fixture.enabled";
     private final MainActivity activity;
     private final AndroidRuntimeManager runtime;
@@ -35,7 +37,7 @@ final class DeckBridge {
             boolean debuggable = (activity.getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
             value.put("platform", "android");
             value.put("platformKey", AndroidRuntimeManager.PLATFORM_KEY);
-            value.put("version", "0.3.3-orientation-polish");
+            value.put("version", "0.4.0-rgsx-get");
             value.put("localFirst", true);
             value.put("accountRequired", false);
             value.put("embeddedRuntimeReady", false);
@@ -94,8 +96,48 @@ final class DeckBridge {
     }
 
     @JavascriptInterface
+    public String catalogSystems() {
+        return rgsx.catalogSystems();
+    }
+
+    @JavascriptInterface
+    public String catalogGames(String source) {
+        return rgsx.catalogGames(source == null ? "" : source);
+    }
+
+    @JavascriptInterface
+    public String importOwned(String source, String folder, String title, String fileName) {
+        return rgsx.importOwned(
+            source == null ? "" : source,
+            folder == null ? "" : folder,
+            title == null ? "" : title,
+            fileName == null ? "" : fileName
+        );
+    }
+
+    @JavascriptInterface
+    public String downloads() {
+        return rgsx.downloads();
+    }
+
+    @JavascriptInterface
+    public String retryDownload(String taskId) {
+        return rgsx.retry(taskId == null ? "" : taskId);
+    }
+
+    @JavascriptInterface
+    public String pauseDownload(String taskId) {
+        return rgsx.pause(taskId == null ? "" : taskId);
+    }
+
+    @JavascriptInterface
+    public String dismissDownload(String taskId) {
+        return rgsx.dismiss(taskId == null ? "" : taskId);
+    }
+
+    @JavascriptInterface
     public void chooseRgsxRoot() {
-        activity.chooseTree(MainActivity.REQUEST_RGSX);
+        // RGSX is intentionally automatic on Android.
     }
 
     @JavascriptInterface
@@ -134,6 +176,39 @@ final class DeckBridge {
     public void reportQaState(String payload) {
         if (!isDebugFixtureEnabled()) return;
         Log.i(QA_TAG, "GAMEDECK_QA_STATE " + safeLog(payload));
+    }
+
+    void runRgsxQaDownload() {
+        if (!isDebugFixtureEnabled()) return;
+        String queued = rgsx.qaDownloadDemo();
+        Log.i(RGSX_TAG, "GAMEDECK_RGSX_QA queued " + safeLog(queued));
+        new Thread(() -> {
+            String taskId = "";
+            try {
+                taskId = new JSONObject(queued).optString("taskId", "");
+            } catch (Exception ignored) {}
+            long deadline = System.currentTimeMillis() + 15_000;
+            while (System.currentTimeMillis() < deadline) {
+                try {
+                    JSONArray rows = new JSONArray(rgsx.downloads());
+                    for (int index = 0; index < rows.length(); index++) {
+                        JSONObject job = rows.optJSONObject(index);
+                        if (job == null || !taskId.equals(job.optString("taskId"))) continue;
+                        String status = job.optString("status", "");
+                        if ("complete".equals(status)) {
+                            Log.i(RGSX_TAG, "GAMEDECK_RGSX_QA complete " + safeLog(job.toString()));
+                            return;
+                        }
+                        if ("error".equals(status)) {
+                            Log.e(RGSX_TAG, "GAMEDECK_RGSX_QA error " + safeLog(job.toString()));
+                            return;
+                        }
+                    }
+                    Thread.sleep(100);
+                } catch (Exception ignored) {}
+            }
+            Log.e(RGSX_TAG, "GAMEDECK_RGSX_QA timeout taskId=" + safeLog(taskId));
+        }, "GameDeck-RGSX-QA").start();
     }
 
     private boolean isDebugFixtureEnabled() {
