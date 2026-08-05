@@ -15,6 +15,7 @@ import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Insets;
 import android.net.Uri;
+import android.util.Log;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
@@ -28,6 +29,7 @@ import android.view.View;
 import android.view.WindowInsets;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -37,11 +39,16 @@ import android.widget.FrameLayout;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.BufferedInputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -79,6 +86,7 @@ public class MainActivity extends Activity {
     }
 
     private void buildWebView() {
+        if (isDebugBuild()) WebView.setWebContentsDebuggingEnabled(true);
         rootView = new FrameLayout(this);
         rootView.setBackgroundColor(Color.rgb(9, 11, 16));
 
@@ -99,12 +107,18 @@ public class MainActivity extends Activity {
         settings.setBuiltInZoomControls(false);
         settings.setDisplayZoomControls(false);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) settings.setOffscreenPreRaster(true);
-        settings.setUserAgentString(settings.getUserAgentString() + " GameDeckAndroid/0.5.9-artwork");
+        settings.setUserAgentString(settings.getUserAgentString() + " GameDeckAndroid/" + AppVersion.name(this));
 
         bridge = new DeckBridge(this);
         exposeBridge();
         webView.setWebChromeClient(new WebChromeClient());
         webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+                WebResourceResponse artwork = artworkResponse(request == null ? null : request.getUrl());
+                return artwork == null ? super.shouldInterceptRequest(view, request) : artwork;
+            }
+
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri uri = request.getUrl();
@@ -138,6 +152,34 @@ public class MainActivity extends Activity {
         );
         setContentView(rootView);
         applySystemBarInsets(rootView);
+    }
+
+    private WebResourceResponse artworkResponse(Uri uri) {
+        if (uri == null
+            || !"https".equalsIgnoreCase(uri.getScheme())
+            || !"artwork.gamedeck.local".equalsIgnoreCase(uri.getHost())) return null;
+        List<String> segments = uri.getPathSegments();
+        if (segments.size() != 2 || !"artwork".equals(segments.get(0))) return null;
+        try {
+            File file = ManagedLibraryProvider.artworkFileFor(this, segments.get(1));
+            if (!file.isFile() || file.length() < 128) return null;
+            if (isDebugBuild()) Log.d("GameDeckArtwork", "Serving cached artwork: " + file.getName());
+            Map<String, String> headers = new HashMap<>();
+            headers.put("Cache-Control", "private, max-age=604800, immutable");
+            headers.put("Access-Control-Allow-Origin", "*");
+            headers.put("X-Content-Type-Options", "nosniff");
+            return new WebResourceResponse(
+                "image/png",
+                null,
+                200,
+                "OK",
+                headers,
+                new BufferedInputStream(new FileInputStream(file))
+            );
+        } catch (Exception error) {
+            if (isDebugBuild()) Log.w("GameDeckArtwork", "Could not serve cached artwork.", error);
+            return null;
+        }
     }
 
     private void applySystemBarInsets(View target) {
@@ -286,6 +328,14 @@ public class MainActivity extends Activity {
             writeRendererQaSnapshot();
             return;
         }
+        if ("artwork:renderer".equals(command)) {
+            writeArtworkRendererQaSnapshot();
+            return;
+        }
+        if ("artwork:known".equals(command)) {
+            qaIo.execute(bridge::writeKnownArtworkQaSnapshot);
+            return;
+        }
         if (command.startsWith("e2e:queue:")) {
             String[] parts = command.substring("e2e:queue:".length()).split(":", 2);
             String folder = parts.length > 0 ? parts[0] : "";
@@ -366,6 +416,19 @@ public class MainActivity extends Activity {
 
 
 
+
+    private void writeArtworkRendererQaSnapshot() {
+        if (webView == null) return;
+        String script = "(()=>JSON.stringify({capturedAt:Date.now(),cards:[...document.querySelectorAll('.game')].slice(0,16).map(card=>{const image=card.querySelector('[data-game-art]');const src=image?.currentSrc||image?.src||'';return{title:card.querySelector('.meta b')?.textContent||image?.alt||'',src,complete:!!image?.complete,width:Number(image?.naturalWidth||0),height:Number(image?.naturalHeight||0),generated:src.startsWith('data:image/svg+xml'),hasArt:card.classList.contains('has-art'),missingArt:card.classList.contains('missing-art'),status:card.querySelector('.art-status')?.textContent||''}})}))()";
+        webView.post(() -> webView.evaluateJavascript(script, raw -> {
+            try {
+                String decoded = new JSONArray("[" + (raw == null ? "null" : raw) + "]").optString(0, "{}");
+                writeQaTextArtifact("artwork-renderer.json", decoded == null || decoded.isEmpty() ? "{}" : decoded);
+            } catch (Exception error) {
+                writeQaTextArtifact("artwork-renderer.json", "{\"ok\":false,\"error\":\"artwork-renderer-snapshot-failed\"}");
+            }
+        }));
+    }
 
     private void writeRendererQaSnapshot() {
         if (webView == null) return;

@@ -77,6 +77,15 @@ public final class ManagedLibraryProvider extends ContentProvider {
             .build();
     }
 
+    static Uri artworkWebUriFor(String fileName) {
+        return new Uri.Builder()
+            .scheme("https")
+            .authority("artwork.gamedeck.local")
+            .appendPath(PATH_ARTWORK)
+            .appendPath(requireSegment(fileName))
+            .build();
+    }
+
     static File fileFor(Context context, String folder, String fileName) throws IOException {
         File root = root(context).getCanonicalFile();
         File directory = new File(root, requireSegment(folder)).getCanonicalFile();

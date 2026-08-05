@@ -48,7 +48,7 @@ final class DeckBridge {
             boolean debuggable = (activity.getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
             value.put("platform", "android");
             value.put("platformKey", AndroidRuntimeManager.PLATFORM_KEY);
-            value.put("version", "0.5.9-artwork");
+            value.put("version", AppVersion.name(activity));
             value.put("localFirst", true);
             value.put("accountRequired", false);
             value.put("embeddedRuntimeReady", runtime.externalAvailable());
@@ -391,6 +391,48 @@ final class DeckBridge {
             "e2e-artwork-" + safeArtifactPart(folder) + "-" + Math.max(0, rank) + ".json",
             output.toString()
         );
+    }
+
+    void writeKnownArtworkQaSnapshot() {
+        if (!isDebugFixtureEnabled()) return;
+        String[][] rows = new String[][]{
+            {"'89 Dennou Kyuusei Uranai (Japan)", "nes", "nes"},
+            {"3 Ninjas Kick Back (USA)", "snes", "snes"},
+            {"Animaniacs (USA)", "snes", "snes"},
+            {"Super Mario All-Stars (USA)", "snes", "snes"},
+            {"Chrono Trigger (USA)", "snes", "snes"}
+        };
+        JSONArray results = new JSONArray();
+        for (String[] row : rows) {
+            JSONObject item = new JSONObject();
+            try {
+                String uri = artwork.artwork(row[0], row[1], row[2]);
+                item.put("title", row[0]);
+                item.put("system", row[1]);
+                item.put("uri", uri == null ? "" : uri);
+                item.put("ok", uri != null && !uri.isEmpty());
+                if (uri != null && !uri.isEmpty()) {
+                    Uri parsed = Uri.parse(uri);
+                    String fileName = parsed.getLastPathSegment();
+                    File file = ManagedLibraryProvider.artworkFileFor(activity, fileName == null ? "" : fileName);
+                    item.put("file", file.getName());
+                    item.put("exists", file.isFile());
+                    item.put("bytes", file.isFile() ? file.length() : 0);
+                }
+            } catch (Exception error) {
+                try {
+                    item.put("ok", false);
+                    item.put("error", error.getMessage() == null ? error.getClass().getSimpleName() : error.getMessage());
+                } catch (Exception ignored) {}
+            }
+            results.put(item);
+        }
+        JSONObject output = new JSONObject();
+        try {
+            output.put("ok", true);
+            output.put("results", results);
+        } catch (Exception ignored) {}
+        activity.writeQaTextArtifact("artwork-known.json", output.toString());
     }
 
     void writeE2eState() {

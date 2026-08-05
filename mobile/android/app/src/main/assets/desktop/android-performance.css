@@ -559,3 +559,18 @@ body.search-active .ad-slot { display: none !important; }
   .session-return-mark { width: 34px; height: 34px; }
   .session-return button { min-height: 36px; }
 }
+
+/* Mobile shelves stay unobstructed and content-first. */
+.gamedeck-android .session-return,
+.gamedeck-android .transfer-dock.complete,
+.gamedeck-android .ad-slot,
+.gamedeck-android .ad-slot:not(.hidden) {
+  display: none !important;
+}
+
+.gamedeck-android .ad-slot,
+.gamedeck-android .ad-slot:not(.hidden) {
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}

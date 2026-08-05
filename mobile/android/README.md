@@ -2,9 +2,9 @@
 
 This module packages GameDeck's shared desktop renderer with an Android platform bridge. The Android UI is not a separate reduced product: Library, Discover, Community, metadata, artwork, favorites, recents, downloads, and responsive presentation use the same renderer contracts as desktop.
 
-## Current development build
+## Android 1.0.0 production release
 
-`0.5.9-artwork` includes:
+`1.0.0` includes:
 
 - binary-safe exact RetroArch launch profiles in public Downloads storage, preventing Android MediaStore from rewriting `.cfg` names;
 

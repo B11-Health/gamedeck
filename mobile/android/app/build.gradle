@@ -3,6 +3,14 @@ plugins { id 'com.android.application' }
 def repositoryRoot = new File(rootProject.projectDir, '../..').canonicalFile
 def sharedRendererAssets = file("$buildDir/generated/sharedRenderer")
 def applicationIdOverride = providers.gradleProperty('gamedeckApplicationId').orNull
+def applicationLabelOverride = providers.gradleProperty('gamedeckAppLabel').orNull
+def androidVersionName = providers.gradleProperty('gamedeckVersionName').orNull ?: '1.0.0'
+def androidVersionCode = (providers.gradleProperty('gamedeckVersionCode').orNull ?: '10000') as Integer
+def releaseKeystore = providers.environmentVariable('GAMEDECK_ANDROID_KEYSTORE').orNull
+def releaseStorePassword = providers.environmentVariable('GAMEDECK_ANDROID_STORE_PASSWORD').orNull
+def releaseKeyAlias = providers.environmentVariable('GAMEDECK_ANDROID_KEY_ALIAS').orNull
+def releaseKeyPassword = providers.environmentVariable('GAMEDECK_ANDROID_KEY_PASSWORD').orNull
+def releaseSigningReady = [releaseKeystore, releaseStorePassword, releaseKeyAlias, releaseKeyPassword].every { it }
 
 tasks.register('prepareSharedRenderer') {
     inputs.dir(new File(repositoryRoot, 'src'))
@@ -46,6 +54,7 @@ tasks.register('prepareSharedRenderer') {
         }
         File platformFile = new File(sharedRendererAssets, 'desktop/platform-android-native.js')
         String platform = platformSource.getText('UTF-8')
+        platform = platform.replace("version: '1.0.0'", "version: '${androidVersionName}'")
         List<String> requiredNativeContracts = [
             "invoke('catalogSystems'",
             "invoke('catalogGames'",
@@ -58,7 +67,7 @@ tasks.register('prepareSharedRenderer') {
             "invoke('pauseDownload'",
             "invoke('dismissDownload'",
             'onDownload: subscribeDownloads',
-            "version: '0.5.9-artwork'"
+            "version: '${androidVersionName}'"
         ]
         List<String> missingNativeContracts = requiredNativeContracts.findAll { !platform.contains(it) }
         if (platform.contains('android_discover_transfer_pending') || !missingNativeContracts.isEmpty()) {
@@ -67,6 +76,10 @@ tasks.register('prepareSharedRenderer') {
             )
         }
         platformFile.write(platform, 'UTF-8')
+        File debugFixtureFile = new File(projectDir, 'src/main/assets/desktop/debug-fixture.js')
+        if (debugFixtureFile.getText('UTF-8').contains('artwork: async () => cover')) {
+            throw new GradleException('Android debug fixture must not override artwork for the real managed library')
+        }
     }
 }
 
@@ -75,11 +88,40 @@ android {
     compileSdk 36
 
     defaultConfig {
-        applicationId applicationIdOverride ?: 'io.gamedeck.mobile.desktoppreview'
+        applicationId applicationIdOverride ?: 'io.gamedeck.android'
         minSdk 26
         targetSdk 36
-        versionCode 27
-        versionName '0.5.9-artwork'
+        versionCode androidVersionCode
+        versionName androidVersionName
+        manifestPlaceholders = [appLabel: applicationLabelOverride ?: 'GameDeck']
+    }
+
+
+    signingConfigs {
+        if (releaseSigningReady) {
+            release {
+                storeFile file(releaseKeystore)
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+                enableV1Signing true
+                enableV2Signing true
+                enableV3Signing true
+                enableV4Signing true
+            }
+        }
+    }
+
+    buildTypes {
+        debug {
+            applicationIdSuffix applicationIdOverride ? '' : '.debug'
+            versionNameSuffix applicationIdOverride ? '' : '-debug'
+        }
+        release {
+            minifyEnabled false
+            shrinkResources false
+            if (releaseSigningReady) signingConfig signingConfigs.release
+        }
     }
 
     sourceSets {
@@ -96,4 +138,21 @@ android {
 
 tasks.named('preBuild').configure {
     dependsOn tasks.named('prepareSharedRenderer')
+}
+
+
+tasks.register('verifyReleaseSigning') {
+    doLast {
+        if (!releaseSigningReady) {
+            throw new GradleException('Release signing environment is incomplete. Set GAMEDECK_ANDROID_KEYSTORE, GAMEDECK_ANDROID_STORE_PASSWORD, GAMEDECK_ANDROID_KEY_ALIAS, and GAMEDECK_ANDROID_KEY_PASSWORD.')
+        }
+        if (!file(releaseKeystore).isFile()) {
+            throw new GradleException("Release keystore does not exist: ${releaseKeystore}")
+        }
+    }
+}
+
+afterEvaluate {
+    tasks.named('assembleRelease').configure { dependsOn tasks.named('verifyReleaseSigning') }
+    tasks.named('bundleRelease').configure { dependsOn tasks.named('verifyReleaseSigning') }
 }

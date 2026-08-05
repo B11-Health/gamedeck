@@ -106,7 +106,6 @@
     library,
     rescan: library,
     favorite: async () => { favorite = !favorite; return library(); },
-    artwork: async () => cover,
     gameDetails: async () => details(),
     refreshGameDetails: async () => details(),
     diagnostics: async () => {

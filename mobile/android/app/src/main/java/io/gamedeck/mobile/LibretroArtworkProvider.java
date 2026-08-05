@@ -2,6 +2,7 @@ package io.gamedeck.mobile;
 
 import android.content.Context;
 import android.net.Uri;
+import android.util.Log;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -29,6 +30,7 @@ import java.util.Set;
 
 /** Native Libretro artwork cache used by the Android WebView renderer. */
 final class LibretroArtworkProvider {
+    private static final String TAG = "GameDeckArtwork";
     private static final long MAX_IMAGE_BYTES = 8L * 1024L * 1024L;
     private static final long MAX_CACHE_BYTES = 256L * 1024L * 1024L;
     private static final int BUFFER_SIZE = 32 * 1024;
@@ -111,10 +113,12 @@ final class LibretroArtworkProvider {
                 }
                 if (download(repository, candidate, cached)) {
                     trimCache();
+                    Log.i(TAG, "Artwork ready: " + repository + "/" + candidate);
                     return ManagedLibraryProvider.artworkUriFor(context, cached.getName()).toString();
                 }
                 misses.add(key);
-            } catch (Exception ignored) {
+            } catch (Exception error) {
+                Log.w(TAG, "Artwork failed: " + repository + "/" + candidate, error);
                 misses.add(key);
             }
         }
@@ -206,7 +210,7 @@ final class LibretroArtworkProvider {
         connection.setInstanceFollowRedirects(false);
         connection.setConnectTimeout(8_000);
         connection.setReadTimeout(12_000);
-        connection.setRequestProperty("User-Agent", "GameDeck-Android/0.5.9-artwork");
+        connection.setRequestProperty("User-Agent", "GameDeck-Android/" + AppVersion.name(context));
         connection.setRequestProperty("Accept", "image/png,image/*;q=0.8");
         int status = connection.getResponseCode();
         if (status == 404) {

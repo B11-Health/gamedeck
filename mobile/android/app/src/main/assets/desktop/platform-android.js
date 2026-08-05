@@ -81,7 +81,7 @@
       const timer = window.setTimeout(() => {
         nativeArtworkRequests.delete(requestId);
         resolve('');
-      }, 24000);
+      }, 8000);
       nativeArtworkRequests.set(requestId, { resolve, timer });
       try {
         native.requestArtwork(requestId, title || '', systemId || '', folder || '');
@@ -229,29 +229,43 @@
     if (!repo) return '';
     const key = `${repo}:${rawTitle(title)}`;
     if (artworkCache.has(key)) return artworkCache.get(key);
+
     const request = (async () => {
-      const cached = invoke('cachedArtwork', '', title || '', systemId || '', folder || '');
-      if (cached) return cached;
-      const nativeArtwork = await requestNativeArtwork(title, systemId, folder);
-      if (nativeArtwork) return nativeArtwork;
+      // This direct GitHub/blob route is the proven pre-RGSX artwork path.
+      // Keep it first so a stalled native cache request can never hold visible cards.
       for (const candidate of thumbnailNames(title)) {
         const url = `https://raw.githubusercontent.com/libretro-thumbnails/${repo}/master/Named_Boxarts/${encodeURIComponent(candidate + '.png')}`;
         try {
-          const response = await fetch(url, { cache: 'force-cache', credentials: 'omit', mode: 'cors' });
+          const response = await fetch(url, { cache: 'force-cache', credentials: 'omit' });
           if (response.ok) {
             const blob = await response.blob();
             if (blob.type.startsWith('image/') && blob.size >= 128 && blob.size <= 8 * 1024 * 1024) {
-              return URL.createObjectURL(blob);
+              const objectUrl = URL.createObjectURL(blob);
+              const loaded = await loadRemoteArtwork(objectUrl, 5000);
+              if (loaded) return objectUrl;
+              URL.revokeObjectURL(objectUrl);
             }
           }
         } catch {}
-        const loaded = await loadRemoteArtwork(url);
+
+        // Some WebView builds render the raw image even when fetch/CORS is unavailable.
+        const loaded = await loadRemoteArtwork(url, 5000);
         if (loaded) return loaded;
       }
+
+      // Native disk caching is a fallback, never the gate in front of visible artwork.
+      const cached = invoke('cachedArtwork', '', title || '', systemId || '', folder || '');
+      if (cached && await loadRemoteArtwork(cached, 5000)) return cached;
+      const nativeArtwork = await requestNativeArtwork(title, systemId, folder);
+      if (nativeArtwork && await loadRemoteArtwork(nativeArtwork, 5000)) return nativeArtwork;
       return '';
     })();
+
     artworkCache.set(key, request);
-    return request;
+    const result = await request;
+    if (!result) artworkCache.delete(key);
+    else artworkCache.set(key, Promise.resolve(result));
+    return result;
   }
 
   async function artworkFor(title, systemId, folder = '') {
@@ -356,7 +370,7 @@
     const library = await getLibrary();
     const runtime = getRuntimeStatus();
     return {
-      platform: 'android', arch: 'arm64', version: '0.5.9-artwork',
+      platform: 'android', arch: 'arm64', version: '1.0.0',
       libraryRoot: library.rootName || '', rgsxRoot: 'Automatic',
       retroArchPath: runtime.externalPackage || '', retroArchCores: '', retroArchSystem: '', mamePath: '', sponsorsEnabled: false
     };

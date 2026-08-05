@@ -347,7 +347,7 @@ final class RgsxProvider {
                 game.put("id", "managed-" + Integer.toUnsignedString(uri.toString().hashCode()));
                 game.put("title", title);
                 game.put("metadataTitle", title);
-                game.put("artworkTitle", title);
+                game.put("artworkTitle", fileName);
                 game.put("artworkFolder", folder);
                 game.put("shortName", title);
                 game.put("file", uri.toString());

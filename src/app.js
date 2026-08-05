@@ -448,13 +448,10 @@ async function handleTransferControl(action, id) {
 }
 
 function renderDownloads() {
-  const now = Date.now();
   const downloads = state.downloads
     .filter(download => {
       if (download.status !== 'running' && state.dismissedDownloads.has(download.id)) return false;
-      if (['running', 'paused', 'error'].includes(download.status)) return true;
-      const finishedAt = Number(download.finishedAt || download.updatedAt || download.startedAt || 0);
-      return finishedAt > 0 && now - finishedAt < 14000;
+      return ['running', 'paused', 'error'].includes(download.status);
     })
     .sort((a, b) => Number(b.startedAt || 0) - Number(a.startedAt || 0));
   const running = downloads.filter(download => download.status === 'running');
@@ -816,20 +813,28 @@ async function refreshArcadeAudit(force = false) {
 
 function updateGameArtwork(game, url) {
   if (!url) return;
-  game.art = url;
-  $$(`[data-game-art="${game.id}"]`).forEach(image => { image.src = url; });
-  const card = document.querySelector(`.game[data-id="${game.id}"]`);
-  card?.classList.remove('missing-art');
-  card?.classList.add('has-art');
-  card?.querySelector('.art-status')?.remove();
-  if (state.focusedGameId === game.id) {
-    $('#spotlightArt').innerHTML = `<img src="${escapeHtml(url)}" alt="${escapeHtml(game.title)} cover">`;
-    applySystemTheme(game.system);
-  }
-  if (state.artworkFilter === 'missing-art' && !['discover', 'community'].includes(state.view)) renderGames();
-  else renderSetupCoach();
-  renderDownloads();
-  if (arcadeSelected()) renderArcadeDeck();
+  const probe = new Image();
+  probe.decoding = 'async';
+  probe.onload = () => {
+    game.art = url;
+    $$(`[data-game-art="${game.id}"]`).forEach(image => {
+      image.removeAttribute('loading');
+      image.src = url;
+    });
+    const card = document.querySelector(`.game[data-id="${game.id}"]`);
+    card?.classList.remove('missing-art');
+    card?.classList.add('has-art');
+    card?.querySelector('.art-status')?.remove();
+    if (state.focusedGameId === game.id) {
+      $('#spotlightArt').innerHTML = `<img src="${escapeHtml(url)}" alt="${escapeHtml(game.title)} cover">`;
+      applySystemTheme(game.system);
+    }
+    if (state.artworkFilter === 'missing-art' && !['discover', 'community'].includes(state.view)) renderGames();
+    else renderSetupCoach();
+    if (arcadeSelected()) renderArcadeDeck();
+  };
+  probe.onerror = () => markGeneratedArtwork(game);
+  probe.src = url;
 }
 
 function queueArtwork(key, work, priority = false) {
@@ -911,17 +916,27 @@ function enrichNextArtwork() {
 
 function updateCatalogArtwork(game, url) {
   if (!url) return;
-  game.art = url;
-  $$(`[data-catalog-art="${game.id}"]`).forEach(image => { image.src = url; });
-  document.querySelector(`.catalog-game[data-id="${game.id}"]`)?.classList.remove('art-pending');
-  document.querySelector(`.catalog-game[data-id="${game.id}"]`)?.classList.add('has-art');
-  const isFeatured = state.focusedCatalogId === game.id || (state.focusedCatalogId == null && currentCatalogGames()[0]?.id === game.id);
-  if (isFeatured) {
-    $('#catalogFeatureArt').innerHTML = `<img src="${escapeHtml(url)}" alt="${escapeHtml(game.name)} cover">`;
-    $('#catalogFeatureBackdrop').src = url;
-    $('#catalogFeatureSource').textContent = 'LIBRETRO ARTWORK';
-  }
-  renderDownloads();
+  const probe = new Image();
+  probe.decoding = 'async';
+  probe.onload = () => {
+    game.art = url;
+    $$(`[data-catalog-art="${game.id}"]`).forEach(image => {
+      image.removeAttribute('loading');
+      image.src = url;
+    });
+    document.querySelector(`.catalog-game[data-id="${game.id}"]`)?.classList.remove('art-pending');
+    document.querySelector(`.catalog-game[data-id="${game.id}"]`)?.classList.add('has-art');
+    const isFeatured = state.focusedCatalogId === game.id || (state.focusedCatalogId == null && currentCatalogGames()[0]?.id === game.id);
+    if (isFeatured) {
+      $('#catalogFeatureArt').innerHTML = `<img src="${escapeHtml(url)}" alt="${escapeHtml(game.name)} cover">`;
+      $('#catalogFeatureBackdrop').src = url;
+      $('#catalogFeatureSource').textContent = 'LIBRETRO ARTWORK';
+    }
+  };
+  probe.onerror = () => {
+    document.querySelector(`.catalog-game[data-id="${game.id}"]`)?.classList.add('art-pending');
+  };
+  probe.src = url;
 }
 
 function requestCatalogArtwork(game, priority = false) {
@@ -949,6 +964,17 @@ function observeVisibleArtwork() {
     }
   }, { root: $('.content'), rootMargin: '320px 0px' });
   $$('[data-game-art], [data-catalog-art]').forEach(image => artworkObserver.observe(image));
+
+  // Android WebView can delay IntersectionObserver delivery while the shell settles.
+  // Prime the first shelf immediately so the user never stares at placeholders.
+  $$('[data-game-art]').slice(0, 12).forEach(image => {
+    const game = state.library.games.find(item => item.id === image.dataset.gameArt);
+    if (game) requestArtwork(game, true);
+  });
+  $$('[data-catalog-art]').slice(0, 12).forEach(image => {
+    const game = state.catalogGames.find(item => item.id === Number(image.dataset.catalogArt));
+    if (game) requestCatalogArtwork(game, true);
+  });
 }
 
 function gameMetadataTitle(game) {
@@ -2017,7 +2043,9 @@ function renderSetupCoach() {
   if (!coach) return;
   const readiness = setupReadiness();
   const libraryView = !['discover', 'community'].includes(state.view);
-  const needsHelp = !readiness.coreReady;
+  const android = document.documentElement.classList.contains('gamedeck-android');
+  const criticalHelp = !readiness.runtimeReady || !readiness.libraryReady || readiness.firmwareIssues.length > 0;
+  const needsHelp = android ? criticalHelp : !readiness.coreReady;
   const visible = libraryView && (state.setupCoachOpen || (!state.setupCoachDismissed && needsHelp));
   coach.classList.toggle('hidden', !visible);
   $('#setupToggle').classList.toggle('active', visible);
@@ -3196,6 +3224,11 @@ window.deck.onArcadeAudit(progress => {
 function renderSessionReturn(runtime = state.runtime) {
   const shell = $('#sessionReturn');
   if (!shell) return;
+  if (document.documentElement.classList.contains('gamedeck-android')) {
+    shell.classList.add('hidden');
+    state.lastSession = runtime?.lastSession || null;
+    return;
+  }
   const session = runtime?.lastSession || null;
   state.lastSession = session;
   const dismissed = session ? sessionStorage.getItem('gamedeck-session-dismissed') === String(session.launchedAt || '') : false;
