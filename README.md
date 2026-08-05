@@ -40,13 +40,17 @@ GameDeck does **not** include ROMs, BIOS files, encryption keys, or commercial g
 - One-click installers with a bundled, verified RetroArch runtime and compatible core set; no separate emulator installer for supported systems
 - Validated multi-disc Saturn `.m3u` playlists that reject missing disc members before launch
 - Dedicated MAME and FinalBurn Neo catalog handling with pre-launch ROM-set health checks
+- First-class OpenBOR catalog discovery and isolated per-game `.pak` launching with native fullscreen/aspect handling, portable engine detection, and active-transfer launch protection
 - One-click launch doctor that resolves shared BIOS/parent files, validates the best available arcade route, and resumes launch automatically
 - Managed repair-on-play for damaged RGSX arcade archives with no manual file handling
 - Full arcade names and local year, manufacturer, player, button, and control metadata from installed MAME
 - Scoped Xbox/XInput arcade profiles that preserve global emulator settings
-- BIOS-aware readiness checks with real setup locations
+- BIOS-aware readiness checks with real setup locations, complete regional firmware requirements, and local-pack restoration
+- Launch-time integrity checks that stop damaged ZIP, 7Z, or RAR game archives before an emulator opens
 - Cinematic title details, artwork caching, favorites, and recent plays
+- Console-aware environmental artwork that changes the spotlight atmosphere, accents, and active shelf cue for each hardware family
 - Exact No-Intro filename matching, revision aliases, Libretro CDN fallback, indexed fuzzy title matching, and quiet background cover enrichment
+- Correct mixed-folder routing for Genesis, Master System, Game Gear, GameCube, Wii, and Sega 32X libraries, with dedicated Famicom Disk System, Satellaview, and Sufami Turbo shelves
 - Premium GameDeck-original posters for trustworthy no-source, homebrew, or unofficial exceptions
 - A calm four-stage startup panel that reports library, launcher, artwork, and control readiness
 - Context-aware hero actions for continuing a recent game, choosing a surprise title, or finishing setup

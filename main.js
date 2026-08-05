@@ -7,6 +7,8 @@ const dgram = require('dgram');
 const zlib = require('zlib');
 const { spawn, spawnSync } = require('child_process');
 const { pathToFileURL } = require('url');
+const { handoffHostWindowForNativeGame, presentNativeGameWindow } = require('./native-window-presenter');
+const { prepareOpenBorLaunch } = require('./openbor-launch');
 const { path7za } = require('7zip-bin');
 const { createRuntimeManager, pathsFor: managedRuntimePathsFor, key: managedRuntimeKey } = require('./runtime-manager');
 const { createStreamServer } = require('./stream-server');
@@ -23,6 +25,12 @@ const {
   resolveCapabilitiesSafely,
   validateCapabilityFileArgument
 } = require('./play-session-manager');
+const {
+  chooseLibrarySystem,
+  parseArchiveEntryExtensions,
+  parseDiscHeaderSystem,
+  parseDolphinHeaderSystem
+} = require('./library-system-classifier');
 
 if (process.platform === 'win32') app.setAppUserModelId('io.gamedeck.launcher');
 
@@ -37,6 +45,23 @@ const MANAGED_RUNTIME_ROOT = path.join(app.getPath('userData'), 'runtime');
 const MANAGED_RUNTIME_PATHS = managedRuntimePathsFor(MANAGED_RUNTIME_ROOT, process.platform);
 const BUNDLED_RUNTIME_ROOT = path.join(process.resourcesPath, 'runtime-cache', managedRuntimeKey());
 const BUNDLED_RUNTIME_AVAILABLE = fs.existsSync(path.join(BUNDLED_RUNTIME_ROOT, 'cache-index.json'));
+const MANAGED_RUNTIME_MANIFEST = readJson(path.join(__dirname, 'config', 'runtime-manifest.json'), { platforms: {} });
+
+function managedRuntimeInstalled() {
+  const spec = MANAGED_RUNTIME_MANIFEST.platforms?.[managedRuntimeKey()];
+  const required = (spec?.components || []).filter(component => component.required !== false);
+  if (!required.length) return false;
+  return required.every(component => (component.expected || []).every(value => {
+    try {
+      return fs.statSync(path.join(MANAGED_RUNTIME_ROOT, ...String(value || '').split('/').filter(Boolean))).size > 0;
+    } catch {
+      return false;
+    }
+  }));
+}
+
+const MANAGED_RUNTIME_INSTALLED = managedRuntimeInstalled();
+const MANAGED_RUNTIME_PREFERRED = BUNDLED_RUNTIME_AVAILABLE || MANAGED_RUNTIME_INSTALLED;
 
 function firstExisting(candidates, fallback = '') {
   return candidates.filter(Boolean).find(candidate => fs.existsSync(candidate)) || fallback;
@@ -115,10 +140,10 @@ const defaultSettings = {
   libraryRoot: process.env.GAMEDECK_LIBRARY || path.join(defaultRgsxRoot, 'roms'),
   rgsxRoot: defaultRgsxRoot,
   emulationRoot: process.env.GAMEDECK_EMULATION_ROOT || path.join(HOME_DIR, 'Games', 'Emulation'),
-  retroArchPath: BUNDLED_RUNTIME_AVAILABLE ? MANAGED_RUNTIME_PATHS.retroArch : (detectedRetroArch || MANAGED_RUNTIME_PATHS.retroArch),
-  retroArchCores: BUNDLED_RUNTIME_AVAILABLE ? MANAGED_RUNTIME_PATHS.cores : (detectedCoreDir || MANAGED_RUNTIME_PATHS.cores),
+  retroArchPath: MANAGED_RUNTIME_PREFERRED ? MANAGED_RUNTIME_PATHS.retroArch : (detectedRetroArch || MANAGED_RUNTIME_PATHS.retroArch),
+  retroArchCores: MANAGED_RUNTIME_PREFERRED ? MANAGED_RUNTIME_PATHS.cores : (detectedCoreDir || MANAGED_RUNTIME_PATHS.cores),
   mamePath: detectedMame,
-  retroArchSystem: process.env.GAMEDECK_RETROARCH_SYSTEM || (BUNDLED_RUNTIME_AVAILABLE
+  retroArchSystem: process.env.GAMEDECK_RETROARCH_SYSTEM || (MANAGED_RUNTIME_PREFERRED
     ? MANAGED_RUNTIME_PATHS.system
     : detectedRetroArch
       ? path.join(path.dirname(detectedRetroArch), 'system')
@@ -127,6 +152,11 @@ const defaultSettings = {
   sponsorManifestUrl: 'https://raw.githubusercontent.com/B11-Health/gamedeck/main/sponsors.json'
 };
 const runtimeSettings = { ...defaultSettings, ...readJson(SETTINGS_FILE, {}) };
+if (MANAGED_RUNTIME_PREFERRED) {
+  runtimeSettings.retroArchPath = MANAGED_RUNTIME_PATHS.retroArch;
+  runtimeSettings.retroArchCores = MANAGED_RUNTIME_PATHS.cores;
+  runtimeSettings.retroArchSystem = MANAGED_RUNTIME_PATHS.system;
+}
 const environmentOverrides = {
   libraryRoot: process.env.GAMEDECK_LIBRARY,
   rgsxRoot: process.env.GAMEDECK_RGSX_ROOT,
@@ -224,8 +254,22 @@ const emulatorPaths = {
     process.platform === 'darwin' && '/Applications/Cemu.app/Contents/MacOS/Cemu',
     process.platform === 'linux' && findOnPath(['cemu'])
   ].filter(Boolean)),
+  openbor: firstExisting([
+    process.env.GAMEDECK_OPENBOR,
+    process.platform === 'win32' && findExecutableUnder(path.join(app.getPath('userData'), 'runtime', 'openbor'), ['OpenBOR.exe'], 8),
+    process.platform === 'win32' && path.join(RGSX_ROOT, 'emulators', 'openbor', 'OpenBOR.exe'),
+    process.platform === 'win32' && findOnPath(['OpenBOR.exe']),
+    process.platform === 'darwin' && '/Applications/OpenBOR.app/Contents/MacOS/OpenBOR',
+    process.platform === 'linux' && findOnPath(['OpenBOR', 'openbor'])
+  ].filter(Boolean)),
   mame: MAME
 };
+
+const DOLPHIN_TOOL = firstExisting([
+  emulatorPaths.dolphin && path.join(path.dirname(emulatorPaths.dolphin), process.platform === 'win32' ? 'DolphinTool.exe' : 'dolphin-tool'),
+  process.platform === 'win32' && findOnPath(['DolphinTool.exe']),
+  process.platform !== 'win32' && findOnPath(['dolphin-tool'])
+].filter(Boolean));
 
 const firmwareSearchRoots = [
   path.join(process.env.APPDATA || '', 'RetroArch', 'system'),
@@ -266,6 +310,7 @@ const thumbnailRepos = {
   nds: 'Nintendo_-_Nintendo_DS',
   megadrive: 'Sega_-_Mega_Drive_-_Genesis',
   genesis: 'Sega_-_Mega_Drive_-_Genesis',
+  sega32x: 'Sega_-_32X',
   mastersystem: 'Sega_-_Master_System_-_Mark_III',
   gamegear: 'Sega_-_Game_Gear',
   segacd: 'Sega_-_Mega-CD_-_Sega_CD',
@@ -289,32 +334,37 @@ const thumbnailRepos = {
 };
 
 const systems = [
-  { id: 'snes', name: 'Super Nintendo', short: 'SNES', color: '#8b5cf6', folders: ['snes', 'sufami', 'satellaview'], exts: ['.sfc', '.smc', '.bs', '.zip'], core: coreFile('snes9x_libretro'), icon: 'S' },
-  { id: 'nes', name: 'Nintendo Entertainment System', short: 'NES', color: '#ef4444', folders: ['nes', 'fds'], exts: ['.nes', '.fds', '.zip'], core: coreFile('mesen_libretro'), icon: 'N' },
+  { id: 'snes', name: 'Super Nintendo', short: 'SNES', color: '#8b5cf6', folders: ['snes'], exts: ['.sfc', '.smc', '.zip'], core: coreFile('snes9x_libretro'), icon: 'S' },
+  { id: 'satellaview', name: 'Satellaview', short: 'BS-X', color: '#7c3aed', folders: ['satellaview'], exts: ['.bs', '.zip'], core: coreFile('snes9x_libretro'), bios: ['BS-X.bin'], biosDirs: [RA_SYSTEM, ...firmwareSearchRoots], icon: 'BS' },
+  { id: 'sufami', name: 'Sufami Turbo', short: 'SUFAMI', color: '#a855f7', folders: ['sufami'], exts: ['.st', '.zip'], core: coreFile('snes9x_libretro'), bios: ['STBIOS.bin'], biosDirs: [RA_SYSTEM, ...firmwareSearchRoots], icon: 'ST' },
+  { id: 'nes', name: 'Nintendo Entertainment System', short: 'NES', color: '#ef4444', folders: ['nes'], exts: ['.nes', '.zip'], core: coreFile('mesen_libretro'), icon: 'N' },
+  { id: 'fds', name: 'Famicom Disk System', short: 'FDS', color: '#dc2626', folders: ['fds'], exts: ['.fds', '.zip'], core: coreFile('mesen_libretro'), bios: ['disksys.rom'], biosDirs: [RA_SYSTEM, ...firmwareSearchRoots], icon: 'FD' },
   { id: 'n64', name: 'Nintendo 64', short: 'N64', color: '#22c55e', folders: ['n64', 'n64dd'], exts: ['.n64', '.z64', '.v64', '.zip'], core: coreFile('mupen64plus_next_libretro'), icon: '64' },
   { id: 'gb', name: 'Game Boy and Color', short: 'GB / GBC', color: '#84cc16', folders: ['gb', 'gbc'], exts: ['.gb', '.gbc', '.zip'], core: coreFile('sameboy_libretro'), icon: 'GB' },
   { id: 'gba', name: 'Game Boy Advance', short: 'GBA', color: '#6366f1', folders: ['gba'], exts: ['.gba', '.zip'], core: coreFile('mgba_libretro'), icon: 'A' },
   { id: 'nds', name: 'Nintendo DS', short: 'NDS', color: '#64748b', folders: ['nds'], exts: ['.nds', '.zip'], core: coreFile('melondsds_libretro'), icon: 'DS' },
   { id: 'genesis', name: 'Sega Genesis', short: 'GENESIS', color: '#2563eb', folders: ['megadrive', 'genesis'], exts: ['.md', '.gen', '.bin', '.zip'], core: coreFile('genesis_plus_gx_libretro'), icon: 'SE' },
+  { id: 'sega32x', name: 'Sega 32X', short: '32X', color: '#334155', folders: ['sega32x', '32x'], exts: ['.32x', '.bin', '.zip'], core: coreFile('picodrive_libretro'), icon: '32' },
   { id: 'mastersystem', name: 'Sega Master System', short: 'MASTER SYSTEM', color: '#e11d48', folders: ['mastersystem'], exts: ['.sms', '.zip'], core: coreFile('genesis_plus_gx_libretro'), icon: 'MS' },
   { id: 'gamegear', name: 'Sega Game Gear', short: 'GAME GEAR', color: '#f43f5e', folders: ['gamegear'], exts: ['.gg', '.zip'], core: coreFile('genesis_plus_gx_libretro'), icon: 'GG' },
-  { id: 'segacd', name: 'Sega CD', short: 'SEGA CD', color: '#3b82f6', folders: ['segacd', 'megacd'], exts: ['.cue', '.chd'], core: coreFile('genesis_plus_gx_libretro'), bios: ['bios_CD_E.bin', 'bios_CD_U.bin', 'bios_CD_J.bin'], biosDirs: [RA_SYSTEM, ...firmwareSearchRoots], icon: 'CD' },
+  { id: 'segacd', name: 'Sega CD', short: 'SEGA CD', color: '#3b82f6', folders: ['segacd', 'megacd'], exts: ['.cue', '.chd'], core: coreFile('genesis_plus_gx_libretro'), bios: ['bios_CD_E.bin', 'bios_CD_U.bin', 'bios_CD_J.bin'], biosMode: 'all', biosDirs: [RA_SYSTEM, ...firmwareSearchRoots], icon: 'CD' },
   { id: 'pce', name: 'PC Engine', short: 'PCE', color: '#f97316', folders: ['pcengine', 'supergrafx'], exts: ['.pce', '.zip'], core: coreFile('mednafen_pce_fast_libretro'), icon: 'P' },
-  { id: 'saturn', name: 'Sega Saturn', short: 'SATURN', color: '#38bdf8', folders: ['saturn'], exts: ['.cue', '.chd', '.m3u'], core: coreFile('mednafen_saturn_libretro'), bios: ['sega_101.bin', 'mpr-17933.bin'], biosDirs: [RA_SYSTEM, ...firmwareSearchRoots], icon: 'ST' },
+  { id: 'saturn', name: 'Sega Saturn', short: 'SATURN', color: '#38bdf8', folders: ['saturn'], exts: ['.cue', '.chd', '.m3u'], core: coreFile('mednafen_saturn_libretro'), bios: ['sega_101.bin', 'mpr-17933.bin'], biosMode: 'all', biosDirs: [RA_SYSTEM, ...firmwareSearchRoots], icon: 'ST' },
   { id: 'dreamcast', name: 'Dreamcast', short: 'DC', color: '#fb923c', folders: ['dreamcast'], exts: ['.gdi', '.cdi', '.chd'], core: coreFile('flycast_libretro'), icon: 'DC' },
   { id: 'atari2600', name: 'Atari 2600', short: 'ATARI', color: '#f59e0b', folders: ['atari2600'], exts: ['.a26', '.bin', '.zip'], core: coreFile('stella_libretro'), icon: 'A' },
   { id: 'arcade', name: 'FinalBurn Neo', short: 'FBNEO', color: '#ec4899', folders: ['fbneo', 'neogeo'], exts: ['.zip', '.7z'], core: coreFile('fbneo_libretro'), icon: 'FB' },
   { id: 'mame', name: 'MAME', short: 'MAME', color: '#f43f8f', folders: ['mame', 'arcade'], exts: ['.zip', '.7z'], core: coreFile('mame_libretro'), exe: emulatorPaths.mame, preferExe: true, launchMode: 'mame', icon: 'M' },
   { id: 'ps1', name: 'PlayStation', short: 'PS1', color: '#94a3b8', folders: ['psx', 'ps1'], exts: ['.cue', '.chd', '.pbp'], core: coreFile('pcsx_rearmed_libretro'), exe: emulatorPaths.duckstation, preferExe: true, args: ['-batch', '-fullscreen'], biosPattern: /^scph[a-z0-9_-]*\.(?:bin|rom)$/i, biosHint: 'a BIOS file named like scph1001.bin or scph5500.rom', biosDirs: [path.join(localAppData, 'DuckStation', 'bios'), path.join(applicationSupport, 'DuckStation', 'bios'), path.join(HOME_DIR, '.local', 'share', 'duckstation', 'bios'), path.join(RGSX_ROOT, 'roms', 'bios')], icon: 'PS' },
   { id: 'ps2', name: 'PlayStation 2', short: 'PS2', color: '#3b82f6', folders: ['ps2'], exts: ['.iso', '.chd'], core: coreFile('play_libretro'), exe: emulatorPaths.pcsx2, preferExe: true, args: ['-fullscreen', '-batch', '--'], biosPattern: /^scph[a-z0-9_-]*\.(?:bin|rom)$/i, biosHint: 'a BIOS file named like scph39001.bin or scph70012.rom', biosDirs: [path.join(DOCUMENTS_DIR, 'PCSX2', 'bios'), path.join(applicationSupport, 'PCSX2', 'bios'), path.join(HOME_DIR, '.config', 'PCSX2', 'bios'), path.join(HOME_DIR, '.local', 'share', 'PCSX2', 'bios'), path.join(RGSX_ROOT, 'roms', 'bios')], icon: 'P2' },
-  { id: 'psp', name: 'PlayStation Portable', short: 'PSP', color: '#06b6d4', folders: ['psp'], exts: ['.iso', '.cso', '.pbp'], core: coreFile('ppsspp_libretro'), exe: emulatorPaths.ppsspp, preferExe: true, icon: 'PP' },
+  { id: 'psp', name: 'PlayStation Portable', short: 'PSP', color: '#06b6d4', folders: ['psp'], exts: ['.iso', '.cso', '.pbp', '.chd'], core: coreFile('ppsspp_libretro'), exe: emulatorPaths.ppsspp, preferExe: true, icon: 'PP' },
   { id: 'gamecube', name: 'Nintendo GameCube', short: 'GAMECUBE', color: '#7c3aed', folders: ['gamecube'], exts: ['.iso', '.gcm', '.rvz'], core: coreFile('dolphin_libretro'), exe: emulatorPaths.dolphin, preferExe: true, args: ['-b', '-e'], icon: 'GC' },
   { id: 'wii', name: 'Nintendo Wii', short: 'WII', color: '#0ea5e9', folders: ['wii'], exts: ['.wbfs', '.rvz'], core: coreFile('dolphin_libretro'), exe: emulatorPaths.dolphin, preferExe: true, args: ['-b', '-e'], icon: 'W' },
-  { id: 'wiiu', name: 'Nintendo Wii U', short: 'WII U', color: '#00a2e8', folders: ['wiiu'], exts: ['.wud', '.wux', '.rpx'], exe: emulatorPaths.cemu, args: ['-f', '-g'], icon: 'WU' }
+  { id: 'wiiu', name: 'Nintendo Wii U', short: 'WII U', color: '#00a2e8', folders: ['wiiu'], exts: ['.wud', '.wux', '.rpx'], exe: emulatorPaths.cemu, args: ['-f', '-g'], icon: 'WU' },
+  { id: 'openbor', name: 'OpenBOR', short: 'OPENBOR', color: '#f97316', folders: ['openbor'], exts: ['.pak'], exe: emulatorPaths.openbor, preferExe: true, launchMode: 'openbor', presentation: 'native-fullscreen', icon: 'OB' }
 ];
 
 const tgdbPlatforms = {
-  snes: 6, nes: 7, n64: 3, gb: 4, gba: 5, nds: 8, genesis: 18,
+  snes: 6, satellaview: 6, sufami: 6, nes: 7, fds: 7, n64: 3, gb: 4, gba: 5, nds: 8, genesis: 18,
   mastersystem: 35, gamegear: 20, segacd: 21, pce: 34, saturn: 17,
   dreamcast: 16, atari2600: 22, arcade: 23, mame: 23, ps1: 10, ps2: 11,
   psp: 13, gamecube: 2, wii: 9, wiiu: 38
@@ -344,6 +394,10 @@ let arcadeAuditTask = null;
 let controllerHintsCache = null;
 const mameMetadataCache = new Map();
 const firmwareInventoryCache = new Map();
+const archiveSystemHintCache = new Map();
+const playableArchiveIntegrityCache = new Map();
+const discSystemHintCache = new Map();
+let libraryFolderSystemIndex = null;
 let runtimeManager = null;
 let streamCaptureSourceId = '';
 let streamCaptureAudio = true;
@@ -634,6 +688,7 @@ function cleanName(file) {
   return leaf
     .replace(/\.[^.]+$/, '')
     .replace(/[_.]/g, ' ')
+    .replace(/^Sega\s*-\s*32X\s*/i, '')
     .replace(/\s*\[[^\]]*\]|\s*\([^)]*\)/g, '')
     .replace(/\s+/g, ' ')
     .trim();
@@ -682,9 +737,15 @@ function installedCatalogFile(installed, value) {
   return '';
 }
 
+const ARCADE_SUPPORT_ARCHIVES = new Set(['neogeo.zip']);
+
 function isArcadeSystem(systemOrId) {
   const id = typeof systemOrId === 'string' ? systemOrId : systemOrId?.id;
   return id === 'arcade' || id === 'mame';
+}
+
+function isArcadeSupportArchive(file, systemOrId) {
+  return isArcadeSystem(systemOrId) && ARCADE_SUPPORT_ARCHIVES.has(path.basename(String(file || '')).toLowerCase());
 }
 
 function getMameTitleIndex() {
@@ -794,7 +855,11 @@ function systemBiosReady(system) {
   const files = (system.biosDirs || []).flatMap(firmwareFiles);
   if (system.bios) {
     const available = new Set(files.map(file => file.toLowerCase()));
-    if (system.bios.some(file => available.has(file.toLowerCase()))) return true;
+    const expected = system.bios.map(file => file.toLowerCase());
+    const ready = system.biosMode === 'all'
+      ? expected.every(file => available.has(file))
+      : expected.some(file => available.has(file));
+    if (ready) return true;
   }
   return Boolean(system.biosPattern && files.some(file => system.biosPattern.test(file)));
 }
@@ -835,7 +900,8 @@ function systemFirmwareIssue(system) {
   const dirs = (system.biosDirs || []).filter(Boolean);
   const preferredDir = dirs[0] || '';
   if (system.bios?.length) {
-    return `${system.name} firmware is required. Add ${system.bios.join(' or ')} to ${preferredDir}.`;
+    const separator = system.biosMode === 'all' ? ' and ' : ' or ';
+    return `${system.name} firmware is required. Add ${system.bios.join(separator)} to ${preferredDir}.`;
   }
   if (system.biosPattern) {
     return `${system.name} firmware is required. Add ${system.biosHint || 'a compatible BIOS file'} to ${preferredDir}.`;
@@ -908,14 +974,148 @@ function systemForFolder(folder) {
   return systems.find(system => system.folders.includes(key)) || null;
 }
 
+function canonicalLibraryRootKey(value) {
+  const resolved = path.resolve(value);
+  try {
+    const real = fs.realpathSync(resolved);
+    return process.platform === 'win32' ? real.toLowerCase() : real;
+  } catch {
+    return process.platform === 'win32' ? resolved.toLowerCase() : resolved;
+  }
+}
+
+function libraryFolderSystems(folder) {
+  if (!libraryFolderSystemIndex) {
+    const rootGroups = new Map();
+    const folderRoots = new Map();
+    for (const system of systems) {
+      for (const alias of system.folders) {
+        const key = canonicalLibraryRootKey(path.join(LIBRARY, alias));
+        folderRoots.set(alias, key);
+        const group = rootGroups.get(key) || new Map();
+        group.set(system.id, system);
+        rootGroups.set(key, group);
+      }
+    }
+    libraryFolderSystemIndex = new Map([...folderRoots].map(([alias, key]) => [alias, [...(rootGroups.get(key)?.values() || [])]]));
+  }
+  return libraryFolderSystemIndex.get(String(folder || '').toLowerCase()) || [];
+}
+
+function archiveContentExtensions(file) {
+  let fingerprint = '';
+  try {
+    const stat = fs.statSync(file);
+    fingerprint = stat.size + ':' + Math.floor(stat.mtimeMs);
+  } catch {
+    return new Set();
+  }
+  const cached = archiveSystemHintCache.get(file);
+  if (cached?.fingerprint === fingerprint) return cached.extensions;
+  if (!SEVEN_ZIP || !fs.existsSync(SEVEN_ZIP)) return new Set();
+  const listing = spawnSync(SEVEN_ZIP, ['l', '-ba', file], {
+    windowsHide: true,
+    encoding: 'utf8',
+    timeout: 6000,
+    maxBuffer: 2 * 1024 * 1024
+  });
+  const extensions = listing.status === 0 ? parseArchiveEntryExtensions(listing.stdout) : new Set();
+  archiveSystemHintCache.set(file, { fingerprint, extensions });
+  return extensions;
+}
+
+function playableArchiveIntegrity(file) {
+  const extension = path.extname(file).toLowerCase();
+  if (!['.zip', '.7z', '.rar'].includes(extension)) return { ok: true, checked: false, message: '' };
+  let fingerprint = '';
+  try {
+    const stat = fs.statSync(file);
+    fingerprint = stat.size + ':' + Math.floor(stat.mtimeMs);
+  } catch {
+    return { ok: false, checked: true, message: 'The game archive is missing or unreadable.' };
+  }
+  const cached = playableArchiveIntegrityCache.get(file);
+  if (cached?.fingerprint === fingerprint) return cached.result;
+  if (!SEVEN_ZIP || !fs.existsSync(SEVEN_ZIP)) return { ok: true, checked: false, message: '' };
+  const test = spawnSync(SEVEN_ZIP, ['t', '-bd', '-bso0', '-bsp0', '--', file], {
+    windowsHide: true,
+    encoding: 'utf8',
+    timeout: 120000,
+    maxBuffer: 4 * 1024 * 1024
+  });
+  const output = [test.stdout, test.stderr].filter(Boolean).join('\n');
+  const ok = test.status === 0 && !/Unexpected end of archive|Data Error|CRC Failed|Headers Error|Can not open the file as archive/i.test(output);
+  const result = {
+    ok,
+    checked: true,
+    message: ok ? '' : 'This game archive is damaged or incomplete. Replace it from a legally owned backup before launching.'
+  };
+  playableArchiveIntegrityCache.set(file, { fingerprint, result });
+  return result;
+}
+
+function rawDiscSystem(file) {
+  try {
+    const handle = fs.openSync(file, 'r');
+    const header = Buffer.alloc(512);
+    fs.readSync(handle, header, 0, header.length, 0);
+    fs.closeSync(handle);
+    return parseDiscHeaderSystem(header);
+  } catch {
+    return '';
+  }
+}
+
+function discSystemForFile(file) {
+  const extension = path.extname(file).toLowerCase();
+  if (extension === '.wbfs' || extension === '.wad') return 'wii';
+  if (extension === '.gcm' || extension === '.tgc') return 'gamecube';
+  let fingerprint = '';
+  try {
+    const stat = fs.statSync(file);
+    fingerprint = stat.size + ':' + Math.floor(stat.mtimeMs);
+  } catch {
+    return '';
+  }
+  const cached = discSystemHintCache.get(file);
+  if (cached?.fingerprint === fingerprint) return cached.systemId;
+  let systemId = ['.iso', '.gcm', '.rvz', '.wia', '.gcz'].includes(extension) ? rawDiscSystem(file) : '';
+  if (!systemId && DOLPHIN_TOOL && fs.existsSync(DOLPHIN_TOOL) && ['.rvz', '.wia', '.gcz', '.iso'].includes(extension)) {
+    const header = spawnSync(DOLPHIN_TOOL, ['header', '-i', file, '-j'], {
+      windowsHide: true,
+      encoding: 'utf8',
+      timeout: 10000,
+      maxBuffer: 1024 * 1024
+    });
+    if (header.status === 0) systemId = parseDolphinHeaderSystem(header.stdout);
+  }
+  if (!systemId) {
+    const name = path.basename(file);
+    if (/\bwii\b/i.test(name)) systemId = 'wii';
+    else if (/\bgamecube\b|\bgc\b/i.test(name)) systemId = 'gamecube';
+  }
+  discSystemHintCache.set(file, { fingerprint, systemId });
+  return systemId;
+}
+
 function detectSystem(file) {
   const relative = path.relative(LIBRARY, file);
   if (relative.startsWith('..') || path.isAbsolute(relative)) return null;
   const folder = relative.split(path.sep)[0].toLowerCase();
-  const byFolder = systemForFolder(folder);
-  if (byFolder) return byFolder;
-
+  const direct = systemForFolder(folder);
+  const candidates = libraryFolderSystems(folder);
   const extension = path.extname(file).toLowerCase();
+  const compatible = candidates.filter(system => system.exts.includes(extension));
+  const selected = chooseLibrarySystem(compatible, {
+    fileExtension: extension,
+    archiveExtensions: ['.zip', '.7z'].includes(extension) ? archiveContentExtensions(file) : new Set(),
+    discSystemId: ['.iso', '.gcm', '.rvz', '.wbfs', '.wia', '.gcz', '.tgc', '.wad'].includes(extension) ? discSystemForFile(file) : '',
+    directSystemId: direct?.id || '',
+    sharedRoot: new Set(candidates.map(system => system.id)).size > 1
+  });
+  if (selected) return selected;
+  if (direct && candidates.length <= 1 && direct.exts.includes(extension)) return direct;
+
   const matches = systems.filter(system => system.exts.includes(extension));
   return matches.length === 1 ? matches[0] : null;
 }
@@ -1310,8 +1510,9 @@ async function auditArcadeLibrary(force = false) {
 function getLibrary() {
   const state = readStore();
   const games = walk(LIBRARY).map(file => {
+    if (activeManagedDownloadFile(file)) return null;
     const system = detectSystem(file);
-    if (!isPlayableFile(file, system)) return null;
+    if (!isPlayableFile(file, system) || isArcadeSupportArchive(file, system)) return null;
     let stat;
     try {
       stat = fs.statSync(file);
@@ -1563,6 +1764,9 @@ function safeLibraryFile(file) {
   const relative = path.relative(path.resolve(LIBRARY), resolved);
   if (relative.startsWith('..') || path.isAbsolute(relative) || !fs.existsSync(resolved)) {
     throw Error('The selected game is not inside the GameDeck library.');
+  }
+  if (activeManagedDownloadFile(resolved)) {
+    throw Error('This game is still downloading. Wait for the transfer to finish before launching.');
   }
   return resolved;
 }
@@ -2144,6 +2348,10 @@ function launchGame(file, options = {}) {
   const system = detectSystem(safeFile);
   if (!system || !isPlayableFile(safeFile, system)) throw Error('Could not identify this game system.');
   if (netplayManager?.status().active && !options.netplay) netplayManager.stop('Opening a local game.');
+  if (!isArcadeSystem(system)) {
+    const archiveIntegrity = playableArchiveIntegrity(safeFile);
+    if (!archiveIntegrity.ok) throw Error(archiveIntegrity.message);
+  }
   const setupIssue = systemSetupIssue(system);
   if (setupIssue) {
     if (String(setupIssue).toLowerCase().includes('firmware')) {
@@ -2178,8 +2386,22 @@ function launchGame(file, options = {}) {
 
   const emulator = selectLaunchEmulator(system, game);
   if (!emulator) throw Error(system.name + ' emulator is not installed or configured.');
+  let launchExecutable = emulator.executable;
+  let launchCwd = path.dirname(emulator.executable);
+  let presentation = system.presentation || '';
   let args;
-  if (emulator.kind === 'libretro') {
+  let openBorLaunch = null;
+  if (emulator.kind === 'openbor') {
+    openBorLaunch = prepareOpenBorLaunch({
+      engineExecutable: emulator.executable,
+      sourcePak: safeFile,
+      sessionsRoot: path.join(app.getPath('userData'), 'runtime', 'openbor', 'sessions')
+    });
+    launchExecutable = openBorLaunch.executable;
+    launchCwd = openBorLaunch.cwd;
+    presentation = openBorLaunch.presentation;
+    args = openBorLaunch.args;
+  } else if (emulator.kind === 'libretro') {
     const controllerConfig = isArcadeSystem(system) ? ensureRetroArchArcadeControllerConfig() : '';
     const mobileInputConfig = ensureRetroArchMobileInputConfig();
     const appendConfig = [controllerConfig, mobileInputConfig].filter(Boolean).join('|');
@@ -2191,18 +2413,37 @@ function launchGame(file, options = {}) {
     args = [...(system.args || []), safeFile];
   }
 
-  const child = spawn(emulator.executable, args, { cwd: path.dirname(emulator.executable), detached: true, stdio: 'ignore' });
+  const child = spawn(launchExecutable, args, { cwd: launchCwd, detached: true, stdio: 'ignore' });
+  const nativeHandoff = presentation ? handoffHostWindowForNativeGame({ hostWindow: mainWindow, child }) : null;
   child.once('error', error => {
     addActivity('error', system.name + ' launch failed: ' + error.message);
     emitLaunch({ file: safeFile, status: 'failed', message: error.message });
   });
+  if (presentation && child.pid) {
+    presentNativeGameWindow({ pid: child.pid, mode: presentation }).then(windowResult => {
+      if (windowResult?.ok) {
+        const detail = windowResult.status === 'native-fullscreen'
+          ? 'native fullscreen with preserved aspect ratio'
+          : windowResult.status === 'borderless-fullscreen'
+            ? 'borderless fullscreen'
+            : windowResult.status === 'centered-fallback'
+              ? 'centered window fallback'
+              : 'centered window';
+        addActivity('success', system.name + ' presentation ready: ' + detail + (nativeHandoff?.minimized ? '; GameDeck will return when the game closes.' : '.'));
+      } else {
+        addActivity('info', system.name + ' opened, but GameDeck could not confirm the native window: ' + (windowResult?.status || 'unknown result') + '.');
+      }
+    }).catch(error => addActivity('info', system.name + ' opened without window confirmation: ' + error.message));
+  }
   child.unref();
   const store = readStore();
   store.recent[safeFile] = Date.now();
   writeStore(store);
   const displayName = isArcadeSystem(system) ? arcadeDisplayTitle(game.shortName) : cleanName(safeFile);
+  if (openBorLaunch) addActivity('info', 'Prepared an isolated OpenBOR session using ' + openBorLaunch.stagingMethod + ' staging.');
   addActivity('success', 'Launched ' + displayName + ' with ' + emulator.label);
-  const result = { ok: true, launched: true, emulator: emulator.label, message: displayName + ' opened with ' + emulator.label + '.' };
+  const fullscreen = presentation === 'native-fullscreen' || presentation === 'borderless-fullscreen';
+  const result = { ok: true, launched: true, emulator: emulator.label, presentation, message: displayName + ' opened with ' + emulator.label + (fullscreen ? ' in fullscreen.' : '.') };
   if (options.automatic) emitLaunch({ file: safeFile, status: 'launched', emulator: emulator.label, message: result.message });
   return result;
 }
@@ -2266,6 +2507,17 @@ function readCatalogRows(file) {
   }
 }
 
+function activeManagedDownloadFile(file) {
+  const candidate = path.resolve(String(file || ''));
+  const candidateKey = process.platform === 'win32' ? candidate.toLowerCase() : candidate;
+  return [...downloads.values()].some(job => {
+    if (job?.status !== 'running' || !job.folder || !job.fileName) return false;
+    const expected = path.resolve(LIBRARY, String(job.folder), path.basename(String(job.fileName)));
+    const expectedKey = process.platform === 'win32' ? expected.toLowerCase() : expected;
+    return candidateKey === expectedKey;
+  });
+}
+
 function installedFiles(folder) {
   const root = path.resolve(LIBRARY, String(folder || ''));
   const relative = path.relative(path.resolve(LIBRARY), root);
@@ -2273,6 +2525,7 @@ function installedFiles(folder) {
   const system = systemForFolder(folder);
   const artifacts = new Map();
   for (const file of walk(root)) {
+    if (activeManagedDownloadFile(file)) continue;
     const playable = isPlayableFile(file, system);
     const archive = ['.zip', '.rar', '.7z'].includes(path.extname(file).toLowerCase());
     if (!playable && !archive) continue;

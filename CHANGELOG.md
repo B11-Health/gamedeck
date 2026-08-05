@@ -4,6 +4,9 @@ All notable GameDeck releases are documented here.
 
 ## [Unreleased]
 
+- Added production CADOps governance and shipped the reviewed premium UIUX sequence: original console-themed environments, stable six-action spotlight controls, 44-pixel targets, reduced-motion safety, mixed-system classification, archive integrity checks, firmware guidance, and arcade launch repair.
+- Opened a privacy-safe community playtest and added a reusable verified release/social content kit grounded in `main@31e606c`.
+
 - Completed a full repository, security, accessibility, packaged-runtime, public-site, mobile-receiver, and live multiplayer QA pass; added permanent integrity checks, explicit renderer sandboxing, readable status typography, installable PWA icons, and player-friendly pairing errors.
 
 - Reorganized multiplayer into a calm game → play style → lobby flow with a compact three-way mode switch, mode-accurate guidance, larger player slots, deduplicated metadata, and shorter Couch/online setup panels.

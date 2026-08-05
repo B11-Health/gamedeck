@@ -24,6 +24,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+      - run: npm run ui:layout
+        if: runner.os == 'Windows'
 
   package-smoke:
     name: Package smoke · Linux

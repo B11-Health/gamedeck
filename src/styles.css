@@ -8,6 +8,8 @@
   --lime: #72e7ff;
   --lime-soft: #72e7ff26;
   --danger: #ff6b6b;
+  --system-accent: #72e7ff;
+  --system-glow: #8b5cff;
   --header-height: 72px;
 }
 
@@ -25,8 +27,8 @@ body {
   overflow: hidden;
   color: var(--text);
   background:
-    radial-gradient(circle at 70% -10%, #302044 0, transparent 35%),
-    radial-gradient(circle at 12% 92%, #142d2c 0, transparent 26%),
+    radial-gradient(circle at 76% -8%, color-mix(in srgb, var(--system-glow) 20%, transparent) 0, transparent 38%),
+    radial-gradient(circle at 12% 92%, color-mix(in srgb, var(--system-accent) 10%, #142d2c) 0, transparent 26%),
     var(--bg);
   font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 }
@@ -3446,17 +3448,22 @@ body.density-compact .catalog-grid { gap: 15px; }
 .game .play:hover { transform: scale(1.06); }
 
 .spotlight-actions {
+  width: min(300px, 100%);
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: stretch;
   gap: 9px;
   margin-left: auto;
 }
-.spotlight-primary-actions, .spotlight-utility-actions { display: flex; align-items: center; gap: 8px; }
-.spotlight-primary-actions button { min-height: 40px; }
+.spotlight-primary-actions, .spotlight-utility-actions { width: 100%; min-width: 0; display: flex; align-items: center; gap: 8px; }
+.spotlight-primary-actions button, .spotlight-utility-actions button,
+body.density-compact .spotlight-primary-actions button,
+body.density-compact .spotlight-utility-actions button { min-width: 0; flex: 1 1 0; }
+.spotlight-primary-actions button { min-height: 44px; }
 .spotlight-utility-actions button {
   min-width: 78px;
-  min-height: 32px;
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -3465,7 +3472,7 @@ body.density-compact .catalog-grid { gap: 15px; }
   border-color: #2d394a;
   color: #8f9cae;
   background: #0a1018b8;
-  font-size: 8px;
+  font-size: 10px;
 }
 .spotlight-utility-actions button span { color: #72e7ff; font-size: 11px; }
 .spotlight-utility-actions button b { font: inherit; }
@@ -5807,6 +5814,526 @@ body.modal-open > main {
 .boot-visual > small,
 .loading-foot { font-size: 8px; }
 
+
+/* Aurora Focus — premium browsing highlight for game cards */
+@property --aurora-angle { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+.game {
+  --pointer-x: 50%;
+  --pointer-y: 50%;
+  --tilt-x: 0deg;
+  --tilt-y: 0deg;
+  --art-x: 0px;
+  --art-y: 0px;
+  position: relative;
+  isolation: isolate;
+  perspective: 900px;
+}
+
+.aurora-shell {
+  position: relative;
+  isolation: isolate;
+  border-radius: 21px;
+  transform-style: preserve-3d;
+}
+
+.aurora-shell::before,
+.aurora-shell::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .24s ease, transform .3s ease;
+}
+
+.aurora-shell::before {
+  z-index: -2;
+  inset: -3px;
+  padding: 2px;
+  border-radius: inherit;
+  background: conic-gradient(from var(--aurora-angle, 0deg) at 50% 50%, #66edff, #866cff 24%, var(--c) 48%, #c8ff52 70%, #66edff);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  filter: saturate(1.18);
+}
+
+.aurora-shell::after {
+  z-index: -3;
+  inset: -12px;
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at var(--pointer-x) var(--pointer-y), color-mix(in srgb, var(--c) 58%, #66edff) 0, transparent 42%),
+    radial-gradient(circle at 78% 20%, #866cff88, transparent 42%),
+    radial-gradient(circle at 24% 82%, #c8ff5266, transparent 40%);
+  filter: blur(16px);
+  transform: scale(.96);
+}
+
+.game:hover .aurora-shell::before,
+.game:focus-visible .aurora-shell::before,
+.game.active .aurora-shell::before,
+.game:hover .aurora-shell::after,
+.game:focus-visible .aurora-shell::after,
+.game.active .aurora-shell::after {
+  opacity: 1;
+}
+
+.game:hover .aurora-shell::before,
+.game:focus-visible .aurora-shell::before,
+.game.active .aurora-shell::before { animation: auroraPerimeter 3.6s linear infinite; }
+.game:hover .aurora-shell::after,
+.game:focus-visible .aurora-shell::after,
+.game.active .aurora-shell::after {
+  animation: auroraHalo 2.2s ease-in-out infinite;
+  transform: scale(1);
+}
+
+.game .cover {
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  will-change: auto;
+}
+
+.game:hover .cover,
+.game:focus-visible .cover,
+.game.active .cover {
+  border-color: color-mix(in srgb, var(--c) 52%, #bdf7ff);
+  box-shadow:
+    0 28px 64px #000c,
+    0 0 0 1px #ffffff45 inset,
+    0 0 0 3px #72e7ff18,
+    0 0 32px color-mix(in srgb, var(--c) 38%, transparent);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .game:hover .cover {
+    transform: translateY(-7px) scale(1.015) rotateX(var(--tilt-x)) rotateY(var(--tilt-y));
+    will-change: transform;
+  }
+}
+
+.game:focus-visible .cover,
+.game.active .cover {
+  transform: translateY(-7px) scale(1.015);
+}
+
+.game .cover-art::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(circle at var(--pointer-x) var(--pointer-y), #ffffff38 0, #72e7ff16 19%, transparent 49%);
+  mix-blend-mode: screen;
+  transition: opacity .2s ease;
+}
+
+.game:hover .cover-art::after,
+.game:focus-visible .cover-art::after,
+.game.active .cover-art::after { opacity: .85; }
+
+.game .cover-art img {
+  transform: translate3d(0, 0, 0) scale(1);
+  transition: transform .34s cubic-bezier(.2,.75,.2,1), filter .3s ease, opacity .3s ease;
+}
+
+.game:hover .cover-art img,
+.game:focus-visible .cover-art img,
+.game.active .cover-art img {
+  transform: translate3d(var(--art-x), var(--art-y), 18px) scale(1.055);
+  filter: saturate(1.12) contrast(1.04) drop-shadow(0 14px 24px #0008);
+  opacity: 1;
+}
+
+.game:focus-visible .cover-art img,
+.game.active .cover-art img { transform: translate3d(0, 0, 18px) scale(1.055); }
+
+.game .cover::before {
+  width: 54%;
+  background: linear-gradient(96deg, transparent 5%, #ffffff12 28%, #72e7ff32 48%, #9d7bff2b 60%, transparent 92%);
+}
+
+.game:hover .cover::before,
+.game:focus-visible .cover::before,
+.game.active .cover::before { animation: auroraSweep 1.15s cubic-bezier(.22,.7,.2,1) both; }
+
+.game:hover .fav,
+.game:focus-visible .fav,
+.game.active .fav,
+.game:hover .play,
+.game:focus-visible .play,
+.game.active .play,
+.game:hover .cover-title,
+.game:focus-visible .cover-title,
+.game.active .cover-title {
+  opacity: 1;
+}
+
+.game:hover .play,
+.game:focus-visible .play,
+.game.active .play { transform: none; }
+
+.game:hover .meta > b,
+.game:focus-visible .meta > b,
+.game.active .meta > b { color: #f8fbff; }
+.game:hover .game-card-facts,
+.game:focus-visible .game-card-facts,
+.game.active .game-card-facts { color: #a8b5c8; }
+
+@keyframes auroraPerimeter { to { --aurora-angle: 360deg; } }
+@keyframes auroraHalo { 50% { opacity: .72; transform: scale(1.025); } }
+@keyframes auroraSweep {
+  from { transform: skewX(-14deg) translateX(-240%); }
+  to { transform: skewX(-14deg) translateX(560%); }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .game:hover:not(.active):not(:focus-visible) .aurora-shell::before,
+  .game:hover:not(.active):not(:focus-visible) .aurora-shell::after,
+  .game:hover:not(.active):not(:focus-visible) .cover-art::after { opacity: 0; }
+  .game:hover:not(.active):not(:focus-visible) .cover {
+    transform: none;
+    border-color: #ffffff14;
+    box-shadow: 0 16px 40px #0006;
+  }
+  .game:hover:not(.active):not(:focus-visible) .cover-art img {
+    transform: none;
+    filter: drop-shadow(0 10px 18px #0007);
+  }
+  .game:hover:not(.active):not(:focus-visible) .cover::before { transform: skewX(-14deg) translateX(-240%); }
+  .game:hover .cover,
+  .game:hover .cover-art img,
+  .game:hover .aurora-shell::before,
+  .game:hover .aurora-shell::after,
+  .game:hover .cover-art::after,
+  .game:hover .cover::before {
+    animation: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game {
+    --pointer-x: 50% !important;
+    --pointer-y: 50% !important;
+    --tilt-x: 0deg !important;
+    --tilt-y: 0deg !important;
+    --art-x: 0px !important;
+    --art-y: 0px !important;
+  }
+  .game,
+  .game .aurora-shell,
+  .game .aurora-shell::before,
+  .game .aurora-shell::after,
+  .game .cover,
+  .game .cover::before,
+  .game .cover::after,
+  .game .cover-art,
+  .game .cover-art::after,
+  .game .cover-art img {
+    animation: none !important;
+    transition: none !important;
+  }
+  .game:hover .cover,
+  .game:focus-visible .cover,
+  .game.active .cover { transform: translateY(-4px) scale(1.01); }
+  .game:hover .cover-art img,
+  .game:focus-visible .cover-art img,
+  .game.active .cover-art img { transform: scale(1.035); }
+  .game:hover .aurora-shell::after,
+  .game:focus-visible .aurora-shell::after,
+  .game.active .aurora-shell::after { opacity: .7; transform: none; }
+  .game:hover .cover::before,
+  .game:focus-visible .cover::before,
+  .game.active .cover::before { transform: skewX(-14deg) translateX(145%); }
+}
+
+@media (max-width: 520px) {
+  .aurora-shell { border-radius: 19px; }
+  .aurora-shell::after { inset: -8px; filter: blur(12px); }
+}
+
+/* Stable selected-game spotlight geometry */
+@media (min-width: 821px) {
+  .spotlight {
+    height: 236px;
+    min-height: 236px;
+    max-height: 236px;
+  }
+
+  body.density-compact .spotlight {
+    height: 172px;
+    min-height: 172px;
+    max-height: 172px;
+  }
+
+  .spotlight-copy h2 {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-wrap: nowrap;
+    white-space: nowrap;
+  }
+
+  .spotlight .spotlight-actions {
+    width: min(300px, 100%);
+    max-width: 300px;
+    min-width: 0;
+    align-self: center;
+    align-items: stretch;
+  }
+
+  .spotlight .spotlight-actions .spotlight-primary-actions,
+  .spotlight .spotlight-actions .spotlight-utility-actions {
+    width: 100%;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .spotlight .spotlight-actions .spotlight-primary-actions > button,
+  .spotlight .spotlight-actions .spotlight-utility-actions > button {
+    width: auto;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+    padding-inline: 8px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+@media (min-width: 821px) and (max-width: 1080px) {
+  .spotlight {
+    height: 220px;
+    min-height: 220px;
+    max-height: 220px;
+  }
+}
+
+@media (max-width: 820px) {
+  .spotlight-copy h2 {
+    display: -webkit-box;
+    min-height: 2.06em;
+    max-height: 2.06em;
+    overflow: hidden;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+}
+
+/* Console-themed environmental artwork */
+.system.active {
+  border-color: color-mix(in srgb, var(--system-accent) 52%, #2f3847);
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--system-accent) 12%, #181e28), #181e28 72%);
+  box-shadow: inset 3px 0 var(--system-accent), 0 0 24px color-mix(in srgb, var(--system-glow) 18%, transparent);
+}
+.system.active .count {
+  color: #eef8ff;
+  border: 1px solid color-mix(in srgb, var(--system-accent) 28%, transparent);
+  background: color-mix(in srgb, var(--system-accent) 9%, #0b0f15);
+}
+
+.spotlight {
+  border-color: color-mix(in srgb, var(--system-accent) 31%, #ffffff18);
+  box-shadow:
+    0 24px 72px #0008,
+    0 0 44px color-mix(in srgb, var(--system-glow) 14%, transparent),
+    inset 0 1px #ffffff12;
+  transition: border-color .28s ease, box-shadow .28s ease;
+}
+.spotlight .feature-backdrop { background: #07101c; }
+.spotlight .feature-backdrop img {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  object-fit: cover;
+  filter: saturate(1.12) contrast(1.04);
+  transform: scale(1.035);
+  transition: opacity .34s ease, transform .65s cubic-bezier(.2,.75,.2,1);
+}
+.spotlight .feature-backdrop img.is-ready { opacity: .8; transform: scale(1); }
+.spotlight .feature-backdrop::before {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  background:
+    radial-gradient(circle at 82% 52%, color-mix(in srgb, var(--system-glow) 15%, transparent), transparent 42%),
+    linear-gradient(90deg, #080d16fa 0%, #09101aef 31%, #09111dc4 58%, #07101b68 100%);
+}
+.spotlight .feature-backdrop::after {
+  z-index: 2;
+  background:
+    linear-gradient(0deg, #080d15f2 0%, transparent 50%),
+    linear-gradient(90deg, transparent 55%, #060a1080 100%);
+}
+.spotlight-art {
+  border-color: color-mix(in srgb, var(--system-accent) 38%, #ffffff24);
+  box-shadow: 0 18px 42px #000a, 0 0 24px color-mix(in srgb, var(--system-glow) 18%, transparent);
+}
+.spotlight-copy .eyebrow {
+  color: var(--system-accent);
+  text-shadow: 0 0 20px color-mix(in srgb, var(--system-glow) 42%, transparent);
+}
+.spotlight .feature-facts span {
+  border-color: color-mix(in srgb, var(--system-accent) 28%, #ffffff17);
+  background: #070c14c4;
+}
+.spotlight-actions .primary {
+  color: #071016;
+  border-color: var(--system-accent);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--system-accent) 84%, white), var(--system-accent));
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--system-glow) 30%, transparent);
+}
+.spotlight-primary-actions .online {
+  border-color: color-mix(in srgb, var(--system-glow) 42%, #2d394a);
+  background: color-mix(in srgb, var(--system-glow) 10%, #0a1018);
+}
+.spotlight-utility-actions button span { color: var(--system-accent); }
+.spotlight-utility-actions button:hover {
+  border-color: color-mix(in srgb, var(--system-accent) 46%, #526278);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--system-glow) 16%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spotlight,
+  .spotlight .feature-backdrop img {
+    transition: none;
+  }
+}
+
+
+/* Native game launch handoff */
+.launch-handoff {
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+  display: grid;
+  place-items: center;
+  padding: clamp(18px, 4vw, 54px);
+  color: #f7fbff;
+  background:
+    radial-gradient(circle at 50% 44%, #1f84aa2b 0 14%, transparent 42%),
+    linear-gradient(180deg, #060a11e8, #05070af4);
+  backdrop-filter: blur(20px) saturate(1.18);
+  opacity: 0;
+  transition: opacity .22s ease;
+}
+.launch-handoff.visible { opacity: 1; }
+.launch-handoff::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, transparent 0 49.8%, #72e7ff10 50%, transparent 50.2%),
+    linear-gradient(0deg, transparent 0 49.8%, #72e7ff0b 50%, transparent 50.2%);
+  mask-image: radial-gradient(circle at center, #000, transparent 68%);
+}
+.launch-handoff-card {
+  position: relative;
+  width: min(720px, calc(100vw - 36px));
+  min-width: 0;
+  display: grid;
+  grid-template-columns: clamp(82px, 12vw, 126px) minmax(0, 1fr) 42px;
+  align-items: center;
+  gap: clamp(18px, 3vw, 32px);
+  padding: clamp(18px, 3vw, 30px);
+  border: 1px solid #72e7ff42;
+  border-radius: 26px;
+  background: linear-gradient(145deg, #101c2be8, #090d15f5 66%);
+  box-shadow: 0 34px 90px #000c, 0 0 0 1px #ffffff08 inset, 0 0 70px #45c9ff12;
+  transform: translateY(12px) scale(.985);
+  transition: transform .24s cubic-bezier(.2,.8,.2,1), border-color .24s ease;
+  overflow: hidden;
+}
+.launch-handoff.visible .launch-handoff-card { transform: translateY(0) scale(1); border-color: #72e7ff78; }
+.launch-handoff-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 15%, #ffffff08 45%, transparent 72%);
+  transform: translateX(-120%);
+  animation: launchSweep 1.8s ease-in-out infinite;
+}
+.launch-handoff-art {
+  aspect-ratio: 4 / 5;
+  min-width: 0;
+  display: grid;
+  place-items: center;
+  border: 1px solid #ffffff18;
+  border-radius: 18px;
+  overflow: hidden;
+  background: linear-gradient(150deg, #24354d, #0b1019);
+  box-shadow: 0 18px 34px #0008, 0 0 26px #72e7ff18;
+}
+.launch-handoff-art img { width: 100%; height: 100%; object-fit: cover; }
+.launch-handoff-art span { font: 900 28px/1 system-ui, sans-serif; color: #72e7ff; text-shadow: 0 0 20px #72e7ff80; }
+.launch-handoff-copy { min-width: 0; display: grid; gap: 8px; }
+.launch-handoff-kicker {
+  color: #72e7ff;
+  font: 800 11px/1.2 'Segoe UI Variable Display', 'Segoe UI', system-ui, sans-serif;
+  letter-spacing: .18em;
+}
+.launch-handoff-copy b {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 750 clamp(24px, 3.1vw, 38px)/1.06 'Segoe UI Variable Display', 'Segoe UI', system-ui, sans-serif;
+  letter-spacing: -.025em;
+}
+.launch-handoff-copy small {
+  max-width: 520px;
+  color: #aebdce;
+  font: 500 clamp(12px, 1.35vw, 15px)/1.55 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+}
+.launch-handoff-spinner {
+  width: 34px;
+  height: 34px;
+  border: 3px solid #ffffff16;
+  border-top-color: #72e7ff;
+  border-right-color: #b06cff;
+  border-radius: 50%;
+  animation: launchSpin .8s linear infinite;
+  box-shadow: 0 0 18px #72e7ff24;
+}
+.launch-handoff-foot {
+  position: absolute;
+  left: 50%;
+  bottom: clamp(24px, 5vh, 54px);
+  translate: -50% 0;
+  width: min(720px, calc(100vw - 40px));
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  color: #7f91a5;
+  font: 800 9px/1.2 'Segoe UI Variable Display', 'Segoe UI', system-ui, sans-serif;
+  letter-spacing: .13em;
+}
+.launch-handoff-foot span { padding: 7px 10px; border: 1px solid #ffffff10; border-radius: 999px; background: #091019a8; }
+@keyframes launchSpin { to { transform: rotate(360deg); } }
+@keyframes launchSweep { 55%, 100% { transform: translateX(120%); } }
+@media (max-width: 660px) {
+  .launch-handoff-card { grid-template-columns: 72px minmax(0, 1fr); border-radius: 20px; }
+  .launch-handoff-spinner { grid-column: 1 / -1; justify-self: center; width: 28px; height: 28px; }
+  .launch-handoff-copy b { font-size: 23px; }
+  .launch-handoff-foot { bottom: 18px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .launch-handoff, .launch-handoff-card { transition: none; }
+  .launch-handoff-card::after { animation: none; }
+  .launch-handoff-spinner { animation-duration: 1.5s; }
+}
 
 /* Decentralized compatible-room discovery */
 .community-host-options { align-items: stretch; }

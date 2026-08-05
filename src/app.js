@@ -81,6 +81,7 @@ const state = {
   donations: null,
   diagnostics: null,
   launchingFile: null,
+  launchHandoffTimer: null,
   inputMode: 'pointer',
   shelfMemory: {},
   setupCoachOpen: requestedCaptureView === 'setup' || readPreference('setup-coach', 'auto') === 'open',
@@ -97,6 +98,61 @@ const state = {
   density: 'compact',
   sidebarCollapsed: readPreference('sidebar', 'expanded') === 'collapsed'
 };
+
+const SYSTEM_THEME_BACKGROUNDS = {
+  all: { key: 'all', image: '../assets/system-themes/nintendo-polygon.webp', accent: '#72e7ff', glow: '#8b5cff', position: '78% center' },
+  snes: { key: 'nintendo-classic', image: '../assets/system-themes/nintendo-classic.webp', accent: '#c86cff', glow: '#ff3eb5', position: '76% center' },
+  nes: { key: 'nintendo-classic', image: '../assets/system-themes/nintendo-classic.webp', accent: '#ff5a6f', glow: '#b947ff', position: '76% center' },
+  fds: { key: 'nintendo-classic', image: '../assets/system-themes/nintendo-classic.webp', accent: '#ff5a6f', glow: '#b947ff', position: '76% center' },
+  satellaview: { key: 'nintendo-classic', image: '../assets/system-themes/nintendo-classic.webp', accent: '#a66cff', glow: '#ff3eb5', position: '76% center' },
+  sufami: { key: 'nintendo-classic', image: '../assets/system-themes/nintendo-classic.webp', accent: '#d36cff', glow: '#ff3e9f', position: '76% center' },
+  n64: { key: 'nintendo-polygon', image: '../assets/system-themes/nintendo-polygon.webp', accent: '#45e6c1', glow: '#6d71ff', position: '80% center' },
+  gamecube: { key: 'nintendo-polygon', image: '../assets/system-themes/nintendo-polygon.webp', accent: '#8f72ff', glow: '#36d8ff', position: '80% center' },
+  wii: { key: 'nintendo-polygon', image: '../assets/system-themes/nintendo-polygon.webp', accent: '#7de7ff', glow: '#4e9fff', position: '80% center' },
+  wiiu: { key: 'nintendo-polygon', image: '../assets/system-themes/nintendo-polygon.webp', accent: '#36c8ff', glow: '#6f62ff', position: '80% center' },
+  gb: { key: 'nintendo-handheld', image: '../assets/system-themes/nintendo-handheld.webp', accent: '#a9ef5b', glow: '#5bdcff', position: '82% center' },
+  gba: { key: 'nintendo-handheld', image: '../assets/system-themes/nintendo-handheld.webp', accent: '#8d7cff', glow: '#5bdcff', position: '82% center' },
+  nds: { key: 'nintendo-handheld', image: '../assets/system-themes/nintendo-handheld.webp', accent: '#75dfff', glow: '#8d68ff', position: '82% center' },
+  genesis: { key: 'sega-16bit', image: '../assets/system-themes/sega-16bit.webp', accent: '#48a8ff', glow: '#ff3eb5', position: '80% center' },
+  sega32x: { key: 'sega-16bit', image: '../assets/system-themes/sega-16bit.webp', accent: '#ff9a47', glow: '#6b7cff', position: '80% center' },
+  mastersystem: { key: 'sega-16bit', image: '../assets/system-themes/sega-16bit.webp', accent: '#ff5a63', glow: '#4f8dff', position: '80% center' },
+  gamegear: { key: 'sega-16bit', image: '../assets/system-themes/sega-16bit.webp', accent: '#ef62ff', glow: '#3ccfff', position: '80% center' },
+  segacd: { key: 'sega-3d', image: '../assets/system-themes/sega-3d.webp', accent: '#55c8ff', glow: '#ff9c45', position: '80% center' },
+  saturn: { key: 'sega-3d', image: '../assets/system-themes/sega-3d.webp', accent: '#7dcfff', glow: '#8c6cff', position: '80% center' },
+  dreamcast: { key: 'sega-3d', image: '../assets/system-themes/sega-3d.webp', accent: '#ff9a47', glow: '#5bcfff', position: '80% center' },
+  ps1: { key: 'playstation', image: '../assets/system-themes/playstation.webp', accent: '#b7c6dd', glow: '#4d86ff', position: '80% center' },
+  ps2: { key: 'playstation', image: '../assets/system-themes/playstation.webp', accent: '#4c8dff', glow: '#825fff', position: '80% center' },
+  psp: { key: 'playstation', image: '../assets/system-themes/playstation.webp', accent: '#43d8ff', glow: '#586bff', position: '80% center' },
+  arcade: { key: 'arcade', image: '../assets/system-themes/arcade.webp', accent: '#ff49cc', glow: '#36d9ff', position: '82% center' },
+  mame: { key: 'arcade', image: '../assets/system-themes/arcade.webp', accent: '#ff49cc', glow: '#36d9ff', position: '82% center' },
+  atari2600: { key: 'retro', image: '../assets/system-themes/retro.webp', accent: '#ff9a3d', glow: '#ffc24b', position: '82% center' },
+  pce: { key: 'retro', image: '../assets/system-themes/retro.webp', accent: '#ff9a3d', glow: '#ffc24b', position: '82% center' }
+};
+
+function systemTheme(systemId) {
+  return SYSTEM_THEME_BACKGROUNDS[systemId] || SYSTEM_THEME_BACKGROUNDS.all;
+}
+
+function applySystemTheme(systemId) {
+  const theme = systemTheme(systemId);
+  const root = document.documentElement;
+  root.style.setProperty('--system-accent', theme.accent);
+  root.style.setProperty('--system-glow', theme.glow);
+  document.body.dataset.systemTheme = theme.key;
+  const spotlight = $('#spotlight');
+  const backdrop = $('#spotlightBackdrop');
+  if (!spotlight || !backdrop) return theme;
+  spotlight.dataset.systemTheme = theme.key;
+  backdrop.style.objectPosition = theme.position;
+  if (backdrop.dataset.themeSrc !== theme.image) {
+    backdrop.dataset.themeSrc = theme.image;
+    backdrop.classList.remove('is-ready');
+    backdrop.onload = () => backdrop.classList.add('is-ready');
+    backdrop.src = theme.image;
+    if (backdrop.complete) backdrop.classList.add('is-ready');
+  }
+  return theme;
+}
 
 const views = ['home', 'discover', 'favorites', 'recent', 'community'];
 const CATALOG_PAGE_SIZE = 120;
@@ -535,6 +591,7 @@ function systemById(id) {
 }
 
 function systemStatusLabel(system) {
+  if (Number(system?.count || 0) === 0) return system?.ready ? 'NO GAMES' : 'SETUP';
   return system?.ready ? 'READY' : 'SETUP';
 }
 
@@ -734,7 +791,7 @@ function updateGameArtwork(game, url) {
   card?.querySelector('.art-status')?.remove();
   if (state.focusedGameId === game.id) {
     $('#spotlightArt').innerHTML = `<img src="${escapeHtml(url)}" alt="${escapeHtml(game.title)} cover">`;
-    $('#spotlightBackdrop').src = url;
+    applySystemTheme(game.system);
   }
   if (state.artworkFilter === 'missing-art' && !['discover', 'community'].includes(state.view)) renderGames();
   else renderSetupCoach();
@@ -950,7 +1007,7 @@ function setFocusedGame(game, options = {}) {
   $('#spotlightPlay').textContent = blocked ? 'Fix ROM set first' : 'Play now';
   $('#spotlightFav').textContent = game.favorite ? 'Remove favorite' : 'Add favorite';
   $('#spotlightArt').innerHTML = `<img src="${escapeHtml(art)}" alt="${escapeHtml(game.title)} cover">`;
-  $('#spotlightBackdrop').src = art;
+  applySystemTheme(game.system);
   spotlight.classList.remove('hidden');
   requestArtwork(game);
   queueGameDetails(gameMetadataTitle(game), game.system, gameDetailsContext(game), details => {
@@ -1147,14 +1204,46 @@ function renderGames() {
     const generatedArt = artMissing && artworkEnrichmentTried.has(game.id);
     const artStatus = artMissing ? `<span class="art-status ${generatedArt ? 'generated' : 'matching'}">${generatedArt ? 'GAMEDECK ART' : 'MATCHING ART'}</span>` : '';
     const stateClasses = [artMissing ? 'missing-art' : 'has-art', game.favorite ? 'is-favorite' : '', game.lastPlayed ? 'is-recent' : '', playable ? 'is-playable' : 'needs-setup'].filter(Boolean).join(' ');
-    return `<article class="game ${game.file === state.launchingFile ? 'launching' : ''} ${stateClasses} ${arcade ? 'arcade-card' : ''} ${blocked ? 'health-attention' : ''} ${repairable ? 'health-repairable' : ''} ${active ? 'active' : ''}" style="--delay:${Math.min(index, 14) * 18}ms" tabindex="0" role="listitem" aria-current="${active}" aria-label="Select ${escapeHtml(game.title)} on ${escapeHtml(system?.name || 'GameDeck')}" data-id="${game.id}"><div class="cover" style="--c:${system?.color || '#8992a3'}"><div class="cover-art"><img data-game-art="${game.id}" src="${escapeHtml(gameArt(game))}" alt="${escapeHtml(game.title)} artwork" loading="lazy"></div><span class="cover-system">${escapeHtml(system?.short || 'GAME')}</span>${badge}${artStatus}<button type="button" class="fav ${game.favorite ? 'on' : ''}" aria-label="${game.favorite ? 'Remove favorite' : 'Favorite'}"><span aria-hidden="true">${game.favorite ? '★' : '☆'}</span></button><div class="cover-logo">${escapeHtml(system?.icon || 'G')}</div><div class="cover-title">${escapeHtml(game.title)}</div><button type="button" class="play" aria-label="${blocked ? 'ROM set needs attention' : `Play ${escapeHtml(game.title)}`}" ${blocked ? 'disabled' : ''}><span aria-hidden="true">${blocked ? '!' : '▶'}</span> ${blocked ? 'CHECK' : 'PLAY'}</button></div><div class="meta"><b title="${escapeHtml(game.title)}">${escapeHtml(game.title)}</b><div class="game-card-facts">${facts}</div><small><span class="ready-dot ${playable ? 'ok' : 'setup'}"></span>${escapeHtml(status)}</small></div></article>`;
+    return `<article class="game ${game.file === state.launchingFile ? 'launching' : ''} ${stateClasses} ${arcade ? 'arcade-card' : ''} ${blocked ? 'health-attention' : ''} ${repairable ? 'health-repairable' : ''} ${active ? 'active' : ''}" style="--delay:${Math.min(index, 14) * 18}ms" tabindex="0" role="listitem" aria-current="${active}" aria-label="Select ${escapeHtml(game.title)} on ${escapeHtml(system?.name || 'GameDeck')}" data-id="${game.id}"><div class="aurora-shell" style="--c:${system?.color || '#8992a3'}"><div class="cover"><div class="cover-art"><img data-game-art="${game.id}" src="${escapeHtml(gameArt(game))}" alt="${escapeHtml(game.title)} artwork" loading="lazy"></div><span class="cover-system">${escapeHtml(system?.short || 'GAME')}</span>${badge}${artStatus}<button type="button" class="fav ${game.favorite ? 'on' : ''}" aria-label="${game.favorite ? 'Remove favorite' : 'Favorite'}"><span aria-hidden="true">${game.favorite ? '★' : '☆'}</span></button><div class="cover-logo">${escapeHtml(system?.icon || 'G')}</div><div class="cover-title">${escapeHtml(game.title)}</div><button type="button" class="play" aria-label="${blocked ? 'ROM set needs attention' : `Play ${escapeHtml(game.title)}`}" ${blocked ? 'disabled' : ''}><span aria-hidden="true">${blocked ? '!' : '▶'}</span> ${blocked ? 'CHECK' : 'PLAY'}</button></div></div><div class="meta"><b title="${escapeHtml(game.title)}">${escapeHtml(game.title)}</b><div class="game-card-facts">${facts}</div><small><span class="ready-dot ${playable ? 'ok' : 'setup'}"></span>${escapeHtml(status)}</small></div></article>`;
   }).join('');
 
   renderEmptyState(games);
   $$('.game').forEach(card => {
     const game = games.find(item => item.id === card.dataset.id);
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const resetAuroraPointer = () => {
+      card.style.removeProperty('--pointer-x');
+      card.style.removeProperty('--pointer-y');
+      card.style.removeProperty('--tilt-x');
+      card.style.removeProperty('--tilt-y');
+      card.style.removeProperty('--art-x');
+      card.style.removeProperty('--art-y');
+    };
     card.onmouseenter = () => setFocusedGame(game);
-    card.onfocus = () => setFocusedGame(game);
+    card.onpointermove = event => {
+      if (event.pointerType !== 'mouse' || !window.matchMedia('(hover: hover) and (pointer: fine)').matches || reducedMotion.matches) {
+        resetAuroraPointer();
+        return;
+      }
+      const bounds = card.getBoundingClientRect();
+      if (!bounds.width || !bounds.height) return;
+      const x = Math.max(0, Math.min(1, (event.clientX - bounds.left) / bounds.width));
+      const y = Math.max(0, Math.min(1, (event.clientY - bounds.top) / bounds.height));
+      const tiltX = (0.5 - y) * 8;
+      const tiltY = (x - 0.5) * 10;
+      card.style.setProperty('--pointer-x', (x * 100).toFixed(2) + '%');
+      card.style.setProperty('--pointer-y', (y * 100).toFixed(2) + '%');
+      card.style.setProperty('--tilt-x', tiltX.toFixed(2) + 'deg');
+      card.style.setProperty('--tilt-y', tiltY.toFixed(2) + 'deg');
+      card.style.setProperty('--art-x', ((x - 0.5) * -8).toFixed(2) + 'px');
+      card.style.setProperty('--art-y', ((y - 0.5) * -8).toFixed(2) + 'px');
+    };
+    card.onpointerleave = resetAuroraPointer;
+    card.onpointercancel = resetAuroraPointer;
+    card.onfocus = () => {
+      resetAuroraPointer();
+      setFocusedGame(game);
+    };
     card.onclick = event => {
       if (event.target.closest('button')) return;
       setFocusedGame(game);
@@ -1190,6 +1279,7 @@ function selectLibrarySystem(id) {
   state.selectedSystem = id;
   state.focusedLibrarySystem = id;
   state.view = 'home';
+  applySystemTheme(id);
   state.query = '';
   $('#search').value = '';
   setActiveView('home');
@@ -1208,8 +1298,42 @@ async function toggleFavorite(game) {
   toast(wasFavorite ? 'Removed from favorites' : 'Added to favorites', 'success');
 }
 
+function updateLaunchHandoff(game, active) {
+  const panel = $('#launchHandoff');
+  if (!panel) return;
+  clearTimeout(state.launchHandoffTimer);
+  if (!active || !game) {
+    panel.classList.remove('visible');
+    state.launchHandoffTimer = setTimeout(() => panel.classList.add('hidden'), 220);
+    return;
+  }
+  const system = systemById(game.system);
+  const fullscreen = system?.id === 'openbor' || ['arcade', 'mame', 'ps1', 'ps2', 'gamecube', 'wii', 'wiiu'].includes(system?.id);
+  $('#launchHandoffKicker').textContent = fullscreen ? 'OPENING FULLSCREEN' : 'OPENING GAME';
+  $('#launchHandoffTitle').textContent = game.title || 'Preparing your game';
+  $('#launchHandoffDetail').textContent = system?.id === 'openbor'
+    ? 'GameDeck is opening an isolated OpenBOR session, preserving aspect ratio, and handing over controller focus.'
+    : `GameDeck is handing controller focus to ${system?.name || 'the selected engine'}.`;
+  $('#launchHandoffMode').textContent = fullscreen ? 'FULLSCREEN HANDOFF' : 'CENTERED HANDOFF';
+  const art = $('#launchHandoffArt');
+  art.replaceChildren();
+  const image = document.createElement('img');
+  image.src = gameArt(game);
+  image.alt = '';
+  image.addEventListener('error', () => {
+    art.replaceChildren();
+    const fallback = document.createElement('span');
+    fallback.textContent = system?.icon || '▶';
+    art.append(fallback);
+  }, { once: true });
+  art.append(image);
+  panel.classList.remove('hidden');
+  requestAnimationFrame(() => panel.classList.add('visible'));
+}
+
 function setLaunchingState(game, active) {
   state.launchingFile = active && game ? game.file : null;
+  updateLaunchHandoff(game, active);
   const card = game ? document.querySelector('.game[data-id="' + game.id + '"]') : null;
   card?.classList.toggle('launching', active);
   card?.setAttribute('aria-busy', String(active));
@@ -1245,7 +1369,7 @@ async function launch(file) {
     setTimeout(() => {
       setLaunchingState(game, false);
       loadLibrary(false);
-    }, 1100);
+    }, result.presentation ? 1800 : 1100);
   } catch (error) {
     setLaunchingState(game, false);
     toast(error.message || 'Could not launch this game', 'warning');
@@ -3195,6 +3319,13 @@ setInterval(() => { if (state.view === 'community') void refreshCommunityHubRoom
   } else if (captureView === 'arcade-attention') {
     state.arcadeFilter = 'attention';
     selectLibrarySystem('arcade');
+  } else if (captureView === 'launch-handoff') {
+    changeView('home');
+    const game = state.library.games.find(item => item.system === 'openbor') || state.library.games[0];
+    if (game) {
+      setFocusedGame(game);
+      setLaunchingState(game, true);
+    }
   }
   if (captureView) document.body.dataset.captureReady = 'true';
 }
