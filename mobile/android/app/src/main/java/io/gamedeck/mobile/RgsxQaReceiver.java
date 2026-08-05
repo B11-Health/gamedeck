@@ -9,15 +9,12 @@ import android.util.Log;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.io.File;
-
 public final class RgsxQaReceiver extends BroadcastReceiver {
     private static final String TAG = "GameDeckRgsx";
-    private static final String DEBUG_FIXTURE_FILE = "renderer-fixture.enabled";
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        if (context == null || !isEnabled(context)) return;
+        if (context == null || !isEnabled(context, intent)) return;
         PendingResult pending = goAsync();
         new Thread(() -> {
             try {
@@ -52,8 +49,8 @@ public final class RgsxQaReceiver extends BroadcastReceiver {
         }, "GameDeck-RGSX-QA-Receiver").start();
     }
 
-    private boolean isEnabled(Context context) {
+    private boolean isEnabled(Context context, Intent intent) {
         boolean debuggable = (context.getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
-        return debuggable && new File(context.getFilesDir(), DEBUG_FIXTURE_FILE).isFile();
+        return debuggable && intent != null && intent.getBooleanExtra("gamedeckQa", false);
     }
 }

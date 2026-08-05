@@ -25,7 +25,6 @@ final class DeckBridge {
     private static final String RENDERER_TAG = "GameDeckRenderer";
     private static final String QA_TAG = "GameDeckVisualQA";
     private static final String RGSX_TAG = "GameDeckRgsx";
-    private static final String DEBUG_FIXTURE_FILE = "renderer-fixture.enabled";
     private final MainActivity activity;
     private final AndroidRuntimeManager runtime;
     private final LibraryRepository library;
@@ -52,7 +51,7 @@ final class DeckBridge {
             value.put("localFirst", true);
             value.put("accountRequired", false);
             value.put("embeddedRuntimeReady", runtime.externalAvailable());
-            value.put("debugFixture", debuggable && new File(activity.getFilesDir(), DEBUG_FIXTURE_FILE).isFile());
+            value.put("debugFixture", debuggable && activity.isDebugFixtureEnabled());
         } catch (Exception ignored) {}
         return value.toString();
     }
@@ -524,8 +523,7 @@ final class DeckBridge {
     }
 
     private boolean isDebugFixtureEnabled() {
-        boolean debuggable = (activity.getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
-        return debuggable && new File(activity.getFilesDir(), DEBUG_FIXTURE_FILE).isFile();
+        return activity.isDebugFixtureEnabled();
     }
 
     private String safeLog(String value) {

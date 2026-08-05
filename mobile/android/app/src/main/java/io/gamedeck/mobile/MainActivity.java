@@ -71,10 +71,12 @@ public class MainActivity extends Activity {
     private boolean leftTriggerPressed = false;
     private boolean rightTriggerPressed = false;
     private final ExecutorService qaIo = Executors.newSingleThreadExecutor();
+    private volatile boolean debugFixtureEnabled = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        clearLegacyDebugFixture();
         getWindow().setStatusBarColor(Color.rgb(9, 11, 16));
         getWindow().setNavigationBarColor(Color.rgb(9, 11, 16));
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -258,8 +260,14 @@ public class MainActivity extends Activity {
         return (getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
     }
 
-    private boolean isDebugFixtureEnabled() {
-        return isDebugBuild() && new File(getFilesDir(), DEBUG_FIXTURE_FILE).isFile();
+    boolean isDebugFixtureEnabled() {
+        return isDebugBuild() && debugFixtureEnabled;
+    }
+
+    private void clearLegacyDebugFixture() {
+        debugFixtureEnabled = false;
+        File marker = new File(getFilesDir(), DEBUG_FIXTURE_FILE);
+        if (marker.isFile()) marker.delete();
     }
 
     private void registerQaReceiver() {
@@ -282,17 +290,17 @@ public class MainActivity extends Activity {
         if (!isDebugBuild()) return;
         String command = rawCommand == null ? "" : rawCommand.trim();
         if ("fixture:on".equals(command)) {
-            try (OutputStream ignored = new FileOutputStream(new File(getFilesDir(), DEBUG_FIXTURE_FILE), false)) {
-                writeQaTextArtifact("fixture-status.json", "{\"enabled\":true}");
-            } catch (Exception error) {
-                writeQaTextArtifact("fixture-status.json", "{\"enabled\":false,\"error\":\"write-failed\"}");
-            }
+            debugFixtureEnabled = true;
+            File marker = new File(getFilesDir(), DEBUG_FIXTURE_FILE);
+            if (marker.isFile()) marker.delete();
+            writeQaTextArtifact("fixture-status.json", "{\"enabled\":true,\"scope\":\"process-session\"}");
             return;
         }
         if ("fixture:off".equals(command)) {
+            debugFixtureEnabled = false;
             File marker = new File(getFilesDir(), DEBUG_FIXTURE_FILE);
             boolean removed = !marker.exists() || marker.delete();
-            writeQaTextArtifact("fixture-status.json", "{\"enabled\":false,\"removed\":" + removed + "}");
+            writeQaTextArtifact("fixture-status.json", "{\"enabled\":false,\"removed\":" + removed + ",\"scope\":\"process-session\"}");
             return;
         }
         if (command.startsWith("screenshot:")) {
