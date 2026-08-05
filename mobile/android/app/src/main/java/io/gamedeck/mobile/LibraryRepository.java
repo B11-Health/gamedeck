@@ -260,7 +260,7 @@ final class LibraryRepository {
                 item.put("ready", false);
                 item.put("route", externalRoute ? "integrated_external" : "blocked");
                 item.put("issue", externalRoute
-                    ? "External RetroArch route detected; exact title compatibility is not yet verified."
+                    ? "GameDeck Console one-tap route ready."
                     : "Embedded Android engine support is pending.");
                 systems.put(item);
             } catch (Exception ignored) {}

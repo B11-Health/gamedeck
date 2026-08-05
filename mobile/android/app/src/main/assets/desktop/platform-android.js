@@ -77,6 +77,8 @@
   const catalogCache = new Map();
   const catalogSourceMap = new Map();
   let catalogSystemsCache = null;
+  let runtimeCache = null;
+  const runtimeListeners = new Set();
 
   function normalizeLibrary(library) {
     const source = library && typeof library === 'object' ? library : { systems: [], games: [] };
@@ -119,8 +121,9 @@
     return libraryCache;
   }
 
-  function getRuntimeStatus() {
-    return parse(invoke('runtimeStatus', '{}'), {
+  function getRuntimeStatus(force = false) {
+    if (!force && runtimeCache) return runtimeCache;
+    runtimeCache = parse(invoke('runtimeStatus', '{}'), {
       supported: false,
       ready: false,
       embeddedReady: false,
@@ -130,6 +133,7 @@
       reasonCode: 'android_runtime_status_unknown',
       message: 'Android runtime status is unavailable.'
     });
+    return runtimeCache;
   }
 
   async function findLibraryGame(title, systemId, context = {}) {
@@ -390,7 +394,7 @@
     const library = await getLibrary();
     const runtime = getRuntimeStatus();
     return {
-      platform: 'android', arch: 'arm64', version: '0.4.3-discover',
+      platform: 'android', arch: 'arm64', version: '0.4.4-console',
       libraryRoot: library.rootName || '', rgsxRoot: 'Automatic',
       retroArchPath: runtime.externalPackage || '', retroArchCores: '', retroArchSystem: '', mamePath: '', sponsorsEnabled: false
     };
@@ -402,11 +406,11 @@
     launch: async file => {
       const target = typeof file === 'string' ? file : file?.contentUri || file?.file || '';
       const game = (await getLibrary()).games.find(item => item.file === target || item.contentUri === target);
-      const result = parse(invoke('launch', '{}', target, game?.mimeType || 'application/octet-stream'), { ok: false, message: 'Launch route unavailable.' });
+      const result = parse(invoke('launch', '{}', target, game?.mimeType || 'application/octet-stream', game?.system || ''), { ok: false, error: 'Launch route unavailable.' });
       if (result.ok) libraryCache = null;
       return result;
     },
-    setupSystem: async () => blocked('Android engine provisioning is not complete in this preview.', 'android_runtime_provisioning_pending'),
+    setupSystem: async systemId => parse(invoke('setupSystem', '{}', systemId || ''), { ok: false, error: 'GameDeck Console setup could not start.' }),
     favorite: async file => {
       invoke('favorite', '{}', file || '');
       return getLibrary(true);
@@ -433,8 +437,8 @@
     dismissDownload: async taskId => parse(invoke('dismissDownload', '{}', taskId || ''), { ok: false }),
 
     diagnostics,
-    runtimeStatus: async () => getRuntimeStatus(),
-    ensureRuntime: async () => getRuntimeStatus(),
+    runtimeStatus: async () => getRuntimeStatus(true),
+    ensureRuntime: async () => parse(invoke('ensureRuntime', '{}', ''), { ok: false, error: 'GameDeck Console setup could not start.' }),
     playSessionCapabilities: async () => ({ supported: false, reasonCode: 'android_play_session_pending' }),
     playSessionStatus: async () => ({ active: false, supported: false }),
     arcadeAudit: async () => {
@@ -452,8 +456,8 @@
         fields: {
           libraryRoot: { ready: Boolean(library.rootConfigured), tone: library.rootConfigured ? 'ok' : 'bad', message: library.rootConfigured ? 'Secure folder access active.' : 'Choose a folder through Android.' },
           rgsxRoot: { ready: true, tone: 'ok', message: 'Discover is connected automatically.' },
-          retroArchPath: { ready: Boolean(runtime.externalAvailable), tone: runtime.externalAvailable ? 'ok' : 'muted', message: runtime.externalAvailable ? 'External RetroArch detected.' : 'Embedded Android engine pending.' },
-          retroArchCores: { ready: false, tone: 'muted', message: 'Managed Android cores pending.' },
+          retroArchPath: { ready: Boolean(runtime.ready), tone: runtime.ready ? 'ok' : 'muted', message: runtime.ready ? 'GameDeck Console ready for one-tap play.' : 'GameDeck Console installs automatically on first play.' },
+          retroArchCores: { ready: Boolean(runtime.ready), tone: runtime.ready ? 'ok' : 'muted', message: runtime.ready ? 'Verified cores are selected and cached per console.' : 'The exact verified core downloads automatically with the first title.' },
           retroArchSystem: { ready: false, tone: 'muted', message: 'Managed firmware path pending.' },
           mamePath: { ready: false, tone: 'muted', message: 'Standalone Android MAME pending.' }
         }
@@ -497,7 +501,11 @@
 
     onActivity: noopSubscription,
     onArcadeAudit: noopSubscription,
-    onRuntime: noopSubscription,
+    onRuntime: callback => {
+      if (typeof callback !== 'function') return noopSubscription();
+      runtimeListeners.add(callback);
+      return () => runtimeListeners.delete(callback);
+    },
     onLaunch: noopSubscription,
     onDownload: subscribeDownloads,
     onStream: noopSubscription,
@@ -515,9 +523,9 @@
       }
 
       const replacements = [
-        ['#setupCoachTitle', 'Connect your library and play route.'],
-        ['#setupCoachMessage', 'Choose games you legally own. GameDeck keeps them local; a compatible Android runtime is still required to play.'],
-        ['#setupPrimary', 'Review Android setup']
+        ['#setupCoachTitle', 'One console setup. Then one-tap play.'],
+        ['#setupCoachMessage', 'GameDeck installs its verified Android console once, selects the correct core automatically, and launches every compatible owned title directly.'],
+        ['#setupPrimary', 'Finish one-click setup']
       ];
       replacements.forEach(([selector, value]) => {
         const element = document.querySelector(selector);
@@ -528,11 +536,11 @@
         const text = String(element.textContent || '');
         let next = text;
         if (/full emulator stack is included/i.test(text) || /no separate emulator installation/i.test(text)) {
-          next = 'GameDeck manages the local library and catalog. A compatible Android runtime is still required to launch games.';
+          next = 'GameDeck Console installs once and then launches compatible titles directly with the correct core.';
         } else if (/keyboard and mouse are ready/i.test(text)) {
           next = 'Touch controls are ready; connect a gamepad at any time.';
         } else if (/included with gamedeck\. finish setup once/i.test(text)) {
-          next = 'Managed library support is ready. Install a compatible Android runtime to launch this system.';
+          next = 'Tap once to install GameDeck Console; the selected title resumes automatically after Android confirms the installation.';
         }
         if (next !== text) element.textContent = next;
       });
@@ -565,6 +573,17 @@
   };
   window.GameDeckNative = {
     onStorageChanged() { libraryCache = null; location.reload(); },
+    onRuntimeChanged(runtime) {
+      const previousReady = Boolean(runtimeCache?.ready);
+      runtimeCache = runtime && typeof runtime === 'object' ? runtime : getRuntimeStatus(true);
+      runtimeListeners.forEach(listener => {
+        try { listener(runtimeCache); } catch {}
+      });
+      if (!previousReady && runtimeCache.ready) {
+        libraryCache = null;
+        catalogSystemsCache = null;
+      }
+    },
     showMessage(message) { console.info(message); },
     back() { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); }
   };

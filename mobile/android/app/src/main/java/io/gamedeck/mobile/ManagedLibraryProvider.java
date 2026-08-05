@@ -18,6 +18,8 @@ import java.util.Locale;
 public final class ManagedLibraryProvider extends ContentProvider {
     private static final String ROOT = "managed-library";
     private static final String PATH_FILES = "files";
+    private static final String PATH_RUNTIME = "runtime";
+    private static final String PATH_CORES = "cores";
 
     static File root(Context context) {
         return new File(context.getFilesDir(), ROOT);
@@ -29,6 +31,42 @@ public final class ManagedLibraryProvider extends ContentProvider {
             .authority(context.getPackageName() + ".managed")
             .appendPath(PATH_FILES)
             .appendPath(requireSegment(folder))
+            .appendPath(requireSegment(fileName))
+            .build();
+    }
+
+
+    static File runtimeFileFor(Context context, String fileName) throws IOException {
+        File root = new File(context.getCacheDir(), "console-runtime").getCanonicalFile();
+        if (!root.isDirectory() && !root.mkdirs()) throw new IOException("Could not create runtime cache.");
+        File file = new File(root, requireSegment(fileName)).getCanonicalFile();
+        if (!file.getPath().startsWith(root.getPath() + File.separator)) throw new IOException("Runtime path escaped its root.");
+        return file;
+    }
+
+    static Uri runtimeUriFor(Context context, String fileName) {
+        return new Uri.Builder()
+            .scheme("content")
+            .authority(context.getPackageName() + ".managed")
+            .appendPath(PATH_RUNTIME)
+            .appendPath(requireSegment(fileName))
+            .build();
+    }
+
+
+    static File coreFileFor(Context context, String fileName) throws IOException {
+        File root = new File(context.getFilesDir(), "console-cores").getCanonicalFile();
+        if (!root.isDirectory() && !root.mkdirs()) throw new IOException("Could not create console core storage.");
+        File file = new File(root, requireSegment(fileName)).getCanonicalFile();
+        if (!file.getPath().startsWith(root.getPath() + File.separator)) throw new IOException("Core path escaped its root.");
+        return file;
+    }
+
+    static Uri coreUriFor(Context context, String fileName) {
+        return new Uri.Builder()
+            .scheme("content")
+            .authority(context.getPackageName() + ".managed")
+            .appendPath(PATH_CORES)
             .appendPath(requireSegment(fileName))
             .build();
     }
@@ -55,12 +93,19 @@ public final class ManagedLibraryProvider extends ContentProvider {
         Context context = getContext();
         if (context == null) throw new FileNotFoundException("Provider context is unavailable.");
         List<String> segments = uri == null ? null : uri.getPathSegments();
-        if (segments == null || segments.size() != 3 || !PATH_FILES.equals(segments.get(0))) {
-            throw new FileNotFoundException("Unknown managed library URI.");
-        }
+        if (segments == null || segments.isEmpty()) throw new FileNotFoundException("Unknown managed library URI.");
         try {
-            File file = fileFor(context, segments.get(1), segments.get(2));
-            if (!file.isFile()) throw new FileNotFoundException("Managed game was not found.");
+            File file;
+            if (segments.size() == 3 && PATH_FILES.equals(segments.get(0))) {
+                file = fileFor(context, segments.get(1), segments.get(2));
+            } else if (segments.size() == 2 && PATH_RUNTIME.equals(segments.get(0))) {
+                file = runtimeFileFor(context, segments.get(1));
+            } else if (segments.size() == 2 && PATH_CORES.equals(segments.get(0))) {
+                file = coreFileFor(context, segments.get(1));
+            } else {
+                throw new FileNotFoundException("Unknown managed library URI.");
+            }
+            if (!file.isFile()) throw new FileNotFoundException("Managed file was not found.");
             return file;
         } catch (IllegalArgumentException | IOException error) {
             FileNotFoundException failure = new FileNotFoundException(error.getMessage());
@@ -87,6 +132,7 @@ public final class ManagedLibraryProvider extends ContentProvider {
         if (name.endsWith(".gba")) return "application/x-gba-rom";
         if (name.endsWith(".gb") || name.endsWith(".gbc")) return "application/x-gameboy-rom";
         if (name.endsWith(".zip")) return "application/zip";
+        if (name.endsWith(".apk")) return "application/vnd.android.package-archive";
         return "application/octet-stream";
     }
 

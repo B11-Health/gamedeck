@@ -98,7 +98,7 @@ public class MainActivity extends Activity {
         settings.setBuiltInZoomControls(false);
         settings.setDisplayZoomControls(false);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) settings.setOffscreenPreRaster(true);
-        settings.setUserAgentString(settings.getUserAgentString() + " GameDeckAndroid/0.4.3-discover");
+        settings.setUserAgentString(settings.getUserAgentString() + " GameDeckAndroid/0.4.4-console");
 
         bridge = new DeckBridge(this);
         exposeBridge();
@@ -545,6 +545,17 @@ public class MainActivity extends Activity {
         }
     }
 
+    void notifyRuntimeChanged(String runtimeJson) {
+        String payload = runtimeJson == null || runtimeJson.trim().isEmpty() ? "{}" : runtimeJson;
+        evaluate("window.GameDeckNative&&window.GameDeckNative.onRuntimeChanged(" + payload + ")");
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (bridge != null) new Handler(Looper.getMainLooper()).postDelayed(bridge::resumeRuntimeProvisioning, 650);
+    }
+
     private void evaluate(String script) {
         if (webView != null) webView.post(() -> webView.evaluateJavascript(script, null));
     }
@@ -659,6 +670,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        if (bridge != null) bridge.shutdown();
         if (qaReceiver != null) {
             try {
                 unregisterReceiver(qaReceiver);
@@ -670,7 +682,7 @@ public class MainActivity extends Activity {
             hideBridge();
             webView.destroy();
         }
-        qaIo.shutdown();
+        qaIo.shutdownNow();
         super.onDestroy();
     }
 }

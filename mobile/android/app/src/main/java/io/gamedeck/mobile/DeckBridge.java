@@ -43,10 +43,10 @@ final class DeckBridge {
             boolean debuggable = (activity.getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
             value.put("platform", "android");
             value.put("platformKey", AndroidRuntimeManager.PLATFORM_KEY);
-            value.put("version", "0.4.3-discover");
+            value.put("version", "0.4.4-console");
             value.put("localFirst", true);
             value.put("accountRequired", false);
-            value.put("embeddedRuntimeReady", false);
+            value.put("embeddedRuntimeReady", runtime.externalAvailable());
             value.put("debugFixture", debuggable && new File(activity.getFilesDir(), DEBUG_FIXTURE_FILE).isFile());
         } catch (Exception ignored) {}
         return value.toString();
@@ -91,7 +91,7 @@ final class DeckBridge {
                 if (uri.isEmpty() || existing.contains(uri)) continue;
                 game.put("favorite", library.isFavorite(uri));
                 game.put("lastPlayed", library.lastPlayed(uri));
-                game.put("classification", external ? "integrated_external" : "blocked");
+                game.put("classification", external ? "managed" : "setup_required");
                 games.put(game);
                 existing.add(uri);
                 added++;
@@ -102,10 +102,10 @@ final class DeckBridge {
                     system.put("count", system.optInt("count", 0) + 1);
                     system.put("installedCount", system.optInt("installedCount", 0) + 1);
                     system.put("ready", external);
-                    system.put("route", external ? "integrated_external" : "blocked");
+                    system.put("route", external ? "managed" : "setup_required");
                     system.put("issue", external
-                        ? "External RetroArch route detected; exact title compatibility is not yet verified."
-                        : "Install a compatible Android runtime to launch this system.");
+                        ? "GameDeck Console one-tap route ready."
+                        : "Tap Play once to install GameDeck Console; launch resumes automatically.");
                 }
             }
             if (added > 0) {
@@ -131,19 +131,23 @@ final class DeckBridge {
     }
 
     @JavascriptInterface
-    public String launch(String contentUri, String mimeType) {
+    public String launch(String contentUri, String mimeType, String systemId) {
         try {
-            Uri uri = Uri.parse(contentUri);
-            AndroidRuntimeManager.LaunchResult result = runtime.launch(uri, mimeType);
-            if (result.ok) library.markPlayed(contentUri);
-            return result.toJson().toString();
+            String result = runtime.launch(
+                contentUri == null ? "" : contentUri,
+                mimeType == null ? "application/octet-stream" : mimeType,
+                systemId == null ? "" : systemId
+            );
+            JSONObject value = new JSONObject(result);
+            if (value.optBoolean("ok", false)) library.markPlayed(contentUri == null ? "" : contentUri);
+            return result;
         } catch (Exception error) {
             JSONObject value = new JSONObject();
             try {
                 value.put("ok", false);
                 value.put("route", "blocked");
                 value.put("reasonCode", "android_invalid_content_uri");
-                value.put("message", "The selected game file is no longer available.");
+                value.put("error", "The selected game file is no longer available.");
             } catch (Exception ignored) {}
             return value.toString();
         }
@@ -151,7 +155,17 @@ final class DeckBridge {
 
     @JavascriptInterface
     public String runtimeStatus() {
-        return runtime.status().toString();
+        return runtime.status();
+    }
+
+    @JavascriptInterface
+    public String ensureRuntime(String systemId) {
+        return runtime.ensureRuntime(systemId == null ? "" : systemId);
+    }
+
+    @JavascriptInterface
+    public String setupSystem(String systemId) {
+        return runtime.ensureRuntime(systemId == null ? "" : systemId);
     }
 
     @JavascriptInterface
@@ -329,6 +343,14 @@ final class DeckBridge {
     private String safeLog(String value) {
         String cleaned = value == null ? "" : value.replace('\n', ' ').replace('\r', ' ').trim();
         return cleaned.length() > 1600 ? cleaned.substring(0, 1600) : cleaned;
+    }
+
+    void resumeRuntimeProvisioning() {
+        runtime.resumePendingLaunch();
+    }
+
+    void shutdown() {
+        runtime.shutdown();
     }
 
     void setLibraryRoot(Uri uri) {

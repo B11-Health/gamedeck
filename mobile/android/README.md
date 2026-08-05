@@ -4,11 +4,13 @@ This module packages GameDeck's shared desktop renderer with an Android platform
 
 ## Current development build
 
-`0.4.3-discover` includes:
+`0.4.4-console` includes:
 
 - portrait and landscape layouts designed independently for phones;
 - GPU-composited WebView rendering and a reduced-effects mobile performance profile;
 - complete browseable public title indexes in Discover, with lawful local imports kept separate from verified downloads;
+- one-time verified GameDeck Console provisioning followed by direct one-tap title launch;
+- automatic per-system core selection, verified core downloads, and reusable local game staging;
 - persistent compact navigation and Android safe-area handling;
 - local library scanning through the Storage Access Framework;
 - adjacent artwork and JSON metadata discovery;

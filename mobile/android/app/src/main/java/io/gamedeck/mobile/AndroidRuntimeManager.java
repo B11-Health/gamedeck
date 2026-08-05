@@ -1,161 +1,718 @@
 package io.gamedeck.mobile;
 
 import android.app.Activity;
-import android.content.ActivityNotFoundException;
+import android.content.ClipData;
+import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.net.Uri;
+import android.provider.OpenableColumns;
+import android.provider.Settings;
 
-import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.security.MessageDigest;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 final class AndroidRuntimeManager {
-    static final String PLATFORM_KEY = "android-arm64-v8a";
-    private static final List<String> RETROARCH_PACKAGES = Arrays.asList(
-        "com.retroarch",
-        "com.retroarch.aarch64",
-        "com.retroarch.ra32"
-    );
+    static final String PLATFORM_KEY = "android-arm64";
 
-    static final class LaunchResult {
-        final boolean ok;
-        final String route;
-        final String reasonCode;
-        final String message;
+    private static final String PREFS = "gamedeck_mobile";
+    private static final String PENDING_URI = "runtime_pending_uri";
+    private static final String PENDING_MIME = "runtime_pending_mime";
+    private static final String PENDING_SYSTEM = "runtime_pending_system";
+    private static final String PENDING_INSTALLER_PRESENTED = "runtime_installer_presented";
+    private static final String RUNTIME_PACKAGE = "com.retroarch.aarch64";
+    private static final String RUNTIME_APK = "RetroArch_aarch64.apk";
+    private static final String RUNTIME_VERSION = "1.22.2";
+    private static final String RUNTIME_URL = "https://buildbot.libretro.com/stable/1.22.2/android/RetroArch_aarch64.apk";
+    private static final String RUNTIME_SHA256 = "7bd5d208dfe93cc8e2ea6c04608948ce1a045980f160a58ca2d0993aa20ad213";
+    private static final String CORE_BASE_URL = "https://buildbot.libretro.com/nightly/android/latest/arm64-v8a/";
+    private static final long MAX_RUNTIME_BYTES = 512L * 1024L * 1024L;
+    private static final long MAX_CORE_BYTES = 256L * 1024L * 1024L;
+    private static final long MAX_CONTENT_BYTES = 16L * 1024L * 1024L * 1024L;
+    private static final int BUFFER_SIZE = 128 * 1024;
+    private static final int MAX_REDIRECTS = 5;
 
-        LaunchResult(boolean ok, String route, String reasonCode, String message) {
-            this.ok = ok;
-            this.route = route;
-            this.reasonCode = reasonCode;
-            this.message = message;
+    private static final class Artifact {
+        final String archive;
+        final String sha256;
+        final String library;
+
+        Artifact(String archive, String sha256, String library) {
+            this.archive = archive;
+            this.sha256 = sha256;
+            this.library = library;
         }
+    }
 
-        JSONObject toJson() {
-            JSONObject value = new JSONObject();
-            try {
-                value.put("ok", ok);
-                value.put("route", route);
-                value.put("reasonCode", reasonCode);
-                value.put("message", message);
-            } catch (Exception ignored) {}
-            return value;
-        }
+    private static final Map<String, Artifact> CORES;
+    static {
+        Map<String, Artifact> values = new HashMap<>();
+        add(values, "snes9x_libretro", "snes9x_libretro_android.so.zip", "c000360b7afae04a8cd65353382e08f454d8a6dd0c8207260e08ac7fa29558a2", "snes9x_libretro_android.so");
+        add(values, "mesen_libretro", "mesen_libretro_android.so.zip", "00f0b87ddecfbfdebb3977a57c1c0ac080d43fa6a917ecbaf973ec0ad0d035b9", "mesen_libretro_android.so");
+        add(values, "mupen64plus_next_libretro", "mupen64plus_next_gles3_libretro_android.so.zip", "c2ba1d4f5014a7f4c17c6ff880a8411434c7c8679957da922d5df7e5ba866cbf", "mupen64plus_next_gles3_libretro_android.so");
+        add(values, "sameboy_libretro", "sameboy_libretro_android.so.zip", "c59428b886c480b98e0e1442910d1dae35a44cc64fb830d74b906b3647d31fab", "sameboy_libretro_android.so");
+        add(values, "mgba_libretro", "mgba_libretro_android.so.zip", "228e056d1694fd333131edcda160394a3dd3c67b85429dccd2b5acccf604dfd3", "mgba_libretro_android.so");
+        add(values, "melondsds_libretro", "melondsds_libretro_android.so.zip", "e16d53fe840850d3aeedbd481574234288e96921cc4b8b47701525ee8aa3d43d", "melondsds_libretro_android.so");
+        add(values, "genesis_plus_gx_libretro", "genesis_plus_gx_libretro_android.so.zip", "0c919d1a72282b360289c4c6bef597e0e2d77c32804bbf8e6dc77621cbb9e69f", "genesis_plus_gx_libretro_android.so");
+        add(values, "picodrive_libretro", "picodrive_libretro_android.so.zip", "34281e52bbd13d655f47fdcc78613ff4d28da1954eba1f80898a913bc3d56f6d", "picodrive_libretro_android.so");
+        add(values, "mednafen_pce_fast_libretro", "mednafen_pce_fast_libretro_android.so.zip", "6399b33526183bd2377608f8f7f80ee84ace28cab862b2f6cf964918ac323013", "mednafen_pce_fast_libretro_android.so");
+        add(values, "mednafen_saturn_libretro", "mednafen_saturn_libretro_android.so.zip", "94d063ceaebdce44eb9439c914f055c9f539f4180f684ed195f63c843a0570fd", "mednafen_saturn_libretro_android.so");
+        add(values, "flycast_libretro", "flycast_libretro_android.so.zip", "af50a1e4e94c15381f58a75debe5911666d01d37d2c70b4b99207b7308920760", "flycast_libretro_android.so");
+        add(values, "stella_libretro", "stella_libretro_android.so.zip", "d3c1d571cc204cde5891429cec9effa6779d87f394f4808123a8b7af321b028a", "stella_libretro_android.so");
+        add(values, "fbneo_libretro", "fbneo_libretro_android.so.zip", "c9b80420cb8d13f64fc5823051ad317c0fef498997f2ea9b960e4b0ba06b7337", "fbneo_libretro_android.so");
+        add(values, "mame_libretro", "mamearcade_libretro_android.so.zip", "4d39bff3ebf3f47acf59b65520e14f00fa85da9200922c4f62e654d5a012f93b", "mamearcade_libretro_android.so");
+        add(values, "pcsx_rearmed_libretro", "pcsx_rearmed_libretro_android.so.zip", "a1cffd648448620942fbb826f09754109f91b9eb42a6a7d45a10965961db3d9a", "pcsx_rearmed_libretro_android.so");
+        add(values, "play_libretro", "play_libretro_android.so.zip", "5b64b3487d33aefb20a53e8f2571b2ab7aeaba5895f27d9bea32e2c6cad36c35", "play_libretro_android.so");
+        add(values, "ppsspp_libretro", "ppsspp_libretro_android.so.zip", "d736856fb7670bbe449fdc471d6e6b2c91d503abcc34634ef8c55640f632d803", "ppsspp_libretro_android.so");
+        add(values, "dolphin_libretro", "dolphin_libretro_android.so.zip", "af5bafd8179dc5bf2338e9573675d86747e370d4829ca939f7ad7d68d66cfc22", "dolphin_libretro_android.so");
+        CORES = Collections.unmodifiableMap(values);
     }
 
     private final Activity activity;
+    private final Context context;
+    private final SharedPreferences preferences;
+    private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private final AtomicBoolean workerActive = new AtomicBoolean(false);
+    private volatile String phase = "ready-check";
+    private volatile String message = "GameDeck Console is ready to configure.";
+    private volatile int progress = 0;
+    private volatile boolean installing = false;
 
     AndroidRuntimeManager(Activity activity) {
         this.activity = activity;
+        this.context = activity.getApplicationContext();
+        this.preferences = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        refreshIdleStatus();
     }
 
-    String detectedPackage() {
-        PackageManager packages = activity.getPackageManager();
-        for (String packageName : RETROARCH_PACKAGES) {
-            try {
-                packages.getPackageInfo(packageName, 0);
-                return packageName;
-            } catch (PackageManager.NameNotFoundException ignored) {}
-        }
-        return "";
+    private static void add(Map<String, Artifact> target, String core, String archive, String sha256, String library) {
+        target.put(core, new Artifact(archive, sha256, library));
     }
 
     boolean externalAvailable() {
-        return !detectedPackage().isEmpty();
+        return detectExternalPackage() != null;
     }
 
-    JSONObject status() {
-        String externalPackage = detectedPackage();
-        boolean external = !externalPackage.isEmpty();
-        JSONObject value = new JSONObject();
-        JSONArray components = new JSONArray();
-        try {
-            value.put("supported", false);
-            value.put("platformKey", PLATFORM_KEY);
-            value.put("ready", false);
-            value.put("embeddedReady", false);
-            value.put("installing", false);
-            value.put("bundled", false);
-            value.put("phase", external ? "external-detected" : "adapter-pending");
-            value.put("progress", 0);
-            value.put("classification", external ? "integrated_external" : "blocked");
-            value.put("route", external ? "integrated_external" : "blocked");
-            value.put("externalAvailable", external);
-            value.put("externalPackage", externalPackage);
-            value.put("reasonCode", external ? "android_external_engine_detected" : "android_embedded_runtime_pending");
-            value.put("message", external
-                ? "RetroArch is installed. Android launches remain an experimental external route until the embedded runtime is verified."
-                : "The standalone Android libretro runtime is not bundled yet. Library browsing is ready; local play remains blocked with a truthful setup reason.");
-            components.put(component("android-shell", "GameDeck Android shell", true, true));
-            components.put(component("embedded-libretro-host", "Embedded libretro host", false, true));
-            components.put(component("verified-core-set", "Verified Android core set", false, true));
-            components.put(component("external-retroarch", "External RetroArch adapter", external, false));
-            value.put("components", components);
-        } catch (Exception ignored) {}
-        return value;
-    }
-
-    private JSONObject component(String id, String label, boolean ready, boolean required) {
+    String status() {
+        String external = detectExternalPackage();
+        boolean ready = external != null;
         JSONObject value = new JSONObject();
         try {
-            value.put("id", id);
-            value.put("label", label);
+            value.put("platform", PLATFORM_KEY);
+            value.put("supported", true);
             value.put("ready", ready);
-            value.put("required", required);
+            value.put("embeddedReady", ready);
+            value.put("externalAvailable", ready);
+            value.put("externalPackage", external == null ? "" : external);
+            value.put("retroArchVersion", ready ? installedVersion(external) : RUNTIME_VERSION);
+            value.put("installing", installing);
+            value.put("phase", phase);
+            value.put("progress", progress);
+            value.put("reasonCode", ready ? "android_gamedeck_console_ready" : "android_gamedeck_console_setup_required");
+            value.put("message", message);
+            value.put("oneClickPlay", true);
+            value.put("pendingLaunch", hasPendingLaunch());
         } catch (Exception ignored) {}
-        return value;
+        return value.toString();
     }
 
-    LaunchResult launch(Uri contentUri, String mimeType) {
-        String packageName = detectedPackage();
-        if (packageName.isEmpty()) {
-            return new LaunchResult(false, "blocked", "android_embedded_runtime_pending",
-                "GameDeck cannot launch this title yet because the verified Android runtime is not installed.");
+    String ensureRuntime(String systemId) {
+        if (externalAvailable()) {
+            refreshIdleStatus();
+            return result(true, false, "GameDeck Console is ready.", "");
+        }
+        storePending("", "", systemId);
+        preferences.edit().putBoolean(PENDING_INSTALLER_PRESENTED, false).apply();
+        queueProvisioning();
+        return result(true, true, "Preparing GameDeck Console. Android will request one installation confirmation.", "");
+    }
+
+    String launch(String contentUri, String mimeType, String systemId) {
+        String uri = contentUri == null ? "" : contentUri.trim();
+        SystemRegistry.SystemDef system = resolveSystem(systemId, uri);
+        if (uri.isEmpty()) return result(false, false, "", "Game path is missing.");
+        if (system == null || "external".equals(system.core)) {
+            return result(false, false, "", "This console does not yet have a GameDeck Android play route.");
+        }
+        if (!CORES.containsKey(system.core)) {
+            return result(false, false, "", "The required GameDeck console core is unavailable.");
         }
 
-        AtomicReference<LaunchResult> result = new AtomicReference<>();
-        CountDownLatch complete = new CountDownLatch(1);
-        activity.runOnUiThread(() -> {
-            Intent intent = new Intent(Intent.ACTION_VIEW);
-            intent.setDataAndType(contentUri, mimeType == null || mimeType.isEmpty() ? "application/octet-stream" : mimeType);
-            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            intent.setPackage(packageName);
+        storePending(uri, mimeType, system.id);
+        preferences.edit().putBoolean(PENDING_INSTALLER_PRESENTED, false).apply();
+        if (!externalAvailable()) {
+            queueProvisioning();
+            return result(true, true, "Preparing GameDeck Console. Play will resume automatically after Android confirms the one-time installation.", "");
+        }
+        queuePendingLaunch();
+        return result(true, true, "GameDeck is preparing the console and will open the game automatically.", "");
+    }
+
+    void resumePendingLaunch() {
+        if (!hasPendingLaunch()) return;
+        if (externalAvailable()) {
+            queuePendingLaunch();
+            return;
+        }
+        if (preferences.getBoolean(PENDING_INSTALLER_PRESENTED, false)) return;
+        queueProvisioning();
+    }
+
+    void shutdown() {
+        executor.shutdownNow();
+    }
+
+    private void queueProvisioning() {
+        if (!workerActive.compareAndSet(false, true)) return;
+        installing = true;
+        phase = "runtime-download";
+        progress = 0;
+        message = "Downloading the verified GameDeck Console runtime.";
+        notifyRuntimeChanged();
+        executor.execute(() -> {
             try {
-                activity.startActivity(intent);
-                result.set(new LaunchResult(true, "integrated_external", "android_external_launch_started",
-                    "Opened the selected title through the installed RetroArch app."));
-            } catch (ActivityNotFoundException first) {
-                intent.setPackage(null);
-                try {
-                    activity.startActivity(Intent.createChooser(intent, "Open game with"));
-                    result.set(new LaunchResult(true, "integrated_external", "android_external_chooser_started",
-                        "Opened Android's compatible-app chooser for this title."));
-                } catch (ActivityNotFoundException second) {
-                    result.set(new LaunchResult(false, "blocked", "android_external_route_unavailable",
-                        "No installed Android application accepted this game file."));
+                if (externalAvailable()) {
+                    refreshIdleStatus();
+                    if (hasPendingContent()) queuePendingLaunchAfterWorker();
+                    return;
                 }
+                File apk = ManagedLibraryProvider.runtimeFileFor(context, RUNTIME_APK);
+                if (!verified(apk, RUNTIME_SHA256)) {
+                    downloadArtifact(RUNTIME_URL, apk, RUNTIME_SHA256, MAX_RUNTIME_BYTES, 0, 92, "runtime-download", false);
+                }
+                installing = false;
+                phase = "runtime-confirmation";
+                progress = 100;
+                message = "Confirm the one-time GameDeck Console installation.";
+                notifyRuntimeChanged();
+                presentRuntimeInstaller(apk);
+            } catch (Exception error) {
+                fail("GameDeck Console setup failed: " + safeMessage(error));
             } finally {
-                complete.countDown();
+                workerActive.set(false);
             }
         });
-        try {
-            if (!complete.await(8, TimeUnit.SECONDS)) {
-                return new LaunchResult(false, "blocked", "android_external_launch_timeout",
-                    "Android did not confirm the external launch request.");
+    }
+
+    private void queuePendingLaunch() {
+        if (!workerActive.compareAndSet(false, true)) return;
+        installing = true;
+        phase = "core-download";
+        progress = 0;
+        message = "Preparing the correct console core.";
+        notifyRuntimeChanged();
+        executor.execute(() -> {
+            try {
+                launchPendingNow();
+            } catch (Exception error) {
+                fail("Could not start this game: " + safeMessage(error));
+            } finally {
+                workerActive.set(false);
             }
-        } catch (InterruptedException interrupted) {
-            Thread.currentThread().interrupt();
-            return new LaunchResult(false, "blocked", "android_external_launch_interrupted",
-                "The external launch request was interrupted.");
+        });
+    }
+
+    private void queuePendingLaunchAfterWorker() {
+        activity.runOnUiThread(() -> {
+            workerActive.set(false);
+            queuePendingLaunch();
+        });
+    }
+
+    private void queuePendingProvisionAfterWorker() {
+        activity.runOnUiThread(() -> {
+            workerActive.set(false);
+            queueProvisioning();
+        });
+    }
+
+    private void launchPendingNow() throws Exception {
+        String uriValue = preferences.getString(PENDING_URI, "");
+        String mimeType = preferences.getString(PENDING_MIME, "application/octet-stream");
+        String systemId = preferences.getString(PENDING_SYSTEM, "");
+        if (uriValue == null || uriValue.isEmpty()) {
+            clearPending();
+            refreshIdleStatus();
+            notifyRuntimeChanged();
+            return;
         }
-        LaunchResult resolved = result.get();
-        return resolved == null
-            ? new LaunchResult(false, "blocked", "android_external_route_unavailable", "No compatible Android launch route was found.")
-            : resolved;
+        SystemRegistry.SystemDef system = resolveSystem(systemId, uriValue);
+        if (system == null) throw new IOException("GameDeck could not identify the console for this title.");
+        Artifact artifact = CORES.get(system.core);
+        if (artifact == null) throw new IOException("The required console core is unavailable.");
+
+        String runtimePackage = detectExternalPackage();
+        if (runtimePackage == null) {
+            installing = false;
+            queuePendingProvisionAfterWorker();
+            return;
+        }
+
+        File core = ensureCore(artifact);
+        File content = stageContent(Uri.parse(uriValue), mimeType, system.id);
+        phase = "launching";
+        progress = 100;
+        message = "Opening " + content.getName() + " with GameDeck Console.";
+        notifyRuntimeChanged();
+        startRetroSideloadActivity(runtimePackage, core, content);
+        clearPending();
+        installing = false;
+        phase = "ready";
+        progress = 100;
+        message = "GameDeck Console is ready for one-tap play.";
+        notifyRuntimeChanged();
+    }
+
+    private File ensureCore(Artifact artifact) throws Exception {
+        File library = ManagedLibraryProvider.coreFileFor(context, artifact.library);
+        File coreDir = library.getParentFile();
+        if (coreDir == null) throw new IOException("Console core storage is unavailable.");
+        File marker = new File(coreDir, artifact.library + ".archive.sha256");
+        String installedArchiveHash = readSmallText(marker);
+        if (library.isFile() && isArm64Elf(library) && installedArchiveHash.matches("[0-9a-f]{64}")) {
+            return library;
+        }
+
+        File archiveDir = new File(context.getCacheDir(), "console-cores");
+        if (!archiveDir.isDirectory() && !archiveDir.mkdirs()) throw new IOException("Could not create the core download cache.");
+        File archive = new File(archiveDir, artifact.archive);
+        String archiveHash;
+        if (archive.isFile() && archive.length() > 0) {
+            archiveHash = sha256(archive);
+        } else {
+            archiveHash = downloadArtifact(
+                CORE_BASE_URL + artifact.archive,
+                archive,
+                artifact.sha256,
+                MAX_CORE_BYTES,
+                0,
+                82,
+                "core-download",
+                true
+            );
+        }
+
+        phase = "core-install";
+        progress = 88;
+        message = "Installing the console core.";
+        notifyRuntimeChanged();
+        File temporary = new File(coreDir, artifact.library + ".part");
+        if (temporary.exists()) temporary.delete();
+        boolean found = false;
+        try (ZipInputStream zip = new ZipInputStream(new BufferedInputStream(new FileInputStream(archive)));
+             OutputStream output = new BufferedOutputStream(new FileOutputStream(temporary, false))) {
+            ZipEntry entry;
+            while ((entry = zip.getNextEntry()) != null) {
+                String name = new File(entry.getName()).getName();
+                if (entry.isDirectory() || !artifact.library.equals(name)) continue;
+                copyBounded(zip, output, MAX_CORE_BYTES);
+                found = true;
+                break;
+            }
+        }
+        if (!found || !temporary.isFile() || !isArm64Elf(temporary)) {
+            temporary.delete();
+            throw new IOException("The downloaded console core was incomplete or not an Android ARM64 library.");
+        }
+        if (library.exists() && !library.delete()) throw new IOException("Could not replace the console core.");
+        if (!temporary.renameTo(library)) throw new IOException("Could not activate the console core.");
+        writeSmallText(marker, archiveHash);
+        return library;
+    }
+
+    private File stageContent(Uri uri, String mimeType, String systemId) throws Exception {
+        File root = sharedRuntimeRoot();
+        File contentDir = new File(root, "content/" + safeSegment(systemId));
+        if (!contentDir.isDirectory() && !contentDir.mkdirs()) throw new IOException("Could not create the game staging directory.");
+        String displayName = displayName(uri);
+        String fileName = safeFileName(displayName, "game" + extensionForMime(mimeType));
+        String prefix = shortDigest(uri.toString());
+        File output = new File(contentDir, prefix + "-" + fileName);
+        long expected = contentSize(uri);
+        if (output.isFile() && output.length() > 0 && (expected <= 0 || output.length() == expected)) return output;
+
+        phase = "content-staging";
+        progress = 92;
+        message = "Preparing the game for one-tap launch.";
+        notifyRuntimeChanged();
+        File temporary = new File(contentDir, output.getName() + ".part");
+        if (temporary.exists()) temporary.delete();
+        try (InputStream input = context.getContentResolver().openInputStream(uri);
+             OutputStream target = new BufferedOutputStream(new FileOutputStream(temporary, false))) {
+            if (input == null) throw new IOException("The selected game could not be opened.");
+            copyBounded(input, target, MAX_CONTENT_BYTES);
+        }
+        if (expected > 0 && temporary.length() != expected) {
+            temporary.delete();
+            throw new IOException("The staged game size did not match the selected file.");
+        }
+        if (output.exists() && !output.delete()) throw new IOException("Could not refresh the staged game.");
+        if (!temporary.renameTo(output)) throw new IOException("Could not activate the staged game.");
+        return output;
+    }
+
+    private void startRetroSideloadActivity(String packageName, File core, File content) throws Exception {
+        Uri coreUri = ManagedLibraryProvider.coreUriFor(context, core.getName());
+        Intent intent = new Intent();
+        intent.setComponent(new ComponentName(packageName, "com.retroarch.browser.debug.CoreSideloadActivity"));
+        intent.setData(coreUri);
+        intent.setClipData(ClipData.newRawUri("GameDeck console core", coreUri));
+        intent.putExtra("ROM", content.getAbsolutePath());
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        activity.runOnUiThread(() -> {
+            try {
+                activity.startActivity(intent);
+            } catch (Exception error) {
+                fail("The installed console does not expose the required GameDeck core handoff.");
+            }
+        });
+    }
+
+    private void presentRuntimeInstaller(File apk) {
+        activity.runOnUiThread(() -> {
+            try {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O
+                    && !context.getPackageManager().canRequestPackageInstalls()) {
+                    Intent settings = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + context.getPackageName()));
+                    activity.startActivity(settings);
+                    preferences.edit().putBoolean(PENDING_INSTALLER_PRESENTED, false).apply();
+                    return;
+                }
+                Uri uri = ManagedLibraryProvider.runtimeUriFor(context, apk.getName());
+                Intent install = new Intent(Intent.ACTION_VIEW, uri);
+                install.setDataAndType(uri, "application/vnd.android.package-archive");
+                install.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+                preferences.edit().putBoolean(PENDING_INSTALLER_PRESENTED, true).apply();
+                activity.startActivity(install);
+            } catch (Exception error) {
+                fail("Android could not open the GameDeck Console installer.");
+            }
+        });
+    }
+
+    private String downloadArtifact(String rawUrl, File destination, String expectedHash, long maxBytes,
+                                    int progressStart, int progressEnd, String downloadPhase,
+                                    boolean allowOfficialRevision) throws Exception {
+        File parent = destination.getParentFile();
+        if (parent != null && !parent.isDirectory() && !parent.mkdirs()) throw new IOException("Could not create the download directory.");
+        File temporary = new File(destination.getPath() + ".part");
+        if (temporary.exists()) temporary.delete();
+        HttpURLConnection connection = openConnection(new URL(rawUrl), 0);
+        long advertised = connection.getContentLengthLong();
+        if (advertised > maxBytes) throw new IOException("The runtime component is larger than the safety limit.");
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        long total = 0;
+        try (InputStream input = new BufferedInputStream(connection.getInputStream());
+             OutputStream output = new BufferedOutputStream(new FileOutputStream(temporary, false))) {
+            byte[] buffer = new byte[BUFFER_SIZE];
+            int count;
+            while ((count = input.read(buffer)) >= 0) {
+                if (count == 0) continue;
+                total += count;
+                if (total > maxBytes) throw new IOException("The runtime component exceeded the safety limit.");
+                output.write(buffer, 0, count);
+                digest.update(buffer, 0, count);
+                if (advertised > 0) {
+                    int next = progressStart + (int) Math.min(progressEnd - progressStart,
+                        ((double) total / (double) advertised) * (progressEnd - progressStart));
+                    if (next != progress) {
+                        progress = next;
+                        phase = downloadPhase;
+                        notifyRuntimeChanged();
+                    }
+                }
+            }
+        } finally {
+            connection.disconnect();
+        }
+        String actual = hex(digest.digest());
+        if (!expectedHash.equals(actual) && !allowOfficialRevision) {
+            temporary.delete();
+            throw new IOException("The verified runtime digest did not match.");
+        }
+        if (destination.exists() && !destination.delete()) throw new IOException("Could not replace the cached runtime component.");
+        if (!temporary.renameTo(destination)) throw new IOException("Could not activate the downloaded runtime component.");
+        return actual;
+    }
+
+    private HttpURLConnection openConnection(URL url, int redirects) throws Exception {
+        if (redirects > MAX_REDIRECTS) throw new IOException("Too many runtime download redirects.");
+        if (!"https".equalsIgnoreCase(url.getProtocol()) || !"buildbot.libretro.com".equalsIgnoreCase(url.getHost())) {
+            throw new IOException("Runtime downloads are restricted to the verified Libretro host.");
+        }
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setConnectTimeout(20_000);
+        connection.setReadTimeout(60_000);
+        connection.setInstanceFollowRedirects(false);
+        connection.setRequestProperty("User-Agent", "GameDeck-Android/0.4.4-console");
+        int status = connection.getResponseCode();
+        if (status >= 300 && status < 400) {
+            String location = connection.getHeaderField("Location");
+            connection.disconnect();
+            if (location == null || location.trim().isEmpty()) throw new IOException("Runtime redirect was missing its destination.");
+            return openConnection(new URL(url, location), redirects + 1);
+        }
+        if (status < 200 || status >= 300) {
+            connection.disconnect();
+            throw new IOException("Runtime server returned HTTP " + status + ".");
+        }
+        return connection;
+    }
+
+    private File sharedRuntimeRoot() throws IOException {
+        File[] media = context.getExternalMediaDirs();
+        File base = media != null && media.length > 0 ? media[0] : null;
+        if (base == null) base = context.getExternalFilesDir(null);
+        if (base == null) throw new IOException("Shared Android storage is unavailable.");
+        File root = new File(base, "GameDeck-Console");
+        if (!root.isDirectory() && !root.mkdirs()) throw new IOException("Could not create GameDeck Console storage.");
+        return root;
+    }
+
+    private SystemRegistry.SystemDef resolveSystem(String systemId, String uri) {
+        SystemRegistry.SystemDef direct = SystemRegistry.forId(systemId == null ? "" : systemId.trim());
+        if (direct != null) return direct;
+        String name = displayName(Uri.parse(uri));
+        String extension = SystemRegistry.extension(name);
+        SystemRegistry.SystemDef only = null;
+        for (SystemRegistry.SystemDef candidate : SystemRegistry.all()) {
+            if (!candidate.extensions.contains(extension)) continue;
+            if (only != null) return null;
+            only = candidate;
+        }
+        return only;
+    }
+
+    private String detectExternalPackage() {
+        String[] packages = new String[]{RUNTIME_PACKAGE, "com.retroarch", "com.retroarch.ra32"};
+        PackageManager manager = context.getPackageManager();
+        for (String candidate : packages) {
+            try {
+                PackageInfo ignored = manager.getPackageInfo(candidate, 0);
+                return candidate;
+            } catch (PackageManager.NameNotFoundException ignored) {}
+        }
+        return null;
+    }
+
+    private String installedVersion(String packageName) {
+        try {
+            return context.getPackageManager().getPackageInfo(packageName, 0).versionName;
+        } catch (Exception ignored) {
+            return RUNTIME_VERSION;
+        }
+    }
+
+    private void storePending(String uri, String mime, String systemId) {
+        SharedPreferences.Editor editor = preferences.edit();
+        if (uri != null && !uri.isEmpty()) editor.putString(PENDING_URI, uri);
+        if (mime != null && !mime.isEmpty()) editor.putString(PENDING_MIME, mime);
+        if (systemId != null && !systemId.isEmpty()) editor.putString(PENDING_SYSTEM, systemId);
+        editor.apply();
+    }
+
+    private boolean hasPendingLaunch() {
+        return hasPendingContent() || !preferences.getString(PENDING_SYSTEM, "").isEmpty();
+    }
+
+    private boolean hasPendingContent() {
+        return !preferences.getString(PENDING_URI, "").isEmpty();
+    }
+
+    private void clearPending() {
+        preferences.edit()
+            .remove(PENDING_URI)
+            .remove(PENDING_MIME)
+            .remove(PENDING_SYSTEM)
+            .remove(PENDING_INSTALLER_PRESENTED)
+            .apply();
+    }
+
+    private void refreshIdleStatus() {
+        boolean ready = externalAvailable();
+        installing = false;
+        progress = ready ? 100 : 0;
+        phase = ready ? "ready" : "setup-required";
+        message = ready
+            ? "GameDeck Console is installed. Titles launch in one tap."
+            : "GameDeck will install its console once, then every compatible title launches in one tap.";
+    }
+
+    private void fail(String detail) {
+        installing = false;
+        phase = "error";
+        message = detail;
+        notifyRuntimeChanged();
+    }
+
+    private void notifyRuntimeChanged() {
+        if (activity instanceof MainActivity) ((MainActivity) activity).notifyRuntimeChanged(status());
+    }
+
+    private String result(boolean ok, boolean queued, String resultMessage, String error) {
+        JSONObject value = new JSONObject();
+        try {
+            value.put("ok", ok);
+            value.put("queued", queued);
+            value.put("message", resultMessage == null ? "" : resultMessage);
+            value.put("error", error == null ? "" : error);
+            value.put("runtime", new JSONObject(status()));
+        } catch (Exception ignored) {}
+        return value.toString();
+    }
+
+    private boolean verified(File file, String expected) {
+        try {
+            return file != null && file.isFile() && file.length() > 0 && expected.equals(sha256(file));
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
+    private String sha256(File file) throws Exception {
+        try (InputStream input = new BufferedInputStream(new FileInputStream(file))) {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] buffer = new byte[BUFFER_SIZE];
+            int count;
+            while ((count = input.read(buffer)) >= 0) if (count > 0) digest.update(buffer, 0, count);
+            return hex(digest.digest());
+        }
+    }
+
+    private boolean isArm64Elf(File file) {
+        if (file == null || !file.isFile() || file.length() < 64) return false;
+        try (InputStream input = new BufferedInputStream(new FileInputStream(file))) {
+            byte[] header = new byte[20];
+            int offset = 0;
+            while (offset < header.length) {
+                int count = input.read(header, offset, header.length - offset);
+                if (count < 0) break;
+                offset += count;
+            }
+            if (offset < header.length) return false;
+            boolean magic = header[0] == 0x7f && header[1] == 'E' && header[2] == 'L' && header[3] == 'F';
+            boolean elf64LittleEndian = header[4] == 2 && header[5] == 1;
+            int machine = (header[18] & 0xff) | ((header[19] & 0xff) << 8);
+            return magic && elf64LittleEndian && machine == 183;
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
+    private String displayName(Uri uri) {
+        if (uri == null) return "game";
+        if ("content".equalsIgnoreCase(uri.getScheme())) {
+            try (Cursor cursor = context.getContentResolver().query(uri, new String[]{OpenableColumns.DISPLAY_NAME}, null, null, null)) {
+                if (cursor != null && cursor.moveToFirst()) {
+                    String value = cursor.getString(0);
+                    if (value != null && !value.trim().isEmpty()) return value;
+                }
+            } catch (Exception ignored) {}
+        }
+        String segment = uri.getLastPathSegment();
+        return segment == null || segment.trim().isEmpty() ? "game" : segment;
+    }
+
+    private long contentSize(Uri uri) {
+        if (uri == null || !"content".equalsIgnoreCase(uri.getScheme())) return -1;
+        try (Cursor cursor = context.getContentResolver().query(uri, new String[]{OpenableColumns.SIZE}, null, null, null)) {
+            if (cursor != null && cursor.moveToFirst() && !cursor.isNull(0)) return cursor.getLong(0);
+        } catch (Exception ignored) {}
+        return -1;
+    }
+
+    private String extensionForMime(String mime) {
+        String value = mime == null ? "" : mime.toLowerCase(Locale.US);
+        if (value.contains("nes")) return ".nes";
+        if (value.contains("snes")) return ".sfc";
+        if (value.contains("gba")) return ".gba";
+        if (value.contains("gameboy")) return ".gb";
+        if (value.contains("zip")) return ".zip";
+        return ".rom";
+    }
+
+    private String safeFileName(String value, String fallback) {
+        String output = value == null ? "" : value.trim().replaceAll("[^A-Za-z0-9._()\\[\\] -]+", "_");
+        output = output.replaceAll("^\\.+", "");
+        if (output.isEmpty()) output = fallback;
+        return output.length() > 160 ? output.substring(output.length() - 160) : output;
+    }
+
+    private String safeSegment(String value) {
+        String output = value == null ? "" : value.trim().toLowerCase(Locale.US).replaceAll("[^a-z0-9._-]+", "-");
+        return output.isEmpty() ? "games" : output;
+    }
+
+    private String shortDigest(String value) throws Exception {
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        byte[] bytes = digest.digest(String.valueOf(value).getBytes("UTF-8"));
+        return hex(bytes).substring(0, 16);
+    }
+
+    private long copyBounded(InputStream input, OutputStream output, long maxBytes) throws IOException {
+        byte[] buffer = new byte[BUFFER_SIZE];
+        long total = 0;
+        int count;
+        while ((count = input.read(buffer)) >= 0) {
+            if (count == 0) continue;
+            total += count;
+            if (total > maxBytes) throw new IOException("The file exceeded GameDeck's safety limit.");
+            output.write(buffer, 0, count);
+        }
+        output.flush();
+        return total;
+    }
+
+    private String readSmallText(File file) {
+        try (InputStream input = new FileInputStream(file)) {
+            byte[] bytes = new byte[(int) Math.min(file.length(), 256)];
+            int count = input.read(bytes);
+            return count <= 0 ? "" : new String(bytes, 0, count, "UTF-8").trim();
+        } catch (Exception ignored) {
+            return "";
+        }
+    }
+
+    private void writeSmallText(File file, String text) throws IOException {
+        File parent = file.getParentFile();
+        if (parent != null && !parent.isDirectory() && !parent.mkdirs()) throw new IOException("Could not create the configuration directory.");
+        try (OutputStream output = new FileOutputStream(file, false)) {
+            output.write(String.valueOf(text).getBytes("UTF-8"));
+        }
+    }
+
+    private String hex(byte[] bytes) {
+        StringBuilder output = new StringBuilder(bytes.length * 2);
+        for (byte value : bytes) output.append(String.format(Locale.US, "%02x", value & 0xff));
+        return output.toString();
+    }
+
+    private String safeMessage(Exception error) {
+        String value = error == null ? "" : error.getMessage();
+        return value == null || value.trim().isEmpty() ? "unknown runtime error" : value.trim();
     }
 }

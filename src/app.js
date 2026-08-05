@@ -3038,15 +3038,30 @@ window.deck.onArcadeAudit(progress => {
 });
 window.deck.onRuntime(update => {
   state.runtime = update;
-  if (['downloading', 'retrying', 'verifying', 'installing', 'preparing'].includes(update.phase)) {
-    const progress = Math.max(8, Math.min(92, Number(update.progress || 0)));
-    setLoading(true, 'Preparing game engines', update.message || 'Installing the components GameDeck needs.', progress);
+  const activePhases = [
+    'downloading', 'retrying', 'verifying', 'installing', 'preparing',
+    'runtime-download', 'runtime-confirmation', 'core-download', 'core-install',
+    'content-staging', 'launching'
+  ];
+  if (activePhases.includes(update.phase)) {
+    const progress = Math.max(8, Math.min(98, Number(update.progress || 0)));
+    const title = update.phase === 'runtime-confirmation' ? 'Confirm GameDeck Console' : 'Preparing game engines for one-tap play';
+    setLoading(true, title, update.message || 'GameDeck is preparing the correct console automatically.', progress);
   } else if (update.phase === 'ready') {
     setLoading(false);
-    toast(update.message || 'Game engines are ready.', 'success');
+    toast(update.message || 'GameDeck Console is ready.', 'success');
+    state.catalog = [];
+    state.catalogSystem = null;
+    state.catalogGames = [];
+    state.catalogCache.clear();
+    loadLibrary(false).then(() => {
+      if (state.view === 'discover') renderDiscover();
+      else render();
+    });
+    refreshDiagnostics();
   } else if (update.phase === 'error') {
     setLoading(false);
-    toast(update.message || 'Game engine setup failed.', 'warning');
+    toast(update.message || 'GameDeck Console setup failed.', 'warning');
   }
 });
 

@@ -196,7 +196,7 @@ final class RgsxProvider {
                 item.put("installedCount", installed);
                 boolean playable = runtime != null && runtime.externalAvailable();
                 item.put("playable", playable);
-                item.put("issue", playable ? "" : "Install a compatible Android runtime to launch this system.");
+                item.put("issue", playable ? "" : "Tap Play once to install GameDeck Console; launch resumes automatically.");
                 output.put(item);
             } catch (Exception ignored) {}
         }
