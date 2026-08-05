@@ -333,6 +333,7 @@ if (!pkg.build?.files?.includes('netplay-manager.js')) fail('release packages mu
 if (!pkg.build?.files?.includes('community-chat.js') || !pkg.build?.files?.includes('contracts/*.wasm')) fail('release packages must include community chat and Freenet contracts');
 if (!siteHtml.includes('data-platform="android"') || !siteHtml.includes('Pure game mode')) fail('download site Android installation experience is missing');
 if (!siteApp.includes('ANDROID_PREVIEW_API') || !siteApp.includes('apk$/i')) fail('download site Android release resolver is missing');
+if (!siteApp.includes('COMMUNITY_PREVIEW_API') || !siteHtml.includes('data-stable-release')) fail('coordinated community preview release channel is missing');
 if (!String(pkg.scripts?.check || '').includes('netplay-manager.js') || !String(pkg.scripts?.check || '').includes('src/netplay.js')) fail('multiplayer syntax checks are missing');
 if (!String(pkg.scripts?.check || '').includes('scripts/repo-audit.mjs') || pkg.scripts?.['audit:repo'] !== 'node scripts/repo-audit.mjs') fail('repository integrity audit is not wired into tests');
 if (!main.includes('startRemotePlay') || !main.includes('remoteInputPacket') || !main.includes('network_remote_enable_user_p')) fail('native RetroPad Remote Play host routing is missing');
