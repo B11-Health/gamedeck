@@ -317,8 +317,7 @@ public class MainActivity extends Activity implements InputManager.InputDeviceLi
             case KeyEvent.KEYCODE_BUTTON_R1: return 11;
             case KeyEvent.KEYCODE_BUTTON_L2: return 12;
             case KeyEvent.KEYCODE_BUTTON_R2: return 13;
-            case KeyEvent.KEYCODE_BUTTON_SELECT:
-            case KeyEvent.KEYCODE_BACK: return 2;
+            case KeyEvent.KEYCODE_BUTTON_SELECT: return 2;
             case KeyEvent.KEYCODE_BUTTON_START: return 3;
             case KeyEvent.KEYCODE_BUTTON_THUMBL: return 14;
             case KeyEvent.KEYCODE_BUTTON_THUMBR: return 15;
@@ -424,16 +423,6 @@ public class MainActivity extends Activity implements InputManager.InputDeviceLi
     @Override public void onInputDeviceAdded(int deviceId) { notifyControllerState(); }
     @Override public void onInputDeviceRemoved(int deviceId) { releaseAllInputs(); notifyControllerState(); }
     @Override public void onInputDeviceChanged(int deviceId) { notifyControllerState(); }
-
-    @Override
-    public void onBackPressed() {
-        if (connectBar.getVisibility() == View.GONE) {
-            connectBar.setVisibility(View.VISIBLE);
-            return;
-        }
-        if (webView.canGoBack()) webView.goBack();
-        else super.onBackPressed();
-    }
 
     @Override
     protected void onDestroy() {
