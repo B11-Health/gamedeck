@@ -104,18 +104,34 @@ jobs:
           adb logcat -c
           adb shell am start -W -n "$PACKAGE/$ACTIVITY" | tee "$OUT/START.txt"
 
+          capture_logcat() {
+            local format="${1:-brief}"
+            local target="$2"
+            for attempt in $(seq 1 12); do
+              if adb get-state >/dev/null 2>&1 && adb logcat -d -v "$format" > "$target" 2>/dev/null; then
+                return 0
+              fi
+              timeout 10 adb wait-for-device >/dev/null 2>&1 || true
+              sleep .5
+            done
+            echo "Unable to capture logcat after ADB retries." >&2
+            return 1
+          }
           latest_qa() {
-            adb logcat -d -v brief | grep 'GAMEDECK_QA_STATE' | tail -1 > "$OUT/QA-LATEST.txt" || true
+            capture_logcat brief "$OUT/LOGCAT-BRIEF.txt" || return 1
+            grep 'GAMEDECK_QA_STATE' "$OUT/LOGCAT-BRIEF.txt" | tail -1 > "$OUT/QA-LATEST.txt" || true
           }
           wait_state() {
             local value="$1"
-            for attempt in $(seq 1 60); do
-              latest_qa
-              if grep -Fq "$value" "$OUT/QA-LATEST.txt"; then return 0; fi
+            for attempt in $(seq 1 240); do
+              latest_qa || true
+              if grep -Fq "$value" "$OUT/QA-LATEST.txt" 2>/dev/null; then return 0; fi
               sleep .25
             done
-            echo "Missing state: $value"
-            cat "$OUT/QA-LATEST.txt" || true
+            echo "Missing state after 60 seconds: $value"
+            cat "$OUT/QA-LATEST.txt" 2>/dev/null || true
+            capture_logcat threadtime "$OUT/LOGCAT.txt" || true
+            tail -200 "$OUT/LOGCAT.txt" 2>/dev/null || true
             return 1
           }
           focus_value() {
@@ -130,18 +146,40 @@ jobs:
           PY
           }
           shot() {
+            local name="$1"
             sleep .5
-            adb exec-out screencap -p > "$OUT/$1.png"
-            test -s "$OUT/$1.png"
+            for attempt in $(seq 1 12); do
+              if adb exec-out screencap -p > "$OUT/$name.png" 2>/dev/null && test -s "$OUT/$name.png"; then
+                return 0
+              fi
+              timeout 10 adb wait-for-device >/dev/null 2>&1 || true
+              sleep .5
+            done
+            echo "Unable to capture screenshot: $name" >&2
+            return 1
           }
 
-          for attempt in $(seq 1 80); do
-            adb logcat -d -v brief > "$OUT/LOGCAT.txt"
-            grep -q 'GAMEDECK_RENDERER_READY' "$OUT/LOGCAT.txt" && break
-            ! grep -q 'GAMEDECK_RENDERER_ERROR' "$OUT/LOGCAT.txt"
-            sleep .25
+          renderer_ready=false
+          for attempt in $(seq 1 240); do
+            capture_logcat brief "$OUT/LOGCAT-BRIEF.txt" || true
+            if grep -q 'GAMEDECK_RENDERER_ERROR' "$OUT/LOGCAT-BRIEF.txt" 2>/dev/null; then
+              echo "Renderer reported an error during startup." >&2
+              tail -200 "$OUT/LOGCAT-BRIEF.txt" || true
+              exit 1
+            fi
+            if grep -q 'GAMEDECK_RENDERER_READY' "$OUT/LOGCAT-BRIEF.txt" 2>/dev/null; then
+              renderer_ready=true
+              break
+            fi
+            sleep .5
           done
-          grep -q 'GAMEDECK_RENDERER_READY' "$OUT/LOGCAT.txt"
+          if [ "$renderer_ready" != true ]; then
+            echo "Renderer did not become ready within 120 seconds." >&2
+            adb shell dumpsys activity activities > "$OUT/ACTIVITIES.txt" 2>/dev/null || true
+            capture_logcat threadtime "$OUT/LOGCAT.txt" || true
+            tail -240 "$OUT/LOGCAT.txt" 2>/dev/null || true
+            exit 1
+          fi
           wait_state '"view":"home"'
 
           adb shell input keyevent 22
@@ -183,8 +221,12 @@ jobs:
           wait_state '"controllerMode":true'
           shot 06-landscape-controller
 
-          adb logcat -d -v threadtime > "$OUT/LOGCAT.txt"
-          adb shell dumpsys window | grep -E 'mCurrentFocus|mFocusedApp' > "$OUT/WINDOW-FOCUS.txt"
+          capture_logcat threadtime "$OUT/LOGCAT.txt"
+          for attempt in $(seq 1 12); do
+            if adb shell dumpsys window 2>/dev/null | grep -E 'mCurrentFocus|mFocusedApp' > "$OUT/WINDOW-FOCUS.txt"; then break; fi
+            timeout 10 adb wait-for-device >/dev/null 2>&1 || true
+            sleep .5
+          done
           grep -Fq "$PACKAGE" "$OUT/WINDOW-FOCUS.txt"
           ! grep -Eqi 'FATAL EXCEPTION|GAMEDECK_RENDERER_ERROR' "$OUT/LOGCAT.txt"
           grep -Fq '"controllerMode":true' "$OUT/LOGCAT.txt"
