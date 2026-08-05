@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "provider": "GameDeck lawful RGSX catalog",
+  "systems": [
+    {
+      "id": "gamedeck-nes-homebrew",
+      "source": "GameDeck Homebrew",
+      "folder": "nes",
+      "systemId": "nes",
+      "name": "NES Homebrew",
+      "image": "../assets/system-themes/nintendo-classic.webp",
+      "games": [
+        {
+          "id": "gamedeck-diagnostics-nes",
+          "title": "GameDeck Diagnostics",
+          "fileName": "GameDeck Diagnostics (World) [Homebrew].nes",
+          "region": "World",
+          "tags": ["Homebrew", "CC0", "GameDeck"],
+          "size": 24592,
+          "mimeType": "application/octet-stream",
+          "sha256": "c0e0d5205db6de971fc69963133dc21f2ed771528debdae583d3c127db4f2cdb",
+          "license": "CC0-1.0",
+          "description": "A tiny GameDeck-authored diagnostic cartridge used to verify one-tap Android catalog installation.",
+          "generator": "gamedeck-nes-diagnostics-v1"
+        }
+      ]
+    }
+  ]
+}
