@@ -28,14 +28,14 @@ tasks.register('prepareSharedRenderer') {
         )
         index = index.replace(
             '<link rel="stylesheet" href="styles.css">',
-            '<link rel="stylesheet" href="styles.css">\n  <link rel="stylesheet" href="android-overrides.css">\n  <link rel="stylesheet" href="android-polish.css">\n  <link rel="stylesheet" href="android-shell-fixes.css">'
+            '<link rel="stylesheet" href="styles.css">\n  <link rel="stylesheet" href="android-overrides.css">\n  <link rel="stylesheet" href="android-polish.css">\n  <link rel="stylesheet" href="android-shell-fixes.css">\n  <link rel="stylesheet" href="android-controller.css">'
         )
         index = index.replace(
             '<script src="app.js"></script>',
-            '<script src="platform-android-native.js"></script>\n  <script src="debug-fixture.js"></script>\n  <script src="app.js"></script>\n  <script src="renderer-probe.js"></script>\n  <script src="android-qa-probe.js"></script>'
+            '<script src="platform-android-native.js"></script>\n  <script src="debug-fixture.js"></script>\n  <script src="app.js"></script>\n  <script src="android-controller.js"></script>\n  <script src="renderer-probe.js"></script>\n  <script src="android-qa-probe.js"></script>'
         )
-        if (!index.contains('platform-android-native.js')) {
-            throw new GradleException('Android native platform adapter was not inserted into index.html')
+        if (!index.contains('platform-android-native.js') || !index.contains('android-controller.js')) {
+            throw new GradleException('Android native platform or controller adapter was not inserted into index.html')
         }
         indexFile.write(index, 'UTF-8')
 
@@ -203,7 +203,7 @@ tasks.register('prepareSharedRenderer') {
         )
         platform = platform.replace(
             "version: '0.3.0-parity-preview'",
-            "version: '0.4.0-rgsx-get'"
+            "version: '0.4.1-controls'"
         )
         if (platform.contains('android_discover_transfer_pending')
             || !platform.contains('Managed Discover install')
@@ -223,8 +223,8 @@ android {
         applicationId 'io.gamedeck.mobile.desktoppreview'
         minSdk 26
         targetSdk 36
-        versionCode 8
-        versionName '0.4.0-rgsx-get'
+        versionCode 9
+        versionName '0.4.1-controls'
     }
 
     sourceSets {
