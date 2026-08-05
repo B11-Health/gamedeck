@@ -1,0 +1,163 @@
+{
+  "schemaVersion": 1,
+  "status": "draft",
+  "objective": "Recruit a diverse, consent-aware multiplayer test cohort for QA-approved GameDeck route tuples without claiming universal compatibility or collecting unnecessary personal data.",
+  "publicationGate": {
+    "required": true,
+    "approvedByRoles": [
+      "General Orchestrator",
+      "QA Evidence Reviewer",
+      "Privacy Reviewer"
+    ],
+    "conditions": [
+      "The exact public claim names only QA-approved route tuples.",
+      "The call to action resolves to the repository multiplayer session issue template.",
+      "The privacy warning is included without weakening it.",
+      "Footage, account changes, paid promotion, and external publication require separate approval.",
+      "Unknown coverage and response counts remain unknown rather than becoming zero or success claims."
+    ]
+  },
+  "cta": {
+    "type": "github-issue-template",
+    "repository": "B11-Health/gamedeck",
+    "template": ".github/ISSUE_TEMPLATE/multiplayer_session.yml",
+    "url": "https://github.com/B11-Health/gamedeck/issues/new?template=multiplayer_session.yml"
+  },
+  "cohortDimensions": [
+    {
+      "id": "operatingSystem",
+      "coverage": [
+        "windows",
+        "macos",
+        "linux"
+      ],
+      "collection": "OS family and coarse version only"
+    },
+    {
+      "id": "networkRoute",
+      "coverage": [
+        "same-device",
+        "lan",
+        "internet-direct",
+        "relay-fallback",
+        "unknown"
+      ],
+      "collection": "Selected route and public reason code; never collect public IP addresses"
+    },
+    {
+      "id": "controllerTopology",
+      "coverage": [
+        "one-local",
+        "two-local",
+        "mixed-local-remote",
+        "remote-guest"
+      ],
+      "collection": "Topology and controller family; exact model is optional"
+    },
+    {
+      "id": "controllerFamily",
+      "coverage": [
+        "xinput",
+        "dualsense",
+        "switch-pro",
+        "generic",
+        "keyboard-fallback",
+        "other"
+      ],
+      "collection": "Family and wired or wireless connection only"
+    },
+    {
+      "id": "regionBand",
+      "coverage": [
+        "same-region",
+        "cross-region",
+        "unknown"
+      ],
+      "collection": "Coarse comparison only; never collect city, address, coordinates, or IP data"
+    },
+    {
+      "id": "displayMode",
+      "coverage": [
+        "windowed",
+        "fullscreen",
+        "handheld",
+        "tv"
+      ],
+      "collection": "Display mode and optional coarse resolution"
+    }
+  ],
+  "allowedReportFields": [
+    "GameDeck commit or release",
+    "OS family and coarse version",
+    "host, guest, both-sides, or same-device role",
+    "route selected",
+    "controller family and connection type",
+    "game system and emulator or core",
+    "outcome category",
+    "first failing step or stable public reason code",
+    "approximate invite-to-play duration band",
+    "whether the result reproduced after restart",
+    "sanitized diagnostics",
+    "optional consent to GitHub username credit"
+  ],
+  "forbiddenData": [
+    "ROMs or other game content",
+    "BIOS files or encryption keys",
+    "save files",
+    "absolute file or library paths",
+    "IP addresses",
+    "invite codes",
+    "session tokens",
+    "account identifiers",
+    "email addresses",
+    "phone numbers",
+    "precise location",
+    "raw controller input streams"
+  ],
+  "proofChecklist": [
+    "Name the exact GameDeck commit or release.",
+    "Name the tested route, host or guest role, OS family, controller topology, game system, and engine or core.",
+    "Record the first failing step or completed-play outcome.",
+    "Record one stable public reason and one repair action when blocked.",
+    "Use duration bands instead of exact behavioral timelines.",
+    "Sanitize diagnostics and confirm forbidden data is absent.",
+    "Treat one successful tuple as evidence for that tuple only.",
+    "Obtain explicit consent before crediting a tester or reusing footage."
+  ],
+  "claims": {
+    "allowed": [
+      "GameDeck is recruiting testers for specifically named QA-approved routes.",
+      "Each report adds evidence for one exact environment tuple.",
+      "GameDeck requires legally owned game content and does not distribute games, BIOS files, keys, or saves."
+    ],
+    "forbidden": [
+      "GameDeck works with any game.",
+      "Universal online play is available.",
+      "Every emulator, controller, operating system, or network is supported.",
+      "Testing proves zero-latency or failure-free play.",
+      "Privacy is guaranteed regardless of external platforms or peers."
+    ]
+  },
+  "measurement": {
+    "telemetryImplementation": false,
+    "baseline": null,
+    "source": "Public GitHub issue metadata and explicitly submitted reports only",
+    "counters": [
+      "published recruitment messages",
+      "CTA destinations verified",
+      "reports started",
+      "reports usable after privacy review",
+      "completed playable-session reports",
+      "blocked reports with actionable diagnostics"
+    ],
+    "minimumPublicCohort": 20,
+    "smallCellPolicy": "Do not publish segmented rates below the privacy-safe multiplayer metrics contract minimum cohort.",
+    "responseState": "unknown until an approved recruitment message is published and observed"
+  },
+  "stopConditions": [
+    "Pause recruitment if the CTA is broken or routes to an unreviewed surface.",
+    "Pause recruitment if reports expose private data or copyrighted game content.",
+    "Withdraw any claim that exceeds the exact QA evidence named at publication.",
+    "Do not spend money, promise rewards, or contact testers privately without separate authorization."
+  ]
+}

@@ -61,6 +61,7 @@ const compareItems = (a, b) => (priorityRank.get(a.priority) ?? 99) - (priorityR
   assert.doesNotMatch(text, /OPS-001 (active|review)/);
   for (const item of pulse.ready) assert.match(text, new RegExp(item.id));
   assert.doesNotMatch(text, /ANALYTICS-001/);
+  assert.doesNotMatch(text, /GROWTH-001/);
   assert.match(text, /Critical risks \(0\)/);
 }
 
