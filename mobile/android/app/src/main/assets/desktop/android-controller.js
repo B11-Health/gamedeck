@@ -81,8 +81,14 @@
   };
 
   const initialFocus = () => {
-    const preferred = document.querySelector('.nav.active, #catalogFeatureAction:not([disabled]), .game, .catalog-game, button:not([disabled])');
-    const target = visible(preferred) ? preferred : focusables()[0];
+    const preferred = [
+      '.primary-nav .nav.active',
+      '#catalogFeatureAction:not([disabled])',
+      '.game',
+      '.catalog-game',
+      'button:not([disabled])'
+    ].map(selector => document.querySelector(selector)).find(visible);
+    const target = preferred || focusables()[0];
     if (target) setFocus(target, { silent: true });
     return target;
   };

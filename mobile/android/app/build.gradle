@@ -2,6 +2,7 @@ plugins { id 'com.android.application' }
 
 def repositoryRoot = new File(rootProject.projectDir, '../..').canonicalFile
 def sharedRendererAssets = file("$buildDir/generated/sharedRenderer")
+def applicationIdOverride = providers.gradleProperty('gamedeckApplicationId').orNull
 
 tasks.register('prepareSharedRenderer') {
     inputs.dir(new File(repositoryRoot, 'src'))
@@ -71,7 +72,7 @@ android {
     compileSdk 36
 
     defaultConfig {
-        applicationId 'io.gamedeck.mobile.desktoppreview'
+        applicationId applicationIdOverride ?: 'io.gamedeck.mobile.desktoppreview'
         minSdk 26
         targetSdk 36
         versionCode 9

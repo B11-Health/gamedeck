@@ -4,8 +4,9 @@ set -euo pipefail
 ANDROID_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 REPO_ROOT="$(cd "$ANDROID_DIR/../.." && pwd)"
 ENV_FILE="$HOME/.config/gamedeck/android-env.sh"
-APK="$ANDROID_DIR/app/build/outputs/apk/debug/app-debug.apk"
-PACKAGE="io.gamedeck.mobile.desktoppreview"
+APK="${GAMEDECK_APK:-$ANDROID_DIR/app/build/outputs/apk/debug/app-debug.apk}"
+PACKAGE="${GAMEDECK_PACKAGE:-io.gamedeck.mobile.desktoppreview}"
+DOWNLOAD_NAME="${GAMEDECK_DOWNLOAD_NAME:-GameDeck-dev.apk}"
 ACTIVITY="io.gamedeck.mobile.MainActivity"
 QA_ROOT="$ANDROID_DIR/app/build/outputs/termux-qa"
 QA_ACTION="io.gamedeck.mobile.QA"
@@ -50,16 +51,22 @@ build_apk() {
   require_build_tools
   cd "$ANDROID_DIR"
   echo "Building GameDeck Android from $(git -C "$REPO_ROOT" rev-parse --short HEAD 2>/dev/null || echo working-tree)..."
-  gradle :app:assembleDebug \
-    --daemon \
-    --parallel \
-    --build-cache \
-    --max-workers="${GAMEDECK_GRADLE_WORKERS:-2}" \
+  local gradle_args=(
+    :app:assembleDebug
+    --daemon
+    --parallel
+    --build-cache
+    --max-workers="${GAMEDECK_GRADLE_WORKERS:-2}"
     -Pandroid.aapt2FromMavenOverride="$AAPT2"
+  )
+  if [[ -n "${GAMEDECK_APPLICATION_ID:-}" ]]; then
+    gradle_args+=("-PgamedeckApplicationId=$GAMEDECK_APPLICATION_ID")
+  fi
+  gradle "${gradle_args[@]}"
   test -s "$APK"
   mkdir -p "$HOME/storage/downloads" 2>/dev/null || true
   if [[ -d "$HOME/storage/downloads" ]]; then
-    cp -f "$APK" "$HOME/storage/downloads/GameDeck-dev.apk" || true
+    cp -f "$APK" "$HOME/storage/downloads/$DOWNLOAD_NAME" || true
   fi
   sha256sum "$APK"
   echo "APK: $APK"
