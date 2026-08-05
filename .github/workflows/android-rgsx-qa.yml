@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   rgsx-get:
-    name: Install catalog item through native Get flow
+    name: Press Discover Get and install catalog item
     runs-on: ubuntu-latest
     timeout-minutes: 40
     defaults:
@@ -50,7 +50,7 @@ jobs:
       - name: Build debug APK
         run: gradle :app:assembleDebug --no-daemon --stacktrace
 
-      - name: Verify one-tap native transfer
+      - name: Verify renderer Get to managed Library
         run: |
           set -euo pipefail
           APK=app/build/outputs/apk/debug/app-debug.apk
@@ -101,30 +101,81 @@ jobs:
           adb shell "run-as $PACKAGE sh -c 'mkdir -p files && touch files/renderer-fixture.enabled'"
           adb logcat -c
           adb shell am start -W -n "$PACKAGE/$ACTIVITY" | tee "$OUT/ACTIVITY-START.txt"
-          adb shell am broadcast \
-            -a io.gamedeck.mobile.RGSX_QA \
-            -n "$PACKAGE/io.gamedeck.mobile.RgsxQaReceiver" \
-            | tee "$OUT/BROADCAST.txt"
 
-          for attempt in $(seq 1 100); do
+          for attempt in $(seq 1 80); do
             adb logcat -d -v brief > "$OUT/LOGCAT.txt"
-            if grep -q "GAMEDECK_RGSX_QA error\|GAMEDECK_RGSX_QA exception\|GAMEDECK_RGSX_QA timeout" "$OUT/LOGCAT.txt"; then
-              grep "GAMEDECK_RGSX_QA" "$OUT/LOGCAT.txt"
+            if grep -q "GAMEDECK_RENDERER_ERROR" "$OUT/LOGCAT.txt"; then
+              grep "GAMEDECK_RENDERER_ERROR" "$OUT/LOGCAT.txt"
               exit 1
             fi
-            if grep -q "GAMEDECK_RGSX_QA complete" "$OUT/LOGCAT.txt"; then
+            if grep -q "GAMEDECK_RENDERER_READY" "$OUT/LOGCAT.txt"; then
               break
             fi
             sleep .25
           done
-          grep -q "GAMEDECK_RGSX_QA complete" "$OUT/LOGCAT.txt"
+          grep -q "GAMEDECK_RENDERER_READY" "$OUT/LOGCAT.txt"
 
           FILE=files/managed-library/nes/GameDeck-Diagnostics-Homebrew.nes
+          adb shell "run-as $PACKAGE test ! -f $FILE"
+          adb shell am broadcast \
+            -a io.gamedeck.mobile.QA \
+            -p "$PACKAGE" \
+            --es command rgsx:get-ui \
+            | tee "$OUT/BROADCAST.txt"
+
+          for attempt in $(seq 1 120); do
+            adb logcat -d -v brief > "$OUT/LOGCAT.txt"
+            if grep -q 'GAMEDECK_QA_STATE .*"qa":"rgsx-get-error"' "$OUT/LOGCAT.txt"; then
+              grep 'GAMEDECK_QA_STATE .*"qa":"rgsx-get-' "$OUT/LOGCAT.txt"
+              exit 1
+            fi
+            if grep -q 'GAMEDECK_QA_STATE .*"qa":"rgsx-get-clicked"' "$OUT/LOGCAT.txt"; then
+              break
+            fi
+            sleep .25
+          done
+          grep -q 'GAMEDECK_QA_STATE .*"qa":"rgsx-get-clicked"' "$OUT/LOGCAT.txt"
+
+          for attempt in $(seq 1 120); do
+            if adb shell "run-as $PACKAGE test -f $FILE"; then
+              break
+            fi
+            sleep .25
+          done
+          adb shell "run-as $PACKAGE test -f $FILE"
+          adb exec-out screencap -p > "$OUT/DISCOVER-AFTER-GET.png"
+          test -s "$OUT/DISCOVER-AFTER-GET.png"
+
           SIZE=$(adb shell "run-as $PACKAGE wc -c $FILE" | awk '{print $1}' | tr -d '\r')
           test "$SIZE" = "24592"
           HASH=$(adb shell "run-as $PACKAGE sha256sum $FILE" | awk '{print $1}' | tr -d '\r')
           test "$HASH" = "c0e0d5205db6de971fc69963133dc21f2ed771528debdae583d3c127db4f2cdb"
           printf 'size=%s\nsha256=%s\n' "$SIZE" "$HASH" > "$OUT/INSTALLED-FILE.txt"
+
+          for attempt in $(seq 1 80); do
+            adb logcat -d -v brief > "$OUT/LOGCAT.txt"
+            if grep -q 'GAMEDECK_QA_STATE .*"view":"discover".*"catalogCards":1' "$OUT/LOGCAT.txt"; then
+              break
+            fi
+            sleep .25
+          done
+          grep -q 'GAMEDECK_QA_STATE .*"view":"discover".*"catalogCards":1' "$OUT/LOGCAT.txt"
+
+          adb shell am broadcast \
+            -a io.gamedeck.mobile.QA \
+            -p "$PACKAGE" \
+            --es command view:home \
+            >/dev/null
+          for attempt in $(seq 1 80); do
+            adb logcat -d -v brief > "$OUT/LOGCAT.txt"
+            if grep -q 'GAMEDECK_QA_STATE .*"view":"home".*"gameCards":2' "$OUT/LOGCAT.txt"; then
+              break
+            fi
+            sleep .25
+          done
+          grep -q 'GAMEDECK_QA_STATE .*"view":"home".*"gameCards":2' "$OUT/LOGCAT.txt"
+          adb exec-out screencap -p > "$OUT/LIBRARY-AFTER-GET.png"
+          test -s "$OUT/LIBRARY-AFTER-GET.png"
 
           adb shell am force-stop "$PACKAGE"
           adb shell am start -W -n "$PACKAGE/$ACTIVITY" | tee "$OUT/RESTART.txt"
