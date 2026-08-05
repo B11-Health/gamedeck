@@ -11,6 +11,7 @@ const { path7za } = require('7zip-bin');
 const { createRuntimeManager, pathsFor: managedRuntimePathsFor, key: managedRuntimeKey } = require('./runtime-manager');
 const { createStreamServer } = require('./stream-server');
 const { createNetplayManager } = require('./netplay-manager');
+const { createFreenetContentProvider } = require('./freenet-content-provider');
 const {
   buildCapabilityFailure,
   buildStatusFailure,
@@ -161,6 +162,10 @@ const RGSX_FIRMWARE_PACK = firstExisting([
 ], path.join(RGSX_ROOT, 'Retrobat V8.0.0.zip'));
 const STORE = path.join(app.getPath('userData'), 'library.json');
 const DOWNLOADS_FILE = path.join(app.getPath('userData'), 'downloads.json');
+const COMMUNITY_CACHE_ROOT = path.join(app.getPath('userData'), 'community-cache');
+const COMMUNITY_MANIFEST_CACHE = path.join(COMMUNITY_CACHE_ROOT, 'manifest.json');
+const COMMUNITY_MANIFEST_BOOTSTRAP = process.env.GAMEDECK_COMMUNITY_MANIFEST || path.join(__dirname, 'config', 'community-content.json');
+const COMMUNITY_BLOB_CONTRACT = path.join(__dirname, 'contracts', 'gamedeck-blob.wasm');
 const ART_CACHE = path.join(app.getPath('userData'), 'artwork');
 const DETAILS_CACHE = path.join(app.getPath('userData'), 'details');
 const ARCADE_AUDIT_FILE = path.join(app.getPath('userData'), 'arcade-audit.json');
@@ -329,6 +334,7 @@ let streamCaptureAudio = true;
 let streamServer = null;
 let netplayManager = null;
 let playSessionManager = null;
+let communityContentProvider = null;
 let remotePlayProcess = null;
 let remotePlaySession = null;
 let remoteInputSocket = null;
@@ -1228,6 +1234,27 @@ function addActivity(level, message, taskId = null) {
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('activity', entry);
 }
 
+communityContentProvider = createFreenetContentProvider({
+  libraryRoot: LIBRARY,
+  cacheRoot: COMMUNITY_CACHE_ROOT,
+  bootstrapManifestPath: COMMUNITY_MANIFEST_BOOTSTRAP,
+  manifestCachePath: COMMUNITY_MANIFEST_CACHE,
+  manifestContractKey: process.env.GAMEDECK_COMMUNITY_MANIFEST_KEY || '',
+  contractWasmPath: COMMUNITY_BLOB_CONTRACT,
+  nodeUrl: process.env.GAMEDECK_FREENET_NODE || 'ws://127.0.0.1:7509/v1/contract/command',
+  authToken: process.env.GAMEDECK_FREENET_AUTH_TOKEN || '',
+  trustedKeys: process.env.GAMEDECK_COMMUNITY_PUBLIC_KEY
+    ? { 'gamedeck-release': process.env.GAMEDECK_COMMUNITY_PUBLIC_KEY }
+    : {},
+  allowUnsigned: process.env.GAMEDECK_ALLOW_UNSIGNED_COMMUNITY_MANIFEST === '1',
+  allowLocalSources: process.env.GAMEDECK_COMMUNITY_QA_LOCAL_SOURCES === '1',
+  appVersion: app.getVersion(),
+  onLog: (level, message) => {
+    if (level !== 'debug') addActivity(level, message);
+  }
+});
+void communityContentProvider.refresh?.();
+
 runtimeManager = createRuntimeManager({
   root: MANAGED_RUNTIME_ROOT,
   manifestPath: path.join(__dirname, 'config', 'runtime-manifest.json'),
@@ -2038,6 +2065,78 @@ function getCatalogGames(source) {
   });
 }
 
+function queueGameDownload(source, folder, title, fileName, options = {}) {
+  const asset = communityContentProvider?.findAsset({ folder, fileName, expectedSha256: options.expectedSha256 || '' });
+  if (fs.existsSync(RGSX_PYTHON) && fs.existsSync(RGSX_CLI)) {
+    const primary = queueRgsxDownload(source, folder, title, fileName, options);
+    if (primary?.ok || !asset) return primary;
+  }
+  if (!asset) return { ok: false, error: 'This game is not currently available.' };
+
+  const id = options.resumeFrom?.id || `content-${Date.now()}`;
+  const job = {
+    ...(options.resumeFrom || {}),
+    id,
+    source: 'GameDeck',
+    provider: 'community',
+    folder,
+    title,
+    fileName,
+    expectedSha256: asset.sha256,
+    status: 'running',
+    stage: 'Preparing',
+    message: 'Finding the fastest available copy…',
+    startedAt: options.resumeFrom?.startedAt || Date.now(),
+    progress: Number(options.resumeFrom?.progress || 0),
+    downloadedBytes: Number(options.resumeFrom?.downloadedBytes || 0),
+    totalBytes: asset.size,
+    repair: Boolean(options.repair),
+    resumable: true
+  };
+  downloads.set(id, job);
+  emitDownload(job);
+  const token = { cancelled: false };
+  downloadProcesses.set(id, { kill: () => { token.cancelled = true; } });
+  communityContentProvider.downloadAsset(asset, {
+    isCancelled: () => token.cancelled || Boolean(job.pauseRequested),
+    onProgress: update => {
+      job.stage = update.phase === 'verifying' ? 'Verifying' : 'Downloading';
+      job.progress = Number(update.progress ?? job.progress);
+      job.downloadedBytes = Number(update.downloadedBytes ?? job.downloadedBytes);
+      job.totalBytes = Number(update.totalBytes ?? job.totalBytes);
+      job.message = String(update.message || 'Downloading game…');
+      emitDownload(job);
+    }
+  }).then(() => {
+    downloadProcesses.delete(id);
+    job.status = 'complete';
+    job.stage = job.repair ? 'Launching' : 'Ready to play';
+    job.progress = 100;
+    job.finishedAt = Date.now();
+    job.message = job.repair ? 'Fresh verified copy installed. Launching automatically.' : 'Download complete. The game is ready in your library.';
+    emitDownload(job);
+    addActivity('success', `GameDeck finished: ${title}`, id);
+    completePendingLaunch(id, true, job.message);
+  }).catch(error => {
+    downloadProcesses.delete(id);
+    if (job.pauseRequested || token.cancelled) {
+      delete job.pauseRequested;
+      job.status = 'paused';
+      job.stage = 'Paused';
+      job.message = 'Paused. Resume whenever you are ready.';
+    } else {
+      job.status = 'error';
+      job.stage = 'Failed';
+      job.error = error.message;
+      job.message = error.message;
+      job.finishedAt = Date.now();
+      completePendingLaunch(id, false, error.message);
+    }
+    emitDownload(job);
+  });
+  return { ok: true, queued: true, taskId: id };
+}
+
 function queueRgsxDownload(source, folder, title, fileName, options = {}) {
   if (!fs.existsSync(RGSX_PYTHON) || !fs.existsSync(RGSX_CLI)) {
     return { ok: false, error: 'RGSX runtime is not installed correctly. Open Activity for details.' };
@@ -2391,7 +2490,7 @@ function retryDownload(id) {
   if (job.localInstall && job.archiveFile) return prepareGameArchive(job.archiveFile, { resumeFrom: job });
   if (job.firmware && job.systemId) return Promise.resolve(queueRgsxFirmwareDownload(job.systemId, { resumeFrom: job }));
   if (job.source && job.folder && job.fileName) {
-    return Promise.resolve(queueRgsxDownload(job.source, job.folder, job.title, job.fileName, {
+    return Promise.resolve(queueGameDownload(job.source, job.folder, job.title, job.fileName, {
       force: Boolean(job.repair),
       repair: Boolean(job.repair),
       resumeFrom: job
@@ -3081,7 +3180,7 @@ ipcMain.handle('open-library', () => shell.openPath(LIBRARY));
 ipcMain.handle('rescan', () => getLibrary());
 ipcMain.handle('catalog-systems', () => getCatalogSystems());
 ipcMain.handle('catalog-games', (_, source) => getCatalogGames(source));
-ipcMain.handle('import-owned', (_, source, folder, title, fileName) => queueRgsxDownload(source, folder, title, fileName));
+ipcMain.handle('import-owned', (_, source, folder, title, fileName) => queueGameDownload(source, folder, title, fileName));
 ipcMain.handle('prepare-game', (_, file) => prepareGameArchive(file));
 ipcMain.handle('retry-download', (_, id) => retryDownload(id));
 ipcMain.handle('pause-download', (_, id) => pauseDownload(id));
