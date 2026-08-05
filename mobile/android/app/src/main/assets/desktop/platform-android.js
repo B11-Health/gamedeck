@@ -35,6 +35,18 @@
   });
 
   const imageForSystem = id => `../assets/system-themes/${SYSTEM_IMAGES[id] || 'retro'}.webp`;
+  const REMOTE_SYSTEMS = Object.freeze([
+    ['snes', 'Super Nintendo'], ['satellaview', 'Satellaview'], ['sufami', 'Sufami Turbo'],
+    ['nes', 'Nintendo Entertainment System'], ['fds', 'Famicom Disk System'],
+    ['n64', 'Nintendo 64'], ['n64dd', 'Nintendo 64DD'],
+    ['gb', 'Game Boy'], ['gbc', 'Game Boy Color'], ['gba', 'Game Boy Advance'], ['nds', 'Nintendo DS'],
+    ['genesis', 'Sega Genesis'], ['sega32x', 'Sega 32X'], ['mastersystem', 'Sega Master System'],
+    ['gamegear', 'Sega Game Gear'], ['segacd', 'Sega CD'], ['pce', 'PC Engine / TurboGrafx-16'],
+    ['supergrafx', 'PC Engine SuperGrafx'], ['saturn', 'Sega Saturn'], ['dreamcast', 'Dreamcast'],
+    ['atari2600', 'Atari 2600'], ['fbneo', 'FinalBurn Neo'], ['mame', 'MAME'], ['neogeo', 'Neo Geo'],
+    ['ps1', 'PlayStation'], ['ps2', 'PlayStation 2'], ['psp', 'PlayStation Portable'],
+    ['gamecube', 'Nintendo GameCube'], ['wii', 'Nintendo Wii'], ['wiiu', 'Nintendo Wii U']
+  ].map(([systemId, name]) => Object.freeze({ systemId, name })));
   const stableNumber = value => {
     let hash = 2166136261;
     for (const character of String(value || '')) hash = Math.imul(hash ^ character.charCodeAt(0), 16777619);
@@ -63,6 +75,8 @@
   let libraryCache = null;
   const artworkCache = new Map();
   const catalogCache = new Map();
+  const catalogSourceMap = new Map();
+  let catalogSystemsCache = null;
 
   function normalizeLibrary(library) {
     const source = library && typeof library === 'object' ? library : { systems: [], games: [] };
@@ -217,8 +231,54 @@
   }
 
   async function catalogSystems() {
-    const rows = parse(invoke('catalogSystems', '[]'), []);
-    return Array.isArray(rows) ? rows : [];
+    if (catalogSystemsCache) return catalogSystemsCache;
+    const nativeRows = parse(invoke('catalogSystems', '[]'), []);
+    const safeNativeRows = Array.isArray(nativeRows) ? nativeRows : [];
+    const runtime = getRuntimeStatus();
+    const nativeBySystem = new Map();
+    safeNativeRows.forEach(row => {
+      const systemId = String(row?.systemId || row?.folder || row?.id || '').toLowerCase();
+      if (!systemId) return;
+      const current = nativeBySystem.get(systemId) || [];
+      current.push(row);
+      nativeBySystem.set(systemId, current);
+    });
+
+    catalogSourceMap.clear();
+    const remoteRows = REMOTE_SYSTEMS
+      .filter(system => thumbnailRepo(system.systemId, system.systemId))
+      .map(system => {
+        const source = `public:${system.systemId}`;
+        const nativeSources = (nativeBySystem.get(system.systemId) || []).map(row => String(row.source || row.gamesFile || row.id || '')).filter(Boolean);
+        const installedCount = (nativeBySystem.get(system.systemId) || []).reduce((total, row) => total + Number(row.installedCount || 0), 0);
+        catalogSourceMap.set(source, { systemId: system.systemId, nativeSources });
+        return {
+          id: `public-${system.systemId}`,
+          source,
+          gamesFile: source,
+          systemId: system.systemId,
+          folder: system.systemId,
+          name: system.name,
+          image: imageForSystem(system.systemId),
+          count: 0,
+          countKnown: false,
+          installedCount,
+          playable: Boolean(runtime.externalAvailable || runtime.embeddedReady),
+          issue: runtime.externalAvailable || runtime.embeddedReady ? '' : 'Add a legally owned copy now; an Android play route is still required.'
+        };
+      });
+
+    const covered = new Set(REMOTE_SYSTEMS.map(system => system.systemId));
+    const nativeOnly = safeNativeRows.filter(row => {
+      const systemId = String(row?.systemId || row?.folder || row?.id || '').toLowerCase();
+      if (covered.has(systemId)) return false;
+      const source = String(row.source || row.gamesFile || row.id || '');
+      if (source) catalogSourceMap.set(source, { systemId, nativeSources: [source] });
+      return true;
+    });
+
+    catalogSystemsCache = [...remoteRows, ...nativeOnly].sort((left, right) => String(left.name || '').localeCompare(String(right.name || '')));
+    return catalogSystemsCache;
   }
 
   async function remoteCatalog(systemId) {
@@ -227,29 +287,47 @@
     if (catalogCache.has(repo)) return catalogCache.get(repo);
     const request = (async () => {
       try {
-        const response = await fetch(`https://api.github.com/repos/libretro-thumbnails/${repo}/contents/Named_Boxarts?per_page=1000`, {
-          headers: { Accept: 'application/vnd.github+json' },
-          cache: 'force-cache'
-        });
-        if (!response.ok) return [];
-        const rows = await response.json();
-        if (!Array.isArray(rows)) return [];
+        const requestJson = async url => {
+          const response = await fetch(url, {
+            headers: { Accept: 'application/vnd.github+json' },
+            cache: 'force-cache'
+          });
+          return response.ok ? response.json() : null;
+        };
+        let branch = 'master';
+        let root = await requestJson(`https://api.github.com/repos/libretro-thumbnails/${repo}/git/trees/${branch}`);
+        if (!root) {
+          branch = 'main';
+          root = await requestJson(`https://api.github.com/repos/libretro-thumbnails/${repo}/git/trees/${branch}`);
+        }
+        const boxartTree = Array.isArray(root?.tree)
+          ? root.tree.find(row => row?.type === 'tree' && row.path === 'Named_Boxarts')
+          : null;
+        if (!boxartTree?.sha) return [];
+        const payload = await requestJson(`https://api.github.com/repos/libretro-thumbnails/${repo}/git/trees/${boxartTree.sha}?recursive=1`);
+        const rows = Array.isArray(payload?.tree) ? payload.tree : [];
+        const encodedPath = path => String(path || '').split('/').map(encodeURIComponent).join('/');
         return rows
-          .filter(row => row?.type === 'file' && /\.png$/i.test(row.name || '') && row.download_url)
+          .filter(row => row?.type === 'blob' && /\.png$/i.test(row.path || ''))
           .map(row => {
-            const title = rawTitle(row.name);
+            const fileName = String(row.path || '');
+            const title = rawTitle(fileName);
             return {
               id: stableNumber(`${systemId}:${title}`),
               name: cleanTitle(title),
               fileName: title,
               region: inferRegion(title),
-              tags: [systemId.toUpperCase(), 'Cover catalog'],
-              art: row.download_url,
+              tags: [systemId.toUpperCase(), 'Public title index'],
+              art: `https://raw.githubusercontent.com/libretro-thumbnails/${repo}/${branch}/Named_Boxarts/${encodedPath(fileName)}`,
               installedFile: '',
               installedReady: false,
-              size: 0
+              size: 0,
+              transferAvailable: false,
+              catalogOnly: true
             };
-          });
+          })
+          .filter(game => game.name)
+          .sort((left, right) => left.name.localeCompare(right.name, undefined, { numeric: true, sensitivity: 'base' }));
       } catch {
         return [];
       }
@@ -259,8 +337,27 @@
   }
 
   async function catalogGames(source) {
-    const rows = parse(invoke('catalogGames', '[]', source || ''), []);
-    return Array.isArray(rows) ? rows : [];
+    if (!catalogSystemsCache) await catalogSystems();
+    const descriptor = catalogSourceMap.get(String(source || ''));
+    if (!descriptor) {
+      const rows = parse(invoke('catalogGames', '[]', source || ''), []);
+      return Array.isArray(rows) ? rows : [];
+    }
+
+    const nativeRows = descriptor.nativeSources.flatMap(nativeSource => {
+      const rows = parse(invoke('catalogGames', '[]', nativeSource), []);
+      return Array.isArray(rows) ? rows.map(row => ({
+        ...row,
+        id: Number.isFinite(Number(row.id)) ? Number(row.id) : stableNumber(`${descriptor.systemId}:${row.fileName || row.name || row.title}`),
+        transferAvailable: true,
+        catalogOnly: false
+      })) : [];
+    });
+    const publicRows = await remoteCatalog(descriptor.systemId);
+    const merged = new Map();
+    publicRows.forEach(row => merged.set(normalizedIdentity(row.fileName || row.name), row));
+    nativeRows.forEach(row => merged.set(normalizedIdentity(row.fileName || row.name), row));
+    return [...merged.values()].sort((left, right) => String(left.name || left.title || '').localeCompare(String(right.name || right.title || ''), undefined, { numeric: true, sensitivity: 'base' }));
   }
 
   function subscribeDownloads(callback) {
@@ -293,7 +390,7 @@
     const library = await getLibrary();
     const runtime = getRuntimeStatus();
     return {
-      platform: 'android', arch: 'arm64', version: '0.4.1-controls',
+      platform: 'android', arch: 'arm64', version: '0.4.3-discover',
       libraryRoot: library.rootName || '', rgsxRoot: 'Automatic',
       retroArchPath: runtime.externalPackage || '', retroArchCores: '', retroArchSystem: '', mamePath: '', sponsorsEnabled: false
     };

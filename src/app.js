@@ -1349,6 +1349,7 @@ function renderCatalogFeature(game) {
   const downloading = downloadForGame(game) || (state.activeCatalogTasks.has(catalogTaskKey(game)) ? { stage: 'Preparing', progress: 0 } : null);
   const installed = Boolean(game.installedFile);
   const ready = installed && game.installedReady !== false;
+  const transferable = game.transferAvailable !== false;
   const cached = state.gameDetails.get(detailKey(game.fileName || game.name, state.catalogSystem.systemId));
   feature.classList.toggle('details-loading', !cached);
   $('#catalogFeatureSource').textContent = cached ? String(cached.source || 'GameDeck').toUpperCase() : 'MATCHING DETAILS';
@@ -1358,20 +1359,24 @@ function renderCatalogFeature(game) {
   feature.classList.remove('feature-loading');
   $('#catalogFeatureArt').innerHTML = `<img src="${escapeHtml(art)}" alt="${escapeHtml(game.name)} cover">`;
   $('#catalogFeatureBackdrop').src = art;
-  $('#catalogFeatureSystem').textContent = `${state.catalogSystem.name.toUpperCase()} / ${ready ? 'IN YOUR LIBRARY' : downloading ? 'FINISHING SETUP' : installed ? 'DOWNLOADED' : 'RGSX CATALOG'}`;
+  $('#catalogFeatureSystem').textContent = `${state.catalogSystem.name.toUpperCase()} / ${ready ? 'IN YOUR LIBRARY' : downloading ? 'FINISHING SETUP' : installed ? 'DOWNLOADED' : transferable ? 'RGSX CATALOG' : 'PUBLIC TITLE INDEX'}`;
   $('#catalogFeatureTitle').textContent = game.name;
-  $('#catalogFeatureFacts').innerHTML = factMarkup([game.region || game.tags?.[0], cached?.year, game.size || 'RGSX managed', ready ? 'Ready' : installed ? 'Downloaded' : 'Available']);
+  $('#catalogFeatureFacts').innerHTML = factMarkup([game.region || game.tags?.[0], cached?.year, game.size || (transferable ? 'RGSX managed' : 'Public title index'), ready ? 'Ready' : installed ? 'Downloaded' : 'Available']);
   $('#catalogFeatureDescription').textContent = cached?.description || description;
   $('#catalogFeatureMeta').textContent = !state.catalogSystem.playable
-    ? `Console setup needed · ${state.catalogSystem.issue} You can still add this title now.`
+    ? transferable
+      ? `Console setup needed · ${state.catalogSystem.issue} You can still add this title now.`
+      : `Add a legally owned copy through your local library. ${state.catalogSystem.issue}`
     : ready
       ? 'Ready to play · GameDeck will choose the configured emulator automatically.'
       : downloading
         ? `${downloading.stage || 'Downloading'} · ${Math.round(Number(downloading.progress || 0))}% complete`
         : installed
           ? 'Download complete · Unpack locally once to finish setup. The original archive will be kept.'
-        : 'One-click RGSX transfer · Progress stays visible while you keep browsing.';
-  $('#catalogFeatureAction').textContent = ready ? 'Play now' : downloading ? `${downloading.stage || 'Working'} ${Math.round(Number(downloading.progress || 0))}%` : installed ? 'Finish setup' : 'Add to my deck';
+        : transferable
+          ? 'One-click RGSX transfer · Progress stays visible while you keep browsing.'
+          : 'Browse the complete public title index, then add a legally owned copy through your local library.';
+  $('#catalogFeatureAction').textContent = ready ? 'Play now' : downloading ? `${downloading.stage || 'Working'} ${Math.round(Number(downloading.progress || 0))}%` : installed ? 'Finish setup' : transferable ? 'Add to my deck' : 'Add owned copy';
   $('#catalogFeatureAction').disabled = Boolean(downloading);
   $('#catalogSetup').classList.toggle('hidden', state.catalogSystem.playable);
   $('#catalogSetup').textContent = systemNeedsFirmware(state.catalogSystem) ? 'Download firmware' : 'Setup console';
@@ -1421,10 +1426,11 @@ function renderCatalogGames() {
     const downloading = downloadForGame(game) || (state.activeCatalogTasks.has(catalogTaskKey(game)) ? { progress: 0, stage: 'Preparing' } : null);
     const installed = Boolean(game.installedFile);
     const ready = installed && game.installedReady !== false;
+    const transferable = game.transferAvailable !== false;
     const art = game.art || assetFallback(game.name, '#263347', '#10141c', state.catalogSystem?.name || 'DISCOVER');
-    const facts = [game.region || game.tags?.[0] || 'Catalog', game.size || 'RGSX'].filter(Boolean);
-    const action = ready ? 'Play' : downloading ? `${Math.round(Number(downloading.progress || 0))}%` : installed ? 'Finish' : 'Add';
-    const cardState = ready ? 'IN LIBRARY' : downloading ? escapeHtml(downloading.stage || 'WORKING') : installed ? 'DOWNLOADED' : 'AVAILABLE';
+    const facts = [game.region || game.tags?.[0] || 'Catalog', game.size || (transferable ? 'RGSX' : 'Title index')].filter(Boolean);
+    const action = ready ? 'Play' : downloading ? `${Math.round(Number(downloading.progress || 0))}%` : installed ? 'Finish' : transferable ? 'Add' : 'Owned copy';
+    const cardState = ready ? 'IN LIBRARY' : downloading ? escapeHtml(downloading.stage || 'WORKING') : installed ? 'DOWNLOADED' : transferable ? 'AVAILABLE' : 'TITLE INDEX';
     return `<article class="catalog-game ${game.art ? 'has-art' : 'art-pending'} ${active ? 'active' : ''} ${ready ? 'installed' : ''} ${installed && !ready ? 'downloaded' : ''} ${downloading ? 'downloading' : ''}" tabindex="0" role="listitem" aria-current="${active}" aria-label="Select ${escapeHtml(game.name)} for ${escapeHtml(state.catalogSystem?.name || 'this console')}" style="--delay:${Math.min(index, 14) * 18}ms" data-id="${game.id}"><div class="catalog-media"><img class="catalog-media-backdrop" data-catalog-art="${game.id}" src="${escapeHtml(art)}" alt="" loading="lazy"><img class="catalog-poster" data-catalog-art="${game.id}" src="${escapeHtml(art)}" alt="${escapeHtml(game.name)} artwork" loading="lazy"><span class="catalog-platform">${escapeHtml(state.catalogSystem?.name || 'GAME')}</span><span class="catalog-state">${cardState}</span></div><div class="catalog-info"><b title="${escapeHtml(game.name)}">${escapeHtml(game.name)}</b><small>${facts.map(fact => `<span>${escapeHtml(fact)}</span>`).join('')}</small><p>${escapeHtml(cardDescription(game, state.catalogSystem))}</p><button type="button" class="import" data-id="${game.id}" ${downloading ? 'disabled' : ''}>${action}</button></div></article>`;
   }).join('');
 
@@ -1499,6 +1505,11 @@ function showMoreCatalog(focusNext = false) {
 
 async function catalogAction(game) {
   if (!game || !state.catalogSystem) return;
+  if (game.transferAvailable === false && !game.installedFile) {
+    await window.deck.openLibrary();
+    toast(`Add your legally owned copy of ${game.name} through the selected GameDeck library.`);
+    return;
+  }
   if (game.installedFile) {
     if (game.installedReady !== false) {
       await launch(game.installedFile);
@@ -1580,6 +1591,7 @@ function restoreCatalogContext(systemId) {
 function applyCatalogCollection(system, games, enterGames = false) {
   state.catalogGames = games;
   system.count = games.length;
+  system.countKnown = true;
   system.installedCount = games.filter(game => game.installedFile).length;
   $('#catalogCount').textContent = `${system.installedCount.toLocaleString()} installed · ${games.length.toLocaleString()} available · ${system.playable ? 'emulator ready' : 'setup needed'}`;
   renderConsoleRail();
@@ -1629,7 +1641,8 @@ function renderConsoleRail() {
     const active = state.catalogSystem?.id === system.id;
     const focused = state.discoverZone === 'systems' && state.focusedConsoleId === system.id;
     const installed = Number(system.installedCount || 0);
-    return `<button type="button" class="console-card ${system.playable ? 'playable' : 'needs-setup'} ${active ? 'active' : ''} ${focused ? 'controller-focus' : ''}" data-id="${escapeHtml(system.id)}" title="${escapeHtml(system.issue || '')}"><span class="console-state">${system.playable ? 'READY' : 'SETUP'}</span><b>${escapeHtml(system.name)}</b><small><span>${system.count.toLocaleString()} TITLES</span>${installed ? `<span>${installed.toLocaleString()} ON DECK</span>` : ''}</small><img src="${escapeHtml(system.image)}" alt=""></button>`;
+    const titleCount = system.countKnown === false ? 'BROWSE ALL' : `${Number(system.count || 0).toLocaleString()} TITLES`;
+    return `<button type="button" class="console-card ${system.playable ? 'playable' : 'needs-setup'} ${active ? 'active' : ''} ${focused ? 'controller-focus' : ''}" data-id="${escapeHtml(system.id)}" title="${escapeHtml(system.issue || '')}"><span class="console-state">${system.playable ? 'READY' : 'SETUP'}</span><b>${escapeHtml(system.name)}</b><small><span>${titleCount}</span>${installed ? `<span>${installed.toLocaleString()} ON DECK</span>` : ''}</small><img src="${escapeHtml(system.image)}" alt=""></button>`;
   }).join('');
   $$('.console-card').forEach(card => {
     card.onclick = () => selectCatalog(card.dataset.id, true);
@@ -1644,12 +1657,13 @@ function renderConsoleRail() {
 async function renderDiscover() {
   if (!state.catalog.length) state.catalog = await window.deck.catalogSystems();
   if (state.view !== 'discover') return;
-  if (!state.focusedConsoleId && state.catalog.length) state.focusedConsoleId = state.catalog.find(system => system.id === 'snes')?.id || state.catalog[0].id;
+  if (!state.focusedConsoleId && state.catalog.length) state.focusedConsoleId = state.catalog.find(system => system.systemId === 'snes' || system.id === 'snes')?.id || state.catalog[0].id;
   renderConsoleRail();
   if (!state.catalogSystem && state.focusedConsoleId) await selectCatalog(state.focusedConsoleId, false);
   else if (state.catalogSystem) {
     $('#catalogTitle').textContent = state.catalogSystem.name;
-    $('#catalogCount').textContent = `${Number(state.catalogSystem.installedCount || 0).toLocaleString()} installed · ${state.catalogSystem.count.toLocaleString()} available · ${state.catalogSystem.playable ? 'emulator ready' : 'setup needed'}`;
+    const available = state.catalogSystem.countKnown === false ? 'browse to load' : `${Number(state.catalogSystem.count || 0).toLocaleString()} available`;
+    $('#catalogCount').textContent = `${Number(state.catalogSystem.installedCount || 0).toLocaleString()} installed · ${available} · ${state.catalogSystem.playable ? 'emulator ready' : 'setup needed'}`;
     renderCatalogGames();
   }
 }

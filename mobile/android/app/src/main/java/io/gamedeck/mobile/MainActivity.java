@@ -85,7 +85,7 @@ public class MainActivity extends Activity {
         webView.setBackgroundColor(Color.rgb(9, 11, 16));
         webView.setVisibility(View.VISIBLE);
         webView.setAlpha(1f);
-        webView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
 
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
@@ -98,7 +98,7 @@ public class MainActivity extends Activity {
         settings.setBuiltInZoomControls(false);
         settings.setDisplayZoomControls(false);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) settings.setOffscreenPreRaster(true);
-        settings.setUserAgentString(settings.getUserAgentString() + " GameDeckAndroid/0.4.1-controls");
+        settings.setUserAgentString(settings.getUserAgentString() + " GameDeckAndroid/0.4.3-discover");
 
         bridge = new DeckBridge(this);
         exposeBridge();
@@ -161,7 +161,7 @@ public class MainActivity extends Activity {
 
     private void useLocalRendererLayer() {
         if (webView == null) return;
-        webView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         webView.setVisibility(View.VISIBLE);
         webView.setAlpha(1f);
         webView.invalidate();

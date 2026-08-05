@@ -43,7 +43,7 @@ final class DeckBridge {
             boolean debuggable = (activity.getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
             value.put("platform", "android");
             value.put("platformKey", AndroidRuntimeManager.PLATFORM_KEY);
-            value.put("version", "0.4.1-controls");
+            value.put("version", "0.4.3-discover");
             value.put("localFirst", true);
             value.put("accountRequired", false);
             value.put("embeddedRuntimeReady", false);

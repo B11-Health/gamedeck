@@ -1,0 +1,153 @@
+/* Android WebView performance profile.
+ * Keep the native shell GPU-composited and remove effects that trigger
+ * repeated full-surface rasterization during touch or controller scrolling.
+ */
+
+html,
+body,
+.content,
+main > aside,
+.console-rail,
+.catalog-grid,
+.library-tools,
+.discover-tools {
+  scroll-behavior: auto !important;
+  overscroll-behavior: contain;
+}
+
+.content {
+  touch-action: pan-y pinch-zoom;
+  -webkit-overflow-scrolling: touch;
+}
+
+main > aside,
+.console-rail,
+.library-tools,
+.discover-tools {
+  touch-action: pan-x;
+}
+
+@media (hover: none), (pointer: coarse), (max-width: 820px) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 1ms !important;
+  }
+
+  .ambient,
+  .loading-ambient {
+    display: none !important;
+  }
+
+  .app-shell-header,
+  .app-header,
+  .toolbar,
+  .header-menu,
+  .spotlight,
+  .catalog-feature,
+  .toast,
+  .loading-stage,
+  .boot-panel,
+  .transfer-dock,
+  .stream-modal,
+  .netplay-modal {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+
+  .app-shell-header,
+  .toolbar,
+  .header-menu {
+    background-color: #0a1018 !important;
+  }
+
+  .game,
+  .catalog-game,
+  .console-card,
+  .community-card,
+  .settings-card,
+  .setup-coach,
+  .hero,
+  .spotlight,
+  .catalog-feature {
+    transform: none;
+  }
+
+  .game:hover,
+  .game:active,
+  .catalog-game:hover,
+  .catalog-game:active,
+  .console-card:hover,
+  .console-card:active {
+    transform: none !important;
+  }
+
+  .aurora-shell::before,
+  .aurora-shell::after,
+  .cover::before,
+  .support-rally::before,
+  .catalog-poster-placeholder::after {
+    animation: none !important;
+    filter: none !important;
+  }
+}
+
+@media (max-width: 820px) and (orientation: portrait) {
+  .setup-coach {
+    gap: 9px !important;
+    padding: 12px !important;
+  }
+
+  .setup-steps {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 5px !important;
+  }
+
+  .setup-step {
+    min-height: 40px !important;
+    padding: 7px 6px !important;
+  }
+
+  .setup-step small {
+    display: none !important;
+  }
+
+  .setup-coach-copy p {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .hero {
+    min-height: 0 !important;
+  }
+
+  .catalog-grid {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+    overflow: visible !important;
+    padding: 3px 0 14px !important;
+    scroll-snap-type: none !important;
+  }
+
+  .catalog-game {
+    width: auto !important;
+    min-width: 0 !important;
+    min-height: 150px !important;
+    display: grid !important;
+    grid-template-columns: 104px minmax(0, 1fr) !important;
+    flex: none !important;
+    scroll-snap-align: none !important;
+  }
+
+  .catalog-media {
+    width: 104px !important;
+    min-height: 150px !important;
+    height: 100% !important;
+  }
+}

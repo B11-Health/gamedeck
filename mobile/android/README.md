@@ -4,9 +4,11 @@ This module packages GameDeck's shared desktop renderer with an Android platform
 
 ## Current development build
 
-`0.4.1-controls` includes:
+`0.4.3-discover` includes:
 
 - portrait and landscape layouts designed independently for phones;
+- GPU-composited WebView rendering and a reduced-effects mobile performance profile;
+- complete browseable public title indexes in Discover, with lawful local imports kept separate from verified downloads;
 - persistent compact navigation and Android safe-area handling;
 - local library scanning through the Storage Access Framework;
 - adjacent artwork and JSON metadata discovery;

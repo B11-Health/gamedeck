@@ -25,7 +25,11 @@
     const style = getComputedStyle(element);
     if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity || 1) < 0.05) return false;
     const rect = element.getBoundingClientRect();
-    return rect.width >= 12 && rect.height >= 12;
+    if (rect.width < 12 || rect.height < 12) return false;
+    const marginX = innerWidth;
+    const marginY = innerHeight;
+    return rect.right >= -marginX && rect.left <= innerWidth + marginX
+      && rect.bottom >= -marginY && rect.top <= innerHeight + marginY;
   };
 
   const focusables = () => [...document.querySelectorAll(focusSelector)]
@@ -74,7 +78,7 @@
     }
     try { element.focus({ preventScroll: true }); } catch { try { element.focus(); } catch {} }
     if (options.scroll !== false) {
-      element.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: options.smooth ? 'smooth' : 'auto' });
+      element.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' });
     }
     if (!options.silent) haptic('tick');
     return true;
@@ -127,7 +131,7 @@
       const index = tabs.indexOf(state.current);
       const next = tabs[index + (direction === 'RIGHT' ? 1 : -1)];
       if (next) {
-        setFocus(next, { smooth: true });
+        setFocus(next);
         return;
       }
       haptic('edge');
@@ -144,14 +148,14 @@
         best = candidate;
       }
     }
-    if (best) setFocus(best, { smooth: true });
+    if (best) setFocus(best);
     else {
       const scroller = document.querySelector('.content') || document.scrollingElement;
       const amount = direction === 'UP' || direction === 'DOWN' ? Math.round(innerHeight * .55) : Math.round(innerWidth * .55);
-      if (direction === 'UP') scroller?.scrollBy({ top: -amount, behavior: 'smooth' });
-      if (direction === 'DOWN') scroller?.scrollBy({ top: amount, behavior: 'smooth' });
-      if (direction === 'LEFT') scroller?.scrollBy({ left: -amount, behavior: 'smooth' });
-      if (direction === 'RIGHT') scroller?.scrollBy({ left: amount, behavior: 'smooth' });
+      if (direction === 'UP') scroller?.scrollBy({ top: -amount, behavior: 'auto' });
+      if (direction === 'DOWN') scroller?.scrollBy({ top: amount, behavior: 'auto' });
+      if (direction === 'LEFT') scroller?.scrollBy({ left: -amount, behavior: 'auto' });
+      if (direction === 'RIGHT') scroller?.scrollBy({ left: amount, behavior: 'auto' });
       haptic('edge');
     }
   };
@@ -232,7 +236,7 @@
   const page = delta => {
     showControllerMode();
     const scroller = document.querySelector('.content') || document.scrollingElement;
-    scroller?.scrollBy({ top: delta * Math.round(innerHeight * .78), behavior: 'smooth' });
+    scroller?.scrollBy({ top: delta * Math.round(innerHeight * .78), behavior: 'auto' });
     haptic('tick');
   };
 
