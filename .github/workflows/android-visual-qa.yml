@@ -100,11 +100,19 @@ jobs:
           adb shell settings put global window_animation_scale 0
           adb shell settings put global transition_animation_scale 0
           adb shell settings put global animator_duration_scale 0
-          adb shell cmd window user-rotation lock 0 || true
+          adb shell settings put system accelerometer_rotation 0 || true
+          adb shell settings put system user_rotation 0 || true
           adb install "$APK"
           adb shell "run-as $PACKAGE sh -c 'mkdir -p files && touch files/renderer-fixture.enabled'"
           adb logcat -c
           adb shell am start -W -n "$PACKAGE/$ACTIVITY" | tee "$OUT/ACTIVITY-START.txt"
+
+          latest_qa() {
+            adb logcat -d -v brief \
+              | grep "GAMEDECK_QA_STATE" \
+              | tail -1 \
+              > "$OUT/QA-LATEST.txt" || true
+          }
 
           wait_renderer() {
             for attempt in $(seq 1 60); do
@@ -131,19 +139,29 @@ jobs:
 
           wait_qa() {
             local pattern="$1"
-            for attempt in $(seq 1 40); do
-              adb logcat -d -v brief \
-                | grep "GAMEDECK_QA_STATE" \
-                | tail -80 \
-                > "$OUT/QA-STATES.txt" || true
-              if grep -Fq "$pattern" "$OUT/QA-STATES.txt"; then
+            for attempt in $(seq 1 50); do
+              latest_qa
+              if grep -Fq "$pattern" "$OUT/QA-LATEST.txt"; then
                 return 0
               fi
-              sleep .5
+              sleep .4
             done
-            echo "Missing QA state: $pattern"
-            tail -80 "$OUT/QA-STATES.txt" || true
+            echo "Latest QA state did not contain: $pattern"
+            cat "$OUT/QA-LATEST.txt" || true
             return 1
+          }
+
+          rotate_landscape() {
+            adb shell settings put system accelerometer_rotation 0 || true
+            adb shell settings put system user_rotation 1 || true
+            adb shell wm user-rotation lock 1 || true
+            sleep 3
+            latest_qa
+            if ! grep -Fq '"orientation":"landscape"' "$OUT/QA-LATEST.txt"; then
+              adb emu rotate
+              sleep 3
+            fi
+            wait_qa '"orientation":"landscape"'
           }
 
           capture() {
@@ -170,6 +188,8 @@ jobs:
           wait_renderer
           wait_qa '"orientation":"portrait"'
           wait_qa '"view":"home"'
+          wait_qa '"surface":"library"'
+          wait_qa '"headerVisible":true'
           sleep 2
 
           qa_command 'scroll:top'
@@ -178,20 +198,29 @@ jobs:
 
           qa_command 'scroll:down'
           wait_qa '"scrollBucket":"scrolled"'
+          wait_qa '"headerVisible":true'
           capture '02-portrait-library-scrolled' portrait
 
           qa_command 'view:discover'
           wait_qa '"view":"discover"'
+          wait_qa '"surface":"discover"'
+          qa_command 'scroll:top'
           wait_qa '"scrollBucket":"top"'
+          wait_qa '"headerVisible":true'
           capture '03-portrait-discover-top' portrait
 
           qa_command 'scroll:down'
           wait_qa '"scrollBucket":"scrolled"'
+          wait_qa '"surface":"discover"'
+          wait_qa '"headerVisible":true'
           capture '04-portrait-discover-scrolled' portrait
 
           qa_command 'view:community'
           wait_qa '"view":"community"'
+          wait_qa '"surface":"community"'
+          qa_command 'scroll:top'
           wait_qa '"scrollBucket":"top"'
+          wait_qa '"headerVisible":true'
           capture '05-portrait-community-top' portrait
 
           qa_command 'menu:open'
@@ -202,24 +231,32 @@ jobs:
 
           qa_command 'view:home'
           wait_qa '"view":"home"'
+          wait_qa '"surface":"library"'
           qa_command 'scroll:top'
-          adb shell cmd window user-rotation lock 1 || adb shell settings put system user_rotation 1
-          wait_qa '"orientation":"landscape"'
+          wait_qa '"scrollBucket":"top"'
+          rotate_landscape
           wait_qa '"view":"home"'
+          wait_qa '"surface":"library"'
+          wait_qa '"headerVisible":true'
           sleep 2
           capture '07-landscape-library-top' landscape
 
           qa_command 'scroll:down'
           wait_qa '"scrollBucket":"scrolled"'
+          wait_qa '"headerVisible":true'
           capture '08-landscape-library-scrolled' landscape
 
           qa_command 'view:discover'
           wait_qa '"view":"discover"'
+          wait_qa '"surface":"discover"'
+          qa_command 'scroll:top'
           wait_qa '"scrollBucket":"top"'
           capture '09-landscape-discover-top' landscape
 
           qa_command 'view:community'
           wait_qa '"view":"community"'
+          wait_qa '"surface":"community"'
+          qa_command 'scroll:top'
           wait_qa '"scrollBucket":"top"'
           capture '10-landscape-community-top' landscape
 
@@ -231,6 +268,7 @@ jobs:
           adb shell dumpsys window | grep -E "mCurrentFocus|mFocusedApp" > "$OUT/WINDOW-FOCUS.txt"
           grep -Fq "$PACKAGE" "$OUT/WINDOW-FOCUS.txt"
           adb logcat -d -v brief > "$OUT/LOGCAT.txt"
+          grep "GAMEDECK_QA_STATE" "$OUT/LOGCAT.txt" > "$OUT/QA-STATES.txt"
           PACKAGE_REGEX=${PACKAGE//./\\.}
           ! grep -Eqi "FATAL EXCEPTION.*$PACKAGE_REGEX|Process: $PACKAGE_REGEX.*FATAL EXCEPTION" "$OUT/LOGCAT.txt"
 
@@ -238,8 +276,8 @@ jobs:
           test "$(sha256sum "$OUT"/*.png | awk '{print $1}' | sort -u | wc -l)" -ge 9
           grep -Fq '"orientation":"portrait"' "$OUT/QA-STATES.txt"
           grep -Fq '"orientation":"landscape"' "$OUT/QA-STATES.txt"
-          grep -Fq '"view":"discover"' "$OUT/QA-STATES.txt"
-          grep -Fq '"view":"community"' "$OUT/QA-STATES.txt"
+          grep -Fq '"surface":"discover"' "$OUT/QA-STATES.txt"
+          grep -Fq '"surface":"community"' "$OUT/QA-STATES.txt"
           grep -Fq '"menuOpen":true' "$OUT/QA-STATES.txt"
 
       - name: Upload visual QA evidence
