@@ -27,7 +27,7 @@ tasks.register('prepareSharedRenderer') {
         )
         index = index.replace(
             '<link rel="stylesheet" href="styles.css">',
-            '<link rel="stylesheet" href="styles.css">\n  <link rel="stylesheet" href="android-overrides.css">\n  <link rel="stylesheet" href="android-polish.css">'
+            '<link rel="stylesheet" href="styles.css">\n  <link rel="stylesheet" href="android-overrides.css">\n  <link rel="stylesheet" href="android-polish.css">\n  <link rel="stylesheet" href="android-shell-fixes.css">'
         )
         index = index.replace(
             '<script src="app.js"></script>',
@@ -45,8 +45,8 @@ android {
         applicationId 'io.gamedeck.mobile.desktoppreview'
         minSdk 26
         targetSdk 36
-        versionCode 6
-        versionName '0.3.3-orientation-polish'
+        versionCode 7
+        versionName '0.3.4-orientation-qa'
     }
 
     sourceSets {
