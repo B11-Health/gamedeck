@@ -37,6 +37,94 @@ tasks.register('prepareSharedRenderer') {
 
         File platformFile = new File(sharedRendererAssets, 'desktop/platform-android.js')
         String platform = platformFile.getText('UTF-8')
+        String originalLibrary = '''  async function getLibrary(force = false) {
+    if (!force && libraryCache) return libraryCache;
+    const method = force ? 'rescan' : 'library';
+    libraryCache = normalizeLibrary(parse(invoke(method, '{}'), { systems: [], games: [] }));
+    return libraryCache;
+  }'''
+        String managedLibrary = '''  async function getLibrary(force = false) {
+    if (!force && libraryCache) return libraryCache;
+    const method = force ? 'rescan' : 'library';
+    const base = normalizeLibrary(parse(invoke(method, '{}'), { systems: [], games: [] }));
+    const runtime = parse(invoke('runtimeStatus', '{}'), {});
+    const route = runtime.externalAvailable ? 'integrated_external' : 'blocked';
+    const systems = [...base.systems];
+    const games = [...base.games];
+    const knownFiles = new Set(games.map(game => game.file || game.contentUri).filter(Boolean));
+    const managedSystems = parse(invoke('catalogSystems', '[]'), []);
+    if (Array.isArray(managedSystems)) {
+      managedSystems.forEach(catalogSystem => {
+        const source = String(catalogSystem?.source || catalogSystem?.gamesFile || catalogSystem?.id || '');
+        const installed = parse(invoke('catalogGames', '[]', source), []).filter(game => game?.installedFile);
+        if (!installed.length) return;
+        const systemId = String(catalogSystem.systemId || catalogSystem.folder || catalogSystem.id || 'homebrew');
+        let system = systems.find(item => item.id === systemId);
+        if (!system) {
+          system = {
+            id: systemId,
+            name: catalogSystem.name || systemId,
+            short: String(catalogSystem.name || systemId).toUpperCase(),
+            icon: String(catalogSystem.name || systemId).slice(0, 3).toUpperCase(),
+            color: '#C8FF52',
+            image: catalogSystem.image || imageForSystem(systemId),
+            count: 0,
+            installedCount: 0,
+            ready: Boolean(runtime.externalAvailable),
+            route,
+            issue: runtime.externalAvailable ? '' : 'Install a compatible Android game engine to launch this title.'
+          };
+          systems.push(system);
+        }
+        installed.forEach(game => {
+          const file = String(game.installedFile || '');
+          if (!file || knownFiles.has(file)) return;
+          knownFiles.add(file);
+          const fileName = String(game.fileName || game.name || 'game');
+          const extension = fileName.includes('.') ? fileName.split('.').pop().toUpperCase() : 'FILE';
+          games.push({
+            id: `managed-${stableNumber(file)}`,
+            title: game.name || cleanTitle(fileName),
+            metadataTitle: game.name || cleanTitle(fileName),
+            artworkTitle: rawTitle(fileName),
+            artworkFolder: catalogSystem.folder || systemId,
+            file,
+            contentUri: file,
+            relativePath: `${catalogSystem.folder || systemId}/${fileName}`,
+            mimeType: game.mimeType || 'application/octet-stream',
+            system: systemId,
+            systemName: catalogSystem.name || system.name,
+            size: Number(game.size || 0),
+            modified: 0,
+            format: extension,
+            art: game.art || catalogSystem.image || imageForSystem(systemId),
+            region: game.region || '',
+            edition: 'Homebrew',
+            description: game.description || '',
+            favorite: false,
+            lastPlayed: 0,
+            classification: route,
+            detailsSource: 'Managed Discover install'
+          });
+        });
+        const count = games.filter(game => game.system === systemId).length;
+        system.count = count;
+        system.installedCount = count;
+        system.ready = Boolean(runtime.externalAvailable);
+        system.route = route;
+      });
+    }
+    libraryCache = normalizeLibrary({
+      ...base,
+      rootConfigured: Boolean(base.rootConfigured || games.some(game => String(game.file || '').includes('.managed/'))),
+      rootName: base.rootName || (games.length > base.games.length ? 'GameDeck managed library' : ''),
+      systems,
+      games
+    });
+    return libraryCache;
+  }'''
+        platform = platform.replace(originalLibrary, managedLibrary)
+
         String downloadBridge = '''  const downloadListeners = new Set();
   const downloadSnapshots = new Map();
   const pollNativeDownloads = () => {
