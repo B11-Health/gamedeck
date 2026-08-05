@@ -118,7 +118,8 @@ assert.match(haptics, /const NATIVE_RUMBLE_SYSTEMS = new Set/);
 assert.match(haptics, /const HAPTIC_PREFERENCES = new Set/);
 assert.match(haptics, /selected === 'enhance'/);
 assert.match(haptics, /const HAPTIC_PREFERENCES = new Set\(\['auto', 'enhance', 'off'\]\)/);
-assert.match(haptics, /if \(selected === 'enhance'\) return 'adaptive'/);
+assert.match(haptics, /return 'adaptive';/);
+assert.doesNotMatch(haptics, /return 'native';/);
 assert.match(haptics, /if \(selected === 'off'\) return 'off'/);
 assert.match(haptics, /getByteFrequencyData/);
 assert.match(haptics, /dual-rumble/);
@@ -130,6 +131,18 @@ assert.match(main, /Boolean\(includeAudio && process\.platform === 'win32'\)/);
 assert.match(preload, /includeAudio = false/);
 assert.match(preload, /includeAudio === true/);
 assert.doesNotMatch(main, /GameDeckTaskbar|TaskbarListCom|taskbarVisible/);
+
+assert.match(css, /Reliable GameDeck Play exit target/);
+assert.match(css, /\.play-surface \.play-close \{[\s\S]*width: 52px !important;[\s\S]*height: 52px !important;/);
+assert.match(app, /playCloseButton\.onpointerdown/);
+assert.match(app, /event\.detail !== 0/);
+assert.match(main, /autosave_interval = \"10\"/);
+assert.match(main, /savestate_auto_save = \"true\"/);
+assert.match(main, /savestate_auto_load = \"true\"/);
+assert.match(main, /requestNativeGameWindowClose\(\{ pid, timeoutMs: 3200 \}\)/);
+assert.match(main, /if \(fallbackUsed\) spawnSync\('taskkill\.exe'/);
+assert.match(main, /embeddedClose: lastEmbeddedCloseResult/);
+assert.match(main, /exitedGracefully: closedGracefully/);
 
 const scenarioCount = (s => (s.match(/assert\./g) || []).length)(fs.readFileSync(new URL(import.meta.url), 'utf8'));
 console.log(`play surface UI: ${scenarioCount} scenarios passed`);

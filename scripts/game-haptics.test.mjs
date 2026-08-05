@@ -6,6 +6,7 @@ const {
   FALLBACK_SYSTEMS,
   NATIVE_RUMBLE_SYSTEMS,
   HAPTIC_PREFERENCES,
+  UI_HAPTIC_PROFILES,
   actuatorForPad,
   analyzeFrequencyData,
   createController,
@@ -14,23 +15,47 @@ const {
   initialAnalysisState,
   normalizePreference,
   pulsePad,
-  stopPad
+  stopPad,
+  uiHapticEffect
 } = require('../src/game-haptics.js');
 
 assert.equal(hapticPolicyForSystem('arcade'), 'adaptive');
 assert.equal(hapticPolicyForSystem('openbor'), 'adaptive');
 assert.equal(hapticPolicyForSystem('nes'), 'adaptive');
-assert.equal(hapticPolicyForSystem('n64'), 'native');
-assert.equal(hapticPolicyForSystem('ps2'), 'native');
+assert.equal(hapticPolicyForSystem('n64'), 'adaptive');
+assert.equal(hapticPolicyForSystem('ps2'), 'adaptive');
 assert.equal(hapticPolicyForSystem('dreamcast', 'enhance'), 'adaptive');
 assert.equal(hapticPolicyForSystem('unknown', 'enhance'), 'adaptive');
 assert.equal(hapticPolicyForSystem('arcade', 'off'), 'off');
-assert.equal(hapticPolicyForSystem('unknown'), 'off');
+assert.equal(hapticPolicyForSystem('unknown'), 'adaptive');
 assert.equal(normalizePreference('ENHANCE'), 'enhance');
 assert.equal(normalizePreference('invalid'), 'auto');
 assert.ok(HAPTIC_PREFERENCES.has('off'));
 assert.ok(FALLBACK_SYSTEMS.has('gamegear'));
 assert.ok(NATIVE_RUMBLE_SYSTEMS.has('dreamcast'));
+
+const uiNavigate = uiHapticEffect('navigate', 'auto');
+const uiNavigateBoost = uiHapticEffect('navigate', 'enhance');
+const uiScroll = uiHapticEffect('scroll', 'auto');
+const uiConfirm = uiHapticEffect('confirm', 'auto');
+const uiBack = uiHapticEffect('back', 'auto');
+const uiFavorite = uiHapticEffect('favorite', 'auto');
+assert.ok(Object.isFrozen(UI_HAPTIC_PROFILES));
+assert.equal(uiHapticEffect('navigate', 'off'), null);
+assert.equal(uiHapticEffect('unknown', 'auto'), null);
+assert.equal(uiNavigate.kind, 'ui-navigate');
+assert.equal(uiScroll.kind, 'ui-scroll');
+assert.equal(uiConfirm.kind, 'ui-confirm');
+assert.equal(uiBack.kind, 'ui-back');
+assert.equal(uiFavorite.kind, 'ui-favorite');
+assert.ok(uiNavigate.weakMagnitude > uiNavigate.strongMagnitude);
+assert.ok(uiNavigate.weakMagnitude <= 0.16);
+assert.ok(uiScroll.duration <= uiNavigate.duration);
+assert.ok(uiScroll.minGap >= uiNavigate.minGap);
+assert.ok(uiConfirm.strongMagnitude > uiNavigate.strongMagnitude);
+assert.ok(uiFavorite.weakMagnitude > uiConfirm.weakMagnitude);
+assert.ok(uiNavigateBoost.weakMagnitude > uiNavigate.weakMagnitude);
+assert.ok(uiNavigateBoost.weakMagnitude <= 0.38);
 
 const effects = [];
 const dualPad = {
@@ -195,7 +220,8 @@ reactiveController.stopAll();
 
 const nativeController = createController({ getGamepads: () => [controllerPad], AudioContext: FakeAudioContext });
 nativeController.startReactive(audioStream, 'dreamcast');
-assert.equal(nativeController.getStatus().mode, 'native');
+assert.equal(nativeController.getStatus().mode, 'adaptive');
+nativeController.stopAll();
 
 const noAudioController = createController({ getGamepads: () => [controllerPad], AudioContext: FakeAudioContext });
 noAudioController.startReactive({ getAudioTracks: () => [] }, 'arcade');
@@ -213,4 +239,4 @@ assert.equal(disabledController.getStatus().enabled, true);
 disabledController.setPreference('off');
 assert.equal(disabledController.getStatus().mode, 'off');
 
-console.log('GameDeck adaptive haptics: 75 scenarios passed');
+console.log('GameDeck adaptive haptics: 90 scenarios passed');

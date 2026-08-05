@@ -39,6 +39,8 @@ assert.ok(app.includes('let playCaptureGeneration = 0;'));
 assert.ok(app.includes('captureGeneration !== playCaptureGeneration'));
 assert.ok(app.includes("fallbackPlayCaptureToPopout('The live game window stopped sharing."));
 assert.ok(app.includes('await fallbackPlayCaptureToPopout(error.message'));
-assert.ok(app.includes("await setPlayMode('popout')"));
+assert.ok(app.includes("$('#playCapturePopout').onclick = () => setPlayMode('popout')"));
+const captureFallback = app.slice(app.indexOf('async function fallbackPlayCaptureToPopout'), app.indexOf('async function setPlayMode'))
+assert.ok(!captureFallback.includes("setPlayMode('popout')"));
 
-console.log('play window z-order: 28 scenarios passed');
+console.log('play window z-order: 29 scenarios passed');

@@ -14,6 +14,13 @@
     'n64', 'saturn', 'dreamcast', 'ps1', 'ps2', 'gamecube', 'wii', 'wiiu'
   ]);
   const HAPTIC_PREFERENCES = new Set(['auto', 'enhance', 'off']);
+  const UI_HAPTIC_PROFILES = Object.freeze({
+    navigate: Object.freeze({ duration: 32, strongMagnitude: 0.014, weakMagnitude: 0.12, minGap: 72 }),
+    scroll: Object.freeze({ duration: 24, strongMagnitude: 0.008, weakMagnitude: 0.075, minGap: 96 }),
+    confirm: Object.freeze({ duration: 54, strongMagnitude: 0.1, weakMagnitude: 0.22, minGap: 120 }),
+    back: Object.freeze({ duration: 44, strongMagnitude: 0.055, weakMagnitude: 0.15, minGap: 110 }),
+    favorite: Object.freeze({ duration: 62, strongMagnitude: 0.045, weakMagnitude: 0.27, minGap: 130 })
+  });
 
   function clamp(value, minimum = 0, maximum = 1) {
     return Math.max(minimum, Math.min(maximum, Number(value) || 0));
@@ -24,14 +31,28 @@
     return HAPTIC_PREFERENCES.has(preference) ? preference : 'auto';
   }
 
+  function uiHapticEffect(kind, preference = 'auto') {
+    const selected = normalizePreference(preference);
+    if (selected === 'off') return null;
+    const profile = UI_HAPTIC_PROFILES[String(kind || '').trim().toLowerCase()];
+    if (!profile) return null;
+    const gain = selected === 'enhance' ? 1.18 : 1;
+    return {
+      kind: `ui-${String(kind).toLowerCase()}`,
+      duration: Math.round(profile.duration + (selected === 'enhance' ? 4 : 0)),
+      strongMagnitude: clamp(profile.strongMagnitude * gain, 0, 0.28),
+      weakMagnitude: clamp(profile.weakMagnitude * gain, 0, 0.38),
+      minGap: profile.minGap
+    };
+  }
+
   function hapticPolicyForSystem(systemId, preference = 'auto') {
     const selected = normalizePreference(preference);
     if (selected === 'off') return 'off';
-    if (selected === 'enhance') return 'adaptive';
-    const id = String(systemId || '').trim().toLowerCase();
-    if (FALLBACK_SYSTEMS.has(id)) return 'adaptive';
-    if (NATIVE_RUMBLE_SYSTEMS.has(id)) return 'native';
-    return 'off';
+    // Auto is the always-on GameDeck experience. It uses a restrained adaptive
+    // layer for every console, including systems that may also expose native rumble.
+    // Enhance keeps the same analyzer active with the stronger effect profile.
+    return 'adaptive';
   }
 
   function connectedPads(getGamepads) {
@@ -401,6 +422,7 @@
     FALLBACK_SYSTEMS,
     NATIVE_RUMBLE_SYSTEMS,
     HAPTIC_PREFERENCES,
+    UI_HAPTIC_PROFILES,
     actuatorForPad,
     analyzeFrequencyData,
     createController,
@@ -409,6 +431,7 @@
     initialAnalysisState,
     normalizePreference,
     pulsePad,
-    stopPad
+    stopPad,
+    uiHapticEffect
   };
 });

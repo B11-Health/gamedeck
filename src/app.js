@@ -126,6 +126,11 @@ let playHapticStream = null;
 let playHapticRenderedMode = '';
 let playHapticRenderedPreference = '';
 let playHaptics = null;
+let uiHapticLastAt = -Infinity;
+let uiHapticLastKind = '';
+let gameDetailReturnFocus = null;
+let gameDetailHideTimer = null;
+
 
 const SYSTEM_THEME_BACKGROUNDS = {
   all: { key: 'all', image: '../assets/system-themes/nintendo-polygon.webp', accent: '#72e7ff', glow: '#8b5cff', position: '78% center' },
@@ -282,10 +287,10 @@ function fileTaskIdentity(value) {
 }
 
 function fallbackDescription(title, systemName, installed, edition = '') {
-  const release = edition ? ` This ${edition.replace(/\s*\/\s*/g, ', ')} edition is shown with its original catalog details.` : '';
+  const release = edition ? ` This ${edition.replace(/\s*\/\s*/g, ', ')} edition keeps its original release identity.` : '';
   return installed
-    ? `${title} is installed in your ${systemName} collection and ready to play.${release} GameDeck will open it with the emulator already configured for this system.`
-    : `${title} is available for ${systemName}.${release} Add it through Discover and GameDeck will place it in your library, match the artwork, and choose the right play route.`;
+    ? `${title} is ready in your ${systemName} collection.${release} Pick up a controller and jump in whenever you are ready.`
+    : `${title} is available for ${systemName}.${release} Add it through Discover to bring it into your GameDeck library.`;
 }
 
 function cardDescription(game, system) {
@@ -301,7 +306,7 @@ function factMarkup(items) {
 
 const INPUT_LEGENDS = {
   pointer: [
-    ['CLICK', 'Preview'], ['DOUBLE', 'Play'], ['☆', 'Favorite'], ['SCROLL', 'Browse'], ['/', 'Search']
+    ['CLICK', 'Play'], ['i', 'Details'], ['☆', 'Favorite'], ['SCROLL', 'Browse'], ['/', 'Search']
   ],
   keyboard: [
     ['ENTER', 'Play'], ['ESC', 'Back'], ['ARROWS', 'Move'], ['/', 'Search'], ['CTRL+B', 'Systems']
@@ -813,8 +818,8 @@ function updateGameArtwork(game, url) {
   card?.classList.add('has-art');
   card?.querySelector('.art-status')?.remove();
   if (state.focusedGameId === game.id) {
-    $('#spotlightArt').innerHTML = `<img src="${escapeHtml(url)}" alt="${escapeHtml(game.title)} cover">`;
     applySystemTheme(game.system);
+    applySpotlightArtwork(game);
   }
   if (state.artworkFilter === 'missing-art' && !['discover', 'community'].includes(state.view)) renderGames();
   else renderSetupCoach();
@@ -949,13 +954,83 @@ function gameDetailsContext(game) {
   return { name: game?.title, systemName: system?.name, shortName: game?.shortName, file: game?.file, edition: game?.edition, region: game?.region, installed: true };
 }
 
+function setSpotlightActionLabel(id, label) {
+  const button = $(id);
+  if (!button) return;
+  const target = button.querySelector('b');
+  if (target) target.textContent = label;
+  else button.textContent = label;
+}
+
+function applySpotlightArtwork(game) {
+  if (!game) return;
+  const art = gameArt(game);
+  $('#spotlightArt').innerHTML = `<div class="spotlight-art-ambient" aria-hidden="true"><img src="${escapeHtml(art)}" alt=""></div><img class="spotlight-art-main" src="${escapeHtml(art)}" alt="${escapeHtml(game.title)} cover">`;
+  const backdrop = $('#spotlightBackdrop');
+  if (!backdrop) return;
+  backdrop.classList.remove('is-ready');
+  backdrop.onload = () => backdrop.classList.add('is-ready');
+  backdrop.src = art;
+  if (backdrop.complete) backdrop.classList.add('is-ready');
+}
+
+function openGameDetails(game) {
+  if (!game || state.playSession?.active) return;
+  gameDetailReturnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  setFocusedGame(game);
+  const spotlight = $('#spotlight');
+  if (!spotlight) return;
+  clearTimeout(gameDetailHideTimer);
+  spotlight.classList.remove('hidden');
+  spotlight.setAttribute('aria-hidden', 'false');
+  document.body.classList.add('game-detail-open', 'modal-open');
+  requestAnimationFrame(() => {
+    spotlight.classList.add('is-open');
+    $('#spotlightPlay')?.focus({ preventScroll: true });
+  });
+  pulseUiHaptic('confirm', { force: true });
+}
+
+function closeGameDetails(options = {}) {
+  const spotlight = $('#spotlight');
+  if (!spotlight || (!document.body.classList.contains('game-detail-open') && spotlight.classList.contains('hidden'))) return false;
+  clearTimeout(gameDetailHideTimer);
+  spotlight.classList.remove('is-open');
+  spotlight.setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('game-detail-open', 'modal-open');
+  gameDetailHideTimer = setTimeout(() => spotlight.classList.add('hidden'), options.immediate ? 0 : 220);
+  if (options.restoreFocus !== false) {
+    const target = gameDetailReturnFocus;
+    requestAnimationFrame(() => target?.isConnected && target.focus?.({ preventScroll: true }));
+  }
+  gameDetailReturnFocus = null;
+  return true;
+}
+
+async function shareFocusedGame() {
+  const game = focusedGame();
+  if (!game) return;
+  const system = systemById(game.system);
+  const text = `${game.title} on ${system?.name || 'GameDeck'} — ready to play in GameDeck.`;
+  try {
+    if (typeof navigator.share === 'function') {
+      await navigator.share({ title: game.title, text });
+      toast('Share sheet opened', 'success');
+      return;
+    }
+    await window.deck.copyText(text);
+    toast('Game share text copied', 'success');
+  } catch (error) {
+    if (error?.name !== 'AbortError') toast('Could not share this game', 'warning');
+  }
+}
+
 function applyFocusedDetails(game, details) {
   if (!game || state.focusedGameId !== game.id || !details) return;
   const system = systemById(game.system);
-  const arcade = isArcadeId(game.system);
   const fallback = fallbackDescription(game.title, system?.name || 'this console', true);
   $('#spotlightDescription').textContent = details.description || fallback;
-  $('#spotlightFacts').innerHTML = factMarkup([arcade && game.shortName?.toUpperCase(), system?.short || system?.name, details.year, details.genre, details.players && (details.players + ' player' + (details.players === '1' ? '' : 's')), details.buttons && (details.buttons + ' buttons'), details.developer || details.manufacturer, details.publisher, game.region, game.format, sizeLabel(game.size)]);
+  $('#spotlightFacts').innerHTML = factMarkup([details.year, details.genre, details.players && (details.players + ' player' + (details.players === '1' ? '' : 's')), details.developer || details.manufacturer, details.publisher]);
   $('#spotlightSource').textContent = String(details.source || 'GameDeck').toUpperCase();
   $('#spotlight').classList.remove('details-loading');
 }
@@ -1006,32 +1081,31 @@ function setFocusedGame(game, options = {}) {
 
   const spotlight = $('#spotlight');
   if (!game) {
-    spotlight.classList.add('hidden');
+    closeGameDetails({ restoreFocus: false, immediate: true });
+    spotlight?.classList.add('hidden');
     return;
   }
 
   const system = systemById(game.system);
-  const art = gameArt(game);
-  const launcher = system?.emulatorLabel || (system?.core ? 'RetroArch' : system?.name || 'your configured emulator');
   const arcade = isArcadeId(game.system);
   const blocked = arcade && gameLaunchBlocked(game);
   const fallback = fallbackDescription(game.title, system?.name || 'this console', true);
   const cached = state.gameDetails.get(detailKey(gameMetadataTitle(game), game.system));
   spotlight.classList.toggle('details-loading', !cached);
   $('#spotlightSource').textContent = cached ? String(cached.source || 'GameDeck').toUpperCase() : 'MATCHING DETAILS';
-  $('#spotlightSystem').textContent = `${system?.name || 'Game'} / ${blocked ? arcadeHealthLabel(game) : system?.ready ? 'READY TO PLAY' : 'SETUP NEEDED'}`;
+  $('#spotlightSystem').textContent = system?.name || 'GameDeck';
   $('#spotlightTitle').textContent = game.title;
-  $('#spotlightFacts').innerHTML = factMarkup([arcade && game.shortName?.toUpperCase(), system?.short || system?.name, cached?.year, cached?.players && `${cached.players} player${cached.players === '1' ? '' : 's'}`, cached?.buttons && `${cached.buttons} buttons`, game.format, sizeLabel(game.size)]);
+  $('#spotlightFacts').innerHTML = factMarkup([cached?.year, cached?.genre, cached?.players && `${cached.players} player${cached.players === '1' ? '' : 's'}`, cached?.developer || cached?.manufacturer, cached?.publisher]);
   $('#spotlightDescription').textContent = cached?.description || fallback;
   $('#spotlightMeta').textContent = blocked
-    ? game.archiveHealthMessage || 'This ROM set needs attention before it can launch.'
-    : `${relative(game.lastPlayed)} · Opens with ${launcher}${arcade && game.archiveHealth === 'verified' ? ' · Archive verified' : ''}`;
+    ? 'This game needs attention before it can launch.'
+    : game.lastPlayed ? `Last played ${relative(game.lastPlayed)} · Ready to play inside GameDeck.` : 'Ready to play inside GameDeck.';
   $('#spotlightPlay').disabled = blocked;
-  $('#spotlightPlay').textContent = blocked ? 'Fix ROM set first' : 'Play now';
-  $('#spotlightFav').textContent = game.favorite ? 'Remove favorite' : 'Add favorite';
-  $('#spotlightArt').innerHTML = `<img src="${escapeHtml(art)}" alt="${escapeHtml(game.title)} cover">`;
+  setSpotlightActionLabel('#spotlightPlay', blocked ? 'Check game' : 'Play now');
+  setSpotlightActionLabel('#spotlightFav', game.favorite ? 'Favorited' : 'Favorite');
+  $('#spotlightFav')?.classList.toggle('is-favorite', Boolean(game.favorite));
   applySystemTheme(game.system);
-  spotlight.classList.remove('hidden');
+  applySpotlightArtwork(game);
   requestArtwork(game);
   queueGameDetails(gameMetadataTitle(game), game.system, gameDetailsContext(game), details => {
     applyFocusedDetails(game, details);
@@ -1109,7 +1183,7 @@ async function refreshFocusedDetails() {
     toast(error.message || 'Game details could not be refreshed');
   } finally {
     button.disabled = false;
-    label.textContent = 'Details';
+    label.textContent = 'Refresh';
     $('#spotlight').classList.remove('details-loading');
   }
 }
@@ -1134,7 +1208,7 @@ function renderSystems() {
   $('#systems').innerHTML = all + systems;
 
   $$('.system').forEach(button => {
-    button.onclick = () => selectLibrarySystem(button.dataset.id);
+    button.onclick = () => { pulseUiHaptic('confirm', { force: true }); selectLibrarySystem(button.dataset.id); };
     button.onmouseenter = () => { state.focusedLibrarySystem = button.dataset.id; };
   });
 }
@@ -1205,6 +1279,25 @@ function runEmptyAction(action) {
   }
 }
 
+function gameCardIcon(name) {
+  const icons = {
+    play: '<path d="M9 6.5 17 12l-8 5.5z"></path>',
+    check: '<circle cx="12" cy="12" r="8"></circle><path d="M12 8v5M12 16.5v.1"></path>',
+    favorite: '<path d="m12 3.8 2.5 5.1 5.6.8-4 3.9.9 5.5-5-2.6-5 2.6.9-5.5-4-3.9 5.6-.8z"></path>'
+  };
+  const key = Object.prototype.hasOwnProperty.call(icons, name) ? name : 'play';
+  return `<svg class="game-card-icon icon-${key}" viewBox="0 0 24 24" aria-hidden="true">${icons[key]}</svg>`;
+}
+
+function arcadeCardHealthLabel(game) {
+  if (game.autoRepair && ['damaged', 'incomplete'].includes(game.archiveHealth)) return 'Auto repair';
+  if (game.archiveHealth === 'verified') return 'Verified';
+  if (game.archiveHealth === 'damaged') return 'Damaged';
+  if (game.archiveHealth === 'incomplete') return 'Incomplete';
+  if (game.archiveHealth === 'repairable') return 'Auto setup';
+  return 'Checking';
+}
+
 function renderGames() {
   const games = currentGames();
   $('#resultCount').textContent = `${games.length.toLocaleString()} ${games.length === 1 ? 'game' : 'games'}`;
@@ -1217,77 +1310,47 @@ function renderGames() {
     const repairable = arcade && healthClass === 'repairable';
     const artMissing = !game.art;
     const playable = Boolean(system?.ready) && !blocked;
-    const badge = arcade ? `<span class="archive-badge ${healthClass}">${escapeHtml(arcadeHealthLabel(game))}</span>` : '';
-    const facts = arcade
-      ? `<span class="game-shortname">${escapeHtml(game.shortName || 'ROM SET')}</span><span>${escapeHtml(game.format || 'ARCHIVE')}</span>`
-      : `<span>${escapeHtml(system?.name || 'Game')}</span><span>${escapeHtml(sizeLabel(game.size))}</span>`;
-    const status = arcade
-      ? (game.archiveHealth === 'verified' ? 'Archive verified' : game.archiveHealthMessage || 'Health check pending')
-      : relative(game.lastPlayed);
-    const generatedArt = artMissing && artworkEnrichmentTried.has(game.id);
-    const artStatus = artMissing ? `<span class="art-status ${generatedArt ? 'generated' : 'matching'}">${generatedArt ? 'GAMEDECK ART' : 'MATCHING ART'}</span>` : '';
     const stateClasses = [artMissing ? 'missing-art' : 'has-art', game.favorite ? 'is-favorite' : '', game.lastPlayed ? 'is-recent' : '', playable ? 'is-playable' : 'needs-setup'].filter(Boolean).join(' ');
-    return `<article class="game ${game.file === state.launchingFile ? 'launching' : ''} ${stateClasses} ${arcade ? 'arcade-card' : ''} ${blocked ? 'health-attention' : ''} ${repairable ? 'health-repairable' : ''} ${active ? 'active' : ''}" style="--delay:${Math.min(index, 14) * 18}ms" tabindex="0" role="listitem" aria-current="${active}" aria-label="Select ${escapeHtml(game.title)} on ${escapeHtml(system?.name || 'GameDeck')}" data-id="${game.id}"><div class="aurora-shell" style="--c:${system?.color || '#8992a3'}"><div class="cover"><div class="cover-art"><img data-game-art="${game.id}" src="${escapeHtml(gameArt(game))}" alt="${escapeHtml(game.title)} artwork" loading="lazy"></div><span class="cover-system">${escapeHtml(system?.short || 'GAME')}</span>${badge}${artStatus}<button type="button" class="fav ${game.favorite ? 'on' : ''}" aria-label="${game.favorite ? 'Remove favorite' : 'Favorite'}"><span aria-hidden="true">${game.favorite ? '★' : '☆'}</span></button><div class="cover-logo">${escapeHtml(system?.icon || 'G')}</div><div class="cover-title">${escapeHtml(game.title)}</div><button type="button" class="play" aria-label="${blocked ? 'ROM set needs attention' : `Play ${escapeHtml(game.title)}`}" ${blocked ? 'disabled' : ''}><span aria-hidden="true">${blocked ? '!' : '▶'}</span> ${blocked ? 'CHECK' : 'PLAY'}</button></div></div><div class="meta"><b title="${escapeHtml(game.title)}">${escapeHtml(game.title)}</b><div class="game-card-facts">${facts}</div><small><span class="ready-dot ${playable ? 'ok' : 'setup'}"></span>${escapeHtml(status)}</small></div></article>`;
+    const playLabel = blocked ? 'Check' : 'Play';
+    const playIcon = gameCardIcon(blocked ? 'check' : 'play');
+    const subtitle = blocked ? 'Needs attention' : (system?.name || 'GameDeck');
+    const artwork = escapeHtml(gameArt(game));
+    const title = escapeHtml(game.title);
+    return `<article class="game ${game.file === state.launchingFile ? 'launching' : ''} ${stateClasses} ${arcade ? 'arcade-card' : ''} ${blocked ? 'health-attention' : ''} ${repairable ? 'health-repairable' : ''} ${active ? 'active' : ''}" style="--delay:${Math.min(index, 14) * 18}ms" tabindex="0" role="button" aria-current="${active}" aria-label="Play ${title} on ${escapeHtml(system?.name || 'GameDeck')}" data-id="${game.id}"><div class="aurora-shell" style="--c:${system?.color || '#8992a3'}"><div class="cover game-card-launch"><div class="cover-ambient" aria-hidden="true"><img src="${artwork}" alt="" loading="lazy" decoding="async"></div><div class="cover-art"><img data-game-art="${game.id}" src="${artwork}" alt="${title} artwork" loading="lazy" decoding="async"></div></div></div><div class="meta"><div class="game-card-heading"><div class="game-title" title="${title}"><span class="game-title-text">${title}</span></div><div class="game-card-tools"><button type="button" class="details" aria-haspopup="dialog" aria-label="View details for ${title}"><span aria-hidden="true">i</span></button><button type="button" class="fav ${game.favorite ? 'on' : ''}" aria-label="${game.favorite ? 'Remove favorite' : 'Add favorite'}">${gameCardIcon('favorite')}</button></div></div><div class="game-card-footer"><span class="game-card-subtitle ${blocked ? 'attention' : ''}"><i style="--system-color:${blocked ? '#ff9b76' : system?.color || '#8992a3'}" aria-hidden="true"></i>${escapeHtml(subtitle)}</span><button type="button" class="play" aria-label="${blocked ? 'Game needs attention before it can play' : `Play ${title}`}" ${blocked ? 'disabled' : ''}>${playIcon}<span>${playLabel}</span></button></div></div></article>`;
   }).join('');
 
   renderEmptyState(games);
   $$('.game').forEach(card => {
     const game = games.find(item => item.id === card.dataset.id);
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const resetAuroraPointer = () => {
-      card.style.removeProperty('--pointer-x');
-      card.style.removeProperty('--pointer-y');
-      card.style.removeProperty('--tilt-x');
-      card.style.removeProperty('--tilt-y');
-      card.style.removeProperty('--art-x');
-      card.style.removeProperty('--art-y');
-    };
-    card.onmouseenter = () => setFocusedGame(game);
-    card.onpointermove = event => {
-      if (event.pointerType !== 'mouse' || !window.matchMedia('(hover: hover) and (pointer: fine)').matches || reducedMotion.matches) {
-        resetAuroraPointer();
-        return;
-      }
-      const bounds = card.getBoundingClientRect();
-      if (!bounds.width || !bounds.height) return;
-      const x = Math.max(0, Math.min(1, (event.clientX - bounds.left) / bounds.width));
-      const y = Math.max(0, Math.min(1, (event.clientY - bounds.top) / bounds.height));
-      const tiltX = (0.5 - y) * 8;
-      const tiltY = (x - 0.5) * 10;
-      card.style.setProperty('--pointer-x', (x * 100).toFixed(2) + '%');
-      card.style.setProperty('--pointer-y', (y * 100).toFixed(2) + '%');
-      card.style.setProperty('--tilt-x', tiltX.toFixed(2) + 'deg');
-      card.style.setProperty('--tilt-y', tiltY.toFixed(2) + 'deg');
-      card.style.setProperty('--art-x', ((x - 0.5) * -8).toFixed(2) + 'px');
-      card.style.setProperty('--art-y', ((y - 0.5) * -8).toFixed(2) + 'px');
-    };
-    card.onpointerleave = resetAuroraPointer;
-    card.onpointercancel = resetAuroraPointer;
-    card.onfocus = () => {
-      resetAuroraPointer();
-      setFocusedGame(game);
-    };
-    card.onclick = event => {
-      if (event.target.closest('button')) return;
-      setFocusedGame(game);
-    };
-    card.ondblclick = event => {
-      if (event.target.closest('button')) return;
+    const playGame = event => {
+      event?.stopPropagation();
       setFocusedGame(game);
       if (gameLaunchBlocked(game)) {
-        toast(game.archiveHealthMessage || 'This ROM set needs attention', 'warning');
+        toast('This game needs attention before it can play.', 'warning');
         return;
       }
+      pulseUiHaptic('confirm', { force: true });
       launch(game.file);
     };
-    card.querySelector('.play').onclick = event => {
+    card.onmouseenter = () => setFocusedGame(game);
+    card.onfocus = () => setFocusedGame(game);
+    card.onclick = event => {
+      if (event.target.closest('.details, .fav, .play')) return;
+      playGame(event);
+    };
+    card.onkeydown = event => {
+      if (event.target !== card || !['Enter', ' '].includes(event.key)) return;
+      event.preventDefault();
+      playGame(event);
+    };
+    card.querySelector('.details').onclick = event => {
       event.stopPropagation();
-      setFocusedGame(game);
-      if (gameLaunchBlocked(game)) return;
-      launch(game.file);
+      openGameDetails(game);
     };
+    card.querySelector('.play').onclick = playGame;
     card.querySelector('.fav').onclick = async event => {
       event.stopPropagation();
+      pulseUiHaptic('favorite', { force: true });
       await toggleFavorite(game);
     };
   });
@@ -1473,6 +1536,23 @@ function ensurePlayHaptics() {
   });
   renderPlayHapticStatus(playHaptics.getStatus());
   return playHaptics;
+}
+
+function pulseUiHaptic(kind, options = {}) {
+  if (state.playSession?.active || state.hapticPreference === 'off') return false;
+  const effect = window.GameDeckHaptics?.uiHapticEffect?.(kind, state.hapticPreference);
+  if (!effect) return false;
+  const now = performance.now();
+  const sameKind = uiHapticLastKind === kind;
+  if (!options.force && sameKind && now - uiHapticLastAt < Number(effect.minGap || 80)) return false;
+  uiHapticLastAt = now;
+  uiHapticLastKind = kind;
+  const target = window.GameDeckHaptics?.findHapticPad?.(() => navigator.getGamepads?.() || []);
+  if (!target) return false;
+  const controller = ensurePlayHaptics();
+  if (!controller) return false;
+  void controller.pulse(effect);
+  return true;
 }
 
 function resetPlayHapticBinding(mode = 'idle') {
@@ -1887,6 +1967,7 @@ function resetPlaySessionUi() {
   state.playSession = { active: false, phase: 'idle', sessionId: '', title: '', mode: 'docked', aspectRatio: 16 / 9, captureReady: false };
   state.playFile = '';
   state.playGameId = null;
+  rearmGamepadInput(420);
 }
 
 async function requestPlayCapture(sessionId, includeAudio = false) {
@@ -1986,11 +2067,12 @@ async function fallbackPlayCaptureToPopout(message) {
   if (playCaptureFallbackPending || !current?.active || current.mode === 'popout') return false;
   playCaptureFallbackPending = true;
   try {
-    $('#playCaptureErrorMessage').textContent = message || 'Integrated video was unavailable. Continuing in Pop out.';
+    $('#playCaptureErrorMessage').textContent = message || 'Integrated video was interrupted. Retry the GameDeck view or choose Window to continue in the native game window.';
     $('#playCaptureError').classList.remove('hidden');
-    toast('Integrated video was unavailable. Continuing in Pop out.', 'warning');
-    await setPlayMode('popout');
-    return state.playSession?.mode === 'popout';
+    $('#playLoading').classList.add('ready');
+    hideLaunchCurtain();
+    toast('Integrated video needs attention. The game is still safely owned by GameDeck.', 'warning');
+    return false;
   } finally {
     playCaptureFallbackPending = false;
   }
@@ -2050,59 +2132,59 @@ async function startIntegratedPlay(file, game) {
   return result;
 }
 
+async function integratedCapabilitiesFor(file, game) {
+  let capabilities = await window.deck.playSessionCapabilities(file);
+  if (capabilities?.eligible && capabilities?.presentation?.embedded) return capabilities;
+
+  const runtimeReason = new Set(['engine_unavailable', 'core_unavailable', 'managed_config_unavailable']);
+  const reasonCode = capabilities?.fallback?.reasonCode || '';
+  let runtime = state.runtime || state.diagnostics?.managedRuntime || await window.deck.runtimeStatus();
+  if (runtime?.supported && !runtime.ready && (runtime.bundled || runtimeReason.has(reasonCode))) {
+    showLaunchCurtain(game, `Preparing ${game?.title || 'your game'}`, 'Finishing the GameDeck engine setup for seamless in-app play…');
+    toast('Preparing the GameDeck play engine…', 'progress');
+    runtime = await window.deck.ensureRuntime(false);
+    state.runtime = runtime;
+    if (!runtime?.ready) throw Error(runtime?.message || 'GameDeck could not prepare its managed play engine.');
+    await refreshDiagnostics();
+    capabilities = await window.deck.playSessionCapabilities(file);
+  }
+
+  if (!capabilities?.eligible || !capabilities?.presentation?.embedded) {
+    const message = capabilities?.fallback?.playerMessage || 'This game is not ready for the unified GameDeck player.';
+    const action = capabilities?.fallback?.recommendedAction || 'Complete console setup, then try again.';
+    throw Error(`${message} ${action}`);
+  }
+  return capabilities;
+}
+
 async function launch(file) {
   if (state.launchingFile || state.playSession?.active) return;
   ensurePlayHaptics()?.primeAudio?.();
   let game = null;
   try {
     game = state.library.games.find(item => item.file === file);
-    if (game && gameLaunchBlocked(game)) throw Error(game.archiveHealthMessage || 'This ROM set needs attention before launch');
+    if (game && gameLaunchBlocked(game)) throw Error(game.archiveHealthMessage || 'This game needs attention before launch.');
+    closeGameDetails({ restoreFocus: false, immediate: true });
     setLaunchingState(game, true);
-    showLaunchCurtain(game, `Starting ${game?.title || 'your game'}`, 'Checking the engine, controller profile, and best play route…');
-    toast('Opening ' + (game?.title || 'your game') + ' — GameDeck is checking everything automatically…', 'progress');
+    showLaunchCurtain(game, `Starting ${game?.title || 'your game'}`, 'Opening the unified GameDeck player…');
+    toast('Opening ' + (game?.title || 'your game') + ' inside GameDeck…', 'progress');
 
-    let capabilities = null;
-    try { capabilities = await window.deck.playSessionCapabilities(file); } catch {}
-    if (capabilities?.eligible && capabilities?.presentation?.embedded) {
-      try {
-        const integrated = await startIntegratedPlay(file, game);
-        if (integrated?.queued) {
-          setLaunchingState(game, false);
-          state.transferExpanded = true;
-          renderDownloads();
-          toast(integrated.message || 'GameDeck is preparing the required files. The game will open automatically.', 'progress');
-        }
-        return;
-      } catch (embeddedError) {
-        resetPlaySessionUi();
-        toast('Integrated view was unavailable, so GameDeck is opening the normal game window.', 'warning');
-        showLaunchCurtain(game, `Opening ${game?.title || 'your game'}`, 'Switching to the verified external play route…');
-      }
-    }
-
-    const result = await window.deck.launch(file);
-    if (result?.queued) {
-      hideLaunchCurtain();
+    await integratedCapabilitiesFor(file, game);
+    const integrated = await startIntegratedPlay(file, game);
+    if (integrated?.queued) {
       setLaunchingState(game, false);
       state.transferExpanded = true;
       renderDownloads();
-      toast(result.message || 'GameDeck is preparing the required files. The game will open automatically.', 'progress');
-      return;
+      toast(integrated.message || 'GameDeck is preparing the required files. The game will open automatically.', 'progress');
     }
-    if (!result?.ok) throw Error(result?.error || 'Could not launch this game');
-    hideLaunchCurtain(2800);
-    setTimeout(() => {
-      setLaunchingState(game, false);
-      loadLibrary(false);
-    }, result.presentation ? 1800 : 1100);
   } catch (error) {
     resetPlaySessionUi();
     hideLaunchCurtain();
     setLaunchingState(game, false);
-    toast(error.message || 'Could not launch this game', 'warning');
-    openConsole(true);
+    toast(error.message || 'The unified GameDeck player could not start.', 'warning');
   }
 }
+
 
 function renderCatalogFeature(game) {
   const feature = $('#catalogFeature');
@@ -2399,7 +2481,7 @@ function renderConsoleRail() {
     return `<button type="button" class="console-card ${system.playable ? 'playable' : 'needs-setup'} ${active ? 'active' : ''} ${focused ? 'controller-focus' : ''}" data-id="${escapeHtml(system.id)}" title="${escapeHtml(system.issue || '')}"><span class="console-state">${system.playable ? 'READY' : 'SETUP'}</span><b>${escapeHtml(system.name)}</b><small><span>${system.count.toLocaleString()} TITLES</span>${installed ? `<span>${installed.toLocaleString()} ON DECK</span>` : ''}</small><img src="${escapeHtml(system.image)}" alt=""></button>`;
   }).join('');
   $$('.console-card').forEach(card => {
-    card.onclick = () => selectCatalog(card.dataset.id, true);
+    card.onclick = () => { pulseUiHaptic('confirm', { force: true }); selectCatalog(card.dataset.id, true); };
     card.onmouseenter = () => {
       state.focusedConsoleId = card.dataset.id;
       state.discoverZone = 'systems';
@@ -2940,10 +3022,11 @@ function moveLibrary(direction) {
     if (direction === 'down') index = (index + 1) % ids.length;
     if (direction === 'right') {
       const first = currentGames()[0];
-      if (first) setFocusedGame(first, { scroll: true });
+      if (first) { setFocusedGame(first, { scroll: true }); pulseUiHaptic('navigate'); }
       return;
     }
     state.focusedLibrarySystem = ids[index];
+    pulseUiHaptic('navigate');
     renderSystems();
     document.querySelector(`.system[data-id="${state.focusedLibrarySystem}"]`)?.scrollIntoView({ block: 'nearest' });
     return;
@@ -2966,6 +3049,7 @@ function moveLibrary(direction) {
   if (direction === 'down') index += columns;
   index = Math.max(0, Math.min(games.length - 1, index));
   setFocusedGame(games[index], { scroll: true });
+  pulseUiHaptic('navigate');
 }
 
 function moveDiscover(direction) {
@@ -2976,10 +3060,11 @@ function moveDiscover(direction) {
     if (direction === 'right') index = (index + 1) % ids.length;
     if (direction === 'down') {
       const game = currentCatalogGames()[0];
-      if (game) setFocusedCatalogGame(game, { scroll: true });
+      if (game) { setFocusedCatalogGame(game, { scroll: true }); pulseUiHaptic('navigate'); }
       return;
     }
     state.focusedConsoleId = ids[index];
+    pulseUiHaptic('navigate');
     renderConsoleRail();
     document.querySelector(`.console-card[data-id="${state.focusedConsoleId}"]`)?.scrollIntoView({ block: 'nearest', inline: 'center' });
     return;
@@ -3004,14 +3089,17 @@ function moveDiscover(direction) {
     if (showMoreCatalog()) {
       const expandedGames = currentCatalogGames();
       setFocusedCatalogGame(expandedGames[Math.min(target, expandedGames.length - 1)], { scroll: true });
+      pulseUiHaptic('navigate');
       return;
     }
   }
   index = Math.max(0, Math.min(games.length - 1, index));
   setFocusedCatalogGame(games[index], { scroll: true });
+  pulseUiHaptic('navigate');
 }
 
 function activateFocused() {
+  pulseUiHaptic('confirm', { force: true });
   if (state.view === 'community') {
     const target = document.activeElement;
     if (!$('#community')?.contains(target) || !communityControls().includes(target)) return;
@@ -3039,6 +3127,11 @@ function activateFocused() {
 }
 
 function backAction() {
+  pulseUiHaptic('back', { force: true });
+  if (document.body.classList.contains('game-detail-open')) {
+    closeGameDetails();
+    return;
+  }
   if (!$('#debugConsole').classList.contains('hidden')) {
     openConsole(false);
     return;
@@ -3135,11 +3228,16 @@ function changeView(view) {
 }
 
 function cycleView(delta = 1) {
+  pulseUiHaptic('navigate');
   const index = views.indexOf(state.view);
   changeView(views[(index + delta + views.length) % views.length]);
 }
 
-const gamepadState = { buttons: [], direction: null, nextRepeat: 0, initialized: false, acceptAfter: performance.now() + 1500 };
+const gamepadState = { buttons: [], direction: null, nextRepeat: 0, initialized: false, armed: false, acceptAfter: performance.now() + 1500 };
+
+function gamepadButtons(pad) {
+  return [...(pad?.buttons || [])].map(button => Boolean(button?.pressed));
+}
 
 function gamepadDirection(pad) {
   if (pad.buttons[12]?.pressed || (pad.axes[1] || 0) < -0.7) return 'up';
@@ -3149,40 +3247,73 @@ function gamepadDirection(pad) {
   return null;
 }
 
+function gamepadNeutral(pad) {
+  return !gamepadDirection(pad) && !gamepadButtons(pad).some(Boolean);
+}
+
+function rearmGamepadInput(delay = 320) {
+  gamepadState.buttons = [];
+  gamepadState.direction = null;
+  gamepadState.nextRepeat = 0;
+  gamepadState.initialized = false;
+  gamepadState.armed = false;
+  gamepadState.acceptAfter = performance.now() + Math.max(0, Number(delay || 0));
+}
+
 function handleGamepad() {
   const pad = navigator.getGamepads ? [...navigator.getGamepads()].find(Boolean) : null;
   setControllerStatus();
   if (!pad) {
     gamepadState.initialized = false;
-    return;
-  }
-  if (state.playSession?.active) {
-    const buttons = [...pad.buttons].map(button => button.pressed);
-    const direction = gamepadDirection(pad);
-    const changed = direction !== gamepadState.direction
-      || buttons.some((pressed, index) => pressed && !gamepadState.buttons[index]);
-    if (changed) setInputMode('controller');
-    gamepadState.buttons = buttons;
-    gamepadState.direction = direction;
-    gamepadState.initialized = true;
-    return;
-  }
-  if (document.body.classList.contains('modal-open')) {
-    gamepadState.buttons = [...pad.buttons].map(button => button.pressed);
-    gamepadState.direction = gamepadDirection(pad);
+    gamepadState.armed = false;
     return;
   }
 
-  if (!gamepadState.initialized || performance.now() < gamepadState.acceptAfter) {
-    gamepadState.buttons = [...pad.buttons].map(button => button.pressed);
-    gamepadState.direction = gamepadDirection(pad);
-    gamepadState.nextRepeat = gamepadState.direction ? Number.POSITIVE_INFINITY : 0;
+  const buttons = gamepadButtons(pad);
+  const direction = gamepadDirection(pad);
+  const snapshot = () => {
+    gamepadState.buttons = buttons;
+    gamepadState.direction = direction;
+    gamepadState.nextRepeat = direction ? Number.POSITIVE_INFINITY : 0;
     gamepadState.initialized = true;
+  };
+
+  if (state.playSession?.active) {
+    const changed = direction !== gamepadState.direction
+      || buttons.some((pressed, index) => pressed && !gamepadState.buttons[index]);
+    if (changed) setInputMode('controller');
+    snapshot();
+    gamepadState.armed = false;
+    return;
+  }
+
+  if (document.body.classList.contains('game-detail-open')) {
+    const pressed = index => Boolean(buttons[index] && !gamepadState.buttons[index]);
+    if (pressed(1)) backAction();
+    if (pressed(0)) {
+      closeGameDetails({ restoreFocus: false });
+      activateFocused();
+    }
+    snapshot();
+    return;
+  }
+
+  if (document.body.classList.contains('modal-open')) {
+    snapshot();
+    gamepadState.armed = false;
     return;
   }
 
   const now = performance.now();
-  const direction = gamepadDirection(pad);
+  if (!gamepadState.initialized || now < gamepadState.acceptAfter || !gamepadState.armed) {
+    snapshot();
+    if (now >= gamepadState.acceptAfter && gamepadNeutral(pad)) {
+      gamepadState.armed = true;
+      gamepadState.nextRepeat = 0;
+    }
+    return;
+  }
+
   if (direction && (direction !== gamepadState.direction || now >= gamepadState.nextRepeat)) {
     if (state.view === 'discover') moveDiscover(direction);
     else moveLibrary(direction);
@@ -3191,7 +3322,7 @@ function handleGamepad() {
   if (!direction) gamepadState.nextRepeat = 0;
   gamepadState.direction = direction;
 
-  const pressed = index => Boolean(pad.buttons[index]?.pressed && !gamepadState.buttons[index]);
+  const pressed = index => Boolean(buttons[index] && !gamepadState.buttons[index]);
   const startIndex = pad.mapping === 'standard' ? 9 : 7;
   const actions = {
     select: pressed(0), back: pressed(1), surprise: pressed(2), setup: pressed(3),
@@ -3206,8 +3337,9 @@ function handleGamepad() {
   if (actions.next) cycleView(1);
   if (actions.activity) openConsole($('#debugConsole').classList.contains('hidden'));
   if (actions.start) window.GameDeckMultiplayer?.open?.();
-  gamepadState.buttons = [...pad.buttons].map(button => button.pressed);
+  gamepadState.buttons = buttons;
 }
+
 
 function formatActivity(entry) {
   const time = new Date(entry.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -3536,7 +3668,19 @@ $$('[data-play-mode]').forEach(button => {
     settlePlayChrome(720);
   };
 });
-$('#playClose').onclick = () => stopIntegratedPlay('player_closed');
+const playCloseButton = $('#playClose');
+playCloseButton.onpointerdown = event => {
+  if (event.pointerType === 'mouse' && event.button !== 0) return;
+  event.preventDefault();
+  event.stopPropagation();
+  stopIntegratedPlay('player_closed');
+};
+playCloseButton.onclick = event => {
+  if (event.detail !== 0) return;
+  event.preventDefault();
+  event.stopPropagation();
+  stopIntegratedPlay('player_closed');
+};
 $('#playCapturePopout').onclick = () => setPlayMode('popout');
 $('#playHapticsToggle').onclick = async () => {
   const previousPreference = state.hapticPreference;
@@ -3594,6 +3738,13 @@ document.onkeydown = event => {
         hideFullscreenControls(true);
         hidePlayPointer();
       }
+    }
+    return;
+  }
+  if (document.body.classList.contains('game-detail-open')) {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      backAction();
     }
     return;
   }
@@ -3664,11 +3815,20 @@ $$('[data-arcade-filter]').forEach(button => {
 $('#folder').onclick = () => window.deck.openLibrary();
 $('#emptyPrimary').onclick = event => runEmptyAction(event.currentTarget.dataset.action);
 $('#emptySecondary').onclick = event => runEmptyAction(event.currentTarget.dataset.action);
-$('#spotlightPlay').onclick = () => activateFocused();
+$('#spotlightPlay').onclick = () => {
+  closeGameDetails({ restoreFocus: false });
+  activateFocused();
+};
 $('#spotlightFav').onclick = () => {
   const game = focusedGame();
-  if (game) toggleFavorite(game);
+  if (game) {
+    pulseUiHaptic('favorite', { force: true });
+    toggleFavorite(game);
+  }
 };
+$('#spotlightShare').onclick = () => shareFocusedGame();
+$('#spotlightClose').onclick = () => closeGameDetails();
+$('#spotlightDismiss').onclick = () => closeGameDetails();
 $('#spotlightArtwork').onclick = () => chooseFocusedArtwork();
 $('#spotlightDetails').onclick = () => refreshFocusedDetails();
 $('#spotlightDelete').onclick = () => deleteFocusedGame();
@@ -3818,6 +3978,10 @@ $('#saveSettings').onclick = async () => {
   }
 };
 $('#restartApp').onclick = () => window.deck.restartApp();
+
+$('.content').addEventListener('wheel', () => {
+  pulseUiHaptic('scroll');
+}, { passive: true });
 
 $('.content').addEventListener('scroll', event => {
   const content = event.currentTarget;

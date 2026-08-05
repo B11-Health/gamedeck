@@ -7,7 +7,7 @@ const dgram = require('dgram');
 const zlib = require('zlib');
 const { spawn, spawnSync } = require('child_process');
 const { pathToFileURL } = require('url');
-const { handoffHostWindowForNativeGame, presentNativeGameWindow } = require('./native-window-presenter');
+const { handoffHostWindowForNativeGame, presentNativeGameWindow, requestNativeGameWindowClose } = require('./native-window-presenter');
 const { prepareOpenBorLaunch } = require('./openbor-launch');
 const { buildFbneoReadiness, isFatalLibretroReadinessLog, isFbneoCore, resolveLibretroLaunchCwd } = require('./libretro-launch');
 const { path7za } = require('7zip-bin');
@@ -375,6 +375,7 @@ const downloads = new Map();
 const downloadProcesses = new Map();
 const gameDeckOpenBorProcesses = new Map();
 const managedEmbeddedProcesses = new Map();
+let lastEmbeddedCloseResult = null;
 const embeddedNativeWindows = new Map();
 const pendingLaunches = new Map();
 const mameLaunchVerificationCache = new Map();
@@ -1694,6 +1695,9 @@ function ensureRetroArchEmbeddedConfig() {
     'video_smooth = "false"',
     'video_shader_enable = "false"',
     'video_scale = "3.0"',
+    'autosave_interval = "10"',
+    'savestate_auto_save = "true"',
+    'savestate_auto_load = "true"',
     'pause_nonactive = "false"',
     'menu_show_load_content_animation = "false"',
     'notification_show_autoconfig = "false"',
@@ -2044,11 +2048,28 @@ function stopGameDeckOpenBorProcesses(exceptPid = 0) {
   }
 }
 
-function terminateEmbeddedProcess(child) {
+async function terminateEmbeddedProcess(child) {
   if (!child?.pid) return;
   const pid = Number(child.pid);
   if (process.platform === 'win32') {
-    spawnSync('taskkill.exe', ['/PID', String(pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' });
+    const closeStartedAt = Date.now();
+    let closeResult = null;
+    let closedGracefully = false;
+    try {
+      closeResult = await requestNativeGameWindowClose({ pid, timeoutMs: 3200 });
+      closedGracefully = Boolean(closeResult?.exited);
+    } catch (error) {
+      closeResult = { ok: false, status: 'close-error', error: error.message };
+    }
+    const fallbackUsed = !closedGracefully;
+    if (fallbackUsed) spawnSync('taskkill.exe', ['/PID', String(pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' });
+    lastEmbeddedCloseResult = {
+      status: closeResult?.status || (fallbackUsed ? 'forced' : 'closed'),
+      exitedGracefully: closedGracefully,
+      fallbackUsed,
+      durationMs: Date.now() - closeStartedAt,
+      at: new Date().toISOString()
+    };
     managedEmbeddedProcesses.delete(pid);
     return;
   }
@@ -3875,6 +3896,7 @@ function diagnostics(includeLibrary = true) {
     managedRuntime: managedRuntimeStatus(),
     streaming: gameDeckStreamStatus(),
     remotePlay: remotePlayStatus(),
+    embeddedClose: lastEmbeddedCloseResult,
     multiplayer: gameDeckNetplayStatus(),
     retroarch: fs.existsSync(RA),
     mame: Boolean(MAME && fs.existsSync(MAME)),

@@ -128,6 +128,44 @@ $final = New-Object GameDeckWindow+RECT
   foreground = $foreground
 } | ConvertTo-Json -Compress`;
 }
+function buildWindowsCloseScript({ pid, timeoutMs = 1800 } = {}) {
+  if (!Number.isInteger(pid) || pid <= 0) throw new TypeError('pid must be a positive integer');
+  const boundedTimeout = Math.max(400, Math.min(5000, Number(timeoutMs) || 1800));
+  return String.raw`$ErrorActionPreference = 'Stop'
+Add-Type @'
+using System;
+using System.Runtime.InteropServices;
+public static class GameDeckCloseWindow {
+  private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+  [DllImport("user32.dll")] private static extern bool EnumWindows(EnumWindowsProc callback, IntPtr lParam);
+  [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
+  [DllImport("user32.dll", SetLastError=true)] private static extern bool PostMessage(IntPtr hWnd, uint message, IntPtr wParam, IntPtr lParam);
+  public static int RequestClose(uint targetPid) {
+    int count = 0;
+    EnumWindows(delegate(IntPtr hWnd, IntPtr lParam) {
+      uint ownerPid;
+      GetWindowThreadProcessId(hWnd, out ownerPid);
+      if (ownerPid == targetPid) {
+        if (PostMessage(hWnd, 0x0010, IntPtr.Zero, IntPtr.Zero)) count++;
+      }
+      return true;
+    }, IntPtr.Zero);
+    return count;
+  }
+}
+'@
+$pidValue = ${pid}
+$posted = [GameDeckCloseWindow]::RequestClose([uint32]$pidValue)
+$deadline = [DateTime]::UtcNow.AddMilliseconds(${boundedTimeout})
+$exited = $false
+while ([DateTime]::UtcNow -lt $deadline) {
+  if (-not (Get-Process -Id $pidValue -ErrorAction SilentlyContinue)) { $exited = $true; break }
+  Start-Sleep -Milliseconds 80
+}
+if (-not $exited) { $exited = -not [bool](Get-Process -Id $pidValue -ErrorAction SilentlyContinue) }
+[pscustomobject]@{ ok = $true; status = if ($exited) { 'closed' } elseif ($posted -gt 0) { 'close-pending' } else { 'window-not-found' }; pid = $pidValue; posted = $posted; exited = $exited } | ConvertTo-Json -Compress`;
+}
+
 function parsePresentationResult(stdout, stderr = '') {
   const lines = String(stdout || '').trim().split(/\r?\n/).filter(Boolean);
   const candidate = lines.at(-1);
@@ -186,10 +224,29 @@ function presentNativeGameWindow({ pid, mode = 'borderless-fullscreen', timeoutM
     child.once('close', () => resolve(parsePresentationResult(stdout, stderr)));
   });
 }
+function requestNativeGameWindowClose({ pid, timeoutMs = 1800, platform = process.platform, spawnImpl = spawn } = {}) {
+  if (platform !== 'win32') return Promise.resolve({ ok: false, status: 'unsupported-platform', exited: false });
+  const script = buildWindowsCloseScript({ pid, timeoutMs });
+  return new Promise(resolve => {
+    const child = spawnImpl('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', script], {
+      windowsHide: true,
+      stdio: ['ignore', 'pipe', 'pipe']
+    });
+    let stdout = '';
+    let stderr = '';
+    child.stdout?.on('data', chunk => { stdout += chunk; });
+    child.stderr?.on('data', chunk => { stderr += chunk; });
+    child.once('error', error => resolve({ ok: false, status: 'close-error', exited: false, error: error.message }));
+    child.once('close', () => resolve(parsePresentationResult(stdout, stderr)));
+  });
+}
+
 module.exports = {
   buildWindowsPresentationScript,
+  buildWindowsCloseScript,
   normalizePresentationMode,
   handoffHostWindowForNativeGame,
   parsePresentationResult,
-  presentNativeGameWindow
+  presentNativeGameWindow,
+  requestNativeGameWindowClose
 };

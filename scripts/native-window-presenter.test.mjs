@@ -4,10 +4,12 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 const {
   buildWindowsPresentationScript,
+  buildWindowsCloseScript,
   handoffHostWindowForNativeGame,
   normalizePresentationMode,
   parsePresentationResult,
-  presentNativeGameWindow
+  presentNativeGameWindow,
+  requestNativeGameWindowClose
 } = require('../native-window-presenter.js');
 assert.equal(normalizePresentationMode('native-fullscreen'), 'native-fullscreen');
 assert.equal(normalizePresentationMode('borderless-fullscreen'), 'borderless-fullscreen');
@@ -45,6 +47,14 @@ assert.deepEqual(
 );
 assert.equal(parsePresentationResult('', 'empty').status, 'no-result');
 assert.equal(parsePresentationResult('not json').status, 'invalid-result');
+assert.throws(() => buildWindowsCloseScript({ pid: 0 }), /positive integer/);
+const closeScript = buildWindowsCloseScript({ pid: 4242, timeoutMs: 1900 });
+assert.match(closeScript, /\$pidValue = 4242/);
+assert.match(closeScript, /PostMessage/);
+assert.match(closeScript, /0x0010/);
+assert.match(closeScript, /RequestClose/);
+assert.match(closeScript, /AddMilliseconds\(1900\)/);
+assert.match(closeScript, /exited = \$false/);
 let unsupportedSpawned = false;
 const unsupported = await presentNativeGameWindow({
   pid: 9,
@@ -74,6 +84,32 @@ assert(calls[0].args.includes('-NoProfile'));
 assert(calls[0].args.includes('-NonInteractive'));
 assert(calls[0].args.at(-1).includes('$pidValue = 1234'));
 assert.equal(calls[0].options.windowsHide, true);
+
+let closeUnsupportedSpawned = false;
+const closeUnsupported = await requestNativeGameWindowClose({ pid: 99, platform: 'linux', spawnImpl: () => { closeUnsupportedSpawned = true; } });
+assert.equal(closeUnsupported.status, 'unsupported-platform');
+assert.equal(closeUnsupported.exited, false);
+assert.equal(closeUnsupportedSpawned, false);
+const closeCalls = [];
+const closeSpawn = (executable, args, options) => {
+  closeCalls.push({ executable, args, options });
+  const child = new EventEmitter();
+  child.stdout = new EventEmitter();
+  child.stderr = new EventEmitter();
+  queueMicrotask(() => {
+    child.stdout.emit('data', Buffer.from('{"ok":true,"status":"closed","pid":1234,"posted":1,"exited":true}\n'));
+    child.emit('close', 0);
+  });
+  return child;
+};
+const closeResult = await requestNativeGameWindowClose({ pid: 1234, platform: 'win32', timeoutMs: 1500, spawnImpl: closeSpawn });
+assert.equal(closeResult.ok, true);
+assert.equal(closeResult.status, 'closed');
+assert.equal(closeResult.exited, true);
+assert.equal(closeCalls.length, 1);
+assert.equal(closeCalls[0].executable, 'powershell.exe');
+assert(closeCalls[0].args.at(-1).includes('$pidValue = 1234'));
+assert(closeCalls[0].args.at(-1).includes('AddMilliseconds(1500)'));
 
 {
   const events = [];
@@ -111,4 +147,4 @@ assert.equal(calls[0].options.windowsHide, true);
   assert.equal(minimized, false);
   assert.equal(handoff.restore(), false);
 }
-console.log('native window presenter: 41 scenarios passed');
+console.log('native window presenter: 56 scenarios passed');

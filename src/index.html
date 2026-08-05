@@ -163,33 +163,38 @@
         </aside>
       </section>
 
-      <section class="spotlight hidden" id="spotlight" aria-label="Selected game">
-        <div class="feature-backdrop" aria-hidden="true"><img id="spotlightBackdrop" alt=""></div>
-        <div class="spotlight-art" id="spotlightArt"></div>
-        <div class="spotlight-copy">
-          <div class="eyebrow" id="spotlightSystem">SELECTED GAME</div>
-          <h2 id="spotlightTitle">Pick a game</h2>
-          <div class="feature-detail-head"><div class="feature-facts" id="spotlightFacts"></div><span class="feature-source" id="spotlightSource">LOCAL DETAILS</span></div>
-          <p class="feature-description" id="spotlightDescription">Use a controller, keyboard, or mouse to focus a title.</p>
-          <p class="feature-status" id="spotlightMeta">Ready when you are.</p>
-        </div>
-        <div class="spotlight-actions">
-          <div class="spotlight-primary-actions">
-            <button type="button" class="primary" id="spotlightPlay">Play now</button>
-            <button type="button" class="online" id="spotlightOnline">Multiplayer</button>
-            <button type="button" id="spotlightFav">Save</button>
+      <section class="spotlight hidden" id="spotlight" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="spotlightTitle">
+        <button type="button" class="spotlight-scrim" id="spotlightDismiss" aria-label="Close game details"></button>
+        <article class="spotlight-panel" id="spotlightPanel" tabindex="-1">
+          <button type="button" class="spotlight-close" id="spotlightClose" aria-label="Close game details"><span aria-hidden="true">×</span></button>
+          <div class="feature-backdrop" aria-hidden="true"><img id="spotlightBackdrop" alt=""></div>
+          <div class="spotlight-art-shell"><div class="spotlight-art" id="spotlightArt"></div></div>
+          <div class="spotlight-copy">
+            <div class="spotlight-kicker-row"><div class="eyebrow" id="spotlightSystem">SELECTED GAME</div><span class="feature-source" id="spotlightSource">LOCAL DETAILS</span></div>
+            <h2 id="spotlightTitle">Pick a game</h2>
+            <div class="feature-facts" id="spotlightFacts"></div>
+            <p class="feature-description" id="spotlightDescription">Choose a title to see its story, details, and play options.</p>
+            <p class="feature-status" id="spotlightMeta">Ready when you are.</p>
           </div>
-          <div class="spotlight-utility-actions" aria-label="Game details tools">
-            <button type="button" id="spotlightArtwork" title="Choose a local cover image"><span aria-hidden="true">▧</span><b>Artwork</b></button>
-            <button type="button" id="spotlightDetails" title="Retry the metadata lookup"><span aria-hidden="true">↻</span><b>Details</b></button>
-            <button type="button" class="danger" id="spotlightDelete" title="Move this game to Trash"><span aria-hidden="true">⌫</span><b>Remove</b></button>
+          <div class="spotlight-actions">
+            <div class="spotlight-primary-actions">
+              <button type="button" class="primary" id="spotlightPlay"><span class="action-glyph" aria-hidden="true">▶</span><b>Play now</b></button>
+              <button type="button" class="online" id="spotlightOnline"><span class="action-glyph" aria-hidden="true">◉</span><b>Multiplayer</b></button>
+              <button type="button" id="spotlightFav"><span class="action-glyph" aria-hidden="true">☆</span><b>Favorite</b></button>
+            </div>
+            <div class="spotlight-utility-actions" aria-label="Game actions">
+              <button type="button" id="spotlightShare" title="Share this game"><span aria-hidden="true">↗</span><b>Share</b></button>
+              <button type="button" id="spotlightArtwork" title="Choose a local cover image"><span aria-hidden="true">▧</span><b>Artwork</b></button>
+              <button type="button" id="spotlightDetails" title="Refresh game details"><span aria-hidden="true">↻</span><b>Refresh</b></button>
+              <button type="button" class="danger" id="spotlightDelete" title="Move this game to Trash"><span aria-hidden="true">⌫</span><b>Remove</b></button>
+            </div>
           </div>
-        </div>
+        </article>
       </section>
 
       <div class="control-legend" id="controlLegend" data-mode="pointer" aria-label="Input help" aria-live="polite">
-        <span><kbd>CLICK</kbd> Preview</span>
-        <span><kbd>DOUBLE</kbd> Play</span>
+        <span><kbd>CLICK</kbd> Play</span>
+        <span><kbd>i</kbd> Details</span>
         <span><kbd>☆</kbd> Favorite</span>
         <span><kbd>SCROLL</kbd> Browse</span>
         <span><kbd>/</kbd> Search</span>
