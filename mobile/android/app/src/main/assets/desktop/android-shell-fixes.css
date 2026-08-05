@@ -1,0 +1,63 @@
+/* Final Android shell corrections after portrait screenshot review. */
+
+@media (max-width: 820px) and (orientation: portrait) {
+  .app-shell-header {
+    position: fixed !important;
+    z-index: 120 !important;
+    top: 0 !important;
+    right: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    box-shadow: 0 10px 30px #000b !important;
+  }
+
+  main {
+    padding-top: var(--android-header) !important;
+  }
+
+  main > aside {
+    position: relative !important;
+    top: auto !important;
+  }
+
+  .toolbar {
+    top: calc(var(--android-header) + 5px) !important;
+  }
+
+  .header-menu {
+    position: fixed !important;
+    z-index: 150 !important;
+    top: calc(env(safe-area-inset-top, 0px) + 51px) !important;
+    right: 9px !important;
+    max-height: calc(100vh - var(--android-header) - 20px) !important;
+    overflow-y: auto !important;
+  }
+
+  .content-scrolled .app-header {
+    border-bottom-color: #ffffff1a !important;
+    background: linear-gradient(180deg, #080d15fc, #0a1018fa) !important;
+  }
+
+  .content-scrolled .brand-mark {
+    box-shadow: 0 0 24px #58d6ff42 !important;
+  }
+
+  .content-scrolled main > aside {
+    box-shadow: none !important;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 620px) {
+  .app-shell-header {
+    position: relative !important;
+    z-index: 100 !important;
+  }
+
+  main {
+    padding-top: 0 !important;
+  }
+
+  .toolbar {
+    top: 0 !important;
+  }
+}
