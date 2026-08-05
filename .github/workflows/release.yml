@@ -77,11 +77,19 @@ jobs:
       - name: Build installable preview APK
         working-directory: mobile/android
         run: gradle --no-daemon lintDebug assembleDebug
-      - name: Name Android artifact
+      - name: Inspect and name Android artifact
+        shell: bash
         run: |
+          set -euo pipefail
           mkdir -p dist/android
-          cp mobile/android/app/build/outputs/apk/debug/app-debug.apk dist/android/GameDeck-Android-${GITHUB_REF_NAME:-preview}.apk
-          sha256sum dist/android/GameDeck-Android-*.apk > dist/android/SHA256SUMS-android.txt
+          APK="dist/android/GameDeck-Android-${GITHUB_REF_NAME:-preview}.apk"
+          cp mobile/android/app/build/outputs/apk/debug/app-debug.apk "$APK"
+          "$ANDROID_HOME/build-tools/36.1.0/aapt" dump badging "$APK" | tee dist/android/APK-METADATA.txt
+          grep -F "package: name='io.gamedeck.mobile.preview'" dist/android/APK-METADATA.txt
+          grep -F "sdkVersion:'26'" dist/android/APK-METADATA.txt
+          grep -F "targetSdkVersion:'36'" dist/android/APK-METADATA.txt
+          "$ANDROID_HOME/build-tools/36.1.0/apksigner" verify --verbose --print-certs "$APK" | tee dist/android/APK-SIGNATURE.txt
+          sha256sum "$APK" > dist/android/SHA256SUMS-android.txt
       - uses: actions/upload-artifact@v7
         with:
           name: gamedeck-android-${{ github.sha }}

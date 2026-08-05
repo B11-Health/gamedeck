@@ -24,11 +24,21 @@ jobs:
       - name: Build and inspect APK
         working-directory: mobile/android
         run: gradle --no-daemon lintDebug assembleDebug
-      - name: Prepare preview release
+      - name: Inspect preview release
+        shell: bash
         run: |
+          set -euo pipefail
           mkdir -p dist/android
-          cp mobile/android/app/build/outputs/apk/debug/app-debug.apk dist/android/GameDeck-Android-preview.apk
-          sha256sum dist/android/GameDeck-Android-preview.apk > dist/android/SHA256SUMS-android.txt
+          APK="dist/android/GameDeck-Android-preview.apk"
+          cp mobile/android/app/build/outputs/apk/debug/app-debug.apk "$APK"
+          "$ANDROID_HOME/build-tools/36.1.0/aapt" dump badging "$APK" | tee dist/android/APK-METADATA.txt
+          grep -F "package: name='io.gamedeck.mobile.preview'" dist/android/APK-METADATA.txt
+          grep -F "sdkVersion:'26'" dist/android/APK-METADATA.txt
+          grep -F "targetSdkVersion:'36'" dist/android/APK-METADATA.txt
+          grep -F "uses-permission: name='android.permission.INTERNET'" dist/android/APK-METADATA.txt
+          grep -F "uses-permission: name='android.permission.VIBRATE'" dist/android/APK-METADATA.txt
+          "$ANDROID_HOME/build-tools/36.1.0/apksigner" verify --verbose --print-certs "$APK" | tee dist/android/APK-SIGNATURE.txt
+          sha256sum "$APK" > dist/android/SHA256SUMS-android.txt
       - name: Publish preview asset
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
