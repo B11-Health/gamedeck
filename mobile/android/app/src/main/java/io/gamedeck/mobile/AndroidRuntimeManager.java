@@ -1,7 +1,6 @@
 package io.gamedeck.mobile;
 
 import android.app.Activity;
-import android.content.ClipData;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -288,9 +287,10 @@ final class AndroidRuntimeManager {
     }
 
     private File ensureCore(Artifact artifact) throws Exception {
-        File library = ManagedLibraryProvider.coreFileFor(context, artifact.library);
-        File coreDir = library.getParentFile();
-        if (coreDir == null) throw new IOException("Console core storage is unavailable.");
+        File root = sharedRuntimeRoot();
+        File coreDir = new File(root, "cores");
+        if (!coreDir.isDirectory() && !coreDir.mkdirs()) throw new IOException("Could not create the console core directory.");
+        File library = new File(coreDir, artifact.library);
         File marker = new File(coreDir, artifact.library + ".archive.sha256");
         String installedArchiveHash = readSmallText(marker);
         if (library.isFile() && isArm64Elf(library) && installedArchiveHash.matches("[0-9a-f]{64}")) {
@@ -376,13 +376,17 @@ final class AndroidRuntimeManager {
     }
 
     private void startRetroSideloadActivity(String packageName, File core, File content) throws Exception {
-        Uri coreUri = ManagedLibraryProvider.coreUriFor(context, core.getName());
+        if (!core.setReadable(true, false) && !core.canRead()) {
+            throw new IOException("The staged console core is not readable.");
+        }
+        if (!content.setReadable(true, false) && !content.canRead()) {
+            throw new IOException("The staged game is not readable.");
+        }
         Intent intent = new Intent();
         intent.setComponent(new ComponentName(packageName, "com.retroarch.browser.debug.CoreSideloadActivity"));
-        intent.setData(coreUri);
-        intent.setClipData(ClipData.newRawUri("GameDeck console core", coreUri));
+        intent.putExtra("LIBRETRO", core.getAbsolutePath());
         intent.putExtra("ROM", content.getAbsolutePath());
-        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
         activity.runOnUiThread(() -> {
             try {
                 activity.startActivity(intent);

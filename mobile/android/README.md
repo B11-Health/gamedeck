@@ -4,7 +4,7 @@ This module packages GameDeck's shared desktop renderer with an Android platform
 
 ## Current development build
 
-`0.4.4-console` includes:
+`0.4.5-console` includes:
 
 - portrait and landscape layouts designed independently for phones;
 - GPU-composited WebView rendering and a reduced-effects mobile performance profile;

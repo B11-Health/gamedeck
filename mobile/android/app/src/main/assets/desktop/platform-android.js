@@ -394,7 +394,7 @@
     const library = await getLibrary();
     const runtime = getRuntimeStatus();
     return {
-      platform: 'android', arch: 'arm64', version: '0.4.4-console',
+      platform: 'android', arch: 'arm64', version: '0.4.5-console',
       libraryRoot: library.rootName || '', rgsxRoot: 'Automatic',
       retroArchPath: runtime.externalPackage || '', retroArchCores: '', retroArchSystem: '', mamePath: '', sponsorsEnabled: false
     };

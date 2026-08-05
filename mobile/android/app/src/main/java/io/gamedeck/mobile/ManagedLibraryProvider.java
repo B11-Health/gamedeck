@@ -19,7 +19,6 @@ public final class ManagedLibraryProvider extends ContentProvider {
     private static final String ROOT = "managed-library";
     private static final String PATH_FILES = "files";
     private static final String PATH_RUNTIME = "runtime";
-    private static final String PATH_CORES = "cores";
 
     static File root(Context context) {
         return new File(context.getFilesDir(), ROOT);
@@ -54,23 +53,6 @@ public final class ManagedLibraryProvider extends ContentProvider {
     }
 
 
-    static File coreFileFor(Context context, String fileName) throws IOException {
-        File root = new File(context.getFilesDir(), "console-cores").getCanonicalFile();
-        if (!root.isDirectory() && !root.mkdirs()) throw new IOException("Could not create console core storage.");
-        File file = new File(root, requireSegment(fileName)).getCanonicalFile();
-        if (!file.getPath().startsWith(root.getPath() + File.separator)) throw new IOException("Core path escaped its root.");
-        return file;
-    }
-
-    static Uri coreUriFor(Context context, String fileName) {
-        return new Uri.Builder()
-            .scheme("content")
-            .authority(context.getPackageName() + ".managed")
-            .appendPath(PATH_CORES)
-            .appendPath(requireSegment(fileName))
-            .build();
-    }
-
     static File fileFor(Context context, String folder, String fileName) throws IOException {
         File root = root(context).getCanonicalFile();
         File directory = new File(root, requireSegment(folder)).getCanonicalFile();
@@ -100,8 +82,6 @@ public final class ManagedLibraryProvider extends ContentProvider {
                 file = fileFor(context, segments.get(1), segments.get(2));
             } else if (segments.size() == 2 && PATH_RUNTIME.equals(segments.get(0))) {
                 file = runtimeFileFor(context, segments.get(1));
-            } else if (segments.size() == 2 && PATH_CORES.equals(segments.get(0))) {
-                file = coreFileFor(context, segments.get(1));
             } else {
                 throw new FileNotFoundException("Unknown managed library URI.");
             }
