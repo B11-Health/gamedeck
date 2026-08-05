@@ -1,0 +1,19 @@
+[package]
+name = "gamedeck-blob-contract"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+freenet-stdlib = "0.8.5"
+sha2 = "0.10"
+
+[features]
+default = ["freenet-main-contract", "contract"]
+contract = ["freenet-stdlib/contract"]
+freenet-main-contract = []
+trace = ["freenet-stdlib/trace"]

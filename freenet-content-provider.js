@@ -192,8 +192,30 @@ function createSdkClient(options = {}) {
     WasmContractV1
   } = require('@freenetorg/freenet-stdlib');
   const { ContractCodeT } = require('@freenetorg/freenet-stdlib/common');
+  const { RelatedContractsT } = require('@freenetorg/freenet-stdlib/client-request');
 
   const url = new URL(options.nodeUrl || 'ws://127.0.0.1:7509/v1/contract/command');
+  let blake3Module = null;
+
+  async function blake3Bytes(value) {
+    blake3Module ||= import('@noble/hashes/blake3.js');
+    const { blake3 } = await blake3Module;
+    return Uint8Array.from(blake3(Uint8Array.from(value)));
+  }
+
+  function encodeContractKey(key) {
+    const code = Buffer.from(key.codePart()).toString('base64url');
+    return code ? key.encode() + '.' + code : key.encode();
+  }
+
+  function decodeContractKey(value) {
+    const [instanceId, codeValue = ''] = String(value || '').trim().split('.', 2);
+    const partial = ContractKey.fromInstanceId(instanceId);
+    if (!codeValue) return partial;
+    const code = Buffer.from(codeValue, 'base64url');
+    if (code.length !== 32) throw new Error('Community contract key has an invalid code hash.');
+    return new ContractKey(partial.bytes(), code);
+  }
   const authToken = String(options.authToken || '');
   let api = null;
   let opening = null;
@@ -215,11 +237,26 @@ function createSdkClient(options = {}) {
       const handler = {
         onContractPut: () => {},
         onContractGet: () => {},
-        onContractUpdate: () => {},
+        onContractUpdate: response => {
+          const pending = api?.pendingPuts?.shift?.();
+          if (pending) {
+            clearTimeout(pending.timer);
+            pending.resolve(response);
+          }
+        },
         onContractUpdateNotification: () => {},
         onContractNotFound: () => {},
         onDelegateResponse: () => {},
-        onErr: fail,
+        onErr: error => {
+          options.onLog?.('debug', error?.message || String(error));
+          for (const queue of [api?.pendingGets, api?.pendingPuts, api?.pendingUpdates]) {
+            const pending = queue?.shift?.();
+            if (!pending) continue;
+            clearTimeout(pending.timer);
+            pending.reject(error instanceof Error ? error : new Error(String(error)));
+            break;
+          }
+        },
         onOpen: () => {
           if (settled) return;
           settled = true;
@@ -248,16 +285,20 @@ function createSdkClient(options = {}) {
   return {
     async getState(contractKey) {
       const client = await ensureOpen();
-      const response = await client.get(new GetRequest(ContractKey.fromInstanceId(contractKey), false, false, false));
+      const response = await client.get(new GetRequest(decodeContractKey(contractKey), false, false, false));
       return Buffer.from(response.state || []);
     },
     async putState(contractWasm, parameters, state) {
       const client = await ensureOpen();
-      const code = new ContractCodeT([...contractWasm], []);
-      const contract = new WasmContractV1(code, [...parameters], null);
+      const codeHash = await blake3Bytes(contractWasm);
+      const instanceId = await blake3Bytes(Buffer.concat([Buffer.from(codeHash), Buffer.from(parameters)]));
+      const key = new ContractKey(instanceId, codeHash);
+      const code = new ContractCodeT([...contractWasm], [...codeHash]);
+      const contract = new WasmContractV1(code, [...parameters], key);
       const container = new ContractContainer(ContractType.WasmContractV1, contract);
-      const response = await client.put(new PutRequest(container, [...state], null, false, false));
-      return response.key.encode();
+      const response = await client.put(new PutRequest(container, [...state], new RelatedContractsT([]), false, false));
+      if (response.key.encode() !== key.encode()) throw new Error('Freenet returned an unexpected contract key.');
+      return encodeContractKey(response.key);
     },
     async close() {
       const client = api;
@@ -382,7 +423,7 @@ function createFreenetContentProvider(options = {}) {
     return payload.assets
       .filter(asset => asset.listed && asset.folder.toLowerCase() === folder)
       .map((asset, index) => ({
-        id: Index,
+        id: index,
         name: asset.title,
         fileName: asset.fileName,
         edition: '',
@@ -555,6 +596,7 @@ function createFreenetContentProvider(options = {}) {
     const handle = await fs.promises.open(resolved, 'r');
     let offset = 0;
     let seeded = 0;
+    const contractKeys = [];
     try {
       for (const chunk of asset.chunks) {
         if (control.isCancelled?.()) throw new Error('Transfer paused.');
@@ -567,6 +609,7 @@ function createFreenetContentProvider(options = {}) {
         if (chunk.contractKey && key !== chunk.contractKey) {
           throw new Error('Published chunk key did not match the signed manifest.');
         }
+        contractKeys.push(key);
         offset += chunk.size;
         seeded += 1;
         control.onProgress?.({ seeded, total: asset.chunks.length });
@@ -575,7 +618,7 @@ function createFreenetContentProvider(options = {}) {
       await handle.close();
     }
     connected = true;
-    return { seeded: true, chunks: seeded };
+    return { seeded: true, chunks: seeded, contractKeys };
   }
 
   return {

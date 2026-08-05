@@ -23,7 +23,7 @@
   },
   "scripts": {
     "start": "electron .",
-    "check": "node scripts/repo-audit.mjs && node --check play-session-manager.js && node --check play-session-capture-grant.js && node --check play-session-process-policy.js && node --check play-session-input-protocol.js && node --check freenet-content-provider.js && node --check main.js && node --check preload.js && node --check stream-server.js && node --check netplay-manager.js && node --check src/app.js && node --check src/streaming.js && node --check src/netplay.js && node --check mobile/web/app.js && node --check mobile/web/sw.js && node scripts/play-session-manager.test.mjs && node scripts/play-session-capture-grant.test.mjs && node scripts/play-session-process-policy.test.mjs && node scripts/play-session-input-protocol.test.mjs && node scripts/runtime-cache-stream-limit.test.mjs && node scripts/community-content-provider.test.cjs && node scripts/smoke-test.mjs",
+    "check": "node scripts/repo-audit.mjs && node --check play-session-manager.js && node --check play-session-capture-grant.js && node --check play-session-process-policy.js && node --check play-session-input-protocol.js && node --check freenet-content-provider.js && node --check freenet-node-manager.js && node --check community-matchmaking.js && node --check community-chat.js && node --check main.js && node --check preload.js && node --check stream-server.js && node --check netplay-manager.js && node --check src/app.js && node --check src/streaming.js && node --check src/netplay.js && node --check mobile/web/app.js && node --check mobile/web/sw.js && node scripts/play-session-manager.test.mjs && node scripts/play-session-capture-grant.test.mjs && node scripts/play-session-process-policy.test.mjs && node scripts/play-session-input-protocol.test.mjs && node scripts/runtime-cache-stream-limit.test.mjs && node scripts/verify-freenet-contract.cjs && node scripts/freenet-node-manager.test.cjs && node scripts/community-content-provider.test.cjs && node scripts/community-asset-builder.test.cjs && node scripts/community-matchmaking.test.cjs && node scripts/community-chat.test.cjs && node scripts/mobile-stream-server.test.cjs && node scripts/smoke-test.mjs",
     "test": "npm run check",
     "pack": "npm run runtime:cache && electron-builder --dir",
     "dist": "npm run runtime:cache && electron-builder --publish never",
@@ -38,7 +38,11 @@
     "video:motion": "npm run video:capture-motion && npm run video:render-motion",
     "video:short": "node scripts/generate-social-short.cjs",
     "video:campaign": "node scripts/generate-social-campaign.cjs",
-    "audit:repo": "node scripts/repo-audit.mjs"
+    "audit:repo": "node scripts/repo-audit.mjs",
+    "freenet:contract": "node scripts/build-freenet-contract.cjs",
+    "community:sign": "node scripts/sign-community-manifest.cjs",
+    "community:live-test": "node scripts/community-content-live.test.cjs && node scripts/community-matchmaking-live.test.cjs",
+    "community:asset": "node scripts/build-community-asset.cjs"
   },
   "devDependencies": {
     "electron": "^43.2.0",
@@ -49,7 +53,7 @@
   "build": {
     "appId": "io.gamedeck.launcher",
     "productName": "GameDeck",
-    "copyright": "Copyright © 2026 B11 Health and GameDeck contributors",
+    "copyright": "Copyright \u00a9 2026 B11 Health and GameDeck contributors",
     "asar": true,
     "directories": {
       "output": "dist",
@@ -63,13 +67,17 @@
       "play-session-process-policy.js",
       "play-session-capture-grant.js",
       "runtime-manager.js",
+      "freenet-node-manager.js",
       "freenet-content-provider.js",
+      "community-matchmaking.js",
+      "community-chat.js",
       "stream-server.js",
       "netplay-manager.js",
       "src/**/*",
       "assets/**/*",
       "!assets/branding/brand-kit/**/*",
       "config/**/*",
+      "contracts/*.wasm",
       "sponsors.json",
       "LICENSE",
       "!**/*.map",
@@ -173,6 +181,7 @@
   },
   "dependencies": {
     "@freenetorg/freenet-stdlib": "^0.3.0",
+    "@noble/hashes": "2.2.0",
     "7zip-bin": "^5.2.0"
   }
 }

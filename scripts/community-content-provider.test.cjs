@@ -54,6 +54,11 @@ const { createFreenetContentProvider, sha256Buffer } = require('../freenet-conte
   });
 
   assert(provider.findAsset({ folder: 'nes', fileName: 'qa-game.nes' }));
+  const systems = provider.catalogSystems();
+  assert.strictEqual(systems.length, 1, 'approved community system should be listed');
+  const games = provider.catalogGames(systems[0].source);
+  assert.strictEqual(games.length, 1, 'approved community game should be listed');
+  assert.strictEqual(games[0].id, 0, 'catalog game IDs should be stable numeric indexes');
   const result = await provider.downloadAsset(asset);
   assert.strictEqual(fs.readFileSync(result.file).compare(bytes), 0, 'fallback file must match original bytes');
 

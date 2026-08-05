@@ -2,52 +2,86 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
   <meta name="theme-color" content="#090b10">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self' blob:; connect-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'self'">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="GameDeck Live">
-  <title>GameDeck Live</title>
+  <meta name="apple-mobile-web-app-title" content="GameDeck">
+  <title>GameDeck</title>
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
   <div class="ambient" aria-hidden="true"></div>
-  <header>
-    <div class="brand"><span class="mark">G</span><span><b>GAMEDECK</b><small>LIVE RECEIVER</small></span></div>
-    <span class="secure">LOCAL NETWORK</span>
+  <header id="appHeader">
+    <div class="brand"><span class="mark">G</span><span><b>GAMEDECK</b><small>PLAY TOGETHER</small></span></div>
+    <nav class="mobile-tabs hidden" id="mobileTabs" aria-label="GameDeck mobile sections">
+      <button class="active" type="button" data-tab="play">Play</button>
+      <button type="button" data-tab="community">Community</button>
+    </nav>
+    <span class="secure">PRIVATE CONNECTION</span>
   </header>
   <main>
     <section class="pair-card" id="pairCard">
       <div class="kicker">PAIR WITH YOUR DECK</div>
-      <h1>Play where you are.</h1>
-      <p>Enter the six-digit code shown in GameDeck Live on your computer.</p>
+      <h1>Your games.<br><em>In your hands.</em></h1>
+      <p>Enter the six-digit code shown by GameDeck. Video, audio, controls, rooms, and chat stay attached to your paired deck.</p>
       <form id="pairForm">
         <label><span>Pairing code</span><input id="pairCode" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="000000" autocomplete="one-time-code"></label>
-        <label><span>Device name</span><input id="deviceName" maxlength="64" placeholder="My phone"></label>
+        <label><span>Player name</span><input id="deviceName" maxlength="40" placeholder="Player"></label>
         <button type="submit">Connect to GameDeck</button>
       </form>
+      <p class="pair-note">Connect an Xbox, PlayStation, 8BitDo, or generic Android gamepad before or after pairing. GameDeck detects it automatically.</p>
       <p class="error hidden" id="pairError" role="alert"></p>
     </section>
 
-    <section class="player-card hidden" id="playerCard">
+    <section class="player-card hidden" id="playerCard" data-panel="play">
       <div class="player-top">
-        <div><span class="live-dot"></span><b id="streamTitle">GameDeck Live</b><small id="streamMeta">Connecting…</small></div>
-        <button id="disconnect" type="button">Disconnect</button>
+        <div><span class="live-dot"></span><b id="streamTitle">GameDeck</b><small id="streamMeta">Connecting…</small></div>
+        <div class="player-top-actions"><span class="controller-state" id="controllerState">Touch controls</span><button id="disconnect" type="button">Disconnect</button></div>
       </div>
       <div class="video-shell" id="videoShell">
-        <video id="video" autoplay playsinline controls></video>
-        <div class="waiting" id="waiting"><span></span><b>Waiting for your deck</b><small>Keep GameDeck Live open on the computer.</small></div>
+        <video id="video" autoplay playsinline></video>
+        <div class="waiting" id="waiting"><span></span><b>Waiting for your deck</b><small>Keep GameDeck open on the computer.</small></div>
+        <div class="touch-controller" id="touchController" aria-label="GameDeck touch controller">
+          <div class="shoulders left"><button type="button" data-button="10">L</button><button type="button" data-button="12">L2</button></div>
+          <div class="shoulders right"><button type="button" data-button="13">R2</button><button type="button" data-button="11">R</button></div>
+          <div class="dpad" aria-label="Directional pad">
+            <button type="button" class="up" data-button="4" aria-label="Up">▲</button>
+            <button type="button" class="left" data-button="6" aria-label="Left">◀</button>
+            <span></span>
+            <button type="button" class="right" data-button="7" aria-label="Right">▶</button>
+            <button type="button" class="down" data-button="5" aria-label="Down">▼</button>
+          </div>
+          <div class="face-buttons" aria-label="Action buttons">
+            <button type="button" class="y" data-button="1">Y</button>
+            <button type="button" class="x" data-button="9">X</button>
+            <button type="button" class="b" data-button="0">B</button>
+            <button type="button" class="a" data-button="8">A</button>
+          </div>
+          <div class="center-buttons"><button type="button" data-button="2">SELECT</button><button type="button" data-button="3">START</button></div>
+        </div>
+        <button class="reveal-chrome hidden" id="revealChrome" type="button" aria-label="Show GameDeck controls">•••</button>
       </div>
       <div class="player-actions">
         <button id="fullscreen" type="button">Fullscreen</button>
         <button id="mute" type="button">Mute</button>
+        <button id="touchToggle" type="button">Touch controls</button>
         <button id="install" class="hidden" type="button">Install app</button>
       </div>
-      <div class="quality-row"><span id="quality">1080p</span><span>WEBRTC · DIRECT LAN</span><span id="connection">CONNECTING</span></div>
+      <div class="quality-row"><span id="quality">1080p</span><span id="playerSlot">PLAYER 1</span><span>WEBRTC · LOW LATENCY</span><span id="connection">CONNECTING</span></div>
+    </section>
+
+    <section class="community-panel hidden" id="communityPanel" data-panel="community">
+      <div class="community-hero"><div><p class="kicker">GAMEDECK COMMUNITY</p><h2>Find a game.<br><em>Find your people.</em></h2><p>Your paired desktop checks its verified library for compatible public rooms. Joining never transfers the game to Android.</p></div><button id="refreshCommunity" type="button">Refresh</button></div>
+      <div class="community-grid">
+        <section class="rooms-card"><div class="section-head"><div><small>OPEN ROOMS</small><b>Games ready on your deck</b></div><span id="roomsStatus">Not loaded</span></div><div class="rooms-list" id="roomsList"><div class="empty">Compatible rooms will appear here.</div></div></section>
+        <section class="chat-card"><div class="section-head"><div><small>COMMUNITY CHAT</small><b>Who wants to play?</b></div><span id="chatStatus">Signed messages</span></div><div class="chat-list" id="chatList"><div class="empty">Messages will appear here.</div></div><form id="chatForm"><input id="chatInput" aria-label="Community chat message" maxlength="600" placeholder="Ask who wants to play…" autocomplete="off"><button type="submit">Send</button></form></section>
+      </div>
     </section>
   </main>
-  <footer>Gameplay stays between this device and your computer.</footer>
+  <footer id="appFooter">Your library stays on your computer. GameDeck sends only the stream, controller events, and community state.</footer>
   <script src="/app.js"></script>
 </body>
 </html>

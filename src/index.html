@@ -248,7 +248,7 @@
 
       <section id="discover" class="discover hidden">
         <div class="discover-label">
-          <span>RGSX CONSOLES</span>
+          <span>GAMEDECK CONSOLES</span>
           <small>Choose a console, then move down into its games.</small>
         </div>
         <div class="console-rail" id="consoleRail"></div>
@@ -257,21 +257,21 @@
           <div class="feature-backdrop" aria-hidden="true"><img id="catalogFeatureBackdrop" alt=""></div>
           <div class="catalog-feature-art" id="catalogFeatureArt"></div>
           <div class="catalog-feature-copy">
-            <div class="eyebrow" id="catalogFeatureSystem">RGSX TITLE</div>
+            <div class="eyebrow" id="catalogFeatureSystem">GAMEDECK TITLE</div>
             <h2 id="catalogFeatureTitle">Select a game</h2>
             <div class="feature-detail-head"><div class="feature-facts" id="catalogFeatureFacts"></div><span class="feature-source" id="catalogFeatureSource">CATALOG DETAILS</span></div>
             <p class="feature-description" id="catalogFeatureDescription">Browse the catalog, then choose a title for the full details.</p>
-            <p class="feature-status" id="catalogFeatureMeta">Downloads are handled by RGSX.</p>
+            <p class="feature-status" id="catalogFeatureMeta">GameDeck finds and verifies the best available copy.</p>
           </div>
           <div class="catalog-feature-actions">
             <button type="button" id="catalogSetup" class="hidden">Setup console</button>
-            <button type="button" class="primary" id="catalogFeatureAction">Get with RGSX</button>
+            <button type="button" class="primary" id="catalogFeatureAction">Get game</button>
           </div>
         </section>
 
         <div class="catalog-head">
           <div>
-            <div class="eyebrow">RGSX CATALOG</div>
+            <div class="eyebrow">GAMEDECK CATALOG</div>
             <h2 id="catalogTitle">Choose a console</h2>
           </div>
           <span id="catalogCount"></span>
@@ -287,8 +287,8 @@
         <section class="community-hero">
           <div class="community-hero-copy">
             <div class="eyebrow">OPEN SOURCE · PLAYER OWNED</div>
-            <h1>The deck gets better<br><em>when everyone builds.</em></h1>
-            <p>GameDeck is a local-first launcher for legally owned game libraries. Help us ship cleaner setup, broader emulator support, and the best couch-first experience on every desktop.</p>
+            <h1>The deck gets better<br><em>when everyone plays.</em></h1>
+            <p>GameDeck turns legally owned libraries into a living player network. Find compatible rooms, host a game, invite friends, and keep the community playable even when individual services disappear.</p>
             <div class="community-actions">
               <button type="button" class="primary" id="openGithub">View on GitHub</button>
               <button type="button" id="openDiscussions">Open Discussions</button>
@@ -304,18 +304,26 @@
           </div>
         </section>
 
+        <section class="community-play-hub" id="communityPlayHub" aria-labelledby="communityPlayTitle">
+          <div class="community-play-head">
+            <div><div class="card-kicker">PLAY TOGETHER NOW</div><h2 id="communityPlayTitle">Open rooms for games already in your deck.</h2><p id="communityPlayStatus" aria-live="polite">GameDeck can scan your most-played and favorite games for compatible players.</p></div>
+            <button class="primary" id="communityPlayRefresh" type="button">Find players</button>
+          </div>
+          <div class="community-play-grid" id="communityPlayRooms"><div class="community-play-empty">Open Rooms will appear here when compatible hosts are online.</div></div>
+        </section>
+
         <section class="community-resource-hub" id="communityResourceHub" aria-labelledby="communityResourceTitle">
           <article class="community-resource-primary">
             <div class="community-resource-mark" aria-hidden="true">GD</div>
             <div class="community-resource-copy">
               <div class="card-kicker">LIVE PLAYER COMMUNITY</div>
-              <h2 id="communityResourceTitle">Find a player. Fix a setup. Shape the next release.</h2>
-              <p>Use GitHub Discussions to find players and share ideas. Keep Remote Play invitations private, use Releases for announcements, and use Issues for support and compatibility reports.</p>
+              <h2 id="communityResourceTitle">Plan events. Get support. Shape the next release.</h2>
+              <p>Use Open Rooms above for live play. Discussions remain useful for scheduled events and ideas, Releases carry announcements, and Issues handle support and compatibility reports.</p>
               <div class="community-resource-actions">
-                <button class="primary" id="openPlayerDiscussion" type="button">Find Remote Play partners</button>
-                <button id="copyPlayerDiscussion" type="button">Copy tester link</button>
+                <button class="primary" id="openPlayerDiscussion" type="button">Plan a community event</button>
+                <button id="copyPlayerDiscussion" type="button">Copy community link</button>
               </div>
-              <div class="community-resource-meta"><span>GitHub Discussions</span><span>Public issue tracking</span><span>Open-source community</span></div>
+              <div class="community-resource-meta"><span>Scheduled events</span><span>Public issue tracking</span><span>Open-source community</span></div>
             </div>
           </article>
           <div class="community-resource-grid" aria-label="GameDeck community resources">
@@ -577,7 +585,11 @@
         </div>
         <div class="netplay-panels">
           <section class="netplay-panel" id="syncHostPanel" role="tabpanel">
-            <div class="multiplayer-mode-note sync-note"><b>Both players need an exact match.</b><span>GameDeck verifies the ROM and core locally, then creates a short relay invitation.</span></div>
+            <div class="multiplayer-mode-note sync-note"><b>Both players need an exact match.</b><span>GameDeck verifies the game and core locally, then creates a community-ready relay room.</span></div>
+            <div class="netplay-options community-host-options">
+              <label><span>Player name</span><input id="syncHostName" maxlength="40" placeholder="Player"></label>
+              <label class="community-room-toggle"><input id="syncDiscoverable" type="checkbox" checked><span><b>List in Open Rooms</b><small>Compatible players can find and join while this room is active.</small></span></label>
+            </div>
             <details class="multiplayer-advanced">
               <summary>Session options</summary>
               <div class="netplay-options">
@@ -594,6 +606,11 @@
             </div>
           </section>
           <section class="netplay-panel hidden" id="syncJoinPanel" role="tabpanel">
+            <section class="community-room-browser" aria-labelledby="communityRoomsTitle">
+              <div class="community-room-head"><div><span>OPEN GAMEDECK ROOMS</span><b id="communityRoomsTitle">Players ready for this exact game</b><small id="communityRoomsStatus" aria-live="polite">Select a verified game to search.</small></div><button class="multiplayer-quiet-action" id="communityRoomsRefresh" type="button">Refresh</button></div>
+              <div class="community-room-list" id="communityRoomList"><div class="community-room-empty">No compatible rooms loaded yet.</div></div>
+            </section>
+            <div class="community-room-divider"><span>or join privately</span></div>
             <label class="netplay-invite-input"><span>Host's same-game invitation</span><textarea id="syncJoinInvite" placeholder="Paste the GDPLAY1 invitation here"></textarea><small>GameDeck will reject mismatched games or core builds before connecting.</small></label>
             <label><span>Player name</span><input id="syncNickname" maxlength="28" placeholder="Player 2"></label>
             <button class="netplay-primary" id="syncJoin" type="button"><span aria-hidden="true">→</span><b>Verify and join</b></button>

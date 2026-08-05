@@ -283,6 +283,7 @@ function createNetplayManager(options = {}) {
     const relay = RELAYS[spec.relayId] || RELAYS.nyc;
     const id = `host-${Date.now()}-${randomToken(4)}`;
     const nickname = `GameDeck-${randomToken(5)}`.slice(0, 28);
+    const displayName = String(spec.nickname || 'Player').replace(/[\r\n\0\x00-\x1f\x7f]/g, ' ').trim().slice(0, 40) || 'Player';
     const password = randomToken(9);
     const startedAt = Date.now();
     const contentSha256 = spec.contentSha256 || await fileSha256(spec.contentFile);
@@ -323,6 +324,8 @@ function createNetplayManager(options = {}) {
       coreFile: path.basename(spec.corePath),
       coreLabel: spec.coreLabel || path.basename(spec.corePath),
       nickname,
+      displayName,
+      discoverable: spec.discoverable !== false,
       password,
       maxPlayers: Math.max(2, Math.min(16, Number(spec.maxPlayers || 4))),
       playerCount: 1,

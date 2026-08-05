@@ -5,6 +5,8 @@
   let signalingTimer = null;
   let elapsedTimer = null;
   const peers = new Map();
+  const controlChannels = new Map();
+  const viewerSlots = new Map();
 
   const qualityProfiles = {
     '1080p': { width: 1920, height: 1080, frameRate: 60 },
@@ -133,17 +135,45 @@
 
   function closePeer(viewerId) {
     const peer = peers.get(viewerId);
+    const channel = controlChannels.get(viewerId);
+    if (channel) {
+      try { channel.close(); } catch {}
+      controlChannels.delete(viewerId);
+    }
+    viewerSlots.delete(viewerId);
     if (peer) {
       try { peer.close(); } catch {}
       peers.delete(viewerId);
     }
   }
 
-  async function createViewerPeer(viewerId) {
+  async function createViewerPeer(viewerId, playerIndex = 0) {
     if (!captureStream || peers.has(viewerId)) return;
     const peer = new RTCPeerConnection({ iceServers: [] });
     peers.set(viewerId, peer);
+    viewerSlots.set(viewerId, Number(playerIndex || 0));
     for (const track of captureStream.getTracks()) peer.addTrack(track, captureStream);
+    const control = peer.createDataChannel('gamedeck-control', { ordered: false, maxRetransmits: 0 });
+    controlChannels.set(viewerId, control);
+    control.onopen = () => {
+      control.send(JSON.stringify({ type: 'ready', playerIndex: viewerSlots.get(viewerId) || 0, protocol: 1 }));
+    };
+    control.onmessage = async event => {
+      try {
+        const payload = JSON.parse(String(event.data || ''));
+        if (payload?.type !== 'input' && payload?.type !== 'controller-state') return;
+        const result = await window.deck.streamViewerInput(viewerId, {
+          playerIndex: viewerSlots.get(viewerId) || 0,
+          controllerConnected: Boolean(payload.controllerConnected),
+          events: Array.isArray(payload.events) ? payload.events.slice(0, 32) : []
+        });
+        if (control.readyState === 'open' && payload.sequence !== undefined) {
+          control.send(JSON.stringify({ type: 'ack', sequence: payload.sequence, accepted: Boolean(result?.accepted) }));
+        }
+      } catch (error) {
+        console.warn('GameDeck controller channel:', error);
+      }
+    };
     peer.onicecandidate = event => {
       if (event.candidate) sendSignal(viewerId, { candidate: event.candidate.toJSON() }).catch(() => {});
     };
@@ -158,7 +188,7 @@
   async function handleHostSignal(message) {
     const viewerId = message.viewerId;
     if (message.type === 'viewer-joined') {
-      await createViewerPeer(viewerId);
+      await createViewerPeer(viewerId, message.playerIndex || 0);
       return;
     }
     if (message.type === 'viewer-left') {
@@ -168,7 +198,7 @@
     if (message.type !== 'signal') return;
     let peer = peers.get(viewerId);
     if (!peer) {
-      await createViewerPeer(viewerId);
+      await createViewerPeer(viewerId, viewerSlots.get(viewerId) || 0);
       peer = peers.get(viewerId);
     }
     const payload = message.payload || {};

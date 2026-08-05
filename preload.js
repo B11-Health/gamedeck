@@ -30,6 +30,7 @@ contextBridge.exposeInMainWorld('deck', {
   streamStop: () => ipcRenderer.invoke('stream-stop'),
   streamHostPull: () => ipcRenderer.invoke('stream-host-pull'),
   streamHostSend: (viewerId, payload) => ipcRenderer.invoke('stream-host-send', viewerId, payload),
+  streamViewerInput: (viewerId, payload) => ipcRenderer.invoke('stream-viewer-input', viewerId, payload),
   remotePlayCodeEncode: (prefix, payload) => ipcRenderer.invoke('remote-play-code-encode', prefix, payload),
   remotePlayCodeDecode: (value, acceptedPrefixes) => ipcRenderer.invoke('remote-play-code-decode', value, acceptedPrefixes),
   remotePlayStatus: () => ipcRenderer.invoke('remote-play-status'),
@@ -40,6 +41,9 @@ contextBridge.exposeInMainWorld('deck', {
   netplayGameInfo: file => ipcRenderer.invoke('netplay-game-info', file),
   netplayMatchInfo: file => ipcRenderer.invoke('netplay-match-info', file),
   netplayRelays: () => ipcRenderer.invoke('netplay-relays'),
+  communityMatchmakingStatus: () => ipcRenderer.invoke('community-matchmaking-status'),
+  communityRooms: file => ipcRenderer.invoke('community-rooms', file),
+  communityLibraryRooms: () => ipcRenderer.invoke('community-library-rooms'),
   netplayHost: (file, config) => ipcRenderer.invoke('netplay-host', file, config || {}),
   netplayJoin: (invite, preferredFile, config) => ipcRenderer.invoke('netplay-join', invite, preferredFile || '', config || {}),
   netplayStop: () => ipcRenderer.invoke('netplay-stop'),
@@ -74,6 +78,11 @@ contextBridge.exposeInMainWorld('deck', {
     const listener = (_, update) => callback(update);
     ipcRenderer.on('netplay-update', listener);
     return () => ipcRenderer.removeListener('netplay-update', listener);
+  },
+  onCommunityRooms: callback => {
+    const listener = (_, update) => callback(update);
+    ipcRenderer.on('community-room-update', listener);
+    return () => ipcRenderer.removeListener('community-room-update', listener);
   },
   onLaunch: callback => {
     const listener = (_, update) => callback(update);
