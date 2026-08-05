@@ -1,70 +1,96 @@
-# GameDeck Android desktop-parity preview
+# GameDeck Android
 
-This module is the Android platform adapter for GameDeck. Android packages the repository's shared desktop renderer (`src/index.html`, `src/app.js`, `src/styles.css`, streaming, netplay, branding, and system-theme assets) rather than maintaining a separate reduced product UI.
+This module packages GameDeck's shared desktop renderer with an Android platform bridge. The Android UI is not a separate reduced product: Library, Discover, Community, metadata, artwork, favorites, recents, downloads, and responsive presentation use the same renderer contracts as desktop.
 
-## Current preview
+## Current development build
 
-The `0.3.1-parity-preview` provides:
+`0.4.1-controls` includes:
 
-- the same Library, Discover, Multiplayer, Activity, and System renderer used by desktop GameDeck;
-- Android Storage Access Framework folder selection with persisted, folder-scoped access;
-- local scanning with the same system IDs, aliases, extensions, labels, favorites, and recent-play model;
-- local cover-art discovery from adjacent files and common `images`, `artwork`, `boxart`, `covers`, and `media` folders;
-- local JSON metadata sidecars for descriptions, release dates, years, genres, players, ratings, developers, publishers, regions, and editions;
-- automatic artwork and Discover catalog lookup through GameDeck's internal Libretro-thumbnail provider mapping, without exposing provider setup to users;
-- responsive phone, tablet, landscape, touch, keyboard, and controller presentation around the shared desktop renderer;
-- the existing GameDeck Live LAN receiver as a separate Remote route;
-- truthful runtime classification: `integrated_external` when a compatible RetroArch package is detected, otherwise `blocked` with `android_embedded_runtime_pending`.
+- portrait and landscape layouts designed independently for phones;
+- persistent compact navigation and Android safe-area handling;
+- local library scanning through the Storage Access Framework;
+- adjacent artwork and JSON metadata discovery;
+- an automatic managed Discover provider with one-tap **Get** installation for lawful catalog entries;
+- persistent native download jobs with queued, running, progress, verify, complete, paused, retry, and error states;
+- a private managed library exposed to compatible game engines through a read-only content provider;
+- controller-first spatial navigation with D-pad and analog input;
+- A select, B back, X favorite, Y details, L1/R1 tab switching, L2/R2 paging, Start multiplayer, and Select menu;
+- held-direction repeat timing, visible controller focus, controller hints, pressed-state animation, and native haptic feedback;
+- touch targets and active feedback tuned separately from controller focus;
+- GameDeck Live preserved as a separate remote receiver route.
 
-## Desktop contract mapping
+RGSX remains an internal provider. Users do not select an RGSX folder or configure the provider.
 
-Android supplies a native-backed `window.deck` platform adapter to the shared renderer:
+## Runtime boundary
 
-| Desktop contract | Android implementation |
-| --- | --- |
-| `library()` / `rescan()` | Secure document-tree scan, system classification, artwork, metadata, favorites, and recents |
-| `artwork()` | Local artwork first, then automatic provider lookup |
-| `gameDetails()` | Local sidecar metadata with truthful local fallback copy |
-| `catalogSystems()` / `catalogGames()` | Automatic Discover catalog and installed-title matching |
-| `favorite()` | Android preferences with full-library refresh |
-| `launch()` | Truthful experimental external route or stable blocked reason |
-| `runtimeStatus()` | Android runtime components and reason code |
-| `chooseDirectory()` | Android system folder picker |
-| GameDeck Live | Existing LAN host URL loaded in the receiver WebView |
+The Android app can browse, install, organize, and expose managed content. A compatible external RetroArch package is currently the only launch route. The embedded libretro host, verified Android core set, firmware provisioning, direct `GDREMOTE2` guest mode, and synchronized netplay remain separate implementation gates.
 
-No game, BIOS, save, key, library inventory, or private path is uploaded by this module. Online artwork/catalog requests contain only public system/title identifiers.
+GameDeck does not bundle commercial games, copyrighted firmware, encryption keys, or unauthorized download sources. Managed catalog entries must be homebrew, public-domain, freely redistributable, or supplied through a user-authorized lawful source.
 
-## Explicit limitations
+## Fast Termux workflow
 
-Shared renderer parity does not imply runtime parity. This preview does not yet bundle:
+The recommended iteration loop is on-device Termux, using one stable debug keystore and wireless ADB to reinstall the app without cloud-build signature conflicts.
 
-- an embedded libretro host or signed Android core set;
-- firmware provisioning or managed repair transfers;
-- direct `GDREMOTE2` WebRTC guest signaling and RetroPad input;
-- exact-match synchronized netplay;
-- production signing or Play-distribution AAB output.
+From the repository root:
 
-Unsupported controls remain visible only where required by the shared renderer and return stable, truthful Android reason codes.
+```bash
+cd mobile/android
+bash termux/setup.sh
+source "$HOME/.config/gamedeck/android-env.sh"
+bash termux/dev.sh install-run
+```
 
-## Validation
+`setup.sh` installs Java 17, Gradle, native ARM64 `aapt2`, Android tools, Android SDK 36, and a stable debug keystore. It patches the SDK build-tools directory to use Termux-native Android binaries.
 
-The Android workflow builds the exact pull-request revision, installs it on a clean API 36 emulator, completes the full desktop startup transition, and uses a private debug-only fixture to verify that the renderer displays a title, cover artwork, description, year, and genre. The fixture is activated only by a marker inside the debuggable app's private sandbox and is inactive for normal users.
+Pair wireless ADB once from Android **Developer options → Wireless debugging**:
 
-## Build
+```bash
+adb pair 127.0.0.1:PAIRING_PORT
+adb connect 127.0.0.1:DEBUG_PORT
+```
+
+The ports change whenever wireless debugging is restarted. After pairing, the normal commands are:
+
+```bash
+bash termux/dev.sh build
+bash termux/dev.sh install-run
+bash termux/dev.sh qa
+bash termux/dev.sh logs
+bash termux/dev.sh watch
+```
+
+`install-run` performs an incremental build, replaces the existing debug app, and launches it. `qa` captures portrait and landscape screenshots, window focus, package state, APK checksum, and logcat evidence. `watch` rebuilds and relaunches whenever Android or shared renderer files change.
+
+Without wireless ADB, `install` opens the Android Package Installer as a fallback.
+
+## Desktop build environment
 
 Requirements:
 
 - JDK 17 or newer
 - Android SDK 36
-- Gradle 9.6 or compatible wrapper environment
+- Gradle 9.6 or compatible environment
 
 ```bash
 cd mobile/android
 gradle :app:assembleDebug
 ```
 
-The debug APK is generated under `app/build/outputs/apk/debug/`.
+The APK is generated at:
 
-## Legal and trust boundary
+```text
+app/build/outputs/apk/debug/app-debug.apk
+```
 
-GameDeck does not include commercial games, copyrighted firmware, encryption keys, or commercial artwork. Users must provide only files they are legally entitled to use. Discovery providers remain internal implementation details and must preserve the same ownership, privacy, and guest-isolation boundaries as desktop GameDeck.
+## Validation gates
+
+Pull-request validation includes:
+
+- clean API 36 installation and cold launch;
+- renderer-ready and crash scanning;
+- portrait and landscape visual screenshots;
+- verified Library, Discover, Community, scrolling, and overflow-menu states;
+- real Discover **Get** activation through the rendered button, managed-file checksum verification, and persistence after restart;
+- controller focus visibility, spatial movement, L1/R1 navigation, Select menu, B back, and landscape retention.
+
+The QA fixture is activated only by a marker inside the debuggable app's private sandbox and is inactive for normal installations.
