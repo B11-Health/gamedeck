@@ -1,6 +1,7 @@
 const REPO='B11-Health/gamedeck';
 const RELEASE=`https://github.com/${REPO}/releases/latest`;
 const API=`https://api.github.com/repos/${REPO}/releases/latest`;
+const COMMUNITY_PREVIEW_API=`https://api.github.com/repos/${REPO}/releases/tags/community-preview`;
 const ANDROID_PREVIEW_API=`https://api.github.com/repos/${REPO}/releases/tags/android-preview`;
 const platforms={
   windows:{label:'Installer · x64',score:asset=>/\.(exe|msi)$/i.test(asset.name)&&!/blockmap|sha256|checksum/i.test(asset.name)?(/setup|installer/i.test(asset.name)?3:2):0},
@@ -18,23 +19,33 @@ async function hydrateRelease(){
   const cards={};
   document.querySelectorAll('[data-platform]').forEach(card=>{cards[card.dataset.platform]=card;card.href=RELEASE});
   try{
-    const response=await fetch(API,{headers:{Accept:'application/vnd.github+json'}});
-    if(!response.ok)throw new Error('release unavailable');
-    const release=await response.json();
-    const version=String(release.tag_name||'').replace(/^v/,'');
-    if(version)document.querySelector('#releaseVersion').textContent=`GameDeck ${version}`;
-    let assets=release.assets||[];
-    if(!bestAsset(assets,platforms.android)){try{const previewResponse=await fetch(ANDROID_PREVIEW_API,{headers:{Accept:'application/vnd.github+json'}});if(previewResponse.ok){const preview=await previewResponse.json();assets=[...assets,...(preview.assets||[])]}}catch{}}
-    const checksum=assets.find(asset=>/sha256|checksums?/i.test(asset.name));
-    document.querySelector('#releaseStatus').textContent=release.prerelease?'Preview release':checksum?'Assets + checksums available':'Release assets available';
+    const stableResponse=await fetch(API,{headers:{Accept:'application/vnd.github+json'}});
+    if(!stableResponse.ok)throw new Error('release unavailable');
+    const stable=await stableResponse.json();
+    let preview=null;
+    try{const response=await fetch(COMMUNITY_PREVIEW_API,{headers:{Accept:'application/vnd.github+json'}});if(response.ok)preview=await response.json()}catch{}
+    const stableAssets=stable.assets||[];
+    let previewAssets=preview?.assets||[];
+    if(!bestAsset(previewAssets,platforms.android)){try{const response=await fetch(ANDROID_PREVIEW_API,{headers:{Accept:'application/vnd.github+json'}});if(response.ok){const androidPreview=await response.json();previewAssets=[...previewAssets,...(androidPreview.assets||[])]}}catch{}}
+    const usePreview=previewAssets.some(asset=>Object.values(platforms).some(config=>config.score(asset)>0));
+    const version=usePreview?'1.3.0 Community Preview':String(stable.tag_name||'').replace(/^v/,'');
+    document.querySelector('#releaseVersion').textContent=usePreview?`GameDeck ${version}`:`GameDeck ${version}`;
+    const checksum=[...previewAssets,...stableAssets].find(asset=>/sha256|checksums?/i.test(asset.name));
+    document.querySelector('#releaseStatus').textContent=usePreview?(checksum?'Matching preview builds + checksums':'Matching community preview builds'):(checksum?'Assets + checksums available':'Release assets available');
     for(const[key,config]of Object.entries(platforms)){
       const card=cards[key];if(!card)continue;
-      const asset=bestAsset(assets,config);
+      const previewAsset=bestAsset(previewAssets,config);
+      const stableAsset=bestAsset(stableAssets,config);
+      const asset=previewAsset||stableAsset;
       if(!asset){card.classList.add('unavailable');card.querySelector('em').textContent='View release';continue}
       card.classList.remove('unavailable');card.href=asset.browser_download_url;
-      const size=formatBytes(asset.size);card.querySelector('[data-asset-detail]').textContent=`${config.label}${size?' · '+size:''}`;
-      if(key==='android')card.querySelector('em').textContent='Download APK';
+      card.dataset.channel=previewAsset?'preview':'stable';
+      const size=formatBytes(asset.size);
+      const prefix=previewAsset?'Community Preview · ':'';
+      card.querySelector('[data-asset-detail]').textContent=`${prefix}${config.label}${size?' · '+size:''}`;
+      card.querySelector('em').textContent=key==='android'?'Download APK':'Download';
     }
+    document.querySelectorAll('[data-stable-release]').forEach(link=>link.href=stable.html_url||RELEASE);
     setAutoLink(cards);
   }catch{
     document.querySelector('#releaseStatus').textContent='Open the latest GitHub release';
