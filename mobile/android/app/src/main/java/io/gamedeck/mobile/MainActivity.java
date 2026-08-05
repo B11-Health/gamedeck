@@ -77,7 +77,7 @@ public class MainActivity extends Activity {
         settings.setBuiltInZoomControls(false);
         settings.setDisplayZoomControls(false);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) settings.setOffscreenPreRaster(true);
-        settings.setUserAgentString(settings.getUserAgentString() + " GameDeckAndroid/0.3.3-orientation-polish");
+        settings.setUserAgentString(settings.getUserAgentString() + " GameDeckAndroid/0.4.0-rgsx-get");
 
         bridge = new DeckBridge(this);
         exposeBridge();
@@ -222,6 +222,9 @@ public class MainActivity extends Activity {
             return;
         }
         switch (command) {
+            case "rgsx:get-ui":
+                runRgsxUiQa();
+                break;
             case "menu:open":
                 evaluate("(()=>{const m=document.querySelector('#headerMenu');if(m&&m.classList.contains('hidden'))document.querySelector('#headerMenuToggle')?.click();})()");
                 break;
@@ -237,6 +240,30 @@ public class MainActivity extends Activity {
             default:
                 break;
         }
+    }
+
+    private void runRgsxUiQa() {
+        evaluate(
+            "(()=>{" +
+            "const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));" +
+            "const report=(qa,detail)=>{try{window.GameDeckAndroid.reportQaState(JSON.stringify({qa,detail:detail||''}));}catch{}};" +
+            "(async()=>{" +
+            "const nav=document.querySelector('.nav[data-view=\"discover\"]');" +
+            "if(!nav){report('rgsx-get-error','Discover navigation missing');return;}" +
+            "nav.click();" +
+            "let system=null;" +
+            "for(let i=0;i<100&&!system;i++){system=document.querySelector('.console-card:not(.catalog-skeleton)');if(!system)await wait(100);}" +
+            "if(!system){report('rgsx-get-error','Catalog system card missing');return;}" +
+            "system.click();" +
+            "let button=null;" +
+            "for(let i=0;i<100&&!button;i++){const candidate=document.querySelector('#catalogFeatureAction');if(candidate&&!candidate.disabled&&!/Working|Downloading|Play now|Finish setup/i.test(candidate.textContent||''))button=candidate;if(!button)await wait(100);}" +
+            "if(!button){report('rgsx-get-error','Discover Get action missing');return;}" +
+            "const label=(button.textContent||'').trim();" +
+            "button.click();" +
+            "report('rgsx-get-clicked',label);" +
+            "})().catch(error=>report('rgsx-get-error',String(error&&error.message||error)));" +
+            "})()"
+        );
     }
 
     void chooseTree(int requestCode) {
