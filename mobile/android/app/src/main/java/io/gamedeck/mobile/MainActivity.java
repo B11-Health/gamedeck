@@ -42,6 +42,8 @@ public class MainActivity extends Activity {
     private Uri remoteOrigin;
     private int horizontalDirection = 0;
     private int verticalDirection = 0;
+    private boolean leftTriggerPressed = false;
+    private boolean rightTriggerPressed = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -77,7 +79,7 @@ public class MainActivity extends Activity {
         settings.setBuiltInZoomControls(false);
         settings.setDisplayZoomControls(false);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) settings.setOffscreenPreRaster(true);
-        settings.setUserAgentString(settings.getUserAgentString() + " GameDeckAndroid/0.4.0-rgsx-get");
+        settings.setUserAgentString(settings.getUserAgentString() + " GameDeckAndroid/0.4.1-controls");
 
         bridge = new DeckBridge(this);
         exposeBridge();
@@ -346,8 +348,8 @@ public class MainActivity extends Activity {
             && event.getAction() == MotionEvent.ACTION_MOVE) {
             float x = strongest(event.getAxisValue(MotionEvent.AXIS_HAT_X), event.getAxisValue(MotionEvent.AXIS_X));
             float y = strongest(event.getAxisValue(MotionEvent.AXIS_HAT_Y), event.getAxisValue(MotionEvent.AXIS_Y));
-            int nextHorizontal = x < -0.55f ? -1 : x > 0.55f ? 1 : 0;
-            int nextVertical = y < -0.55f ? -1 : y > 0.55f ? 1 : 0;
+            int nextHorizontal = axisDirection(x, horizontalDirection);
+            int nextVertical = axisDirection(y, verticalDirection);
             if (nextHorizontal != horizontalDirection) {
                 if (horizontalDirection < 0) sendAxis("LEFT", false);
                 if (horizontalDirection > 0) sendAxis("RIGHT", false);
@@ -362,6 +364,25 @@ public class MainActivity extends Activity {
                 if (nextVertical > 0) sendAxis("DOWN", true);
                 verticalDirection = nextVertical;
             }
+
+            float leftTrigger = Math.max(
+                event.getAxisValue(MotionEvent.AXIS_LTRIGGER),
+                event.getAxisValue(MotionEvent.AXIS_BRAKE)
+            );
+            float rightTrigger = Math.max(
+                event.getAxisValue(MotionEvent.AXIS_RTRIGGER),
+                event.getAxisValue(MotionEvent.AXIS_GAS)
+            );
+            boolean nextLeftTrigger = triggerPressed(leftTrigger, leftTriggerPressed);
+            boolean nextRightTrigger = triggerPressed(rightTrigger, rightTriggerPressed);
+            if (nextLeftTrigger != leftTriggerPressed) {
+                sendAxis("L2", nextLeftTrigger);
+                leftTriggerPressed = nextLeftTrigger;
+            }
+            if (nextRightTrigger != rightTriggerPressed) {
+                sendAxis("R2", nextRightTrigger);
+                rightTriggerPressed = nextRightTrigger;
+            }
             return true;
         }
         return super.dispatchGenericMotionEvent(event);
@@ -369,6 +390,18 @@ public class MainActivity extends Activity {
 
     private float strongest(float first, float second) {
         return Math.abs(first) >= Math.abs(second) ? first : second;
+    }
+
+    private int axisDirection(float value, int current) {
+        if (current < 0) return value > -0.34f ? 0 : -1;
+        if (current > 0) return value < 0.34f ? 0 : 1;
+        if (value < -0.58f) return -1;
+        if (value > 0.58f) return 1;
+        return 0;
+    }
+
+    private boolean triggerPressed(float value, boolean current) {
+        return current ? value > 0.32f : value > 0.62f;
     }
 
     private void sendAxis(String input, boolean pressed) {
@@ -390,6 +423,8 @@ public class MainActivity extends Activity {
             case KeyEvent.KEYCODE_BUTTON_SELECT: return "SELECT";
             case KeyEvent.KEYCODE_BUTTON_L1: return "L1";
             case KeyEvent.KEYCODE_BUTTON_R1: return "R1";
+            case KeyEvent.KEYCODE_BUTTON_L2: return "L2";
+            case KeyEvent.KEYCODE_BUTTON_R2: return "R2";
             default: return null;
         }
     }
