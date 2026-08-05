@@ -19,6 +19,17 @@
       && Number.parseFloat(style.opacity || '1') > 0.01;
   };
 
+  const identity = element => {
+    if (!element) return '';
+    const text = String(element.getAttribute('aria-label') || element.dataset?.view || element.dataset?.system || element.textContent || '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 80);
+    return [element.tagName.toLowerCase(), element.id || '', [...element.classList].filter(name => name !== 'controller-focus').slice(0, 3).join('.'), text]
+      .filter(Boolean)
+      .join(':');
+  };
+
   const emit = () => {
     const view = document.querySelector('.nav.active[data-view]')?.dataset.view || '';
     const menuOpen = visible(document.querySelector('#headerMenu'));
@@ -42,6 +53,7 @@
           : 'unknown';
     const header = document.querySelector('.app-shell-header');
     const headerRect = header?.getBoundingClientRect();
+    const controllerFocus = document.querySelector('.controller-focus');
     const payload = {
       view,
       surface,
@@ -55,7 +67,10 @@
       heroVisible: visible(document.querySelector('.hero')),
       spotlightVisible: visible(document.querySelector('#spotlight')),
       headerVisible: visible(header) && Boolean(headerRect && headerRect.bottom > 0 && headerRect.top < innerHeight),
-      headerTop: Math.round(headerRect?.top || 0)
+      headerTop: Math.round(headerRect?.top || 0),
+      controllerMode: document.documentElement.classList.contains('controller-mode'),
+      controllerFocus: identity(controllerFocus),
+      controllerFocusVisible: visible(controllerFocus)
     };
     const key = JSON.stringify(payload);
     if (key === lastKey) return;
@@ -67,6 +82,8 @@
   addEventListener('orientationchange', () => setTimeout(emit, 220));
   document.addEventListener('click', () => setTimeout(emit, 80), true);
   document.addEventListener('scroll', () => setTimeout(emit, 80), true);
-  setInterval(emit, 300);
+  document.addEventListener('focusin', () => setTimeout(emit, 40), true);
+  document.addEventListener('keydown', () => setTimeout(emit, 40), true);
+  setInterval(emit, 250);
   setTimeout(emit, 500);
 })();
