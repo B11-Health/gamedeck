@@ -34,6 +34,76 @@ tasks.register('prepareSharedRenderer') {
             '<script src="platform-android.js"></script>\n  <script src="debug-fixture.js"></script>\n  <script src="app.js"></script>\n  <script src="renderer-probe.js"></script>\n  <script src="android-qa-probe.js"></script>'
         )
         indexFile.write(index, 'UTF-8')
+
+        File platformFile = new File(sharedRendererAssets, 'desktop/platform-android.js')
+        String platform = platformFile.getText('UTF-8')
+        String downloadBridge = '''  const downloadListeners = new Set();
+  const downloadSnapshots = new Map();
+  const pollNativeDownloads = () => {
+    const rows = parse(invoke('downloads', '[]'), []);
+    if (!Array.isArray(rows)) return [];
+    rows.forEach(job => {
+      const id = String(job?.taskId || job?.id || '');
+      if (!id) return;
+      const snapshot = JSON.stringify([
+        job.status, job.stage, job.progress, job.downloadedSize, job.totalSize,
+        job.message, job.installedFile, job.updatedAt
+      ]);
+      if (downloadSnapshots.get(id) === snapshot) return;
+      downloadSnapshots.set(id, snapshot);
+      if (job.status === 'complete') {
+        libraryCache = null;
+        catalogCache.clear();
+      }
+      downloadListeners.forEach(listener => {
+        try { listener(job); } catch {}
+      });
+    });
+    return rows;
+  };
+  const onNativeDownload = listener => {
+    if (typeof listener !== 'function') return () => {};
+    downloadListeners.add(listener);
+    pollNativeDownloads();
+    return () => downloadListeners.delete(listener);
+  };
+  setInterval(pollNativeDownloads, 350);
+
+'''
+        platform = platform.replace(
+            '  window.deck = Object.freeze({',
+            downloadBridge + '  window.deck = Object.freeze({' 
+        )
+        platform = platform.replace(
+            '    catalogSystems,\n    catalogGames,',
+            '''    catalogSystems: async () => parse(invoke('catalogSystems', '[]'), []),
+    catalogGames: async source => parse(invoke('catalogGames', '[]', source || ''), []),'''
+        )
+        platform = platform.replace(
+            "    importOwned: async () => blocked('Discover downloads are not enabled in this preview.', 'android_discover_transfer_pending'),",
+            "    importOwned: async (source, folder, title, fileName) => parse(invoke('importOwned', '{}', source || '', folder || '', title || '', fileName || ''), { ok: false, message: 'Android transfer adapter unavailable.' }),"
+        )
+        platform = platform.replace(
+            '    retryDownload: async () => ({ ok: false }),',
+            "    retryDownload: async taskId => parse(invoke('retryDownload', '{}', taskId || ''), { ok: false }),"
+        )
+        platform = platform.replace(
+            '    pauseDownload: async () => ({ ok: false }),',
+            "    pauseDownload: async taskId => parse(invoke('pauseDownload', '{}', taskId || ''), { ok: false }),"
+        )
+        platform = platform.replace(
+            '    dismissDownload: async () => ({ ok: true }),',
+            "    dismissDownload: async taskId => parse(invoke('dismissDownload', '{\"ok\":true}', taskId || ''), { ok: true }),"
+        )
+        platform = platform.replace(
+            '    onDownload: noopSubscription,',
+            '    onDownload: onNativeDownload,'
+        )
+        platform = platform.replace(
+            "version: '0.3.0-parity-preview'",
+            "version: '0.4.0-rgsx-get'"
+        )
+        platformFile.write(platform, 'UTF-8')
     }
 }
 
@@ -45,8 +115,8 @@ android {
         applicationId 'io.gamedeck.mobile.desktoppreview'
         minSdk 26
         targetSdk 36
-        versionCode 7
-        versionName '0.3.4-orientation-qa'
+        versionCode 8
+        versionName '0.4.0-rgsx-get'
     }
 
     sourceSets {
