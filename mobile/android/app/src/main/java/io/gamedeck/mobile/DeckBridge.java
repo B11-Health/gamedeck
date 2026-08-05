@@ -6,6 +6,8 @@ import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.net.Uri;
 import android.util.Log;
+import android.view.HapticFeedbackConstants;
+import android.view.View;
 import android.webkit.JavascriptInterface;
 
 import org.json.JSONArray;
@@ -37,7 +39,7 @@ final class DeckBridge {
             boolean debuggable = (activity.getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0;
             value.put("platform", "android");
             value.put("platformKey", AndroidRuntimeManager.PLATFORM_KEY);
-            value.put("version", "0.4.0-rgsx-get");
+            value.put("version", "0.4.1-controls");
             value.put("localFirst", true);
             value.put("accountRequired", false);
             value.put("embeddedRuntimeReady", false);
@@ -160,6 +162,36 @@ final class DeckBridge {
         ClipboardManager clipboard = (ClipboardManager) activity.getSystemService(Context.CLIPBOARD_SERVICE);
         if (clipboard != null) clipboard.setPrimaryClip(ClipData.newPlainText("GameDeck", value == null ? "" : value));
         return "{\"ok\":true}";
+    }
+
+    @JavascriptInterface
+    public void haptic(String style) {
+        activity.runOnUiThread(() -> {
+            View target = activity.getWindow().getDecorView();
+            int feedback;
+            String value = style == null ? "" : style.trim().toLowerCase();
+            switch (value) {
+                case "confirm":
+                    feedback = HapticFeedbackConstants.CONFIRM;
+                    break;
+                case "back":
+                    feedback = HapticFeedbackConstants.REJECT;
+                    break;
+                case "edge":
+                    feedback = HapticFeedbackConstants.LONG_PRESS;
+                    break;
+                case "tab":
+                    feedback = HapticFeedbackConstants.CONTEXT_CLICK;
+                    break;
+                default:
+                    feedback = HapticFeedbackConstants.CLOCK_TICK;
+                    break;
+            }
+            target.performHapticFeedback(
+                feedback,
+                HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING
+            );
+        });
     }
 
     @JavascriptInterface
