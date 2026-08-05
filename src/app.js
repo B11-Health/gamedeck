@@ -452,7 +452,8 @@ function renderDownloads() {
     .filter(download => {
       if (download.status !== 'running' && state.dismissedDownloads.has(download.id)) return false;
       if (['running', 'paused', 'error'].includes(download.status)) return true;
-      return now - Number(download.finishedAt || now) < 14000;
+      const finishedAt = Number(download.finishedAt || download.updatedAt || download.startedAt || 0);
+      return finishedAt > 0 && now - finishedAt < 14000;
     })
     .sort((a, b) => Number(b.startedAt || 0) - Number(a.startedAt || 0));
   const running = downloads.filter(download => download.status === 'running');
@@ -3245,6 +3246,10 @@ window.deck.onLaunch(update => {
 
 window.deck.onDownload(download => {
   if (download.status === 'running') state.dismissedDownloads.delete(download.id);
+  if (download.status === 'complete') {
+    download = { ...download, finishedAt: Number(download.finishedAt || Date.now()) };
+    state.transferExpanded = false;
+  }
   const index = state.downloads.findIndex(item => item.id === download.id);
   if (index === -1) state.downloads = [download, ...state.downloads];
   else state.downloads[index] = download;
