@@ -13,6 +13,7 @@ const MAX_CHAT_BODY_BYTES = 16 * 1024;
 const MAX_HOST_QUEUE = 128;
 const PAIR_FAILURE_LIMIT = 8;
 const PAIR_WINDOW_MS = 60 * 1000;
+const CONTROLLER_APP_ORIGIN = 'http://appassets.local';
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -369,6 +370,21 @@ function createStreamServer(options = {}) {
   }
 
   function requestHandler(request, response) {
+    const origin = String(request.headers.origin || '');
+    if (origin === CONTROLLER_APP_ORIGIN) {
+      response.setHeader('access-control-allow-origin', CONTROLLER_APP_ORIGIN);
+      response.setHeader('access-control-allow-methods', 'GET, POST, OPTIONS');
+      response.setHeader('access-control-allow-headers', 'content-type');
+      response.setHeader('vary', 'Origin');
+    }
+    if (request.method === 'OPTIONS') {
+      response.writeHead(origin === CONTROLLER_APP_ORIGIN ? 204 : 403, {
+        'cache-control': 'no-store',
+        'content-length': 0
+      });
+      response.end();
+      return;
+    }
     const url = new URL(request.url || '/', 'http://gamedeck.local');
     Promise.resolve(api(request, response, url)).then(handled => {
       if (!handled) serveStatic(response, url);

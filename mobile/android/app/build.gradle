@@ -8,8 +8,8 @@ android {
         applicationId 'io.gamedeck.mobile'
         minSdk 26
         targetSdk 36
-        versionCode 2
-        versionName '1.1.0'
+        versionCode 3
+        versionName '1.2.0'
     }
 
     compileOptions {
@@ -27,8 +27,24 @@ android {
         }
     }
 
+    sourceSets {
+        main {
+            assets.srcDir "$buildDir/generated/controllerAssets"
+        }
+    }
+
     lint {
         abortOnError true
         checkReleaseBuilds true
     }
+}
+
+
+tasks.register('syncControllerWeb', Copy) {
+    from file('../../web')
+    into file("$buildDir/generated/controllerAssets/controller")
+}
+
+tasks.named('preBuild').configure {
+    dependsOn tasks.named('syncControllerWeb')
 }

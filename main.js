@@ -2126,13 +2126,21 @@ function decodeRemotePlayCode(value, acceptedPrefixes = []) {
   return payload;
 }
 
-function remoteInputPacket(playerIndex, buttonId, state) {
+function remoteInputPacket(playerIndex, event = {}) {
   const packet = Buffer.alloc(20);
   packet.writeInt32LE(playerIndex, 0);
-  packet.writeInt32LE(1, 4); // RETRO_DEVICE_JOYPAD
-  packet.writeInt32LE(0, 8);
-  packet.writeInt32LE(buttonId, 12);
-  packet.writeUInt16LE(state ? 1 : 0, 16);
+  if (Number.isInteger(event.axis)) {
+    const axis = Math.max(0, Math.min(3, Number(event.axis)));
+    packet.writeInt32LE(5, 4); // RETRO_DEVICE_ANALOG
+    packet.writeInt32LE(axis < 2 ? 0 : 1, 8); // left or right stick
+    packet.writeInt32LE(axis % 2, 12); // X or Y
+    packet.writeInt16LE(Math.max(-32767, Math.min(32767, Number(event.value) || 0)), 16);
+  } else {
+    packet.writeInt32LE(1, 4); // RETRO_DEVICE_JOYPAD
+    packet.writeInt32LE(0, 8);
+    packet.writeInt32LE(Number(event.id), 12);
+    packet.writeUInt16LE(event.state ? 1 : 0, 16);
+  }
   return packet;
 }
 
@@ -2148,7 +2156,7 @@ function ensureRemoteInputPump() {
     for (const [playerIndex, queue] of remoteInputQueues) {
       const event = queue.shift();
       if (!event) continue;
-      const packet = remoteInputPacket(playerIndex, event.id, event.state);
+      const packet = remoteInputPacket(playerIndex, event);
       remoteInputSocket.send(packet, basePort + playerIndex, '127.0.0.1');
     }
   }, 17);
@@ -2162,6 +2170,13 @@ function queueRetroPadEvents(playerIndex, rawEvents, source = 'remote') {
   const queue = remoteInputQueues.get(playerIndex) || [];
   let accepted = 0;
   for (const event of events) {
+    const axis = Number(event?.axis);
+    if (Number.isInteger(axis) && axis >= 0 && axis <= 3) {
+      const normalized = Math.max(-1, Math.min(1, Number(event?.value) || 0));
+      queue.push({ axis, value: Math.round(normalized * 32767), source });
+      accepted += 1;
+      continue;
+    }
     const id = Number(event?.id);
     if (!Number.isInteger(id) || id < 0 || id > 15) continue;
     queue.push({ id, state: event.state ? 1 : 0, source });
