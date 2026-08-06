@@ -1,0 +1,9 @@
+GameDeck Ambient Blur Fill
+
+The files under shaders/ and blurs/, plus blur_fill.glslp, are derived from
+libretro/glsl-shaders "Blur Fill" by fishku, copyright 2023-2025, dedicated
+to the public domain under CC0. Source:
+https://github.com/libretro/glsl-shaders/tree/master/borders
+
+GameDeck packages the shader locally so Android gameplay has a deterministic,
+o-network ambient fill presentation.

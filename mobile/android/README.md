@@ -9,6 +9,8 @@ This module packages GameDeck's shared desktop renderer with an Android platform
 - binary-safe exact RetroArch launch profiles in public Downloads storage, preventing Android MediaStore from rewriting `.cfg` names;
 
 - controller-aware RetroArch handoff: physical gamepads suppress touch overlays, while touch controls remain available when no gamepad is present;
+- a GameDeck-designed premium touch surface with independent portrait/landscape ergonomics, enlarged diagonal D-pad coverage, pressed-state illumination, and native haptic feedback;
+- dynamic ambient blur fill that follows each game frame and replaces unused black bars without stretching the game image;
 - a desktop-aligned branded launch stage before the native game activity;
 - direct repeat launches that bypass RetroArch’s sideload screen after each console core is prepared once;
 - browser-first parallel Libretro artwork loading with a native cache-only fast path;
@@ -39,6 +41,18 @@ This module packages GameDeck's shared desktop renderer with an Android platform
 - GameDeck Live preserved as a separate remote receiver route.
 
 RGSX remains an internal provider. Users do not select an RGSX folder or configure the provider.
+
+## Premium gameplay presentation
+
+After the one-time core preparation route, Android launches RetroArch directly with a generated per-session profile that points to the packaged `presentation-v2` surface. The profile selects an aspect-aware ambient shader preset for each console family, enables automatic portrait/landscape overlay rotation, provides visual press feedback, and enables Android vibration for touch input. Connecting a physical controller hides the touch surface automatically without disabling the ambient gameplay fill.
+
+The touch assets are committed under `app/src/main/assets/console/presentation-v2`. Validate the complete asset graph, hit targets, shader references, manifest hashes, and runtime wiring with:
+
+```bash
+python3 tools/validate_touch_presentation.py
+```
+
+The editable asset generator is `tools/generate_touch_presentation.py`. It requires Pillow and regenerates the control artwork, layout configuration, preview image, aspect-specific shader presets, and manifest.
 
 ## Runtime boundary
 
@@ -106,6 +120,7 @@ app/build/outputs/apk/debug/app-debug.apk
 Pull-request validation includes:
 
 - clean API 36 installation and cold launch;
+- premium touch asset manifest, hit-target, rotation, feedback, shader-graph, and runtime-wiring validation;
 - renderer-ready and crash scanning;
 - portrait and landscape visual screenshots;
 - verified Library, Discover, Community, scrolling, and overflow-menu states;

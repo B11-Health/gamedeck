@@ -76,6 +76,9 @@ final class AndroidRuntimeManager {
     private static final long MAX_CONTENT_BYTES = 16L * 1024L * 1024L * 1024L;
     private static final int BUFFER_SIZE = 128 * 1024;
     private static final int MAX_REDIRECTS = 5;
+    private static final String PRESENTATION_ASSET_ROOT = "console/presentation-v2";
+    private static final String PRESENTATION_VERSION = "2";
+    private static final long MAX_PRESENTATION_ASSET_BYTES = 32L * 1024L * 1024L;
 
     private static final class Artifact {
         final String archive;
@@ -167,7 +170,9 @@ final class AndroidRuntimeManager {
             value.put("touchOverlay", preferences.getBoolean(LAST_TOUCH_OVERLAY, !controllerDetected));
             value.put("launchRoute", preferences.getString(LAST_LAUNCH_ROUTE, "automatic"));
             value.put("launchConfig", preferences.getString(LAST_LAUNCH_CONFIG, ""));
-            value.put("launchPresentation", "gamedeck-splash");
+            value.put("launchPresentation", "gamedeck-touch-v2-ambient-blur");
+            value.put("ambientGameplayFill", true);
+            value.put("touchFeedback", "visual-haptic");
             String lastUri = preferences.getString(LAST_SESSION_URI, "");
             if (lastUri != null && !lastUri.isEmpty()) {
                 JSONObject lastSession = new JSONObject();
@@ -326,7 +331,7 @@ final class AndroidRuntimeManager {
         boolean previouslyLaunched = system.id.equals(preferences.getString(LAST_SESSION_SYSTEM, ""))
             && preferences.getLong(LAST_SESSION_AT, 0) > 0;
         boolean directReady = preferences.getBoolean(coreSideloadKey(runtimePackage, artifact), false) || previouslyLaunched;
-        File config = writeLaunchConfig(runtimePackage, controllerDetected);
+        File config = writeLaunchConfig(runtimePackage, controllerDetected, system.id);
         String launchRoute = directReady ? "direct-native" : "first-core-sideload";
         preferences.edit()
             .putString(LAST_SESSION_URI, uriValue)
@@ -474,24 +479,57 @@ final class AndroidRuntimeManager {
         sendRetroIntent(intent, artifact.library, content.getAbsolutePath());
     }
 
-    private File writeLaunchConfig(String packageName, boolean controllerDetected) throws IOException {
+    private File writeLaunchConfig(String packageName, boolean controllerDetected, String systemId) throws IOException {
         String fileName = controllerDetected ? "gamedeck-gamepad.cfg" : "gamedeck-touch.cfg";
         String retroarchDefault = new File(
             new File(Environment.getExternalStorageDirectory(), "Android/data/" + packageName + "/files"),
             "retroarch.cfg"
         ).getAbsolutePath();
-        String escapedDefault = retroarchDefault.replace("\\", "\\\\").replace("\"", "\\\"");
+        File presentation = ensurePresentationRoot();
+        File overlay = new File(presentation, "gamedeck-premium.cfg");
+        File shader = new File(presentation, shaderPresetForSystem(systemId));
+        if (!overlay.isFile()) throw new IOException("The GameDeck touch surface is missing.");
+        if (!shader.isFile()) throw new IOException("The GameDeck ambient gameplay shader is missing.");
+
+        String escapedDefault = escapeConfigPath(retroarchDefault);
+        String escapedOverlay = escapeConfigPath(overlay.getAbsolutePath());
+        String escapedShader = escapeConfigPath(shader.getAbsolutePath());
         String overlayEnabled = controllerDetected ? "false" : "true";
-        String autoPreferred = controllerDetected ? "false" : "true";
-        String overlayOpacity = controllerDetected ? "0.000000" : "0.700000";
+        String overlayOpacity = controllerDetected ? "0.000000" : "0.860000";
+        String hapticsEnabled = controllerDetected ? "false" : "true";
         String config = "# GameDeck per-launch RetroArch profile\n"
+            + "# Premium touch surface + dynamic ambient gameplay fill\n"
             + "#include \"" + escapedDefault + "\"\n"
-            + "input_overlay_hide_when_gamepad_connected = \"true\"\n"
-            + "input_overlay_enable_autopreferred = \"" + autoPreferred + "\"\n"
+            + "input_overlay = \"" + escapedOverlay + "\"\n"
             + "input_overlay_enable = \"" + overlayEnabled + "\"\n"
-            + "input_overlay_opacity = \"" + overlayOpacity + "\"\n"
+            + "input_overlay_enable_autopreferred = \"false\"\n"
+            + "input_overlay_auto_rotate = \"true\"\n"
+            + "input_overlay_hide_when_gamepad_connected = \"true\"\n"
             + "input_overlay_hide_in_menu = \"true\"\n"
+            + "input_overlay_opacity = \"" + overlayOpacity + "\"\n"
+            + "input_overlay_show_inputs = \"1\"\n"
+            + "input_overlay_show_inputs_port = \"0\"\n"
+            + "input_overlay_scale_landscape = \"1.000000\"\n"
+            + "input_overlay_scale_portrait = \"1.000000\"\n"
+            + "input_overlay_aspect_adjust_landscape = \"0.000000\"\n"
+            + "input_overlay_aspect_adjust_portrait = \"0.000000\"\n"
+            + "input_overlay_x_separation_landscape = \"0.000000\"\n"
+            + "input_overlay_y_separation_landscape = \"0.000000\"\n"
+            + "input_overlay_x_separation_portrait = \"0.000000\"\n"
+            + "input_overlay_y_separation_portrait = \"0.000000\"\n"
+            + "vibrate_on_keypress = \"" + hapticsEnabled + "\"\n"
+            + "enable_device_vibration = \"true\"\n"
+            + "input_rumble_gain = \"80\"\n"
             + "input_osk_overlay_enable = \"false\"\n"
+            + "video_driver = \"gl\"\n"
+            + "video_shader_enable = \"true\"\n"
+            + "video_shader = \"" + escapedShader + "\"\n"
+            + "video_shader_watch_files = \"false\"\n"
+            + "video_shader_delay = \"0\"\n"
+            + "aspect_ratio_index = \"24\"\n"
+            + "video_force_aspect = \"false\"\n"
+            + "video_scale_integer = \"false\"\n"
+            + "video_smooth = \"true\"\n"
             + "menu_show_load_content_animation = \"false\"\n"
             + "notification_show_autoconfig = \"false\"\n"
             + "notification_show_autoconfig_fails = \"false\"\n"
@@ -512,6 +550,109 @@ final class AndroidRuntimeManager {
         return profile;
     }
 
+    private File ensurePresentationRoot() throws IOException {
+        File root = new File(sharedRuntimeRoot(), "presentation/v2");
+        File marker = new File(root, ".asset-version");
+        File overlay = new File(root, "gamedeck-premium.cfg");
+        File shader = new File(root, "blur_fill_4x3.glslp");
+        boolean current = PRESENTATION_VERSION.equals(readSmallText(marker))
+            && overlay.isFile()
+            && shader.isFile();
+        if (!current) {
+            deleteTree(root);
+            if (!root.isDirectory() && !root.mkdirs()) {
+                throw new IOException("Could not create GameDeck presentation storage.");
+            }
+            copyAssetTree(PRESENTATION_ASSET_ROOT, root);
+            writeSmallText(marker, PRESENTATION_VERSION);
+        }
+        markTreeReadable(root);
+        return root;
+    }
+
+    private void copyAssetTree(String assetPath, File destination) throws IOException {
+        String[] entries = context.getAssets().list(assetPath);
+        if (entries == null) throw new IOException("Could not inspect bundled presentation assets.");
+        if (entries.length == 0) {
+            File parent = destination.getParentFile();
+            if (parent != null && !parent.isDirectory() && !parent.mkdirs()) {
+                throw new IOException("Could not create presentation asset directory.");
+            }
+            try (InputStream input = new BufferedInputStream(context.getAssets().open(assetPath));
+                 OutputStream output = new BufferedOutputStream(new FileOutputStream(destination, false))) {
+                copyBounded(input, output, MAX_PRESENTATION_ASSET_BYTES);
+            }
+            return;
+        }
+        if (!destination.isDirectory() && !destination.mkdirs()) {
+            throw new IOException("Could not create presentation asset directory.");
+        }
+        for (String entry : entries) {
+            copyAssetTree(assetPath + "/" + entry, new File(destination, entry));
+        }
+    }
+
+    private void markTreeReadable(File file) throws IOException {
+        if (file == null || !file.exists()) throw new IOException("A GameDeck presentation asset is missing.");
+        if (!file.setReadable(true, false) && !file.canRead()) {
+            throw new IOException("A GameDeck presentation asset is not readable.");
+        }
+        if (file.isDirectory()) {
+            if (!file.setExecutable(true, false) && !file.canExecute()) {
+                throw new IOException("A GameDeck presentation directory is not traversable.");
+            }
+            File[] children = file.listFiles();
+            if (children == null) throw new IOException("Could not inspect GameDeck presentation storage.");
+            for (File child : children) markTreeReadable(child);
+        }
+    }
+
+    private void deleteTree(File file) throws IOException {
+        if (file == null || !file.exists()) return;
+        if (file.isDirectory()) {
+            File[] children = file.listFiles();
+            if (children == null) throw new IOException("Could not refresh GameDeck presentation storage.");
+            for (File child : children) deleteTree(child);
+        }
+        if (!file.delete()) throw new IOException("Could not refresh GameDeck presentation storage.");
+    }
+
+    private String shaderPresetForSystem(String systemId) {
+        String id = systemId == null ? "" : systemId.trim().toLowerCase(Locale.US);
+        switch (id) {
+            case "gba":
+                return "blur_fill_3x2.glslp";
+            case "psp":
+                return "blur_fill_16x9.glslp";
+            case "gb":
+            case "gamegear":
+                return "blur_fill_10x9.glslp";
+            case "nds":
+                return "blur_fill_2x3.glslp";
+            case "snes":
+            case "satellaview":
+            case "sufami":
+            case "nes":
+            case "fds":
+            case "n64":
+            case "genesis":
+            case "sega32x":
+            case "mastersystem":
+            case "segacd":
+            case "pce":
+            case "saturn":
+            case "atari2600":
+            case "ps1":
+                return "blur_fill_4x3.glslp";
+            default:
+                return "blur_fill_native.glslp";
+        }
+    }
+
+    private String escapeConfigPath(String value) {
+        return String.valueOf(value).replace("\\", "\\\\").replace("\"", "\\\"");
+    }
+
     private void startRetroSideloadActivity(String packageName, File core, File content) throws Exception {
         if (!core.setReadable(true, false) && !core.canRead()) {
             throw new IOException("The staged console core is not readable.");
@@ -528,7 +669,6 @@ final class AndroidRuntimeManager {
             | Intent.FLAG_ACTIVITY_NEW_TASK
             | Intent.FLAG_ACTIVITY_NO_ANIMATION);
         sendRetroIntent(intent, core.getAbsolutePath(), content.getAbsolutePath());
-
     }
 
     private void sendRetroIntent(Intent intent, String routeKey, String contentKey) throws Exception {
