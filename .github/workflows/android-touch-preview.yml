@@ -1,0 +1,96 @@
+name: Publish Android standalone preview
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "mobile/android/**"
+      - "src/**"
+      - ".github/workflows/android-touch-preview.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-standalone-preview
+  cancel-in-progress: true
+
+jobs:
+  build-and-publish:
+    name: Build and publish Android preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout current main
+        uses: actions/checkout@v7
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android build tools
+        run: sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: "9.6.1"
+
+      - name: Validate premium touch presentation
+        working-directory: mobile/android
+        run: python3 tools/validate_touch_presentation.py
+
+      - name: Build standalone preview APK
+        working-directory: mobile/android
+        run: >-
+          gradle :app:assembleDebug --no-daemon --stacktrace
+          -PgamedeckApplicationId=io.gamedeck.mobile.preview
+          -PgamedeckAppLabel="GameDeck Preview"
+          -PgamedeckVersionName=1.3.0-preview.2
+          -PgamedeckVersionCode=10302
+
+      - name: Inspect and checksum APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist/android
+          APK="dist/android/GameDeck-Android-community-preview.apk"
+          cp mobile/android/app/build/outputs/apk/debug/app-debug.apk "$APK"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump badging "$APK" | tee dist/android/APK-METADATA.txt
+          grep -F "package: name='io.gamedeck.mobile.preview'" dist/android/APK-METADATA.txt
+          grep -F "sdkVersion:'26'" dist/android/APK-METADATA.txt
+          grep -F "targetSdkVersion:'36'" dist/android/APK-METADATA.txt
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK" | tee dist/android/APK-SIGNATURE.txt
+          sha256sum "$APK" > dist/android/SHA256SUMS-android.txt
+
+      - name: Upload exact build evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: gamedeck-android-standalone-${{ github.sha }}
+          path: dist/android/*
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Point community preview tag at current source
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git tag -f community-preview "$GITHUB_SHA"
+          git push --force origin community-preview
+
+      - name: Publish updated Android APK
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload community-preview dist/android/* --clobber --repo "$GITHUB_REPOSITORY"
+          gh release edit community-preview \
+            --prerelease \
+            --title "GameDeck Community Preview 1.3.0-preview.2" \
+            --notes "Updated Android standalone preview with GameDeck premium touch controls, portrait and landscape layouts, visual and haptic input feedback, physical-controller auto-hide, and dynamic ambient blur fill. Existing desktop preview assets remain available in this release." \
+            --repo "$GITHUB_REPOSITORY"
