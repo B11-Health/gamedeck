@@ -40,7 +40,7 @@ assert(app.includes("location.assign(`${deckBaseUrl}/?code=${encodeURIComponent(
 assert(gradle.includes("gamedeckControllerOnly") && gradle.includes("controllerOnly ? [sharedRendererAssets]"));
 assert(manifest.includes("${fullDeckEnabled}") && manifest.includes("${controllerEnabled}"));
 assert(controllerManifest.includes('"name":"GameDeck Controller"') && controllerManifest.includes('"start_url":"."'));
-assert(controllerSw.includes("gamedeck-controller-v6") && controllerSw.includes("'./app.js'"));
+assert(controllerSw.includes("gamedeck-controller-v7") && controllerSw.includes("'./app.js'"));
 assert(communityWorkflow.includes("GameDeck-Android-community-preview.apk") && communityWorkflow.includes("GameDeck-Controller-Android-community-preview.apk"));
 assert(communityWorkflow.includes("io.gamedeck.controller.preview") && communityWorkflow.includes("gamedeckControllerOnly=true"));
 assert(pagesWorkflow.includes("mobile/web/**") && pagesWorkflow.includes("site-build/controller") && pagesWorkflow.includes("cp -R mobile/web/. site-build/controller/"));
