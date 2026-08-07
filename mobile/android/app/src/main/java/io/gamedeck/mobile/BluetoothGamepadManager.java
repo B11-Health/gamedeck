@@ -104,6 +104,7 @@ public final class BluetoothGamepadManager implements BluetoothProfile.ServiceLi
             || activity.checkSelfPermission(Manifest.permission.BLUETOOTH_ADVERTISE) == PackageManager.PERMISSION_GRANTED;
     }
 
+    @SuppressLint("MissingPermission")
     public void requestAccessAndDiscoverable() {
         if (!supported() || adapter == null) {
             notifyState();
@@ -116,6 +117,7 @@ public final class BluetoothGamepadManager implements BluetoothProfile.ServiceLi
             }, PERMISSION_REQUEST_CODE);
             return;
         }
+        ensureProfileProxy();
         if (!adapter.isEnabled()) {
             activity.startActivity(new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE));
             return;
@@ -126,6 +128,17 @@ public final class BluetoothGamepadManager implements BluetoothProfile.ServiceLi
         registerApplication();
     }
 
+    @SuppressLint("MissingPermission")
+    private void ensureProfileProxy() {
+        if (!supported() || adapter == null || hidDevice != null || !hasPermission()) return;
+        try {
+            adapter.getProfileProxy(activity, this, BluetoothProfile.HID_DEVICE);
+        } catch (SecurityException ignored) {
+            notifyState();
+        }
+    }
+
+    @SuppressLint("MissingPermission")
     private void registerApplication() {
         if (!supported() || hidDevice == null || registered || !hasPermission()) return;
         BluetoothHidDeviceAppSdpSettings settings = new BluetoothHidDeviceAppSdpSettings(
@@ -138,6 +151,7 @@ public final class BluetoothGamepadManager implements BluetoothProfile.ServiceLi
         hidDevice.registerApp(settings, null, null, activity.getMainExecutor(), callback);
     }
 
+    @SuppressLint("MissingPermission")
     public boolean connect(String address) {
         if (!supported() || hidDevice == null || !registered || !hasPermission() || address == null) return false;
         try {
@@ -148,6 +162,7 @@ public final class BluetoothGamepadManager implements BluetoothProfile.ServiceLi
         }
     }
 
+    @SuppressLint("MissingPermission")
     public boolean disconnect() {
         if (!supported() || hidDevice == null || connectedHost == null || !hasPermission()) return false;
         try {
@@ -214,6 +229,7 @@ public final class BluetoothGamepadManager implements BluetoothProfile.ServiceLi
         return report;
     }
 
+    @SuppressLint("MissingPermission")
     private void sendCurrentReport() {
         if (!supported() || hidDevice == null || connectedHost == null || !registered || !hasPermission()) return;
         byte[] report = buildReport();
@@ -225,6 +241,7 @@ public final class BluetoothGamepadManager implements BluetoothProfile.ServiceLi
         }
     }
 
+    @SuppressLint("MissingPermission")
     public String devicesSnapshot() {
         JSONArray devices = new JSONArray();
         if (adapter == null || !hasPermission()) return devices.toString();
@@ -245,6 +262,7 @@ public final class BluetoothGamepadManager implements BluetoothProfile.ServiceLi
         return devices.toString();
     }
 
+    @SuppressLint("MissingPermission")
     public String statusSnapshot() {
         try {
             JSONObject status = new JSONObject();
@@ -282,13 +300,14 @@ public final class BluetoothGamepadManager implements BluetoothProfile.ServiceLi
         notifyState();
     }
 
+    @SuppressLint("MissingPermission")
     public void close() {
         releaseAll();
         try {
             if (hidDevice != null && registered && hasPermission()) hidDevice.unregisterApp();
         } catch (Exception ignored) {}
         try {
-            if (adapter != null && hidDevice != null) adapter.closeProfileProxy(BluetoothProfile.HID_DEVICE, hidDevice);
+            if (adapter != null && hidDevice != null && hasPermission()) adapter.closeProfileProxy(BluetoothProfile.HID_DEVICE, hidDevice);
         } catch (Exception ignored) {}
         hidDevice = null;
         connectedHost = null;
