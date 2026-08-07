@@ -1,6 +1,7 @@
 package io.gamedeck.mobile;
 
 import android.app.Activity;
+import android.annotation.SuppressLint;
 import android.app.ActivityManager;
 import android.content.ActivityNotFoundException;
 import android.content.BroadcastReceiver;
@@ -33,6 +34,7 @@ import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.window.OnBackInvokedDispatcher;
 import android.provider.MediaStore;
 import android.widget.FrameLayout;
 
@@ -58,6 +60,7 @@ public class MainActivity extends Activity {
     private static final String LOCAL_URL = "file:///android_asset/desktop/index.html";
     private static final String QA_ACTION = "io.gamedeck.mobile.QA";
     private static final String DEBUG_FIXTURE_FILE = "renderer-fixture.enabled";
+    private static final String DEBUG_FIXTURE_EXTRA = "gamedeck.qa.fixture";
 
     private FrameLayout rootView;
     private WebView webView;
@@ -77,6 +80,8 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         clearLegacyDebugFixture();
+        debugFixtureEnabled = isDebugBuild() && getIntent() != null
+            && getIntent().getBooleanExtra(DEBUG_FIXTURE_EXTRA, false);
         getWindow().setStatusBarColor(Color.rgb(9, 11, 16));
         getWindow().setNavigationBarColor(Color.rgb(9, 11, 16));
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -84,6 +89,7 @@ public class MainActivity extends Activity {
         }
         buildWebView();
         registerQaReceiver();
+        registerBackNavigation();
         loadLocalShell();
     }
 
@@ -270,6 +276,7 @@ public class MainActivity extends Activity {
         if (marker.isFile()) marker.delete();
     }
 
+    @SuppressLint("UnspecifiedRegisterReceiverFlag")
     private void registerQaReceiver() {
         if (!isDebugBuild()) return;
         qaReceiver = new BroadcastReceiver() {
@@ -762,9 +769,20 @@ public class MainActivity extends Activity {
         super.onActivityResult(requestCode, resultCode, data);
         if (resultCode != RESULT_OK || data == null || data.getData() == null) return;
         Uri uri = data.getData();
-        int flags = data.getFlags() & (Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+        int returnedFlags = data.getFlags();
+        boolean readGranted = (returnedFlags & Intent.FLAG_GRANT_READ_URI_PERMISSION) != 0;
+        boolean writeGranted = (returnedFlags & Intent.FLAG_GRANT_WRITE_URI_PERMISSION) != 0;
         try {
-            getContentResolver().takePersistableUriPermission(uri, flags);
+            if (readGranted && writeGranted) {
+                getContentResolver().takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                );
+            } else if (readGranted) {
+                getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            } else if (writeGranted) {
+                getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+            }
         } catch (SecurityException ignored) {}
         if (requestCode == REQUEST_LIBRARY) {
             bridge.setLibraryRoot(uri);
@@ -899,13 +917,28 @@ public class MainActivity extends Activity {
         }
     }
 
-    @Override
-    public void onBackPressed() {
+    private void registerBackNavigation() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
+                OnBackInvokedDispatcher.PRIORITY_DEFAULT,
+                this::handleBackNavigation
+            );
+        }
+    }
+
+    private void handleBackNavigation() {
         if (remoteMode) {
             loadLocalShell();
             return;
         }
         evaluate("window.GameDeckNative&&window.GameDeckNative.back()");
+    }
+
+    @SuppressLint("GestureBackNavigation")
+    @Override
+    public void onBackPressed() {
+        // Android 8-12 fallback. API 33+ uses OnBackInvokedDispatcher above.
+        handleBackNavigation();
     }
 
     @Override

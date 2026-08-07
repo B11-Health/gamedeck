@@ -28,6 +28,10 @@ tasks.register('prepareSharedRenderer') {
             from new File(repositoryRoot, 'assets')
             into new File(sharedRendererAssets, 'assets')
         }
+        copy {
+            from new File(repositoryRoot, 'mobile/web')
+            into new File(sharedRendererAssets, 'controller')
+        }
 
         File indexFile = new File(sharedRendererAssets, 'desktop/index.html')
         String index = indexFile.getText('UTF-8')
@@ -135,6 +139,7 @@ android {
         targetCompatibility JavaVersion.VERSION_11
     }
 }
+
 
 tasks.named('preBuild').configure {
     dependsOn tasks.named('prepareSharedRenderer')

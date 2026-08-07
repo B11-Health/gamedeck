@@ -98,9 +98,8 @@ jobs:
           test "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1"
 
           adb install "$APK"
-          adb shell "run-as $PACKAGE sh -c 'mkdir -p files && touch files/renderer-fixture.enabled'"
           adb logcat -c
-          adb shell am start -W -n "$PACKAGE/$ACTIVITY" | tee "$OUT/ACTIVITY-START.txt"
+          adb shell am start -W -n "$PACKAGE/$ACTIVITY" --ez gamedeck.qa.fixture true | tee "$OUT/ACTIVITY-START.txt"
 
           for attempt in $(seq 1 80); do
             adb logcat -d -v brief > "$OUT/LOGCAT.txt"
@@ -178,7 +177,7 @@ jobs:
           test -s "$OUT/LIBRARY-AFTER-GET.png"
 
           adb shell am force-stop "$PACKAGE"
-          adb shell am start -W -n "$PACKAGE/$ACTIVITY" | tee "$OUT/RESTART.txt"
+          adb shell am start -W -n "$PACKAGE/$ACTIVITY" --ez gamedeck.qa.fixture true | tee "$OUT/RESTART.txt"
           sleep 3
           adb logcat -d -v brief > "$OUT/LOGCAT-AFTER-RESTART.txt"
           adb shell "run-as $PACKAGE test -f $FILE"

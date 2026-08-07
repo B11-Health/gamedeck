@@ -41,9 +41,18 @@ const { createStreamServer } = require("../stream-server");
   assert.strictEqual(inputs.length, 1);
   assert.strictEqual(inputs[0].payload.events[0].id, 8);
 
+  const analog = await fetch(`${base}/api/input`, {
+    method: "POST",
+    headers: { "content-type": "application/json", origin: "http://appassets.local" },
+    body: JSON.stringify({ code: status.code, viewerId: pair.viewerId, events: [{ axis: 0, value: 0.625 }], controllerConnected: false })
+  });
+  assert.strictEqual(analog.headers.get("access-control-allow-origin"), "http://appassets.local");
+  assert.strictEqual((await analog.json()).accepted, true);
+  assert.strictEqual(inputs[1].payload.events[0].axis, 0);
+
   const direct = server.viewerInput(pair.viewerId, { events: [{ id: 8, state: 0 }], controllerConnected: true });
   assert.strictEqual(direct.accepted, true);
-  assert.strictEqual(inputs.length, 2);
+  assert.strictEqual(inputs.length, 3);
 
   const rooms = await fetch(`${base}/api/community/rooms?${auth}`).then(response => response.json());
   assert.strictEqual(rooms.rooms[0].roomId, "room-1");
@@ -65,7 +74,12 @@ const { createStreamServer } = require("../stream-server");
   assert.strictEqual(listed.messages.length, 1);
 
   const html = await fetch(`${base}/`).then(response => response.text());
-  assert(html.includes("touchController") && html.includes("communityPanel"), "mobile gameplay/community UI must be served");
+  assert(html.includes("switchFrame") && html.includes("communityPanel") && html.includes("bluetoothPrepare"), "controller gameplay/community UI must be served");
+  const preflight = await fetch(`${base}/api/pair`, { method: "OPTIONS", headers: { origin: "http://appassets.local" } });
+  assert.strictEqual(preflight.status, 204);
+  assert.strictEqual(preflight.headers.get("access-control-allow-origin"), "http://appassets.local");
+  const rejectedPreflight = await fetch(`${base}/api/pair`, { method: "OPTIONS", headers: { origin: "https://example.com" } });
+  assert.strictEqual(rejectedPreflight.status, 403);
   await server.close();
   console.log("mobile stream server QA passed");
 })().catch(error => {

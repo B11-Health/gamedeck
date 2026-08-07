@@ -100,9 +100,8 @@ jobs:
           adb shell settings put system accelerometer_rotation 0 || true
           adb shell settings put system user_rotation 0 || true
           adb install "$APK"
-          adb shell "run-as $PACKAGE sh -c 'mkdir -p files && touch files/renderer-fixture.enabled'"
           adb logcat -c
-          adb shell am start -W -n "$PACKAGE/$ACTIVITY" | tee "$OUT/START.txt"
+          adb shell am start -W -n "$PACKAGE/$ACTIVITY" --ez gamedeck.qa.fixture true | tee "$OUT/START.txt"
 
           capture_logcat() {
             local format="${1:-brief}"

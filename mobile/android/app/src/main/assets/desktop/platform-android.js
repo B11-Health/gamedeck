@@ -459,6 +459,11 @@
     streamStop: async () => ({ ok: true }),
     streamHostPull: async () => [],
     streamHostSend: async () => ({ ok: false }),
+    streamViewerInput: async () => ({ ok: false, accepted: false }),
+
+    communityMatchmakingStatus: async () => ({ ok: true, supported: false, connected: false, message: 'Community hosting is available through a paired desktop.' }),
+    communityRooms: async () => ({ ok: true, rooms: [] }),
+    communityLibraryRooms: async () => ({ ok: true, rooms: [] }),
 
     remotePlayCodeEncode: async () => blocked('Remote Play invitation creation is unavailable.', 'android_remote_play_host_pending'),
     remotePlayCodeDecode: async () => blocked('Direct Remote Play guest support is pending.', 'android_remote_play_guest_pending'),
@@ -486,7 +491,8 @@
     onDownload: subscribeDownloads,
     onStream: noopSubscription,
     onRemotePlay: noopSubscription,
-    onNetplay: noopSubscription
+    onNetplay: noopSubscription,
+    onCommunityRooms: noopSubscription
   });
 
   function installAndroidPresentationGuard() {

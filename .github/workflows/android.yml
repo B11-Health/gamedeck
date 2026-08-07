@@ -122,9 +122,8 @@ jobs:
           adb shell settings put global transition_animation_scale 0
           adb shell settings put global animator_duration_scale 0
           adb install "$APK"
-          adb shell "run-as $PACKAGE sh -c 'mkdir -p files && touch files/renderer-fixture.enabled'"
           adb logcat -c
-          adb shell am start -W -n "$PACKAGE/$ACTIVITY" \
+          adb shell am start -W -n "$PACKAGE/$ACTIVITY" --ez gamedeck.qa.fixture true \
             | tee "$OUT/ACTIVITY-START.txt"
 
           renderer_ready=0

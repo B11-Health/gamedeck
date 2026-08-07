@@ -11,7 +11,7 @@ const fail = message => {
   process.exitCode = 1;
 };
 
-const [main, preload, renderer, html, styles, pkgText, donations, runtimeManager, runtimeManifest, runtimeCacheBuilder, streamServer, streamingRenderer, netplayManager, netplayRenderer, mobileReceiver, mobileStyles, mobileManifestText, mobileSw, androidActivity, iosContent, iosInfo, siteHtml, siteStyles, siteApp] = await Promise.all([
+const [main, preload, renderer, html, styles, pkgText, donations, runtimeManager, runtimeManifest, runtimeCacheBuilder, streamServer, streamingRenderer, netplayManager, netplayRenderer, mobileReceiver, mobileStyles, mobileManifestText, mobileSw, androidActivity, controllerActivity, iosContent, iosInfo, siteHtml, siteStyles, siteApp] = await Promise.all([
   read('main.js'),
   read('preload.js'),
   read('src/app.js'),
@@ -31,6 +31,7 @@ const [main, preload, renderer, html, styles, pkgText, donations, runtimeManager
   read('mobile/web/manifest.webmanifest'),
   read('mobile/web/sw.js'),
   read('mobile/android/app/src/main/java/io/gamedeck/mobile/MainActivity.java'),
+  read('mobile/android/app/src/main/java/io/gamedeck/mobile/ControllerActivity.java'),
   read('mobile/ios/GameDeckMobile/ContentView.swift'),
   read('mobile/ios/GameDeckMobile/Info.plist'),
   read('site/index.html'),
@@ -327,7 +328,8 @@ if (!streamingRenderer.includes("createDataChannel('gamedeck-control'") || !stre
 if (!main.includes('input_overlay_enable = "false"') || !main.includes('ensureRetroArchMobileInputConfig') || !main.includes('queueStreamViewerInput')) fail('RetroArch overlay suppression or Android RetroPad routing is missing');
 if (!mobileManifest.icons?.some(icon => icon.sizes === '192x192' && icon.purpose === 'any') || !mobileManifest.icons?.some(icon => icon.sizes === '512x512' && icon.purpose === 'any') || !mobileManifest.icons?.some(icon => icon.sizes === '192x192' && icon.purpose === 'maskable') || !mobileManifest.icons?.some(icon => icon.sizes === '512x512' && icon.purpose === 'maskable')) fail('mobile PWA any and maskable icons are missing');
 if (!mobileSw.includes('gamedeck-mobile-v') || !mobileSw.includes('/icons/icon-192.png') || !mobileSw.includes('/icons/icon-512.png')) fail('mobile PWA cache is missing install icons');
-if (!androidActivity.includes('WebView') || !androidActivity.includes('setMediaPlaybackRequiresUserGesture(false)') || !androidActivity.includes('InputDeviceListener') || !androidActivity.includes('GameDeckNative') || !androidActivity.includes('performHaptic')) fail('native Android controller and haptic receiver shell is missing');
+if (!controllerActivity.includes('WebView') || !controllerActivity.includes('setMediaPlaybackRequiresUserGesture(false)') || !controllerActivity.includes('InputDeviceListener') || !controllerActivity.includes('GameDeckNative') || !controllerActivity.includes('performHaptic')) fail('native Android controller and haptic receiver shell is missing');
+if (!androidActivity.includes('DeckBridge') || !androidActivity.includes('ManagedLibraryProvider')) fail('standalone Android library and runtime shell is missing');
 if (!iosContent.includes('WKWebView') || !iosContent.includes('allowsInlineMediaPlayback')) fail('native iOS receiver shell is missing');
 if (!iosInfo.includes('NSLocalNetworkUsageDescription') || !iosInfo.includes('NSAllowsLocalNetworking')) fail('iOS local-network permissions are missing');
 if (!pkg.build?.files?.includes('stream-server.js') || !pkg.build?.files?.includes('mobile/web/**/*')) fail('desktop packages must include GameDeck Live server and receiver');
