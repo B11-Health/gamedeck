@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "site/**"
+      - "mobile/web/**"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 
@@ -26,8 +27,14 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: actions/configure-pages@v5
+      - name: Stage site and universal controller
+        run: |
+          rm -rf site-build
+          mkdir -p site-build/controller
+          cp -R site/. site-build/
+          cp -R mobile/web/. site-build/controller/
       - uses: actions/upload-pages-artifact@v4
         with:
-          path: site
+          path: site-build
       - id: deployment
         uses: actions/deploy-pages@v4

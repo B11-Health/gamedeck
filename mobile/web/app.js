@@ -24,8 +24,10 @@ let roomCache=[];
 let chatCache=[];
 const pointerButtons=new Map();
 const buttonPressCounts=new Map();
-const STANDALONE_APP=location.origin==='http://appassets.local';
-let deckBaseUrl=STANDALONE_APP?'':location.origin;
+const NATIVE_CONTROLLER_APP=location.origin==='http://appassets.local';
+const PUBLIC_CONTROLLER_APP=/(^|\.)github\.io$/i.test(location.hostname)&&/\/controller\/?/i.test(location.pathname);
+const NEEDS_DECK_ADDRESS=NATIVE_CONTROLLER_APP||PUBLIC_CONTROLLER_APP;
+let deckBaseUrl=NEEDS_DECK_ADDRESS?'':location.origin;
 let screenEnabled=localStorage.getItem('gamedeck:screen-enabled')!=='off';
 let hapticsEnabled=localStorage.getItem('gamedeck:haptics')!=='off';
 let adaptiveHapticsEnabled=localStorage.getItem('gamedeck:adaptive-haptics')==='on';
@@ -60,7 +62,7 @@ function haptic(style='tick'){
 }
 function setConnection(value){$('#connection').textContent=String(value||'').toUpperCase()}
 function authQuery(){return `viewerId=${encodeURIComponent(viewerId)}&code=${encodeURIComponent(code)}`}
-function apiUrl(path){if(!deckBaseUrl&&STANDALONE_APP)throw Error('Enter the local GameDeck computer address.');return `${deckBaseUrl}${path}`}
+function apiUrl(path){if(!deckBaseUrl&&NEEDS_DECK_ADDRESS)throw Error('Enter the local GameDeck computer address.');return `${deckBaseUrl}${path}`}
 async function api(path,options={}){const response=await fetch(apiUrl(path),{cache:'no-store',headers:{'content-type':'application/json',...(options.headers||{})},...options});const body=await response.json().catch(()=>({ok:false,error:`HTTP ${response.status}`}));if(!response.ok||body.ok===false){const error=Error(body.error||`HTTP ${response.status}`);error.status=response.status;throw error}return body}
 function pairingError(error){const status=Number(error?.status||0);const message=String(error?.message||'');if(status===404||/HTTP 404|not found/i.test(message))return'GameDeck host not found. Open this page from the address shown on the host.';if(status===401||status===403||/invalid|expired|pairing code/i.test(message))return'That pairing code is invalid or expired. Request a fresh code from the host.';if(/Failed to fetch|NetworkError|Load failed/i.test(message))return'Could not reach GameDeck. Confirm both devices are on the same network.';return message||'Could not connect to GameDeck.'}
 
@@ -81,12 +83,12 @@ function applyControllerState(value,{notify=true}={}){
 function readNativeController(){try{return normalizedControllerState(nativeBridge()?.controllerState?.())}catch{return{connected:false,count:0,names:[]}}}
 function renderBluetooth(){
   bluetoothState=parseJson(bluetoothState,{supported:false});
-  const status=$('#bluetoothStatus');if(status)status.textContent=!bluetoothState.supported?'Bluetooth gamepad requires Android 9+':!bluetoothState.permission?'Bluetooth permission required':bluetoothState.connected?`Connected to ${bluetoothState.hostName||'computer'}`:bluetoothState.registered?'Ready — choose a paired computer':'Set up Bluetooth gamepad';
+  const status=$('#bluetoothStatus');if(status)status.textContent=!bluetoothState.supported?'Bluetooth gamepad requires Android 9+':!bluetoothState.permission?'Bluetooth permission required':bluetoothState.connected?`Connected to ${bluetoothState.hostName||'computer'}`:bluetoothState.registered?'Ready ï¿½ choose a paired computer':'Set up Bluetooth gamepad';
   const devices=parseJson(nativeBridge()?.bluetoothDevices?.()||'[]',[]);for(const target of [$('#bluetoothDevices'),$('#bluetoothHosts')]){if(!target)continue;target.innerHTML=devices.length?devices.map(device=>`<button type="button" data-bt-address="${escapeHtml(device.address)}"><b>${escapeHtml(device.name||'Paired computer')}</b><small>${device.connected?'Connected':device.bonded?'Connect':'Pair in Android settings'}</small></button>`).join(''):'<span>No paired computers found yet.</span>';target.querySelectorAll('[data-bt-address]').forEach(button=>button.onclick=()=>{nativeBridge()?.bluetoothConnect?.(button.dataset.btAddress);setTimeout(refreshBluetooth,500)})}
 }
 function refreshBluetooth(){try{bluetoothState=parseJson(nativeBridge()?.bluetoothState?.()||'{}',{});renderBluetooth()}catch{}}
 function applyOrientation(value){const state=parseJson(value,{mode:'auto',current:matchMedia('(orientation:landscape)').matches?'landscape':'portrait'});document.body.dataset.orientation=state.current;$$('[data-orientation]').forEach(button=>button.classList.toggle('active',button.dataset.orientation===state.mode))}
-function handleMotion(value){lastMotion={...lastMotion,...parseJson(value,{})};$('#sensorReadout').textContent=`ROLL ${Number(lastMotion.roll||0).toFixed(2)} · PITCH ${Number(lastMotion.pitch||0).toFixed(2)}`;if(!motionEnabled||controllerState.connected)return;const x=Math.max(-1,Math.min(1,(Number(lastMotion.roll||0)-motionCenter.roll)*1.65));const y=Math.max(-1,Math.min(1,(Number(lastMotion.pitch||0)-motionCenter.pitch)*1.65));sendInputEvents([{axis:0,value:x},{axis:1,value:y}],'motion')}
+function handleMotion(value){lastMotion={...lastMotion,...parseJson(value,{})};$('#sensorReadout').textContent=`ROLL ${Number(lastMotion.roll||0).toFixed(2)} ï¿½ PITCH ${Number(lastMotion.pitch||0).toFixed(2)}`;if(!motionEnabled||controllerState.connected)return;const x=Math.max(-1,Math.min(1,(Number(lastMotion.roll||0)-motionCenter.roll)*1.65));const y=Math.max(-1,Math.min(1,(Number(lastMotion.pitch||0)-motionCenter.pitch)*1.65));sendInputEvents([{axis:0,value:x},{axis:1,value:y}],'motion')}
 window.GameDeckAndroid={
   onControllerState:value=>applyControllerState(value),
   onDeckUrl:value=>{const normalized=normalizeDeckUrl(value);if(normalized){deckBaseUrl=normalized;$('#deckAddress').value=normalized.replace(/^https?:\/\//,'')}},
@@ -219,9 +221,10 @@ async function refreshCommunity(force=false){if(!viewerId)return;if(force||activ
 
 async function pair(event){
   event?.preventDefault();$('#pairError').classList.add('hidden');code=$('#pairCode').value.replace(/\D/g,'').slice(0,6);const label=$('#deviceName').value.trim()||deviceLabel();
-  if(STANDALONE_APP){const normalized=normalizeDeckUrl($('#deckAddress').value);if(!normalized){$('#pairError').textContent='Enter the private-network GameDeck address shown on your computer.';$('#pairError').classList.remove('hidden');return}deckBaseUrl=normalized;try{nativeBridge()?.saveDeckUrl?.(normalized)}catch{}}
+  if(NEEDS_DECK_ADDRESS){const normalized=normalizeDeckUrl($('#deckAddress').value);if(!normalized){$('#pairError').textContent='Enter the private-network GameDeck address shown on your computer.';$('#pairError').classList.remove('hidden');return}deckBaseUrl=normalized;try{nativeBridge()?.saveDeckUrl?.(normalized)}catch{}}
   if(code.length!==6){$('#pairError').textContent='Enter the six-digit code from GameDeck.';$('#pairError').classList.remove('hidden');return}
-  try{const result=await api('/api/pair',{method:'POST',body:JSON.stringify({code,label,controllerConnected:controllerState.connected})});viewerId=result.viewerId;streamInfo=result.stream;playerIndex=Number(result.viewer?.playerIndex||0);localStorage.setItem('gamedeck:device-name',label);if(!STANDALONE_APP)history.replaceState(null,'',`/?code=${code}`);$('#pairCard').classList.add('hidden');$('#mobileTabs').classList.remove('hidden');$('#settingsToggle').classList.remove('hidden');$('#playerSlot').textContent=`PLAYER ${playerIndex+1}`;$('#streamTitle').textContent=streamInfo.title||'GameDeck';$('#streamMeta').textContent=`${streamInfo.sourceName||'GameDeck'} · connecting`;$('#quality').textContent=streamInfo.quality||'1080p';setConnection('pairing');setTab('play');await createPeer();poll();scheduleCommunity();haptic('success')}catch(error){haptic('warning');$('#pairError').textContent=pairingError(error);$('#pairError').classList.remove('hidden')}
+  if(PUBLIC_CONTROLLER_APP){localStorage.setItem('gamedeck:device-name',label);location.assign(`${deckBaseUrl}/?code=${encodeURIComponent(code)}`);return}
+  try{const result=await api('/api/pair',{method:'POST',body:JSON.stringify({code,label,controllerConnected:controllerState.connected})});viewerId=result.viewerId;streamInfo=result.stream;playerIndex=Number(result.viewer?.playerIndex||0);localStorage.setItem('gamedeck:device-name',label);if(!NEEDS_DECK_ADDRESS)history.replaceState(null,'',`/?code=${code}`);$('#pairCard').classList.add('hidden');$('#mobileTabs').classList.remove('hidden');$('#settingsToggle').classList.remove('hidden');$('#playerSlot').textContent=`PLAYER ${playerIndex+1}`;$('#streamTitle').textContent=streamInfo.title||'GameDeck';$('#streamMeta').textContent=`${streamInfo.sourceName||'GameDeck'} ï¿½ connecting`;$('#quality').textContent=streamInfo.quality||'1080p';setConnection('pairing');setTab('play');await createPeer();poll();scheduleCommunity();haptic('success')}catch(error){haptic('warning');$('#pairError').textContent=pairingError(error);$('#pairError').classList.remove('hidden')}
 }
 async function disconnect(){clearTimeout(pollTimer);clearTimeout(communityTimer);cancelAnimationFrame(gamepadFrame);stopAdaptiveHaptics();releaseTouchInputs();if(viewerId)api('/api/leave',{method:'POST',body:JSON.stringify({code,viewerId})}).catch(()=>{});viewerId='';closePeer();$('#mobileTabs').classList.add('hidden');$('#settingsToggle').classList.add('hidden');$('#playerCard').classList.add('hidden');$('#communityPanel').classList.add('hidden');$('#pairCard').classList.remove('hidden');document.body.classList.remove('show-chrome','play-active')}
 
@@ -254,8 +257,9 @@ window.addEventListener('orientationchange',()=>setTimeout(()=>applyOrientation(
 window.addEventListener('gamepadconnected',()=>{if(!nativeBridge())applyControllerState({connected:true,count:[...navigator.getGamepads()].filter(Boolean).length,names:[...navigator.getGamepads()].filter(Boolean).map(pad=>pad.id)})});
 window.addEventListener('gamepaddisconnected',()=>{if(!nativeBridge())applyControllerState({connected:[...navigator.getGamepads()].filter(Boolean).length>0,count:[...navigator.getGamepads()].filter(Boolean).length,names:[...navigator.getGamepads()].filter(Boolean).map(pad=>pad.id)})});
 
-document.body.classList.toggle('standalone-app',STANDALONE_APP);
-$('#deckAddressLabel').classList.toggle('hidden',!STANDALONE_APP);
+document.body.classList.toggle('standalone-app',NEEDS_DECK_ADDRESS);
+document.body.classList.toggle('public-controller-app',PUBLIC_CONTROLLER_APP);
+$('#deckAddressLabel').classList.toggle('hidden',!NEEDS_DECK_ADDRESS);
 document.body.classList.toggle('controller-only',!screenEnabled);
 $('#screenToggle').textContent=screenEnabled?'Controller only':'Show game screen';
 $('#screenBadge').textContent=screenEnabled?'SCREEN + CONTROLLER':'CONTROLLER ONLY';
@@ -269,6 +273,6 @@ document.body.classList.toggle('touch-disabled',!touchEnabled);
 const preset=new URLSearchParams(location.search).get('code')||'';
 $('#pairCode').value=preset.replace(/\D/g,'').slice(0,6);
 $('#deviceName').value=deviceLabel();
-if(!STANDALONE_APP&&'serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+if(!NATIVE_CONTROLLER_APP&&'serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});
 gamepadFrame=requestAnimationFrame(pollGamepads);
-if($('#pairCode').value.length===6&&(!STANDALONE_APP||deckBaseUrl))pair();
+if($('#pairCode').value.length===6&&(!NEEDS_DECK_ADDRESS||deckBaseUrl))pair();
