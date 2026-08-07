@@ -1,6 +1,7 @@
 package io.gamedeck.mobile;
 
 import android.app.Activity;
+import android.annotation.SuppressLint;
 import android.app.ActivityManager;
 import android.content.ActivityNotFoundException;
 import android.content.BroadcastReceiver;
@@ -33,6 +34,7 @@ import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.window.OnBackInvokedDispatcher;
 import android.provider.MediaStore;
 import android.widget.FrameLayout;
 
@@ -84,6 +86,7 @@ public class MainActivity extends Activity {
         }
         buildWebView();
         registerQaReceiver();
+        registerBackNavigation();
         loadLocalShell();
     }
 
@@ -899,13 +902,28 @@ public class MainActivity extends Activity {
         }
     }
 
-    @Override
-    public void onBackPressed() {
+    private void registerBackNavigation() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
+                OnBackInvokedDispatcher.PRIORITY_DEFAULT,
+                this::handleBackNavigation
+            );
+        }
+    }
+
+    private void handleBackNavigation() {
         if (remoteMode) {
             loadLocalShell();
             return;
         }
         evaluate("window.GameDeckNative&&window.GameDeckNative.back()");
+    }
+
+    @SuppressLint("GestureBackNavigation")
+    @Override
+    public void onBackPressed() {
+        // Android 8-12 fallback. API 33+ uses OnBackInvokedDispatcher above.
+        handleBackNavigation();
     }
 
     @Override
