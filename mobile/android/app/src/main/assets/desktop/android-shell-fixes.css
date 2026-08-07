@@ -1,0 +1,244 @@
+/* Final Android shell corrections after portrait screenshot review. */
+
+@media (max-width: 820px) and (orientation: portrait) {
+  .app-shell-header {
+    position: fixed !important;
+    z-index: 120 !important;
+    top: 0 !important;
+    right: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    box-shadow: 0 10px 30px #000b !important;
+  }
+
+  main {
+    padding-top: var(--android-header) !important;
+  }
+
+  main > aside {
+    position: relative !important;
+    top: auto !important;
+  }
+
+  .toolbar {
+    top: calc(var(--android-header) + 5px) !important;
+  }
+
+  .header-menu {
+    position: fixed !important;
+    z-index: 150 !important;
+    top: calc(env(safe-area-inset-top, 0px) + 51px) !important;
+    right: 9px !important;
+    max-height: calc(100vh - var(--android-header) - 20px) !important;
+    overflow-y: auto !important;
+  }
+
+  .content-scrolled .app-header {
+    border-bottom-color: #ffffff1a !important;
+    background: linear-gradient(180deg, #080d15fc, #0a1018fa) !important;
+  }
+
+  .content-scrolled .brand-mark {
+    box-shadow: 0 0 24px #58d6ff42 !important;
+  }
+
+  .content-scrolled main > aside {
+    box-shadow: none !important;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 620px) {
+  .app-shell-header {
+    position: relative !important;
+    z-index: 100 !important;
+  }
+
+  main {
+    padding-top: 0 !important;
+  }
+
+  .toolbar {
+    top: 0 !important;
+  }
+}
+
+/* Final phone composition: keep every primary action reachable without desktop overlays. */
+.control-legend {
+  display: none !important;
+}
+
+@media (max-width: 820px) and (orientation: portrait) {
+  :root {
+    --android-header: 108px;
+  }
+
+  .app-header {
+    grid-template-rows: 48px 52px !important;
+    padding: 4px 10px !important;
+  }
+
+  .brand-mark {
+    width: 36px !important;
+    height: 36px !important;
+  }
+
+  .head-actions .overflow-button {
+    width: 44px !important;
+    min-width: 44px !important;
+    height: 44px !important;
+  }
+
+  .app-header .primary-nav {
+    height: 48px !important;
+    padding: 2px !important;
+  }
+
+  .app-header .primary-nav .nav {
+    min-height: 44px !important;
+    height: 44px !important;
+    font-size: 9px !important;
+  }
+
+  .content {
+    padding: 10px 10px max(82px, calc(env(safe-area-inset-bottom) + 18px)) !important;
+  }
+
+  .hero {
+    min-height: 0 !important;
+    display: block !important;
+    padding: 15px !important;
+  }
+
+  .hero > div:first-child {
+    padding-top: 0 !important;
+  }
+
+  .hero .stats,
+  .hero .hero-metrics {
+    display: none !important;
+  }
+
+  .hero h1 {
+    max-width: none !important;
+    font-size: clamp(27px, 7.7vw, 32px) !important;
+    line-height: 1.02 !important;
+    letter-spacing: -1.25px !important;
+  }
+
+  .hero h1 em {
+    display: inline !important;
+  }
+
+  #subhead {
+    max-width: 42ch !important;
+    margin-top: 7px !important;
+    font-size: 10.5px !important;
+    line-height: 1.38 !important;
+  }
+
+  .hero-actions {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr) !important;
+    gap: 7px !important;
+    margin-top: 10px !important;
+  }
+
+  .hero-actions button,
+  .setup-coach-actions button,
+  .toolbar button,
+  .library-tools button,
+  .discover-tools button,
+  .header-menu button,
+  .header-menu a {
+    min-height: 44px !important;
+  }
+
+  .setup-coach {
+    grid-template-columns: 1fr !important;
+    gap: 11px !important;
+    padding: 14px !important;
+  }
+
+  .setup-coach-copy {
+    grid-template-columns: 52px minmax(0, 1fr) !important;
+    gap: 10px !important;
+  }
+
+  .setup-score {
+    width: 52px !important;
+    height: 52px !important;
+  }
+
+  .setup-coach-copy h2 {
+    margin: 2px 0 4px !important;
+    font-size: 18px !important;
+  }
+
+  .setup-coach-copy p {
+    font-size: 9px !important;
+    line-height: 1.4 !important;
+  }
+
+  .setup-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+  }
+
+  .setup-step {
+    min-height: 46px !important;
+    padding: 7px !important;
+  }
+
+  .setup-step small {
+    white-space: normal !important;
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .setup-coach-actions {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+  }
+
+  .setup-coach-actions button {
+    min-width: 0 !important;
+    padding-inline: 7px !important;
+    font-size: 8px !important;
+  }
+
+  .toolbar {
+    position: sticky !important;
+    z-index: 35 !important;
+  }
+
+  .header-menu {
+    width: min(300px, calc(100vw - 18px)) !important;
+    max-width: calc(100vw - 18px) !important;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 620px) {
+  .app-header .primary-nav .nav,
+  .head-actions .overflow-button,
+  .spotlight-actions button,
+  .catalog-feature-actions button,
+  .header-menu button,
+  .header-menu a {
+    min-height: 44px !important;
+  }
+
+  .hero {
+    min-height: 154px !important;
+  }
+
+  .setup-coach {
+    grid-template-columns: minmax(240px, .9fr) minmax(0, 1.1fr) auto !important;
+    gap: 10px !important;
+    padding: 12px !important;
+  }
+
+  .setup-coach-actions {
+    min-width: 132px !important;
+  }
+}

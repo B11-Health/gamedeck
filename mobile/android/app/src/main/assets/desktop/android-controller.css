@@ -1,0 +1,187 @@
+/* GameDeck Android controller-first interaction layer. */
+
+#androidControllerHints {
+  position: fixed;
+  z-index: 220;
+  right: max(10px, env(safe-area-inset-right));
+  bottom: max(10px, env(safe-area-inset-bottom));
+  display: none;
+  align-items: center;
+  gap: 9px;
+  max-width: calc(100vw - 20px);
+  padding: 7px 10px;
+  border: 1px solid #ffffff18;
+  border-radius: 999px;
+  background: #080d15e8;
+  box-shadow: 0 10px 32px #0009, inset 0 1px #ffffff0c;
+  color: #dce8f6;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: .4px;
+  pointer-events: none;
+  backdrop-filter: blur(18px);
+}
+
+.controller-mode #androidControllerHints {
+  display: flex;
+  animation: controllerHintsIn 160ms ease-out both;
+}
+
+#androidControllerHints span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+#androidControllerHints b {
+  display: inline-grid;
+  min-width: 20px;
+  height: 20px;
+  place-items: center;
+  padding-inline: 5px;
+  border: 1px solid #c8ff5260;
+  border-radius: 999px;
+  background: #c8ff5214;
+  color: #eaffb7;
+  font-size: 8px;
+  line-height: 1;
+  box-shadow: inset 0 1px #ffffff16;
+}
+
+.controller-mode .controller-focus {
+  position: relative;
+  z-index: 5;
+  outline: 3px solid #c8ff52 !important;
+  outline-offset: 3px !important;
+  box-shadow:
+    0 0 0 6px #071017d9,
+    0 0 0 8px #59d8ff66,
+    0 12px 32px #000b,
+    0 0 34px #c8ff5247 !important;
+  transform: translateZ(0) scale(1.018);
+  transition: transform 90ms ease-out, box-shadow 90ms ease-out, outline-color 90ms ease-out !important;
+}
+
+.controller-mode .nav.controller-focus,
+.controller-mode button.controller-focus,
+.controller-mode select.controller-focus,
+.controller-mode input.controller-focus,
+.controller-mode a.controller-focus {
+  z-index: 12;
+  outline-width: 2px !important;
+  outline-offset: 2px !important;
+  transform: translateZ(0) scale(1.035);
+}
+
+.controller-mode .controller-focus .cover,
+.controller-mode .controller-focus.cover {
+  filter: saturate(1.08) brightness(1.06);
+}
+
+.controller-mode .controller-focus::after {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  z-index: -1;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px #ffffff22;
+  pointer-events: none;
+}
+
+.controller-pressed {
+  transform: translateZ(0) scale(.972) !important;
+  filter: brightness(1.12) !important;
+}
+
+button,
+.nav,
+.system,
+.game,
+.catalog-game,
+.console-card,
+a,
+[role='button'] {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+button:active,
+.nav:active,
+.system:active,
+.game:active,
+.catalog-game:active,
+.console-card:active,
+a:active,
+[role='button']:active {
+  transform: translateY(1px) scale(.985);
+}
+
+@media (hover: none) and (pointer: coarse) {
+  button,
+  .nav,
+  .system,
+  .game,
+  .catalog-game,
+  .console-card,
+  a,
+  [role='button'] {
+    min-touch-target-size: 44px;
+  }
+
+  .game .fav,
+  .catalog-game button,
+  .spotlight-actions button,
+  .catalog-feature-actions button {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+}
+
+@media (orientation: portrait) and (max-width: 430px) {
+  #androidControllerHints {
+    right: 8px;
+    bottom: max(8px, env(safe-area-inset-bottom));
+    left: 8px;
+    justify-content: center;
+    gap: 7px;
+    overflow: hidden;
+    padding-inline: 8px;
+  }
+
+  #androidControllerHints span {
+    font-size: 7px;
+  }
+
+  #androidControllerHints span:last-child {
+    display: none;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 620px) {
+  #androidControllerHints {
+    right: max(8px, env(safe-area-inset-right));
+    bottom: max(7px, env(safe-area-inset-bottom));
+    gap: 7px;
+    padding: 5px 8px;
+  }
+
+  #androidControllerHints b {
+    min-width: 18px;
+    height: 18px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .controller-mode .controller-focus,
+  .controller-pressed,
+  #androidControllerHints {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+@keyframes controllerHintsIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}

@@ -1,0 +1,192 @@
+'use strict';
+
+(() => {
+  const native = window.GameDeckAndroid;
+  const startedAt = performance.now();
+  let appInfo = {};
+  try { appInfo = JSON.parse(native?.appInfo?.() || '{}'); } catch {}
+  const requireFixture = Boolean(appInfo.debugFixture);
+  let terminal = false;
+  let sawLoading = false;
+  let stableSince = 0;
+
+  const send = (method, payload) => {
+    if (terminal || !native || typeof native[method] !== 'function') return;
+    terminal = true;
+    try { native[method](JSON.stringify(payload)); } catch {}
+  };
+
+  const describeError = value => {
+    if (value instanceof Error) return { name: value.name, message: value.message, stack: value.stack || '' };
+    return { message: String(value || 'Unknown renderer error') };
+  };
+
+  const rectOf = element => {
+    if (!element) return null;
+    const rect = element.getBoundingClientRect();
+    return {
+      x: Math.round(rect.x), y: Math.round(rect.y),
+      width: Math.round(rect.width), height: Math.round(rect.height),
+      right: Math.round(rect.right), bottom: Math.round(rect.bottom)
+    };
+  };
+
+  const hasLayout = element => {
+    if (!element) return false;
+    const rect = element.getBoundingClientRect();
+    const style = getComputedStyle(element);
+    return Boolean(
+      rect.width > 1
+      && rect.height > 1
+      && style.display !== 'none'
+      && style.visibility !== 'hidden'
+      && Number.parseFloat(style.opacity || '1') > 0.01
+    );
+  };
+
+  const isVisibleInViewport = element => {
+    if (!hasLayout(element)) return false;
+    const rect = element.getBoundingClientRect();
+    return Boolean(
+      rect.right > 0
+      && rect.bottom > 0
+      && rect.left < innerWidth
+      && rect.top < innerHeight
+    );
+  };
+
+  addEventListener('error', event => {
+    send('reportRendererError', {
+      phase: 'window-error',
+      ...describeError(event.error || event.message),
+      source: event.filename || '',
+      line: event.lineno || 0,
+      column: event.colno || 0
+    });
+  });
+
+  addEventListener('unhandledrejection', event => {
+    send('reportRendererError', { phase: 'unhandled-rejection', ...describeError(event.reason) });
+  });
+
+  const timer = setInterval(() => {
+    if (terminal) {
+      clearInterval(timer);
+      return;
+    }
+
+    const stage = document.querySelector('#appLoading');
+    const bodyLoading = document.body.classList.contains('is-loading');
+    const stageVisible = Boolean(stage && !stage.classList.contains('hidden') && getComputedStyle(stage).display !== 'none');
+    if (bodyLoading && stageVisible) sawLoading = true;
+
+    const loadingPercent = document.querySelector('#loadingPercent')?.textContent?.trim() || '';
+    const loadingComplete = Boolean(
+      stage
+      && stage.classList.contains('hidden')
+      && !bodyLoading
+      && loadingPercent === '100%'
+    );
+    const header = document.querySelector('.app-header');
+    const content = document.querySelector('.content');
+    const hero = document.querySelector('.hero');
+    const libraryToolbar = document.querySelector('#libraryToolbar');
+    const games = document.querySelector('#games');
+    const emptyState = document.querySelector('#empty');
+    const firstGame = document.querySelector('.game');
+    const gameCards = document.querySelectorAll('.game').length;
+    const firstTitle = firstGame?.querySelector('.meta > b')?.textContent?.trim() || '';
+    const firstArtwork = firstGame?.querySelector('[data-game-art]')?.getAttribute('src') || '';
+    const description = document.querySelector('#spotlightDescription')?.textContent?.trim() || '';
+    const facts = document.querySelector('#spotlightFacts')?.textContent?.replace(/\s+/g, ' ').trim() || '';
+    const centerElement = document.elementFromPoint(Math.max(1, innerWidth / 2), Math.max(1, innerHeight / 2));
+    const fixtureReady = !requireFixture || Boolean(
+      gameCards >= 1
+      && firstTitle === 'Chrono Trigger'
+      && firstArtwork.startsWith('data:image/svg+xml')
+      && description.includes('time-traveling role-playing adventure')
+      && facts.includes('1995')
+      && facts.includes('Role-playing')
+      && hasLayout(firstGame)
+    );
+    const activeLibrarySurface = Boolean(
+      isVisibleInViewport(header)
+      && isVisibleInViewport(content)
+      && isVisibleInViewport(hero)
+      && hasLayout(libraryToolbar)
+      && hasLayout(games)
+      && centerElement
+      && centerElement !== document.documentElement
+      && centerElement !== document.body
+      && fixtureReady
+    );
+
+    if (loadingComplete && activeLibrarySurface && window.deck) {
+      if (!stableSince) stableSince = performance.now();
+      if (performance.now() - stableSince >= 3500) {
+        clearInterval(timer);
+        send('reportRendererReady', {
+          phase: 'ready',
+          title: document.title,
+          elapsedMs: Math.round(performance.now() - startedAt),
+          renderer: 'shared-desktop',
+          startupObserved: true,
+          loadingTransitionObserved: sawLoading,
+          viewportVerified: true,
+          responsiveFoldVerified: true,
+          fixtureVerified: requireFixture,
+          loadingPercent,
+          viewport: { width: innerWidth, height: innerHeight, scale: devicePixelRatio },
+          navigation: [...document.querySelectorAll('.nav[data-view]')].map(item => item.dataset.view),
+          gameCards,
+          catalogCards: document.querySelectorAll('.catalog-game').length,
+          firstGameTitle: firstTitle,
+          artworkKind: firstArtwork.split(':')[0] || '',
+          descriptionVerified: description.includes('time-traveling role-playing adventure'),
+          factsVerified: facts.includes('1995') && facts.includes('Role-playing'),
+          centerElement: `${centerElement.tagName}.${centerElement.className || ''}`.slice(0, 120),
+          headerRect: rectOf(header),
+          heroRect: rectOf(hero),
+          toolbarRect: rectOf(libraryToolbar),
+          firstGameRect: rectOf(firstGame),
+          emptyStateVisible: Boolean(emptyState && !emptyState.classList.contains('hidden'))
+        });
+      }
+    } else {
+      stableSince = 0;
+    }
+
+    if (performance.now() - startedAt > 45000) {
+      clearInterval(timer);
+      send('reportRendererError', {
+        phase: 'startup-timeout',
+        elapsedMs: Math.round(performance.now() - startedAt),
+        requireFixture,
+        sawLoading,
+        bodyLoading,
+        stageClass: stage?.className || '',
+        loadingPercent,
+        viewport: { width: innerWidth, height: innerHeight, scale: devicePixelRatio },
+        hasDeck: Boolean(window.deck),
+        headerVisible: isVisibleInViewport(header),
+        contentVisible: isVisibleInViewport(content),
+        heroVisible: isVisibleInViewport(hero),
+        toolbarHasLayout: hasLayout(libraryToolbar),
+        gamesHasLayout: hasLayout(games),
+        firstGameHasLayout: hasLayout(firstGame),
+        gameCards,
+        firstTitle,
+        firstArtwork: firstArtwork.slice(0, 80),
+        description: description.slice(0, 180),
+        facts: facts.slice(0, 180),
+        centerElement: centerElement ? `${centerElement.tagName}.${centerElement.className || ''}`.slice(0, 120) : '',
+        headerRect: rectOf(header),
+        contentRect: rectOf(content),
+        heroRect: rectOf(hero),
+        toolbarRect: rectOf(libraryToolbar),
+        firstGameRect: rectOf(firstGame),
+        bodyClass: document.body.className
+      });
+    }
+  }, 200);
+})();

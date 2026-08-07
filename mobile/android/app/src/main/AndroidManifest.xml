@@ -2,29 +2,44 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
   <uses-permission android:name="android.permission.INTERNET" />
   <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-  <uses-permission android:name="android.permission.VIBRATE" />
+  <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+  <uses-permission android:name="android.permission.REORDER_TASKS" />
+  <uses-feature android:name="android.hardware.gamepad" android:required="false" />
+  <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+
+  <queries>
+    <package android:name="com.retroarch" />
+    <package android:name="com.retroarch.aarch64" />
+    <package android:name="com.retroarch.ra32" />
+    <intent>
+      <action android:name="android.intent.action.VIEW" />
+      <category android:name="android.intent.category.DEFAULT" />
+      <data android:scheme="content" />
+    </intent>
+  </queries>
+
   <application
       android:allowBackup="true"
-      android:label="GameDeck Mobile"
-      android:icon="@drawable/gamedeck_icon"
-      android:roundIcon="@drawable/gamedeck_icon"
+      android:hardwareAccelerated="true"
+      android:icon="@mipmap/ic_launcher"
+      android:roundIcon="@mipmap/ic_launcher_round"
+      android:label="${appLabel}"
       android:theme="@style/AppTheme"
       android:usesCleartextTraffic="true">
+    <provider
+        android:name="io.gamedeck.mobile.ManagedLibraryProvider"
+        android:authorities="${applicationId}.managed"
+        android:exported="false"
+        android:grantUriPermissions="true" />
+
     <activity
-        android:name=".MainActivity"
-        android:configChanges="keyboard|keyboardHidden|orientation|screenSize|smallestScreenSize|uiMode"
+        android:name="io.gamedeck.mobile.MainActivity"
+        android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
         android:exported="true"
-        android:screenOrientation="sensorLandscape"
-        android:launchMode="singleTask">
+        android:screenOrientation="fullSensor">
       <intent-filter>
         <action android:name="android.intent.action.MAIN" />
         <category android:name="android.intent.category.LAUNCHER" />
-      </intent-filter>
-      <intent-filter>
-        <action android:name="android.intent.action.VIEW" />
-        <category android:name="android.intent.category.DEFAULT" />
-        <category android:name="android.intent.category.BROWSABLE" />
-        <data android:scheme="gamedeck" android:host="connect" />
       </intent-filter>
     </activity>
   </application>
