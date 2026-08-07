@@ -60,6 +60,7 @@ public class MainActivity extends Activity {
     private static final String LOCAL_URL = "file:///android_asset/desktop/index.html";
     private static final String QA_ACTION = "io.gamedeck.mobile.QA";
     private static final String DEBUG_FIXTURE_FILE = "renderer-fixture.enabled";
+    private static final String DEBUG_FIXTURE_EXTRA = "gamedeck.qa.fixture";
 
     private FrameLayout rootView;
     private WebView webView;
@@ -79,6 +80,8 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         clearLegacyDebugFixture();
+        debugFixtureEnabled = isDebugBuild() && getIntent() != null
+            && getIntent().getBooleanExtra(DEBUG_FIXTURE_EXTRA, false);
         getWindow().setStatusBarColor(Color.rgb(9, 11, 16));
         getWindow().setNavigationBarColor(Color.rgb(9, 11, 16));
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {

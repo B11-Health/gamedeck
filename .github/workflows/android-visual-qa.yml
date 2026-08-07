@@ -104,12 +104,7 @@ jobs:
           adb shell settings put system user_rotation 0 || true
           adb install "$APK"
           adb logcat -c
-          adb shell am start -W -n "$PACKAGE/$ACTIVITY" | tee "$OUT/ACTIVITY-START.txt"
-          adb shell am broadcast \
-            -a io.gamedeck.mobile.QA \
-            -p "$PACKAGE" \
-            --es command fixture:on \
-            >/dev/null
+          adb shell am start -W -n "$PACKAGE/$ACTIVITY" --ez gamedeck.qa.fixture true | tee "$OUT/ACTIVITY-START.txt"
 
           latest_qa() {
             adb logcat -d -v brief \

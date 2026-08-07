@@ -123,13 +123,8 @@ jobs:
           adb shell settings put global animator_duration_scale 0
           adb install "$APK"
           adb logcat -c
-          adb shell am start -W -n "$PACKAGE/$ACTIVITY" \
+          adb shell am start -W -n "$PACKAGE/$ACTIVITY" --ez gamedeck.qa.fixture true \
             | tee "$OUT/ACTIVITY-START.txt"
-          adb shell am broadcast \
-            -a io.gamedeck.mobile.QA \
-            -p "$PACKAGE" \
-            --es command fixture:on \
-            >/dev/null
 
           renderer_ready=0
           for attempt in $(seq 1 50); do

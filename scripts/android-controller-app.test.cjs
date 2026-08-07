@@ -7,6 +7,7 @@ const root = path.join(__dirname, "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 
 const activity = read("mobile/android/app/src/main/java/io/gamedeck/mobile/ControllerActivity.java");
+const standalone = read("mobile/android/app/src/main/java/io/gamedeck/mobile/MainActivity.java");
 const bluetooth = read("mobile/android/app/src/main/java/io/gamedeck/mobile/BluetoothGamepadManager.java");
 const manifest = read("mobile/android/app/src/main/AndroidManifest.xml");
 const gradle = read("mobile/android/app/build.gradle");
@@ -18,6 +19,7 @@ const server = read("stream-server.js");
 const platformAndroid = read("mobile/android/app/src/main/assets/desktop/platform-android.js");
 
 assert(activity.includes("LOCAL_APP_URL") && activity.includes("/controller/index.html"));
+assert(standalone.includes("DEBUG_FIXTURE_EXTRA = \"gamedeck.qa.fixture\"") && standalone.includes("isDebugBuild() && getIntent() != null"));
 assert(activity.includes("Sensor.TYPE_ROTATION_VECTOR") && activity.includes("Sensor.TYPE_GYROSCOPE"));
 assert(activity.includes("SCREEN_ORIENTATION_SENSOR_LANDSCAPE") && activity.includes("SCREEN_ORIENTATION_SENSOR_PORTRAIT"));
 assert(activity.includes("bluetoothButton") && activity.includes("bluetoothAxis") && activity.includes("hapticPulse"));
