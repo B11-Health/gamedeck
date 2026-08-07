@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: android-standalone-preview
@@ -21,6 +21,8 @@ jobs:
     name: Build and publish Android preview
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    env:
+      RELEASE_REPOSITORY: B11-Health/gamedeck-releases
     steps:
       - name: Checkout current main
         uses: actions/checkout@v7
@@ -69,6 +71,18 @@ jobs:
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK" | tee dist/android/APK-SIGNATURE.txt
           sha256sum "$APK" > dist/android/SHA256SUMS-android.txt
 
+      - name: Create non-sensitive source build metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > dist/android/SOURCE-BUILD.txt <<EOF
+          GameDeck release: community-preview
+          Source repository: ${GITHUB_REPOSITORY}
+          Source commit: ${GITHUB_SHA}
+          Build timestamp UTC: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+          Distribution repository: ${RELEASE_REPOSITORY}
+          EOF
+
       - name: Upload exact build evidence
         uses: actions/upload-artifact@v7
         with:
@@ -77,20 +91,41 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Point community preview tag at current source
-        run: |
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git tag -f community-preview "$GITHUB_SHA"
-          git push --force origin community-preview
-
-      - name: Publish updated Android APK
+      - name: Require distribution publishing token
+        shell: bash
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GAMEDECK_RELEASES_TOKEN }}
         run: |
-          gh release upload community-preview dist/android/* --clobber --repo "$GITHUB_REPOSITORY"
-          gh release edit community-preview \
-            --prerelease \
-            --title "GameDeck Community Preview 1.3.0-preview.2" \
-            --notes "Updated Android standalone preview with GameDeck premium touch controls, portrait and landscape layouts, visual and haptic input feedback, physical-controller auto-hide, and dynamic ambient blur fill. Existing desktop preview assets remain available in this release." \
-            --repo "$GITHUB_REPOSITORY"
+          set -euo pipefail
+          if [[ -z "${GH_TOKEN:-}" ]]; then
+            echo "GAMEDECK_RELEASES_TOKEN is required for distribution publishing." >&2
+            exit 1
+          fi
+
+      - name: Publish updated Android APK to public distribution repository
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GAMEDECK_RELEASES_TOKEN }}
+        run: |
+          set -euo pipefail
+          RELEASE_TAG="community-preview"
+          RELEASE_TITLE="GameDeck Community Preview 1.3.0-preview.2"
+          RELEASE_NOTES="Updated Android standalone preview with GameDeck premium touch controls, portrait and landscape layouts, visual and haptic input feedback, physical-controller auto-hide, and dynamic ambient blur fill. Existing desktop preview assets remain available in this release."
+
+          if gh release view "$RELEASE_TAG" --repo "$RELEASE_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" dist/android/* \
+              --clobber \
+              --repo "$RELEASE_REPOSITORY"
+            gh release edit "$RELEASE_TAG" \
+              --prerelease \
+              --title "$RELEASE_TITLE" \
+              --notes "$RELEASE_NOTES" \
+              --repo "$RELEASE_REPOSITORY"
+          else
+            gh release create "$RELEASE_TAG" dist/android/* \
+              --target main \
+              --prerelease \
+              --title "$RELEASE_TITLE" \
+              --notes "$RELEASE_NOTES" \
+              --repo "$RELEASE_REPOSITORY"
+          fi
