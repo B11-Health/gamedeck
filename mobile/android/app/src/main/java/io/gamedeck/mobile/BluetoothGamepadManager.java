@@ -2,6 +2,7 @@ package io.gamedeck.mobile;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -21,6 +22,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Set;
 
+@TargetApi(Build.VERSION_CODES.P)
 public final class BluetoothGamepadManager implements BluetoothProfile.ServiceListener {
     public interface Listener {
         void onBluetoothStateChanged(String snapshot);
