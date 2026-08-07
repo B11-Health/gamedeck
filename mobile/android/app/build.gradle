@@ -1,50 +1,165 @@
 plugins { id 'com.android.application' }
 
+def repositoryRoot = new File(rootProject.projectDir, '../..').canonicalFile
+def sharedRendererAssets = file("$buildDir/generated/sharedRenderer")
+def controllerAssets = file("$buildDir/generated/controllerAssets")
+def applicationIdOverride = providers.gradleProperty('gamedeckApplicationId').orNull
+def applicationLabelOverride = providers.gradleProperty('gamedeckAppLabel').orNull
+def androidVersionName = providers.gradleProperty('gamedeckVersionName').orNull ?: '1.0.0'
+def androidVersionCode = (providers.gradleProperty('gamedeckVersionCode').orNull ?: '10000') as Integer
+def releaseKeystore = providers.environmentVariable('GAMEDECK_ANDROID_KEYSTORE').orNull
+def releaseStorePassword = providers.environmentVariable('GAMEDECK_ANDROID_STORE_PASSWORD').orNull
+def releaseKeyAlias = providers.environmentVariable('GAMEDECK_ANDROID_KEY_ALIAS').orNull
+def releaseKeyPassword = providers.environmentVariable('GAMEDECK_ANDROID_KEY_PASSWORD').orNull
+def releaseSigningReady = [releaseKeystore, releaseStorePassword, releaseKeyAlias, releaseKeyPassword].every { it }
+
+tasks.register('prepareSharedRenderer') {
+    inputs.dir(new File(repositoryRoot, 'src'))
+    inputs.dir(new File(repositoryRoot, 'assets'))
+    inputs.dir(new File(projectDir, 'src/main/assets'))
+    outputs.dir(sharedRendererAssets)
+
+    doLast {
+        delete sharedRendererAssets
+        copy {
+            from new File(repositoryRoot, 'src')
+            into new File(sharedRendererAssets, 'desktop')
+        }
+        copy {
+            from new File(repositoryRoot, 'assets')
+            into new File(sharedRendererAssets, 'assets')
+        }
+
+        File indexFile = new File(sharedRendererAssets, 'desktop/index.html')
+        String index = indexFile.getText('UTF-8')
+        index = index.replace(
+            "img-src 'self' data: file:; connect-src 'self' http:;",
+            "img-src 'self' data: file: content: blob: https:; connect-src 'self' http: https:;"
+        )
+        index = index.replace(
+            '<link rel="stylesheet" href="styles.css">',
+            '<link rel="stylesheet" href="styles.css">\n  <link rel="stylesheet" href="android-overrides.css">\n  <link rel="stylesheet" href="android-polish.css">\n  <link rel="stylesheet" href="android-shell-fixes.css">\n  <link rel="stylesheet" href="android-controller.css">\n  <link rel="stylesheet" href="android-performance.css">'
+        )
+        index = index.replace(
+            '<script src="app.js"></script>',
+            '<script src="platform-android-native.js"></script>\n  <script src="debug-fixture.js"></script>\n  <script src="app.js"></script>\n  <script src="android-controller.js"></script>\n  <script src="renderer-probe.js"></script>\n  <script src="android-qa-probe.js"></script>'
+        )
+        if (!index.contains('platform-android-native.js') || !index.contains('android-controller.js')) {
+            throw new GradleException('Android native platform or controller adapter was not inserted into index.html')
+        }
+        indexFile.write(index, 'UTF-8')
+
+        File platformSource = new File(projectDir, 'src/main/assets/desktop/platform-android.js')
+        if (!platformSource.isFile()) {
+            throw new GradleException("Missing Android platform adapter source: ${platformSource}")
+        }
+        File platformFile = new File(sharedRendererAssets, 'desktop/platform-android-native.js')
+        String platform = platformSource.getText('UTF-8')
+        platform = platform.replace("version: '1.0.0'", "version: '${androidVersionName}'")
+        List<String> requiredNativeContracts = [
+            "invoke('catalogSystems'",
+            "invoke('catalogGames'",
+            "invoke('cachedArtwork'",
+            'native.requestArtwork',
+            "invoke('controllers'",
+            "invoke('downloads'",
+            "invoke('importOwned'",
+            "invoke('retryDownload'",
+            "invoke('pauseDownload'",
+            "invoke('dismissDownload'",
+            'onDownload: subscribeDownloads',
+            "version: '${androidVersionName}'"
+        ]
+        List<String> missingNativeContracts = requiredNativeContracts.findAll { !platform.contains(it) }
+        if (platform.contains('android_discover_transfer_pending') || !missingNativeContracts.isEmpty()) {
+            throw new GradleException(
+                "Native Android RGSX adapter contract is incomplete: ${missingNativeContracts.join(', ')}"
+            )
+        }
+        platformFile.write(platform, 'UTF-8')
+        File debugFixtureFile = new File(projectDir, 'src/main/assets/desktop/debug-fixture.js')
+        if (debugFixtureFile.getText('UTF-8').contains('artwork: async () => cover')) {
+            throw new GradleException('Android debug fixture must not override artwork for the real managed library')
+        }
+    }
+}
+
 android {
     namespace 'io.gamedeck.mobile'
     compileSdk 36
 
     defaultConfig {
-        applicationId 'io.gamedeck.mobile'
+        applicationId applicationIdOverride ?: 'io.gamedeck.android'
         minSdk 26
         targetSdk 36
-        versionCode 3
-        versionName '1.2.0'
+        versionCode androidVersionCode
+        versionName androidVersionName
+        manifestPlaceholders = [appLabel: applicationLabelOverride ?: 'GameDeck']
     }
 
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
+
+    signingConfigs {
+        if (releaseSigningReady) {
+            release {
+                storeFile file(releaseKeystore)
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+                enableV1Signing true
+                enableV2Signing true
+                enableV3Signing true
+                enableV4Signing true
+            }
+        }
     }
 
     buildTypes {
         debug {
-            applicationIdSuffix '.preview'
-            versionNameSuffix '-preview'
+            applicationIdSuffix applicationIdOverride ? '' : '.debug'
+            versionNameSuffix applicationIdOverride ? '' : '-debug'
         }
         release {
             minifyEnabled false
+            shrinkResources false
+            if (releaseSigningReady) signingConfig signingConfigs.release
         }
     }
 
     sourceSets {
         main {
-            assets.srcDir "$buildDir/generated/controllerAssets"
+            assets.srcDirs(sharedRendererAssets, controllerAssets)
         }
     }
 
-    lint {
-        abortOnError true
-        checkReleaseBuilds true
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
     }
 }
 
-
 tasks.register('syncControllerWeb', Copy) {
     from file('../../web')
-    into file("$buildDir/generated/controllerAssets/controller")
+    into new File(controllerAssets, 'controller')
 }
 
 tasks.named('preBuild').configure {
+    dependsOn tasks.named('prepareSharedRenderer')
     dependsOn tasks.named('syncControllerWeb')
+}
+
+
+tasks.register('verifyReleaseSigning') {
+    doLast {
+        if (!releaseSigningReady) {
+            throw new GradleException('Release signing environment is incomplete. Set GAMEDECK_ANDROID_KEYSTORE, GAMEDECK_ANDROID_STORE_PASSWORD, GAMEDECK_ANDROID_KEY_ALIAS, and GAMEDECK_ANDROID_KEY_PASSWORD.')
+        }
+        if (!file(releaseKeystore).isFile()) {
+            throw new GradleException("Release keystore does not exist: ${releaseKeystore}")
+        }
+    }
+}
+
+afterEvaluate {
+    tasks.named('assembleRelease').configure { dependsOn tasks.named('verifyReleaseSigning') }
+    tasks.named('bundleRelease').configure { dependsOn tasks.named('verifyReleaseSigning') }
 }

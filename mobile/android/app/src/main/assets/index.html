@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#090b10">
+  <meta name="color-scheme" content="dark">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob: content:; script-src 'self'; style-src 'self'; img-src 'self' data: blob: content:; connect-src http: https:; media-src blob: http: https:">
+  <title>GameDeck Android</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="ambient" aria-hidden="true"><span></span><span></span><span></span></div>
+  <header class="topbar">
+    <button class="brand focusable" id="brandHome" type="button" aria-label="GameDeck home">
+      <span class="brand-mark">G</span>
+      <span><b>GAMEDECK</b><small>ANDROID FOUNDATION</small></span>
+    </button>
+    <nav class="topnav" aria-label="Main navigation">
+      <button class="nav focusable active" type="button" data-view="library">Library</button>
+      <button class="nav focusable" type="button" data-view="discover">Discover</button>
+      <button class="nav focusable" type="button" data-view="remote">Remote</button>
+      <button class="nav focusable" type="button" data-view="status">Status</button>
+    </nav>
+    <div class="top-status">
+      <button class="status-chip focusable" id="engineChip" type="button"><i></i><span>Engines</span><b id="engineChipValue">Checking</b></button>
+      <span class="trust-chip"><i></i><span>LOCAL-FIRST</span></span>
+    </div>
+  </header>
+
+  <div class="app-layout">
+    <aside class="systems-panel" id="systemsPanel">
+      <div class="panel-heading"><span>YOUR SYSTEMS</span><b id="systemTotal">0</b></div>
+      <button class="system-row focusable active" type="button" data-system="all"><span class="system-icon">ALL</span><span><b>All games</b><small>Every local shelf</small></span><em id="allCount">0</em></button>
+      <div id="systemRows"></div>
+      <div class="systems-foot">
+        <button class="secondary focusable" id="chooseLibrary" type="button">Choose game library</button>
+        <small>GameDeck reads only the folder you select.</small>
+      </div>
+    </aside>
+
+    <main id="mainContent">
+      <section class="view active" data-view-panel="library">
+        <section class="hero">
+          <div class="hero-copy">
+            <div class="eyebrow" id="heroKicker">LOCAL GAME LIBRARY</div>
+            <h1>Your games.<br><em>Now in your pocket.</em></h1>
+            <p id="heroMessage">Choose a folder containing games you legally own. GameDeck keeps the library on this device.</p>
+            <div class="hero-actions">
+              <button class="primary focusable" id="heroPrimary" type="button"><span>+</span><b>Choose library</b></button>
+              <button class="secondary focusable" id="surprise" type="button" disabled>Surprise me</button>
+            </div>
+          </div>
+          <div class="hero-metrics" aria-label="Library status">
+            <div><strong id="gameCount">0</strong><span>GAMES</span></div>
+            <div><strong id="readySystemCount">0</strong><span>SYSTEMS</span></div>
+            <div><strong id="routeLabel">BLOCKED</strong><span>PLAY ROUTE</span></div>
+          </div>
+        </section>
+
+        <section class="ready-card" id="readyCard">
+          <div class="ready-score"><strong id="readyScore">25%</strong><span>FOUNDATION</span></div>
+          <div class="ready-copy"><div class="eyebrow">GAMEDECK READY CHECK</div><h2 id="readyTitle">Preparing the Android path</h2><p id="readyMessage">The local shell is ready. Engine, core, and launch verification remain visible instead of being hidden.</p></div>
+          <div class="ready-steps" id="readySteps"></div>
+          <button class="secondary focusable" id="openStatus" type="button">Open full status</button>
+        </section>
+
+        <div class="toolbar">
+          <label class="search"><span>/</span><input id="search" class="focusable" type="search" placeholder="Search your library" autocomplete="off"></label>
+          <div class="toolbar-copy"><b id="shelfTitle">ALL GAMES</b><span id="shelfMeta">Choose a library to begin</span></div>
+          <button class="secondary focusable" id="rescan" type="button">Refresh</button>
+        </div>
+
+        <section class="empty-state" id="emptyState">
+          <span class="empty-orbit"><i></i></span>
+          <div class="eyebrow">LOCAL-FIRST START</div>
+          <h2>Bring the games you own.</h2>
+          <p>Use Android's secure folder picker. GameDeck receives a persistent read grant only for the selected folder—no broad storage permission.</p>
+          <button class="primary focusable" id="emptyChoose" type="button">Choose game library</button>
+        </section>
+        <section class="game-grid hidden" id="gameGrid" aria-label="Games"></section>
+      </section>
+
+      <section class="view" data-view-panel="discover">
+        <section class="page-head"><div><div class="eyebrow">GAME CATALOG</div><h1>Find something great.</h1><p>Browse systems available in GameDeck. Discover is connected automatically and requires no provider setup.</p></div><span class="page-glyph">✦</span></section>
+        <section class="provider-card">
+          <div class="provider-status"><i id="rgsxDot"></i><div><small>DISCOVER</small><h2 id="rgsxTitle">Connecting catalog</h2><p id="rgsxMessage">GameDeck is preparing your discovery catalog.</p></div></div>
+          <div class="provider-metrics"><div><strong id="rgsxSystems">0</strong><span>SUPPORTED SYSTEMS</span></div><div><strong id="rgsxTransfer">AUTO</strong><span>CATALOG CONNECTION</span></div><div><strong>PRIVATE</strong><span>LIBRARY BOUNDARY</span></div></div>
+          <div class="provider-actions"><button class="primary focusable hidden" id="chooseRgsx" type="button" aria-hidden="true" tabindex="-1">Internal catalog override</button><button class="secondary focusable" id="refreshRgsx" type="button">Refresh catalog</button></div>
+        </section>
+        <section class="truth-card"><div class="eyebrow">BUILT INTO GAMEDECK</div><h2>Discovery without technical setup.</h2><p>GameDeck handles catalog providers behind the product surface. Your local game files, firmware, saves, and keys remain private and are never sent to remote guests.</p></section>
+      </section>
+
+      <section class="view" data-view-panel="remote">
+        <section class="page-head"><div><div class="eyebrow">GAMEDECK LIVE</div><h1>Connect to your deck.</h1><p>The existing LAN receiver remains available while standalone Android play is built underneath it.</p></div><span class="page-glyph live">●</span></section>
+        <section class="remote-card">
+          <div class="remote-art"><span class="signal-ring"></span><b>DIRECT LAN</b><small>WEBVIEW RECEIVER</small></div>
+          <form id="remoteForm">
+            <label><span>GameDeck host address</span><input class="focusable" id="remoteUrl" type="url" inputmode="url" placeholder="http://192.168.1.20:41783/?code=123456"></label>
+            <button class="primary focusable" type="submit">Connect to host</button>
+          </form>
+          <div class="remote-notes"><span><i></i>Local-network receiver</span><span><i></i>WebRTC media on host page</span><span><i></i>Back returns to local library</span></div>
+        </section>
+        <section class="truth-card"><div class="eyebrow">MULTIPLAYER ROUTES</div><h2>One product, three honest modes.</h2><div class="route-grid"><article><b>COUCH</b><span>Local controllers, no network.</span></article><article><b>REMOTE</b><span>Host owns game; encrypted media and input.</span></article><article><b>SYNC</b><span>Exact matching game and core on both devices.</span></article></div></section>
+      </section>
+
+      <section class="view" data-view-panel="status">
+        <section class="page-head"><div><div class="eyebrow">DEVICE TRUTH</div><h1>Nothing hidden.</h1><p>Each unavailable path has one reason and one next action.</p></div><span class="page-glyph">◎</span></section>
+        <section class="status-grid">
+          <article class="status-card"><header><span>APPLICATION</span><i class="good"></i></header><h2>Android shell</h2><strong>READY</strong><p>Bundled local UI, secure storage picker, library scanner, and controller navigation.</p></article>
+          <article class="status-card" id="runtimeCard"><header><span>GAME ENGINES</span><i></i></header><h2 id="runtimeTitle">Embedded runtime</h2><strong id="runtimeState">CHECKING</strong><p id="runtimeMessage">Inspecting this device.</p></article>
+          <article class="status-card"><header><span>LIBRARY</span><i id="libraryDot"></i></header><h2 id="libraryTitle">Local library</h2><strong id="libraryState">NOT SELECTED</strong><p id="libraryMessage">Choose one folder through Android's system picker.</p></article>
+          <article class="status-card"><header><span>DISCOVER</span><i id="statusRgsxDot"></i></header><h2>Catalog service</h2><strong id="statusRgsxState">CONNECTING</strong><p id="statusRgsxMessage">GameDeck connects discovery automatically.</p></article>
+        </section>
+        <section class="reason-card"><div><small>PUBLIC REASON</small><code id="reasonCode">android_embedded_runtime_pending</code></div><p id="reasonAction">Next action: integrate and verify an Android-native libretro host and signed core bundle.</p></section>
+      </section>
+    </main>
+  </div>
+
+  <section class="spotlight hidden" id="spotlight" aria-label="Selected game">
+    <button class="spotlight-close focusable" id="spotlightClose" type="button" aria-label="Close selected game">×</button>
+    <div class="spotlight-symbol" id="spotlightSymbol">G</div>
+    <div class="spotlight-copy"><div class="eyebrow" id="spotlightSystem">SELECTED GAME</div><h2 id="spotlightTitle">Game</h2><p id="spotlightPath"></p><div class="spotlight-facts"><span id="spotlightFormat"></span><span id="spotlightSize"></span><span id="spotlightRoute"></span></div></div>
+    <div class="spotlight-actions"><button class="primary focusable" id="spotlightPlay" type="button">Play now</button><button class="secondary focusable" id="spotlightFavorite" type="button">Favorite</button></div>
+  </section>
+
+  <div class="control-legend" aria-label="Controller help"><span><kbd>◀▶▲▼</kbd> Move</span><span><kbd>A</kbd> Select</span><span><kbd>B</kbd> Back</span><span><kbd>X</kbd> Surprise</span><span><kbd>Y</kbd> Favorite</span></div>
+  <div class="toast" id="toast" role="status"><i>i</i><span></span></div>
+  <div class="boot" id="boot"><div class="boot-mark">G</div><div><small>GAMEDECK ANDROID</small><h2 id="bootTitle">Starting local shell</h2><p id="bootMessage">Reading device capabilities without sending library data anywhere.</p><span class="boot-track"><i id="bootBar"></i></span></div></div>
+  <script src="app.js"></script>
+</body>
+</html>

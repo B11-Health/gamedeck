@@ -1,0 +1,247 @@
+name: Android controls QA
+
+on:
+  pull_request:
+    paths:
+      - "mobile/android/**"
+      - ".github/workflows/android-controls-qa.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  controls:
+    name: Verify controller navigation and feedback states
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: mobile/android
+    steps:
+      - name: Checkout exact source revision
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install emulator image
+        run: |
+          sdkmanager \
+            "platform-tools" \
+            "emulator" \
+            "platforms;android-36" \
+            "build-tools;36.0.0" \
+            "system-images;android-36;google_apis;x86_64"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: "9.6.1"
+
+      - name: Build debug APK
+        run: gradle :app:assembleDebug --no-daemon --stacktrace
+
+      - name: Exercise gamepad navigation
+        run: |
+          set -euo pipefail
+          APK=app/build/outputs/apk/debug/app-debug.apk
+          OUT=app/build/outputs/apk/debug/controls-qa
+          mkdir -p "$OUT"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump badging "$APK" > "$OUT/APK-BADGING.txt"
+          PACKAGE=$(sed -n "s/^package: name='\([^']*\)'.*/\1/p" "$OUT/APK-BADGING.txt" | head -1)
+          ACTIVITY=$(sed -n "s/^launchable-activity: name='\([^']*\)'.*/\1/p" "$OUT/APK-BADGING.txt" | head -1)
+          test -n "$PACKAGE"
+          test -n "$ACTIVITY"
+
+          export ANDROID_AVD_HOME="$RUNNER_TEMP/android-controls-avd"
+          mkdir -p "$ANDROID_AVD_HOME"
+          echo no | avdmanager create avd \
+            --force \
+            --name gamedeck_controls_api36 \
+            --path "$ANDROID_AVD_HOME/gamedeck_controls_api36.avd" \
+            --package "system-images;android-36;google_apis;x86_64" \
+            --device pixel_6
+
+          ACCEL=off
+          if [ -e /dev/kvm ]; then
+            sudo chmod 666 /dev/kvm
+            ACCEL=on
+          fi
+          "$ANDROID_HOME/emulator/emulator" \
+            -avd gamedeck_controls_api36 \
+            -no-window \
+            -no-audio \
+            -no-boot-anim \
+            -no-snapshot \
+            -accel "$ACCEL" \
+            -gpu swiftshader_indirect \
+            > "$OUT/EMULATOR-LOG.txt" 2>&1 &
+          EMULATOR_PID=$!
+          trap 'adb emu kill >/dev/null 2>&1 || true; kill "$EMULATOR_PID" >/dev/null 2>&1 || true' EXIT
+          timeout 180 adb wait-for-device
+          for attempt in $(seq 1 120); do
+            if [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ]; then break; fi
+            sleep 2
+          done
+          test "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1"
+
+          adb shell settings put global window_animation_scale 0
+          adb shell settings put global transition_animation_scale 0
+          adb shell settings put global animator_duration_scale 0
+          adb shell settings put system accelerometer_rotation 0 || true
+          adb shell settings put system user_rotation 0 || true
+          adb install "$APK"
+          adb shell "run-as $PACKAGE sh -c 'mkdir -p files && touch files/renderer-fixture.enabled'"
+          adb logcat -c
+          adb shell am start -W -n "$PACKAGE/$ACTIVITY" | tee "$OUT/START.txt"
+
+          capture_logcat() {
+            local format="${1:-brief}"
+            local target="$2"
+            for attempt in $(seq 1 12); do
+              if adb get-state >/dev/null 2>&1 && adb logcat -d -v "$format" > "$target" 2>/dev/null; then
+                return 0
+              fi
+              timeout 10 adb wait-for-device >/dev/null 2>&1 || true
+              sleep .5
+            done
+            echo "Unable to capture logcat after ADB retries." >&2
+            return 1
+          }
+          latest_qa() {
+            capture_logcat brief "$OUT/LOGCAT-BRIEF.txt" || return 1
+            grep 'GAMEDECK_QA_STATE' "$OUT/LOGCAT-BRIEF.txt" | tail -1 > "$OUT/QA-LATEST.txt" || true
+          }
+          wait_state() {
+            local value="$1"
+            for attempt in $(seq 1 240); do
+              latest_qa || true
+              if grep -Fq "$value" "$OUT/QA-LATEST.txt" 2>/dev/null; then return 0; fi
+              sleep .25
+            done
+            echo "Missing state after 60 seconds: $value"
+            cat "$OUT/QA-LATEST.txt" 2>/dev/null || true
+            capture_logcat threadtime "$OUT/LOGCAT.txt" || true
+            tail -200 "$OUT/LOGCAT.txt" 2>/dev/null || true
+            return 1
+          }
+          focus_value() {
+            latest_qa
+            python3 - "$OUT/QA-LATEST.txt" <<'PY'
+          import json, re, sys
+          text = open(sys.argv[1], encoding='utf-8', errors='replace').read()
+          match = re.search(r'GAMEDECK_QA_STATE (\{.*\})', text)
+          if not match:
+              raise SystemExit(1)
+          print(json.loads(match.group(1)).get('controllerFocus', ''))
+          PY
+          }
+          shot() {
+            local name="$1"
+            sleep .5
+            for attempt in $(seq 1 12); do
+              if adb exec-out screencap -p > "$OUT/$name.png" 2>/dev/null && test -s "$OUT/$name.png"; then
+                return 0
+              fi
+              timeout 10 adb wait-for-device >/dev/null 2>&1 || true
+              sleep .5
+            done
+            echo "Unable to capture screenshot: $name" >&2
+            return 1
+          }
+
+          renderer_ready=false
+          for attempt in $(seq 1 240); do
+            capture_logcat brief "$OUT/LOGCAT-BRIEF.txt" || true
+            if grep -q 'GAMEDECK_RENDERER_ERROR' "$OUT/LOGCAT-BRIEF.txt" 2>/dev/null; then
+              echo "Renderer reported an error during startup." >&2
+              tail -200 "$OUT/LOGCAT-BRIEF.txt" || true
+              exit 1
+            fi
+            if grep -q 'GAMEDECK_RENDERER_READY' "$OUT/LOGCAT-BRIEF.txt" 2>/dev/null; then
+              renderer_ready=true
+              break
+            fi
+            sleep .5
+          done
+          if [ "$renderer_ready" != true ]; then
+            echo "Renderer did not become ready within 120 seconds." >&2
+            adb shell dumpsys activity activities > "$OUT/ACTIVITIES.txt" 2>/dev/null || true
+            capture_logcat threadtime "$OUT/LOGCAT.txt" || true
+            tail -240 "$OUT/LOGCAT.txt" 2>/dev/null || true
+            exit 1
+          fi
+          wait_state '"view":"home"'
+
+          adb shell input keyevent 22
+          wait_state '"controllerMode":true'
+          wait_state '"controllerFocusVisible":true'
+          FIRST=$(focus_value)
+          test -n "$FIRST"
+          shot 01-controller-focus
+
+          adb shell input keyevent 22
+          sleep .5
+          SECOND=$(focus_value)
+          test -n "$SECOND"
+          test "$FIRST" != "$SECOND"
+          shot 02-spatial-move
+
+          adb shell input keyevent 103
+          wait_state '"view":"discover"'
+          wait_state '"controllerFocusVisible":true'
+          shot 03-r1-discover
+
+          adb shell input keyevent 102
+          wait_state '"view":"home"'
+          shot 04-l1-library
+
+          adb shell input keyevent 109
+          wait_state '"menuOpen":true'
+          shot 05-select-menu
+          adb shell input keyevent 97
+          wait_state '"menuOpen":false'
+
+          adb shell settings put system user_rotation 1 || true
+          adb shell wm user-rotation lock 1 || true
+          sleep 3
+          wait_state '"orientation":"landscape"'
+          wait_state '"controllerFocusVisible":true'
+          adb shell input keyevent 20
+          sleep .5
+          wait_state '"controllerMode":true'
+          shot 06-landscape-controller
+
+          capture_logcat threadtime "$OUT/LOGCAT.txt"
+          for attempt in $(seq 1 12); do
+            if adb shell dumpsys window 2>/dev/null | grep -E 'mCurrentFocus|mFocusedApp' > "$OUT/WINDOW-FOCUS.txt"; then break; fi
+            timeout 10 adb wait-for-device >/dev/null 2>&1 || true
+            sleep .5
+          done
+          grep -Fq "$PACKAGE" "$OUT/WINDOW-FOCUS.txt"
+          ! grep -Eqi 'FATAL EXCEPTION|GAMEDECK_RENDERER_ERROR' "$OUT/LOGCAT.txt"
+          grep -Fq '"controllerMode":true' "$OUT/LOGCAT.txt"
+          grep -Fq '"controllerFocusVisible":true' "$OUT/LOGCAT.txt"
+          grep -Fq '"view":"discover"' "$OUT/LOGCAT.txt"
+          grep -Fq '"menuOpen":true' "$OUT/LOGCAT.txt"
+          test "$(find "$OUT" -maxdepth 1 -name '*.png' | wc -l)" -eq 6
+
+      - name: Upload controls evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: gamedeck-android-controls-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            mobile/android/app/build/outputs/apk/debug/app-debug.apk
+            mobile/android/app/build/outputs/apk/debug/controls-qa
+          if-no-files-found: warn
+          retention-days: 14

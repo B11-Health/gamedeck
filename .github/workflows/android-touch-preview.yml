@@ -1,0 +1,131 @@
+name: Publish Android standalone preview
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "mobile/android/**"
+      - "src/**"
+      - ".github/workflows/android-touch-preview.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-standalone-preview
+  cancel-in-progress: true
+
+jobs:
+  build-and-publish:
+    name: Build and publish Android preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      RELEASE_REPOSITORY: B11-Health/gamedeck-releases
+    steps:
+      - name: Checkout current main
+        uses: actions/checkout@v7
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android build tools
+        run: sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: "9.6.1"
+
+      - name: Validate premium touch presentation
+        working-directory: mobile/android
+        run: python3 tools/validate_touch_presentation.py
+
+      - name: Build standalone preview APK
+        working-directory: mobile/android
+        run: >-
+          gradle :app:assembleDebug --no-daemon --stacktrace
+          -PgamedeckApplicationId=io.gamedeck.mobile.preview
+          -PgamedeckAppLabel="GameDeck Preview"
+          -PgamedeckVersionName=1.3.0-preview.2
+          -PgamedeckVersionCode=10302
+
+      - name: Inspect and checksum APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist/android
+          APK="dist/android/GameDeck-Android-community-preview.apk"
+          cp mobile/android/app/build/outputs/apk/debug/app-debug.apk "$APK"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump badging "$APK" | tee dist/android/APK-METADATA.txt
+          grep -F "package: name='io.gamedeck.mobile.preview'" dist/android/APK-METADATA.txt
+          grep -F "minSdkVersion:'26'" dist/android/APK-METADATA.txt
+          grep -F "targetSdkVersion:'36'" dist/android/APK-METADATA.txt
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK" | tee dist/android/APK-SIGNATURE.txt
+          sha256sum "$APK" > dist/android/SHA256SUMS-android.txt
+
+      - name: Create non-sensitive source build metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > dist/android/SOURCE-BUILD.txt <<EOF
+          GameDeck release: community-preview
+          Source repository: ${GITHUB_REPOSITORY}
+          Source commit: ${GITHUB_SHA}
+          Build timestamp UTC: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+          Distribution repository: ${RELEASE_REPOSITORY}
+          EOF
+
+      - name: Upload exact build evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: gamedeck-android-standalone-${{ github.sha }}
+          path: dist/android/*
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Require distribution publishing token
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GAMEDECK_RELEASES_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${GH_TOKEN:-}" ]]; then
+            echo "GAMEDECK_RELEASES_TOKEN is required for distribution publishing." >&2
+            exit 1
+          fi
+
+      - name: Publish updated Android APK to public distribution repository
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GAMEDECK_RELEASES_TOKEN }}
+        run: |
+          set -euo pipefail
+          RELEASE_TAG="community-preview"
+          RELEASE_TITLE="GameDeck Community Preview 1.3.0-preview.2"
+          RELEASE_NOTES="Updated Android standalone preview with GameDeck premium touch controls, portrait and landscape layouts, visual and haptic input feedback, physical-controller auto-hide, and dynamic ambient blur fill. Existing desktop preview assets remain available in this release."
+
+          if gh release view "$RELEASE_TAG" --repo "$RELEASE_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" dist/android/* \
+              --clobber \
+              --repo "$RELEASE_REPOSITORY"
+            gh release edit "$RELEASE_TAG" \
+              --prerelease \
+              --title "$RELEASE_TITLE" \
+              --notes "$RELEASE_NOTES" \
+              --repo "$RELEASE_REPOSITORY"
+          else
+            gh release create "$RELEASE_TAG" dist/android/* \
+              --target main \
+              --prerelease \
+              --title "$RELEASE_TITLE" \
+              --notes "$RELEASE_NOTES" \
+              --repo "$RELEASE_REPOSITORY"
+          fi

@@ -6,7 +6,7 @@ const path = require("path");
 const root = path.join(__dirname, "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 
-const activity = read("mobile/android/app/src/main/java/io/gamedeck/mobile/MainActivity.java");
+const activity = read("mobile/android/app/src/main/java/io/gamedeck/mobile/ControllerActivity.java");
 const bluetooth = read("mobile/android/app/src/main/java/io/gamedeck/mobile/BluetoothGamepadManager.java");
 const manifest = read("mobile/android/app/src/main/AndroidManifest.xml");
 const gradle = read("mobile/android/app/build.gradle");
@@ -23,6 +23,7 @@ assert(activity.includes("bluetoothButton") && activity.includes("bluetoothAxis"
 assert(bluetooth.includes("BluetoothHidDevice") && bluetooth.includes("SUBCLASS2_GAMEPAD"));
 assert(bluetooth.includes("REPORT_TYPE_OUTPUT") && bluetooth.includes("sendReport"));
 assert(manifest.includes("BLUETOOTH_CONNECT") && manifest.includes("BLUETOOTH_ADVERTISE"));
+assert(manifest.includes("ControllerActivity") && manifest.includes("ControllerLauncher"));
 assert(!manifest.includes("sensorLandscape"), "controller app must allow portrait and landscape");
 assert(gradle.includes("syncControllerWeb") && gradle.includes("generated/controllerAssets"));
 assert(html.includes('id="switchFrame"') && html.includes('data-stick="left"') && html.includes('data-stick="right"'));
