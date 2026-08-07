@@ -23,7 +23,12 @@ jobs:
           gradle-version: '9.6.1'
       - name: Build and inspect APK
         working-directory: mobile/android
-        run: gradle --no-daemon lintDebug assembleDebug
+        run: >-
+          gradle --no-daemon lintDebug assembleDebug
+          -PgamedeckApplicationId=io.gamedeck.mobile.preview
+          -PgamedeckAppLabel="GameDeck Preview"
+          -PgamedeckVersionName=1.3.0-controller-preview
+          -PgamedeckVersionCode=10310
       - name: Inspect preview release
         shell: bash
         run: |
@@ -37,6 +42,8 @@ jobs:
           grep -F "targetSdkVersion:'36'" dist/android/APK-METADATA.txt
           grep -F "uses-permission: name='android.permission.INTERNET'" dist/android/APK-METADATA.txt
           grep -F "uses-permission: name='android.permission.VIBRATE'" dist/android/APK-METADATA.txt
+          grep -F "uses-permission: name='android.permission.BLUETOOTH_CONNECT'" dist/android/APK-METADATA.txt
+          grep -F "uses-permission: name='android.permission.BLUETOOTH_ADVERTISE'" dist/android/APK-METADATA.txt
           "$ANDROID_HOME/build-tools/36.1.0/apksigner" verify --verbose --print-certs "$APK" | tee dist/android/APK-SIGNATURE.txt
           sha256sum "$APK" > dist/android/SHA256SUMS-android.txt
       - name: Publish preview asset
@@ -46,5 +53,5 @@ jobs:
           if gh release view android-preview --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             gh release upload android-preview dist/android/* --clobber --repo "$GITHUB_REPOSITORY"
           else
-            gh release create android-preview dist/android/* --prerelease --title "GameDeck Android Preview" --notes "Installable Android preview for controller, touch, haptics, Open Rooms, and community chat testing." --repo "$GITHUB_REPOSITORY"
+            gh release create android-preview dist/android/* --prerelease --title "GameDeck Android Preview" --notes "Installable combined Android preview with standalone GameDeck plus GameDeck Controller, Wi-Fi streaming, optional Bluetooth HID, touch, motion, haptics, Open Rooms, and community chat testing." --repo "$GITHUB_REPOSITORY"
           fi

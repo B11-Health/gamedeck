@@ -273,6 +273,7 @@ public class MainActivity extends Activity {
         if (marker.isFile()) marker.delete();
     }
 
+    @SuppressLint("UnspecifiedRegisterReceiverFlag")
     private void registerQaReceiver() {
         if (!isDebugBuild()) return;
         qaReceiver = new BroadcastReceiver() {
