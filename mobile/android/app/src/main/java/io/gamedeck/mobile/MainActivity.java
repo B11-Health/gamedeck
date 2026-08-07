@@ -765,9 +765,20 @@ public class MainActivity extends Activity {
         super.onActivityResult(requestCode, resultCode, data);
         if (resultCode != RESULT_OK || data == null || data.getData() == null) return;
         Uri uri = data.getData();
-        int flags = data.getFlags() & (Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+        int returnedFlags = data.getFlags();
+        boolean readGranted = (returnedFlags & Intent.FLAG_GRANT_READ_URI_PERMISSION) != 0;
+        boolean writeGranted = (returnedFlags & Intent.FLAG_GRANT_WRITE_URI_PERMISSION) != 0;
         try {
-            getContentResolver().takePersistableUriPermission(uri, flags);
+            if (readGranted && writeGranted) {
+                getContentResolver().takePersistableUriPermission(
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                );
+            } else if (readGranted) {
+                getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            } else if (writeGranted) {
+                getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+            }
         } catch (SecurityException ignored) {}
         if (requestCode == REQUEST_LIBRARY) {
             bridge.setLibraryRoot(uri);
