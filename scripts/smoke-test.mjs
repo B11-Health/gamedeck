@@ -227,17 +227,17 @@ for (const [label, content] of [['desktop renderer', renderer], ['desktop HTML',
 if (!renderer.includes('Feedback-first Reddit launch copied') || !renderer.includes('#GameDeck #OpenSource')) fail('platform-ready share copy is missing');
 if (!renderer.includes('LinkedIn launch post copied') || !renderer.includes('Facebook group post copied') || !renderer.includes('Looking-for-players post copied') || !renderer.includes('function playTonightCopy')) fail('cross-platform player acquisition copy is missing');
 if (!pkg.build?.mac?.x64ArchFiles?.includes('node_modules/7zip-bin')) fail('macOS universal 7zip merge rule is missing');
-if (!siteHtml.includes('GameDeck Live') || !siteHtml.includes('Couch Co-op') || !siteHtml.includes('Remote Play Together') || !siteHtml.includes('Synchronized Netplay') || !siteHtml.includes('docs/MULTIPLAYER.md') || !siteHtml.includes('data-platform="windows"')) fail('public growth site is missing GameDeck 1.2 conversion paths');
-if (!siteHtml.includes('Find players tonight') || !siteHtml.includes('multiplayer_session.yml') || !siteStyles.includes('.matchmaking') || !siteStyles.includes('.session-report')) fail('above-the-fold player activation and session reporting are missing');
-if (!siteHtml.includes('id="liveEvent"') || !siteHtml.includes('github.com/B11-Health/gamedeck/discussions/8') || !siteHtml.includes('data-end="2026-08-03T00:00:00-04:00"') || !siteApp.includes('function hydrateLiveEvent') || !siteApp.includes('now>=end') || !siteStyles.includes('.live-event[hidden]')) fail('self-expiring playtest event strip is missing');
-if (!siteApp.includes('api.github.com/repos/') || !siteApp.includes('releases/latest')) fail('public growth site must resolve current release assets dynamically');
+if (!siteHtml.includes('Your games.') || !siteHtml.includes('GameDeck Controller') || !siteHtml.includes('Couch Co-op') || !siteHtml.includes('Remote Play') || !siteHtml.includes('Netplay') || !siteHtml.includes('data-platform="windows"')) fail('public product site is missing core conversion paths');
+if (!siteHtml.includes('The controller is already in your pocket.') || !siteHtml.includes('JUST WANT THE CONTROLLER?') || !siteHtml.includes('No account required')) fail('public product/controller positioning is incomplete');
+if (siteHtml.includes('id="liveEvent"') || siteHtml.includes('Find players tonight') || siteHtml.includes('shorts-section') || siteHtml.includes('GameDeck 1.2 tutorial')) fail('retired campaign or tutorial clutter returned to the public site');
+if (!siteApp.includes('api.github.com/repos/') || !siteApp.includes('releases/latest')) fail('public product site must resolve current release assets dynamically');
 if (!main.includes('sandbox: true') || !main.includes('contextIsolation: true') || !main.includes('nodeIntegration: false') || !main.includes('webSecurity: true')) fail('Electron renderer security hardening is missing');
 if (!styles.includes('Accessibility readability floor') || !styles.includes('font-size: 9px') || !styles.includes('readiness-chip b { font-size: 10px; }') || !styles.includes('.art-status { font-size: 9px; }')) fail('app readability floor is missing');
 if (/sendBeacon|\/events/.test(siteApp)) fail('public growth site must not add behavioral click telemetry');
 if (!siteStyles.includes('.multiplayer') || !siteStyles.includes('.mode-card') || !siteStyles.includes('@media(max-width:760px)')) fail('public growth site responsive product sections are missing');
-if (!siteHtml.includes('tiktok.com/@playgamedeck') || !siteHtml.includes('\"sameAs\"')) fail('public social discovery links are missing');
-if (!siteHtml.includes('ndETcPuCOyE') || !siteHtml.includes('dOEuy8g8Bmw') || !siteStyles.includes('.shorts-section') || !siteStyles.includes('.short-card')) fail('public Shorts discovery gallery is missing');
-if (!siteHtml.includes('PLCbffYifS8R8') || !siteHtml.includes('PLG-ejeCsa-AI')) fail('public YouTube playlist funnel is missing');
+if (!siteHtml.includes('rel="canonical"') || !siteHtml.includes('\"@type\":\"SoftwareApplication\"')) fail('public site metadata is incomplete');
+if (!siteHtml.includes('assets/marketing/controller-product.webp') || !siteHtml.includes('assets/marketing/gamedeck-action.webp') || !siteStyles.includes('.hero-product') || !siteStyles.includes('.action-media')) fail('public site product imagery is missing');
+if (!siteHtml.includes('Your library stays yours') || !siteHtml.includes('Bring the games you legally own')) fail('public site ownership and privacy positioning is incomplete');
 if (e2eResult.releaseCommit !== '250bbd7bc3b929fe49205ee6c0695654426f49b2' || e2eResult.results?.windowsArtifacts?.setup?.sha256 !== '6677c63e871915d1dc001866d36255e126963bb3cc057be0c9c847af28ad0654' || !e2eReportText.includes('GameDeck-1.2.0-mac-universal.dmg')) fail('official v1.2.0 evidence is stale');
 if (e2eResult.results?.youtubeChannel?.branding?.watermark !== 'entire_video' || !e2eResult.results?.youtubeChannel?.publicShorts?.includes('https://youtube.com/shorts/dOEuy8g8Bmw')) fail('verified YouTube channel evidence is stale');
 
@@ -336,8 +336,8 @@ if (!pkg.build?.files?.includes('stream-server.js') || !pkg.build?.files?.includ
 if (!pkg.build?.files?.includes('netplay-manager.js')) fail('release packages must include GameDeck multiplayer services');
 if (!pkg.build?.files?.includes('community-chat.js') || !pkg.build?.files?.includes('contracts/*.wasm')) fail('release packages must include community chat and Freenet contracts');
 if (!siteHtml.includes('data-platform="android"') || !siteHtml.includes('data-controller-android') || !siteHtml.includes('Open Web Controller')) fail('download site GameDeck/controller split is missing');
-if (!siteApp.includes('ANDROID_PREVIEW_API') || !siteApp.includes('apk$/i')) fail('download site Android release resolver is missing');
-if (!siteApp.includes('COMMUNITY_PREVIEW_API') || !siteHtml.includes('data-stable-release')) fail('coordinated community preview release channel is missing');
+if (!siteApp.includes('CONTROLLER_API') || !siteApp.includes('GameDeck-Controller-Android')) fail('download site controller release resolver is missing');
+if (!siteApp.includes('PREVIEW_API') || !siteApp.includes('previewVersion')) fail('coordinated current-build release channel is missing');
 if (!String(pkg.scripts?.check || '').includes('netplay-manager.js') || !String(pkg.scripts?.check || '').includes('src/netplay.js')) fail('multiplayer syntax checks are missing');
 if (!String(pkg.scripts?.check || '').includes('scripts/repo-audit.mjs') || pkg.scripts?.['audit:repo'] !== 'node scripts/repo-audit.mjs') fail('repository integrity audit is not wired into tests');
 if (!main.includes('startRemotePlay') || !main.includes('remoteInputPacket') || !main.includes('network_remote_enable_user_p')) fail('native RetroPad Remote Play host routing is missing');
