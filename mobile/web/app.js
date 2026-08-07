@@ -56,9 +56,10 @@ function hapticPulse(strength=hapticStrength,duration=18){
   try{if(nativeBridge()?.hapticPulse)return Boolean(nativeBridge().hapticPulse(amplitude,Math.max(8,Math.min(600,Number(duration)||18))))}catch{}
   if(navigator.vibrate){navigator.vibrate(Math.max(8,Math.min(120,Number(duration)||18)));return true}return false;
 }
+function visualHaptic(style='tick'){document.body.dataset.haptic=style;document.body.classList.remove('haptic-pulse');void document.body.offsetWidth;document.body.classList.add('haptic-pulse');clearTimeout(visualHaptic.timer);visualHaptic.timer=setTimeout(()=>document.body.classList.remove('haptic-pulse'),180)}
 function haptic(style='tick'){
   if(!hapticsEnabled)return;const scale={tick:[Math.round(hapticStrength*.55),12],success:[hapticStrength,28],warning:[Math.min(255,hapticStrength+55),48],heavy:[Math.min(255,hapticStrength+35),36]};
-  const [strength,duration]=scale[style]||scale.tick;hapticPulse(strength,duration);
+  const [strength,duration]=scale[style]||scale.tick;visualHaptic(style);hapticPulse(strength,duration);
 }
 function setConnection(value){$('#connection').textContent=String(value||'').toUpperCase()}
 function authQuery(){return `viewerId=${encodeURIComponent(viewerId)}&code=${encodeURIComponent(code)}`}
@@ -162,11 +163,12 @@ function releaseTouchInputs(){
   for(let axis=0;axis<4;axis++){if(Math.abs(analogValues[axis])>.001)events.push({axis,value:0});analogValues[axis]=0}
   pointerButtons.clear();buttonPressCounts.clear();stickPointers.clear();$$('[data-button].pressed').forEach(button=>button.classList.remove('pressed'));$$('[data-stick] span').forEach(knob=>knob.style.transform='translate(0,0)');sendInputEvents(events,'touch');
 }
+function spawnTouchRipple(target,event){const rect=target.getBoundingClientRect();const ripple=document.createElement('span');ripple.className='touch-ripple';const x=event?.clientX?event.clientX-rect.left:rect.width/2;const y=event?.clientY?event.clientY-rect.top:rect.height/2;ripple.style.left=`${x}px`;ripple.style.top=`${y}px`;target.appendChild(ripple);ripple.addEventListener('animationend',()=>ripple.remove(),{once:true})}
 function touchButtonDown(button,event){
   if(controllerState.connected||!touchEnabled)return;
   event.preventDefault();
   const id=Number(button.dataset.button);if(!Number.isInteger(id))return;
-  button.setPointerCapture?.(event.pointerId);pointerButtons.set(event.pointerId,{id,button});
+  button.setPointerCapture?.(event.pointerId);pointerButtons.set(event.pointerId,{id,button});spawnTouchRipple(button,event);
   const count=Number(buttonPressCounts.get(id)||0)+1;buttonPressCounts.set(id,count);button.classList.add('pressed');
   if(count===1)sendInputEvents([{id,state:1}],'touch');haptic('tick');
 }
@@ -182,8 +184,8 @@ function setStickValue(stick,x,y,source='touch-stick'){
   analogValues[base]=x;analogValues[base+1]=y;const knob=stick.querySelector('span');if(knob)knob.style.transform=`translate(${x*34}px,${y*34}px)`;sendInputEvents([{axis:base,value:x},{axis:base+1,value:y}],source)
 }
 function stickMove(stick,event){const active=stickPointers.get(event.pointerId);if(!active)return;event.preventDefault();const rect=stick.getBoundingClientRect();setStickValue(stick,(event.clientX-(rect.left+rect.width/2))/(rect.width*.38),(event.clientY-(rect.top+rect.height/2))/(rect.height*.38))}
-function stickDown(stick,event){if(controllerState.connected||!touchEnabled)return;event.preventDefault();stick.setPointerCapture?.(event.pointerId);stickPointers.set(event.pointerId,stick);stickMove(stick,event);haptic('tick')}
-function stickUp(event){const stick=stickPointers.get(event.pointerId);if(!stick)return;event.preventDefault();stickPointers.delete(event.pointerId);setStickValue(stick,0,0)}
+function stickDown(stick,event){if(controllerState.connected||!touchEnabled)return;event.preventDefault();stick.setPointerCapture?.(event.pointerId);stickPointers.set(event.pointerId,stick);stick.classList.add('pressed');spawnTouchRipple(stick,event);stickMove(stick,event);haptic('tick')}
+function stickUp(event){const stick=stickPointers.get(event.pointerId);if(!stick)return;event.preventDefault();stickPointers.delete(event.pointerId);stick.classList.remove('pressed');setStickValue(stick,0,0)}
 $$('[data-stick]').forEach(stick=>{stick.addEventListener('pointerdown',event=>stickDown(stick,event));stick.addEventListener('pointermove',event=>stickMove(stick,event));stick.addEventListener('pointerup',stickUp);stick.addEventListener('pointercancel',stickUp);stick.addEventListener('lostpointercapture',stickUp)});
 
 
