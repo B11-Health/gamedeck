@@ -63,7 +63,12 @@ jobs:
           gradle-version: '9.6.1'
       - name: Compile and lint Android
         working-directory: mobile/android
-        run: gradle --no-daemon lintDebug assembleDebug
+        run: >-
+          gradle --no-daemon lintDebug assembleDebug
+          -PgamedeckApplicationId=io.gamedeck.mobile.preview
+          -PgamedeckAppLabel="GameDeck Preview"
+          -PgamedeckVersionName=1.3.0-controller-preview
+          -PgamedeckVersionCode=10310
       - name: Inspect Android package
         shell: bash
         run: |
@@ -76,6 +81,8 @@ jobs:
           grep -F "targetSdkVersion:'36'" dist/android/APK-METADATA.txt
           grep -F "uses-permission: name='android.permission.INTERNET'" dist/android/APK-METADATA.txt
           grep -F "uses-permission: name='android.permission.VIBRATE'" dist/android/APK-METADATA.txt
+          grep -F "uses-permission: name='android.permission.BLUETOOTH_CONNECT'" dist/android/APK-METADATA.txt
+          grep -F "uses-permission: name='android.permission.BLUETOOTH_ADVERTISE'" dist/android/APK-METADATA.txt
           "$ANDROID_HOME/build-tools/36.1.0/apksigner" verify --verbose --print-certs dist/android/GameDeck-Android-preview.apk | tee dist/android/APK-SIGNATURE.txt
           sha256sum dist/android/GameDeck-Android-preview.apk > dist/android/SHA256SUMS-android.txt
       - uses: actions/upload-artifact@v7
