@@ -64,7 +64,7 @@ jobs:
           cp mobile/android/app/build/outputs/apk/debug/app-debug.apk "$APK"
           "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump badging "$APK" | tee dist/android/APK-METADATA.txt
           grep -F "package: name='io.gamedeck.mobile.preview'" dist/android/APK-METADATA.txt
-          grep -F "sdkVersion:'26'" dist/android/APK-METADATA.txt
+          grep -F "minSdkVersion:'26'" dist/android/APK-METADATA.txt
           grep -F "targetSdkVersion:'36'" dist/android/APK-METADATA.txt
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK" | tee dist/android/APK-SIGNATURE.txt
           sha256sum "$APK" > dist/android/SHA256SUMS-android.txt
