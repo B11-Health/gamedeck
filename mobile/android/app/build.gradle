@@ -6,6 +6,8 @@ def applicationIdOverride = providers.gradleProperty('gamedeckApplicationId').or
 def applicationLabelOverride = providers.gradleProperty('gamedeckAppLabel').orNull
 def androidVersionName = providers.gradleProperty('gamedeckVersionName').orNull ?: '1.0.0'
 def androidVersionCode = (providers.gradleProperty('gamedeckVersionCode').orNull ?: '10000') as Integer
+def controllerOnly = (providers.gradleProperty('gamedeckControllerOnly').orNull ?: 'false').toBoolean()
+def controllerEnabled = (providers.gradleProperty('gamedeckControllerEnabled').orNull ?: 'true').toBoolean()
 def releaseKeystore = providers.environmentVariable('GAMEDECK_ANDROID_KEYSTORE').orNull
 def releaseStorePassword = providers.environmentVariable('GAMEDECK_ANDROID_STORE_PASSWORD').orNull
 def releaseKeyAlias = providers.environmentVariable('GAMEDECK_ANDROID_KEY_ALIAS').orNull
@@ -20,18 +22,24 @@ tasks.register('prepareSharedRenderer') {
 
     doLast {
         delete sharedRendererAssets
-        copy {
-            from new File(repositoryRoot, 'src')
-            into new File(sharedRendererAssets, 'desktop')
+        if (!controllerOnly) {
+            copy {
+                from new File(repositoryRoot, 'src')
+                into new File(sharedRendererAssets, 'desktop')
+            }
+            copy {
+                from new File(repositoryRoot, 'assets')
+                into new File(sharedRendererAssets, 'assets')
+            }
         }
-        copy {
-            from new File(repositoryRoot, 'assets')
-            into new File(sharedRendererAssets, 'assets')
+        if (controllerEnabled) {
+            copy {
+                from new File(repositoryRoot, 'mobile/web')
+                into new File(sharedRendererAssets, 'controller')
+            }
         }
-        copy {
-            from new File(repositoryRoot, 'mobile/web')
-            into new File(sharedRendererAssets, 'controller')
-        }
+
+        if (controllerOnly) return
 
         File indexFile = new File(sharedRendererAssets, 'desktop/index.html')
         String index = indexFile.getText('UTF-8')
@@ -97,7 +105,12 @@ android {
         targetSdk 36
         versionCode androidVersionCode
         versionName androidVersionName
-        manifestPlaceholders = [appLabel: applicationLabelOverride ?: 'GameDeck']
+        manifestPlaceholders = [
+            appLabel: applicationLabelOverride ?: 'GameDeck',
+            fullDeckEnabled: !controllerOnly,
+            controllerEnabled: controllerEnabled,
+            controllerLauncherEnabled: controllerEnabled
+        ]
     }
 
 
@@ -130,7 +143,7 @@ android {
 
     sourceSets {
         main {
-            assets.srcDir(sharedRendererAssets)
+            assets.srcDirs = controllerOnly ? [sharedRendererAssets] : [file('src/main/assets'), sharedRendererAssets]
         }
     }
 

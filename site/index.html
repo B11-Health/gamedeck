@@ -51,7 +51,7 @@
 <section class="feature-grid">
   <article><span>01</span><h3>One-install runtime</h3><p>Supported systems use a verified managed runtime and compatible engines without a separate emulator-install scavenger hunt.</p></article>
   <article><span>02</span><h3>Controller-first shelves</h3><p>Browse systems, search, favorite, resume, and launch from the couch with adaptive keyboard, pointer, and gamepad guidance.</p></article>
-  <article><span>03</span><h3>GameDeck Mobile</h3><p>Pair Android directly to your deck for streamed gameplay, native controller input, adaptive touch controls, haptics, Open Rooms, and community chat.</p></article>
+  <article><span>03</span><h3>GameDeck Controller</h3><p>Turn iPhone, iPad, Android, or another browser into a paired GameDeck controller. Android also has a controller-only APK with native motion, haptics, physical gamepad support, and optional Bluetooth HID.</p></article>
   <article><span>04</span><h3>Multiplayer command center</h3><p>Choose local Couch Co-op, encrypted Remote Play Together, or exact-match Synchronized Netplay from one readiness-first flow.</p></article>
   <article><span>05</span><h3>Arcade without mystery</h3><p>MAME and FinalBurn Neo routes include real names, archive preflight, parent-file diagnostics, and scoped controller profiles.</p></article>
   <article><span>06</span><h3>Community without lock-in</h3><p>Signed decentralized room and chat state keeps players connected while your library, commercial games, firmware, and keys stay private.</p></article>
@@ -79,14 +79,22 @@
     <a class="download-card" data-platform="windows" href="https://github.com/B11-Health/gamedeck/releases/latest"><span class="platform-icon">⊞</span><span><strong>Windows</strong><small data-asset-detail>Installer · x64</small></span><em>Download</em></a>
     <a class="download-card" data-platform="linux" href="https://github.com/B11-Health/gamedeck/releases/latest"><span class="platform-icon">◆</span><span><strong>Linux</strong><small data-asset-detail>AppImage or DEB</small></span><em>Download</em></a>
     <a class="download-card" data-platform="mac" href="https://github.com/B11-Health/gamedeck/releases/latest"><span class="platform-icon">⌘</span><span><strong>macOS</strong><small data-asset-detail>DMG · Intel / Apple Silicon</small></span><em>Download</em></a>
-    <a class="download-card android" data-platform="android" href="https://github.com/B11-Health/gamedeck/releases/latest"><span class="platform-icon">A</span><span><strong>Android</strong><small data-asset-detail>APK · controller + touch</small></span><em>Download APK</em></a>
+    <a class="download-card android" data-platform="android" href="https://github.com/B11-Health/gamedeck/releases/latest"><span class="platform-icon">A</span><span><strong>Android</strong><small data-asset-detail>Full GameDeck APK</small></span><em>Download APK</em></a>
   </div>
   <div class="install-guide">
     <article><b>Desktop first</b><span>Install GameDeck on Windows, Linux, or macOS. Add only games you legally own.</span></article>
-    <article><b>Android companion</b><span>Install the APK, open the local address shown by GameDeck, and enter the six-digit pairing code.</span></article>
-    <article><b>Pure game mode</b><span>Connect any Android gamepad and GameDeck removes touch controls automatically. Without one, adaptive controls and haptics appear.</span></article>
+    <article><b>Android GameDeck</b><span>Install the full APK only if you want the GameDeck library and local gameplay on Android.</span></article>
+    <article><b>Controller is separate</b><span>Use the browser controller on iPhone, iPad, Android, or desktop, or install the smaller Android Controller APK.</span></article>
   </div>
   <p class="notice">The matching Community Preview is recommended for Android testing. Preview desktop artifacts may trigger an operating-system warning until code signing is enabled; Android may ask you to allow installs from your browser. <a data-stable-release href="https://github.com/B11-Health/gamedeck/releases/latest">Use the stable v1.2 release instead.</a></p>
+</section>
+<section class="controller-download section" id="controller" aria-labelledby="controllerTitle">
+  <div class="controller-copy"><p class="eyebrow">GAMEDECK CONTROLLER</p><h2 id="controllerTitle">Your phone can just be the controller.</h2><p>No ROMs, emulator library, or Freenet node lives in the Controller. It pairs to a full GameDeck, which handles the game, streaming session, and Freenet-backed community services.</p><div class="controller-trust"><span>iPhone + iPad</span><span>Android</span><span>No app store required</span></div></div>
+  <div class="controller-options">
+    <a class="controller-option web-controller" href="https://b11-health.github.io/gamedeck/controller/"><small>UNIVERSAL</small><strong>Open Web Controller</strong><span>iPhone · iPad · Android · browser</span><em>Open &rarr;</em></a>
+    <a class="controller-option android-controller" data-controller-android href="https://github.com/B11-Health/gamedeck/releases/download/community-preview/GameDeck-Controller-Android-community-preview.apk"><small>ANDROID NATIVE</small><strong>Controller APK</strong><span data-controller-asset-detail>Touch · analog · motion · haptics · Bluetooth HID</span><em>Download APK</em></a>
+  </div>
+  <p class="controller-note"><b>iPhone:</b> open the Web Controller from this site, enter the local GameDeck address and pairing code, and it hands off to the controller served directly by your GameDeck. You can also add this launcher to your Home Screen. No App Store account is required.</p>
 </section>
 <section class="community" id="community"><div class="community-mark">GD</div><div><p class="eyebrow">LIVE PLAYER COMMUNITY</p><h2>Find a player. Fix a setup. Shape the next release.</h2><p>Open Rooms finds compatible players from games already in your deck. Signed community chat stays available across participating GameDeck nodes; GitHub remains the place for releases, support, and development.</p></div><div class="community-actions"><a class="primary" href="https://github.com/B11-Health/gamedeck/discussions">Open Discussions</a><a class="secondary" href="https://github.com/B11-Health/gamedeck/issues">Open an issue</a></div></section>
 <section class="final"><img src="https://raw.githubusercontent.com/B11-Health/gamedeck/main/assets/branding/gamedeck-mark-source.png" alt=""><p class="eyebrow">BUILD · PLAY · SHARE</p><h2>Make your library feel legendary again.</h2><div class="actions"><a class="primary" data-download="auto" href="https://github.com/B11-Health/gamedeck/releases/latest">Download latest</a><a class="secondary" href="https://github.com/B11-Health/gamedeck">Star or contribute</a></div></section>

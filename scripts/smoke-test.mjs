@@ -327,7 +327,7 @@ if (!streamServer.includes('/api/input') || !streamServer.includes('/api/communi
 if (!streamingRenderer.includes("createDataChannel('gamedeck-control'") || !streamingRenderer.includes('streamViewerInput')) fail('host low-latency mobile controller data channel is missing');
 if (!main.includes('input_overlay_enable = "false"') || !main.includes('ensureRetroArchMobileInputConfig') || !main.includes('queueStreamViewerInput')) fail('RetroArch overlay suppression or Android RetroPad routing is missing');
 if (!mobileManifest.icons?.some(icon => icon.sizes === '192x192' && icon.purpose === 'any') || !mobileManifest.icons?.some(icon => icon.sizes === '512x512' && icon.purpose === 'any') || !mobileManifest.icons?.some(icon => icon.sizes === '192x192' && icon.purpose === 'maskable') || !mobileManifest.icons?.some(icon => icon.sizes === '512x512' && icon.purpose === 'maskable')) fail('mobile PWA any and maskable icons are missing');
-if (!mobileSw.includes('gamedeck-mobile-v') || !mobileSw.includes('/icons/icon-192.png') || !mobileSw.includes('/icons/icon-512.png')) fail('mobile PWA cache is missing install icons');
+if (!mobileSw.includes('gamedeck-controller-v') || !mobileSw.includes('./icons/icon-192.png') || !mobileSw.includes('./icons/icon-512.png')) fail('controller PWA cache is missing install icons');
 if (!controllerActivity.includes('WebView') || !controllerActivity.includes('setMediaPlaybackRequiresUserGesture(false)') || !controllerActivity.includes('InputDeviceListener') || !controllerActivity.includes('GameDeckNative') || !controllerActivity.includes('performHaptic')) fail('native Android controller and haptic receiver shell is missing');
 if (!androidActivity.includes('DeckBridge') || !androidActivity.includes('ManagedLibraryProvider')) fail('standalone Android library and runtime shell is missing');
 if (!iosContent.includes('WKWebView') || !iosContent.includes('allowsInlineMediaPlayback')) fail('native iOS receiver shell is missing');
@@ -335,7 +335,7 @@ if (!iosInfo.includes('NSLocalNetworkUsageDescription') || !iosInfo.includes('NS
 if (!pkg.build?.files?.includes('stream-server.js') || !pkg.build?.files?.includes('mobile/web/**/*')) fail('desktop packages must include GameDeck Live server and receiver');
 if (!pkg.build?.files?.includes('netplay-manager.js')) fail('release packages must include GameDeck multiplayer services');
 if (!pkg.build?.files?.includes('community-chat.js') || !pkg.build?.files?.includes('contracts/*.wasm')) fail('release packages must include community chat and Freenet contracts');
-if (!siteHtml.includes('data-platform="android"') || !siteHtml.includes('Pure game mode')) fail('download site Android installation experience is missing');
+if (!siteHtml.includes('data-platform="android"') || !siteHtml.includes('data-controller-android') || !siteHtml.includes('Open Web Controller')) fail('download site GameDeck/controller split is missing');
 if (!siteApp.includes('ANDROID_PREVIEW_API') || !siteApp.includes('apk$/i')) fail('download site Android release resolver is missing');
 if (!siteApp.includes('COMMUNITY_PREVIEW_API') || !siteHtml.includes('data-stable-release')) fail('coordinated community preview release channel is missing');
 if (!String(pkg.scripts?.check || '').includes('netplay-manager.js') || !String(pkg.scripts?.check || '').includes('src/netplay.js')) fail('multiplayer syntax checks are missing');

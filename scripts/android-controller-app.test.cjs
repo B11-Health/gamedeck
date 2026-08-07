@@ -17,6 +17,10 @@ const styles = read("mobile/web/styles.css");
 const main = read("main.js");
 const server = read("stream-server.js");
 const platformAndroid = read("mobile/android/app/src/main/assets/desktop/platform-android.js");
+const controllerManifest = read("mobile/web/manifest.webmanifest");
+const controllerSw = read("mobile/web/sw.js");
+const communityWorkflow = read(".github/workflows/community-preview.yml");
+const pagesWorkflow = read(".github/workflows/pages.yml");
 
 assert(activity.includes("LOCAL_APP_URL") && activity.includes("/controller/index.html"));
 assert(standalone.includes("DEBUG_FIXTURE_EXTRA = \"gamedeck.qa.fixture\"") && standalone.includes("isDebugBuild() && getIntent() != null"));
@@ -31,7 +35,15 @@ assert(!manifest.includes("sensorLandscape"), "controller app must allow portrai
 assert(gradle.includes("prepareSharedRenderer") && gradle.includes("mobile/web") && gradle.includes("sharedRendererAssets, 'controller'"));
 assert(html.includes('id="switchFrame"') && html.includes('data-stick="left"') && html.includes('data-stick="right"'));
 assert(html.includes('id="screenToggle"') && html.includes('id="motionToggle"') && html.includes('id="bluetoothPrepare"'));
-assert(app.includes("STANDALONE_APP") && app.includes("appassets.local"));
+assert(app.includes("NATIVE_CONTROLLER_APP") && app.includes("PUBLIC_CONTROLLER_APP") && app.includes("appassets.local"));
+assert(app.includes("location.assign(`${deckBaseUrl}/?code=${encodeURIComponent(code)}`)"), "public controller must hand off to the local GameDeck origin instead of mixed-content API fetches");
+assert(gradle.includes("gamedeckControllerOnly") && gradle.includes("controllerOnly ? [sharedRendererAssets]"));
+assert(manifest.includes("${fullDeckEnabled}") && manifest.includes("${controllerEnabled}"));
+assert(controllerManifest.includes('"name":"GameDeck Controller"') && controllerManifest.includes('"start_url":"."'));
+assert(controllerSw.includes("gamedeck-controller-v6") && controllerSw.includes("'./app.js'"));
+assert(communityWorkflow.includes("GameDeck-Android-community-preview.apk") && communityWorkflow.includes("GameDeck-Controller-Android-community-preview.apk"));
+assert(communityWorkflow.includes("io.gamedeck.controller.preview") && communityWorkflow.includes("gamedeckControllerOnly=true"));
+assert(pagesWorkflow.includes("mobile/web/**") && pagesWorkflow.includes("site-build/controller") && pagesWorkflow.includes("cp -R mobile/web/. site-build/controller/"));
 assert(app.includes("adaptiveHapticsEnabled") && app.includes("createAnalyser"));
 assert(app.includes("onNativeAxis") && app.includes("onMotion") && app.includes("bluetoothConnect"));
 assert(styles.includes(".switch-frame") && styles.includes(".joycon-left") && styles.includes("@media(orientation:portrait)"));

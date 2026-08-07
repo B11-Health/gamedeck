@@ -1,4 +1,4 @@
-name: Publish Android preview
+name: Publish Android controller preview
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ permissions:
   contents: write
 
 jobs:
-  android-preview:
+  controller-preview:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -21,37 +21,40 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.6.1'
-      - name: Build and inspect APK
+      - name: Build controller-only APK
         working-directory: mobile/android
         run: >-
           gradle --no-daemon lintDebug assembleDebug
-          -PgamedeckApplicationId=io.gamedeck.mobile.preview
-          -PgamedeckAppLabel="GameDeck Preview"
+          -PgamedeckApplicationId=io.gamedeck.controller.preview
+          -PgamedeckAppLabel="GameDeck Controller"
           -PgamedeckVersionName=1.3.0-controller-preview
-          -PgamedeckVersionCode=10310
-      - name: Inspect preview release
+          -PgamedeckVersionCode=10321
+          -PgamedeckControllerOnly=true
+          -PgamedeckControllerEnabled=true
+      - name: Inspect controller preview
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p dist/android
-          APK="dist/android/GameDeck-Android-preview.apk"
+          mkdir -p dist/android-controller
+          APK="dist/android-controller/GameDeck-Controller-Android-preview.apk"
           cp mobile/android/app/build/outputs/apk/debug/app-debug.apk "$APK"
-          "$ANDROID_HOME/build-tools/36.1.0/aapt" dump badging "$APK" | tee dist/android/APK-METADATA.txt
-          grep -F "package: name='io.gamedeck.mobile.preview'" dist/android/APK-METADATA.txt
-          grep -F "sdkVersion:'26'" dist/android/APK-METADATA.txt
-          grep -F "targetSdkVersion:'36'" dist/android/APK-METADATA.txt
-          grep -F "uses-permission: name='android.permission.INTERNET'" dist/android/APK-METADATA.txt
-          grep -F "uses-permission: name='android.permission.VIBRATE'" dist/android/APK-METADATA.txt
-          grep -F "uses-permission: name='android.permission.BLUETOOTH_CONNECT'" dist/android/APK-METADATA.txt
-          grep -F "uses-permission: name='android.permission.BLUETOOTH_ADVERTISE'" dist/android/APK-METADATA.txt
-          "$ANDROID_HOME/build-tools/36.1.0/apksigner" verify --verbose --print-certs "$APK" | tee dist/android/APK-SIGNATURE.txt
-          sha256sum "$APK" > dist/android/SHA256SUMS-android.txt
-      - name: Publish preview asset
+          "$ANDROID_HOME/build-tools/36.1.0/aapt" dump badging "$APK" | tee dist/android-controller/APK-CONTROLLER-METADATA.txt
+          grep -F "package: name='io.gamedeck.controller.preview'" dist/android-controller/APK-CONTROLLER-METADATA.txt
+          grep -F "sdkVersion:'26'" dist/android-controller/APK-CONTROLLER-METADATA.txt
+          grep -F "targetSdkVersion:'36'" dist/android-controller/APK-CONTROLLER-METADATA.txt
+          grep -F "uses-permission: name='android.permission.INTERNET'" dist/android-controller/APK-CONTROLLER-METADATA.txt
+          grep -F "uses-permission: name='android.permission.VIBRATE'" dist/android-controller/APK-CONTROLLER-METADATA.txt
+          grep -F "uses-permission: name='android.permission.BLUETOOTH_CONNECT'" dist/android-controller/APK-CONTROLLER-METADATA.txt
+          "$ANDROID_HOME/build-tools/36.1.0/apksigner" verify --verbose --print-certs "$APK" | tee dist/android-controller/APK-CONTROLLER-SIGNATURE.txt
+          sha256sum "$APK" > dist/android-controller/SHA256SUMS-controller-android.txt
+      - name: Publish controller preview asset
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          NOTES="GameDeck Controller is a separate controller-only Android app. It pairs with a GameDeck over local Wi-Fi for WebRTC video/audio and low-latency controls, with touch, analog sticks, motion, haptics, physical gamepads, and optional Android Bluetooth HID. It does not include the GameDeck library or emulator runtime and is not a Freenet node."
           if gh release view android-preview --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release upload android-preview dist/android/* --clobber --repo "$GITHUB_REPOSITORY"
+            gh release upload android-preview dist/android-controller/* --clobber --repo "$GITHUB_REPOSITORY"
+            gh release edit android-preview --prerelease --title "GameDeck Controller Android Preview" --notes "$NOTES" --repo "$GITHUB_REPOSITORY"
           else
-            gh release create android-preview dist/android/* --prerelease --title "GameDeck Android Preview" --notes "Installable combined Android preview with standalone GameDeck plus GameDeck Controller, Wi-Fi streaming, optional Bluetooth HID, touch, motion, haptics, Open Rooms, and community chat testing." --repo "$GITHUB_REPOSITORY"
+            gh release create android-preview dist/android-controller/* --prerelease --title "GameDeck Controller Android Preview" --notes "$NOTES" --repo "$GITHUB_REPOSITORY"
           fi
