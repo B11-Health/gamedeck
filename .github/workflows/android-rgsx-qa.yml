@@ -98,9 +98,13 @@ jobs:
           test "$(adb shell getprop sys.boot_completed | tr -d '\r')" = "1"
 
           adb install "$APK"
-          adb shell "run-as $PACKAGE sh -c 'mkdir -p files && touch files/renderer-fixture.enabled'"
           adb logcat -c
           adb shell am start -W -n "$PACKAGE/$ACTIVITY" | tee "$OUT/ACTIVITY-START.txt"
+          adb shell am broadcast \
+            -a io.gamedeck.mobile.QA \
+            -p "$PACKAGE" \
+            --es command fixture:on \
+            >/dev/null
 
           for attempt in $(seq 1 80); do
             adb logcat -d -v brief > "$OUT/LOGCAT.txt"
