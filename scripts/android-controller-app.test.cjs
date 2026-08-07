@@ -25,7 +25,7 @@ assert(bluetooth.includes("REPORT_TYPE_OUTPUT") && bluetooth.includes("sendRepor
 assert(manifest.includes("BLUETOOTH_CONNECT") && manifest.includes("BLUETOOTH_ADVERTISE"));
 assert(manifest.includes("ControllerActivity") && manifest.includes("ControllerLauncher"));
 assert(!manifest.includes("sensorLandscape"), "controller app must allow portrait and landscape");
-assert(gradle.includes("syncControllerWeb") && gradle.includes("generated/controllerAssets"));
+assert(gradle.includes("prepareSharedRenderer") && gradle.includes("mobile/web") && gradle.includes("sharedRendererAssets, 'controller'"));
 assert(html.includes('id="switchFrame"') && html.includes('data-stick="left"') && html.includes('data-stick="right"'));
 assert(html.includes('id="screenToggle"') && html.includes('id="motionToggle"') && html.includes('id="bluetoothPrepare"'));
 assert(app.includes("STANDALONE_APP") && app.includes("appassets.local"));

@@ -2,7 +2,6 @@ plugins { id 'com.android.application' }
 
 def repositoryRoot = new File(rootProject.projectDir, '../..').canonicalFile
 def sharedRendererAssets = file("$buildDir/generated/sharedRenderer")
-def controllerAssets = file("$buildDir/generated/controllerAssets")
 def applicationIdOverride = providers.gradleProperty('gamedeckApplicationId').orNull
 def applicationLabelOverride = providers.gradleProperty('gamedeckAppLabel').orNull
 def androidVersionName = providers.gradleProperty('gamedeckVersionName').orNull ?: '1.0.0'
@@ -28,6 +27,10 @@ tasks.register('prepareSharedRenderer') {
         copy {
             from new File(repositoryRoot, 'assets')
             into new File(sharedRendererAssets, 'assets')
+        }
+        copy {
+            from new File(repositoryRoot, 'mobile/web')
+            into new File(sharedRendererAssets, 'controller')
         }
 
         File indexFile = new File(sharedRendererAssets, 'desktop/index.html')
@@ -127,7 +130,7 @@ android {
 
     sourceSets {
         main {
-            assets.srcDirs(sharedRendererAssets, controllerAssets)
+            assets.srcDir(sharedRendererAssets)
         }
     }
 
@@ -137,14 +140,9 @@ android {
     }
 }
 
-tasks.register('syncControllerWeb', Copy) {
-    from file('../../web')
-    into new File(controllerAssets, 'controller')
-}
 
 tasks.named('preBuild').configure {
     dependsOn tasks.named('prepareSharedRenderer')
-    dependsOn tasks.named('syncControllerWeb')
 }
 
 
