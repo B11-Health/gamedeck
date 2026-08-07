@@ -15,6 +15,7 @@ const app = read("mobile/web/app.js");
 const styles = read("mobile/web/styles.css");
 const main = read("main.js");
 const server = read("stream-server.js");
+const platformAndroid = read("mobile/android/app/src/main/assets/desktop/platform-android.js");
 
 assert(activity.includes("LOCAL_APP_URL") && activity.includes("/controller/index.html"));
 assert(activity.includes("Sensor.TYPE_ROTATION_VECTOR") && activity.includes("Sensor.TYPE_GYROSCOPE"));
@@ -34,5 +35,6 @@ assert(app.includes("onNativeAxis") && app.includes("onMotion") && app.includes(
 assert(styles.includes(".switch-frame") && styles.includes(".joycon-left") && styles.includes("@media(orientation:portrait)"));
 assert(main.includes("RETRO_DEVICE_ANALOG") && main.includes("event.axis"));
 assert(server.includes("CONTROLLER_APP_ORIGIN") && server.includes("access-control-allow-origin"));
+assert(platformAndroid.includes("communityLibraryRooms") && platformAndroid.includes("communityRooms") && platformAndroid.includes("onCommunityRooms") && platformAndroid.includes("streamViewerInput"));
 
 console.log("Android controller app contract passed");
