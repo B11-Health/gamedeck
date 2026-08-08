@@ -16,6 +16,13 @@ const textExtensions = new Set([
   '', '.cjs', '.css', '.gradle', '.html', '.js', '.json', '.md', '.mjs',
   '.srt', '.swift', '.txt', '.xml', '.yaml', '.yml'
 ]);
+// Imported emulator databases/licenses are preserved byte-for-byte from upstream. They are
+// still tracked and fingerprinted, but first-party style/placeholder-marker rules must not rewrite them.
+const importedTextExempt = [
+  /^mobile\/android\/ps2engine\/PLAY-LICENSE\.txt$/,
+  /^mobile\/android\/ps2engine\/src\/main\/assets\/resources\//
+];
+
 const forbiddenTracked = [
   /^node_modules\//,
   /^dist\//,
@@ -46,6 +53,7 @@ const report = (file, line, message) => {
 
 for (const file of tracked) {
   if (forbiddenTracked.some(pattern => pattern.test(file))) report(file, 0, 'generated, secret, or local-only path is tracked');
+  if (importedTextExempt.some(pattern => pattern.test(file))) continue;
 
   const absolute = path.join(root, file);
   const buffer = readFileSync(absolute);

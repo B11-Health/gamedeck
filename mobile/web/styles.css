@@ -10,7 +10,7 @@ header,footer{width:100%}
 @media(max-width:480px){.player-top{align-items:stretch;flex-wrap:wrap;gap:10px;padding-inline:12px}.player-top>div:first-child{flex-basis:100%}.player-top-actions{width:100%;justify-content:space-between}.controller-state{max-width:calc(100% - 116px)}.video-shell{min-height:0}}
 
 
-/* GameDeck Controller — Switch-style phone controller */
+/* GameDeck Controller â€” Switch-style phone controller */
 .header-settings{width:38px;height:38px;padding:0;border-radius:50%;font-size:17px}.native-only{display:none}.native-android .native-only{display:flex}.pair-card{max-width:720px}.pair-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}.transport-card{margin-top:18px;align-items:center;gap:16px;padding:15px;border:1px solid #2b3b4d;border-radius:15px;background:linear-gradient(120deg,#101b2a,#0a1018)}.transport-card>div:first-child{min-width:0;flex:1}.transport-card small,.setting-label{display:block;color:var(--cyan);font-size:8px;font-weight:900;letter-spacing:.14em}.transport-card b{display:block;margin-top:4px;font-size:13px}.transport-card p{margin:5px 0 0;font-size:9px}.bluetooth-devices{display:grid;gap:7px;margin-top:10px}.transport-card>.bluetooth-devices{flex-basis:100%}.bluetooth-devices button{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:10px;text-align:left}.bluetooth-devices button b{margin:0;font-size:10px}.bluetooth-devices button small{color:#8190a4;font-size:7px}.bluetooth-devices>span{color:#728196;font-size:8px}.bluetooth-devices.compact{margin-top:8px}.switch-frame{display:grid;grid-template-columns:minmax(116px,170px) minmax(0,1fr) minmax(116px,170px);align-items:stretch;gap:0;min-width:0;background:#030509}.screen-column{min-width:0;display:flex;flex-direction:column;background:#080c13}.screen-column .video-shell{min-height:0;width:100%;flex:1;aspect-ratio:16/9;border:9px solid #070a0f;border-radius:14px}.screen-badge{position:absolute;left:50%;top:10px;z-index:4;transform:translateX(-50%);padding:5px 8px;border:1px solid #ffffff24;border-radius:999px;background:#05080cbb;color:#8e9daf;font-size:7px;font-weight:900;letter-spacing:.1em;pointer-events:none}.joycon{position:relative;min-width:0;min-height:430px;padding:14px 12px 18px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;overflow:hidden;user-select:none;touch-action:none}.joycon-left{border-radius:20px 0 0 20px;background:linear-gradient(155deg,#35d4ee,#0c8cac 70%,#09647d);box-shadow:inset -6px 0 12px #001a25aa}.joycon-right{border-radius:0 20px 20px 0;background:linear-gradient(155deg,#ff5f70,#d52343 70%,#92142c);box-shadow:inset 6px 0 12px #2b0008aa}.joycon button{display:grid;place-items:center;padding:0;border:1px solid #ffffff4a;background:#10141de8;color:#f8fbff;box-shadow:inset 0 0 0 2px #0008,0 6px 14px #0006;font-weight:950;touch-action:none}.joycon button.pressed{transform:scale(.9);background:var(--lime);color:#071005}.rail-shoulders{display:grid;grid-template-columns:1fr 1fr;gap:6px;width:100%}.rail-shoulders button{min-width:0;height:34px;border-radius:10px;font-size:10px}.mini-button{position:absolute;top:62px;width:30px;height:24px;border-radius:8px!important;font-size:19px}.joycon-left .mini-button{right:10px}.joycon-right .mini-button{left:10px}.analog-stick{position:relative;width:min(11vw,92px);height:min(11vw,92px);min-width:66px;min-height:66px;border-radius:50%;background:radial-gradient(circle at 42% 35%,#44505e,#171c24 58%,#06080b 61%);border:3px solid #101721;box-shadow:inset 0 0 0 5px #0009,0 7px 18px #0018;touch-action:none}.analog-stick:after{content:"";position:absolute;inset:19%;border:1px solid #ffffff16;border-radius:50%}.analog-stick span{position:absolute;inset:20%;border-radius:50%;background:radial-gradient(circle at 40% 34%,#586473,#202731 62%,#10141a);box-shadow:0 4px 9px #0008;will-change:transform;pointer-events:none}.joycon .dpad{position:relative;left:auto;bottom:auto;width:min(11vw,96px);height:min(11vw,96px);min-width:76px;min-height:76px;gap:2px}.joycon .dpad button{position:relative!important;width:100%;height:100%;border-radius:9px;font-size:10px}.joycon .dpad span{background:#131820;border-color:#0005}.joycon .face-buttons{position:relative;right:auto;bottom:auto;width:min(11vw,96px);height:min(11vw,96px);min-width:76px;min-height:76px}.joycon .face-buttons button{position:absolute;width:32%;height:32%;border-radius:50%;font-size:13px}.joycon .face-buttons .y{left:34%;top:0}.joycon .face-buttons .x{left:0;top:34%}.joycon .face-buttons .b{right:0;top:34%}.joycon .face-buttons .a{left:34%;bottom:0}.stick-click{width:38px;height:27px;border-radius:999px!important;font-size:8px}.touch-disabled .joycon,.controller-connected .joycon{display:none}.touch-disabled .switch-frame,.controller-connected .switch-frame{grid-template-columns:minmax(0,1fr)}.controller-only .screen-column{display:none}.controller-only .switch-frame{grid-template-columns:minmax(140px,220px) minmax(140px,220px);justify-content:center;gap:16px;padding:18px;background:radial-gradient(circle,#172234,#05070b 70%)}.controller-only .joycon{border-radius:24px;min-height:min(75vh,560px)}.controller-only .joycon-left{box-shadow:inset -6px 0 12px #001a25aa,0 22px 50px #0008}.controller-only .joycon-right{box-shadow:inset 6px 0 12px #2b0008aa,0 22px 50px #0008}.controller-settings{border-top:1px solid #263245;padding:16px;background:#080d14}.settings-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:13px}.settings-head>div{display:grid;gap:3px}.settings-head small{color:var(--cyan);font-size:7px;font-weight:900;letter-spacing:.15em}.settings-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.settings-grid article{display:grid;align-content:start;gap:11px;padding:13px;border:1px solid #273447;border-radius:13px;background:#0d141e}.segmented{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}.segmented button{padding:9px 5px;font-size:8px}.segmented button.active{background:var(--lime);border-color:var(--lime);color:#081006}.setting-row{display:flex;grid-template-columns:none;align-items:center;justify-content:space-between;gap:12px}.setting-row>span{display:grid;gap:3px}.setting-row b{font-size:10px}.setting-row small{color:#748397;font-size:7px;line-height:1.4}.setting-row input{width:22px;min-height:22px;accent-color:var(--lime)}.range-row{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:12px}.range-row input{min-height:auto;padding:0;accent-color:var(--lime)}.sensor-readout,.bluetooth-status{padding:9px;border:1px solid #273548;border-radius:9px;background:#070b11;color:#88a0b8;font:700 8px ui-monospace,monospace}.standalone-app #appFooter{display:none}.standalone-app main{padding-bottom:max(12px,env(safe-area-inset-bottom))}
 .native-android.play-active.controller-connected:not(.show-chrome) .switch-frame{display:block;width:100vw;height:100vh}.native-android.play-active.controller-connected:not(.show-chrome) .screen-column{display:block;width:100%;height:100%}.native-android.play-active.controller-connected:not(.show-chrome) .screen-column .video-shell{border:0;border-radius:0}.native-android.play-active.controller-connected:not(.show-chrome) .screen-badge{display:none}
 @media(max-width:820px){.switch-frame{grid-template-columns:minmax(98px,24vw) minmax(0,1fr) minmax(98px,24vw)}.joycon{min-height:350px;padding-inline:8px}.screen-column .player-actions{display:grid;grid-template-columns:repeat(2,1fr)}.settings-grid{grid-template-columns:1fr}.transport-card{flex-wrap:wrap}.pair-fields{grid-template-columns:1fr}}
@@ -20,3 +20,97 @@ header,footer{width:100%}
 
 /* Tactile GameDeck Controller visual pass */
 :root{--gd-cyan:#54e8ff;--gd-violet:#a175ff;--gd-ink:#050811}body{background:radial-gradient(circle at 18% 18%,#0b38504a,transparent 32%),radial-gradient(circle at 82% 74%,#391d662f,transparent 34%),linear-gradient(160deg,#03070d,#070912 58%,#050711);min-height:100vh}body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.13;background-image:linear-gradient(#fff08 1px,transparent 1px),linear-gradient(90deg,#fff07 1px,transparent 1px);background-size:54px 54px;mask-image:radial-gradient(circle at center,#000,transparent 82%)}.switch-frame{position:relative;isolation:isolate;filter:drop-shadow(0 24px 70px #000b)}.switch-frame:before{content:"";position:absolute;inset:-18px;z-index:-2;border-radius:44px;background:radial-gradient(circle at 17% 42%,#33dfff25,transparent 27%),radial-gradient(circle at 84% 58%,#9a6cff25,transparent 29%);filter:blur(22px);opacity:.9}.joycon{position:relative;overflow:hidden;backdrop-filter:blur(18px);background:linear-gradient(180deg,#0b1724ed,#07101af4)!important;border:1px solid #79edff33!important;box-shadow:inset 0 0 55px #32ddff0b,0 20px 54px #0008}.joycon:before{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(145deg,#8cf2ff12,transparent 31%,transparent 68%,#9a71ff0b)}.joycon-left{box-shadow:inset 0 0 60px #2de4ff10,0 20px 54px #0008!important}.joycon-right{border-color:#ad86ff38!important;box-shadow:inset 0 0 60px #946aff11,0 20px 54px #0008!important}.joycon button,.player-actions button,.mini-button,.stick-click{position:relative;overflow:hidden;transition:transform .08s ease,box-shadow .12s ease,border-color .12s ease,background .12s ease;touch-action:none}.joycon button:active,.joycon button.pressed,.stick-click.pressed{transform:scale(.93);background:#112332!important;border-color:var(--gd-cyan)!important;box-shadow:0 0 0 1px #80efff80,0 0 26px #42e4ff48,inset 0 0 25px #42e4ff1d}.joycon-right button:active,.joycon-right button.pressed{border-color:var(--gd-violet)!important;box-shadow:0 0 0 1px #b794ff7d,0 0 28px #9d73ff4e,inset 0 0 25px #9d73ff20}.face-buttons button{font-weight:900;text-shadow:0 0 14px currentColor}.face-buttons .a{color:#63f0e8}.face-buttons .b{color:#c08bff}.face-buttons .x{color:#8acaff}.face-buttons .y{color:#ecf5ff}.analog-stick{position:relative;overflow:hidden;border:1px solid #68eaff42!important;background:radial-gradient(circle at 50% 50%,#172434 0 29%,#09111d 31% 48%,#3ae5ff 50% 52%,#08121d 54% 100%)!important;box-shadow:0 0 0 1px #4be5ff15,0 0 28px #46e3ff2d,inset 0 0 28px #2bdfff12;transition:box-shadow .12s ease,transform .12s ease}.joycon-right .analog-stick{border-color:#a376ff42!important;background:radial-gradient(circle at 50% 50%,#1d2130 0 29%,#0d0d19 31% 48%,#9b71ff 50% 52%,#0b0d18 54% 100%)!important;box-shadow:0 0 0 1px #9c73ff18,0 0 28px #976dff30,inset 0 0 28px #8f67ff13}.analog-stick:after{content:"";position:absolute;inset:7%;border-radius:50%;border:1px solid #ffffff14;pointer-events:none}.analog-stick.pressed{transform:scale(.97);box-shadow:0 0 0 2px #6beaff44,0 0 42px #4de6ff58,inset 0 0 34px #43e4ff22}.joycon-right .analog-stick.pressed{box-shadow:0 0 0 2px #af88ff44,0 0 42px #a176ff58,inset 0 0 34px #976fff22}.touch-ripple{position:absolute;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;pointer-events:none;z-index:20;background:#d9fbffb8;box-shadow:0 0 18px #58e9ff;animation:gd-ripple .5s cubic-bezier(.1,.65,.3,1) forwards}.joycon-right .touch-ripple{background:#e0d2ffb8;box-shadow:0 0 18px #a276ff}@keyframes gd-ripple{0%{transform:scale(.2);opacity:.95}70%{opacity:.38}100%{transform:scale(7);opacity:0}}.video-shell{border:1px solid #6aeaff2c!important;box-shadow:inset 0 0 60px #25ddff0a,0 18px 60px #0009}.screen-badge{border:1px solid #68e8ff2f!important;background:#050b13c9!important;backdrop-filter:blur(12px);letter-spacing:.11em}.controller-state{border:1px solid #66e9ff28!important;background:#09131fd4!important;color:#c9f8ff!important}.haptic-pulse .switch-frame:after{content:"";position:absolute;inset:-10px;border-radius:42px;pointer-events:none;border:2px solid #61eaff;box-shadow:0 0 50px #4fe8ff4a,0 0 100px #9f74ff28;animation:gd-haptic 180ms ease-out forwards}@keyframes gd-haptic{0%{transform:scale(.985);opacity:.9}100%{transform:scale(1.025);opacity:0}}.pair-card{border:1px solid #6eeaff25!important;background:radial-gradient(circle at 12% 12%,#13334a4a,transparent 38%),radial-gradient(circle at 88% 84%,#3b24663b,transparent 36%),linear-gradient(145deg,#08111de8,#050811f4)!important;box-shadow:0 34px 100px #0009}.pair-card h1 em{background:linear-gradient(90deg,#67eaff,#a47aff);-webkit-background-clip:text;background-clip:text;color:transparent}.controller-settings{border:1px solid #72eaff2c!important;background:#07101bf3!important;backdrop-filter:blur(24px)}@media(orientation:portrait){.switch-frame{filter:drop-shadow(0 18px 50px #000a)}.joycon{border-radius:24px!important}.analog-stick{box-shadow:0 0 22px #47e6ff29}.joycon-right .analog-stick{box-shadow:0 0 22px #9b71ff2b}}
+
+/* Premium control parity: mirrors the native GameDeck glass, travel, and thumb ergonomics. */
+:root{
+  --gd-control-surface:#121a28;
+  --gd-control-surface-hi:#263346;
+  --gd-control-edge:#788caa;
+  --gd-control-cyan:#54e8ff;
+  --gd-control-violet:#a175ff;
+  --gd-control-lime:#c8ff52;
+  --gd-control-shadow:#000a;
+}
+.gamepad-grip{
+  background:linear-gradient(160deg,#101a28f2,#0a111bf4 58%,#05080df7)!important;
+  border-color:#7589a333!important;
+  box-shadow:inset 0 0 0 1px #ffffff0a,inset 0 0 54px #54e8ff08,0 22px 56px var(--gd-control-shadow)!important;
+}
+.gamepad-grip.joycon-right{box-shadow:inset 0 0 0 1px #ffffff0a,inset 0 0 54px #a175ff0a,0 22px 56px var(--gd-control-shadow)!important}
+.joycon button{
+  background:linear-gradient(155deg,var(--gd-control-surface-hi),var(--gd-control-surface) 55%,#080d15)!important;
+  border:1px solid #8196b255!important;
+  box-shadow:inset 0 1px 0 #ffffff15,inset 0 0 0 1px #0006,0 4px 0 #05080d,0 8px 18px #0007!important;
+  transition:transform 70ms cubic-bezier(.2,.8,.2,1),box-shadow 90ms ease,border-color 90ms ease,background 90ms ease!important;
+}
+.joycon button:active,.joycon button.pressed,.stick-click.pressed{
+  transform:translateY(2px) scale(.96)!important;
+  background:linear-gradient(155deg,#263a49,#101c28)!important;
+  border-color:var(--gd-control-cyan)!important;
+  box-shadow:inset 0 1px 0 #ffffff18,inset 0 0 24px #54e8ff18,0 2px 0 #05080d,0 0 24px #54e8ff35!important;
+}
+.joycon-right button:active,.joycon-right button.pressed{
+  border-color:var(--gd-control-violet)!important;
+  box-shadow:inset 0 1px 0 #ffffff18,inset 0 0 24px #a175ff1b,0 2px 0 #05080d,0 0 24px #a175ff38!important;
+}
+.rail-shoulders{gap:8px}
+.rail-shoulders button{height:42px;border-radius:13px;font-size:10px;letter-spacing:.05em}
+.mini-button{width:36px;height:29px;border-radius:10px!important;font-size:16px}
+.stick-click{width:52px;height:31px;border-radius:999px!important;font-size:8px;letter-spacing:.06em}
+.analog-stick{
+  width:min(12.5vw,108px);height:min(12.5vw,108px);min-width:82px;min-height:82px;
+  background:radial-gradient(circle at 50% 50%,#202c3b 0 27%,#0c1420 29% 47%,#67849d 49% 50%,#08101a 52% 100%)!important;
+  border:1px solid #7c96aa66!important;
+  box-shadow:inset 0 0 0 5px #0009,inset 0 0 22px #54e8ff0d,0 6px 0 #05080d,0 12px 28px #0009!important;
+}
+.joycon-right .analog-stick{background:radial-gradient(circle at 50% 50%,#24293a 0 27%,#0e101c 29% 47%,#8668b0 49% 50%,#0a0c16 52% 100%)!important}
+.analog-stick span{
+  inset:21%;
+  background:radial-gradient(circle at 39% 32%,#536276,#202a36 58%,#0c1119 100%);
+  border:1px solid #9bacc04d;
+  box-shadow:inset 0 0 0 1px #0009,0 4px 8px #0009,0 10px 18px #0006;
+}
+.analog-stick span:after{content:"";position:absolute;inset:22%;border:1px solid #b8c8d326;border-radius:50%}
+.joycon .dpad{width:min(15vw,132px);height:min(15vw,132px);min-width:106px;min-height:106px;gap:0;filter:drop-shadow(0 7px 8px #0009)}
+.joycon .dpad button{border-radius:3px!important;background:linear-gradient(150deg,#263346,#111a27 58%,#080d14)!important;box-shadow:inset 0 1px 0 #ffffff12!important}
+.joycon .dpad .up{border-radius:12px 12px 3px 3px!important}
+.joycon .dpad .down{border-radius:3px 3px 12px 12px!important}
+.joycon .dpad .left{border-radius:12px 3px 3px 12px!important}
+.joycon .dpad .right{border-radius:3px 12px 12px 3px!important}
+.joycon .dpad span{border:0;border-radius:2px;background:radial-gradient(circle,#1b2635,#0a111b 72%);box-shadow:inset 0 0 0 1px #8499b128}
+.joycon .face-buttons{width:min(15vw,132px);height:min(15vw,132px);min-width:106px;min-height:106px}
+.joycon .face-buttons button{width:38%;height:38%;font-size:15px;border-width:1px!important}
+.joycon .face-buttons .y{left:31%;top:0}.joycon .face-buttons .x{left:0;top:31%}.joycon .face-buttons .b{right:0;top:31%}.joycon .face-buttons .a{left:31%;bottom:0}
+.face-buttons button:after{content:"";position:absolute;inset:13%;border:1px solid currentColor;border-radius:50%;opacity:.25;pointer-events:none}
+.controller-only .joycon{border-radius:30px;min-width:0}
+@media(max-width:820px){
+  .joycon .dpad,.joycon .face-buttons{width:min(15vw,118px);height:min(15vw,118px);min-width:92px;min-height:92px}
+  .analog-stick{width:92px;height:92px;min-width:76px;min-height:76px}
+}
+@media(max-height:600px) and (orientation:landscape){
+  .rail-shoulders button{height:36px}
+  .joycon .dpad,.joycon .face-buttons{width:112px;height:112px;min-width:104px;min-height:104px}
+  .analog-stick{width:78px;height:78px;min-width:72px;min-height:72px}
+  .stick-click{height:27px}
+}
+@media(orientation:portrait){
+  .joycon .dpad,.joycon .face-buttons{width:min(31vw,138px);height:min(31vw,138px)}
+  .analog-stick{width:min(25vw,112px);height:min(25vw,112px)}
+}
+
+
+/* Shared native/web controller parity: live ambience + bounded layout edit mode. */
+:root{--gd-live-a:#174d60;--gd-live-b:#432765}
+body{background:radial-gradient(circle at 16% 16%,color-mix(in srgb,var(--gd-live-a) 42%,transparent),transparent 35%),radial-gradient(circle at 84% 72%,color-mix(in srgb,var(--gd-live-b) 38%,transparent),transparent 36%),linear-gradient(160deg,#03070d,#070912 58%,#050711)}
+.switch-frame:before{background:radial-gradient(circle at 17% 42%,color-mix(in srgb,var(--gd-live-a) 38%,transparent),transparent 30%),radial-gradient(circle at 84% 58%,color-mix(in srgb,var(--gd-live-b) 38%,transparent),transparent 31%);transition:background .5s ease}
+.layout-lock{position:absolute;z-index:35;left:50%;bottom:9px;transform:translateX(-50%);width:38px;height:30px;padding:0;border-radius:999px;background:#07101bd9;border:1px solid #7beaff38;box-shadow:0 8px 26px #0009,0 0 18px #54e8ff16;backdrop-filter:blur(14px);display:grid;place-items:center;touch-action:none}
+.lock-glyph{position:relative;width:11px;height:9px;border:1.5px solid #d7f9ff;border-radius:2px;opacity:.92}
+.lock-glyph:before{content:"";position:absolute;left:1px;top:-7px;width:6px;height:7px;border:1.5px solid #d7f9ff;border-bottom:0;border-radius:6px 6px 0 0;transform-origin:1px 7px;transition:transform .14s ease}
+.layout-lock.unlocked{border-color:#c8ff5270;box-shadow:0 8px 26px #0009,0 0 24px #c8ff5232}
+.layout-lock.unlocked .lock-glyph{border-color:#dfff9b}.layout-lock.unlocked .lock-glyph:before{border-color:#dfff9b;transform:translate(3px,-1px) rotate(28deg)}
+[data-layout-node]{--layout-x:0px;--layout-y:0px;translate:var(--layout-x) var(--layout-y);will-change:transform,translate}
+.layout-editing [data-layout-node]{outline:1px dashed #c8ff5268;outline-offset:5px;cursor:grab;touch-action:none;filter:drop-shadow(0 0 12px #c8ff5226)}
+.layout-editing [data-layout-node].layout-dragging{cursor:grabbing;outline-color:#c8ff52;filter:drop-shadow(0 0 22px #c8ff5250)}
+.layout-editing [data-layout-node] button,.layout-editing button[data-layout-node]{pointer-events:auto}
+@media(orientation:portrait){.layout-lock{bottom:12px}}
+@media(max-height:600px) and (orientation:landscape){.layout-lock{bottom:8px;width:34px;height:28px}}

@@ -242,3 +242,31 @@
     min-width: 132px !important;
   }
 }
+
+
+/* Keep the status center above the tall Android shell header. The desktop
+   position placed its close controls underneath the mobile header. */
+@media (max-width: 900px) {
+  .debug-console {
+    z-index: 10000 !important;
+    top: calc(env(safe-area-inset-top, 0px) + 8px) !important;
+    right: 8px !important;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 8px) !important;
+    left: 8px !important;
+    width: auto !important;
+    max-height: none !important;
+  }
+
+  .debug-head {
+    position: sticky;
+    z-index: 2;
+    top: 0;
+    min-height: 58px;
+  }
+
+  #consoleClose {
+    min-width: 72px;
+    min-height: 42px;
+    font-size: 12px;
+  }
+}

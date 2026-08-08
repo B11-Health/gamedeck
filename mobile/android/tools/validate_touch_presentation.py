@@ -168,8 +168,9 @@ def validate_runtime_integration() -> None:
         'video_shader_enable = \\"true\\"',
         'video_shader = \\"',
         'aspect_ratio_index = \\"24\\"',
-        'startRetroNativeActivity(runtimePackage, artifact, content, config)',
-        'intent.putExtra("CONFIGFILE", config.getAbsolutePath())',
+        'startEmbeddedActivity(embeddedCore, playableContent, sessionTitle, system.id)',
+        'new Intent(activity, GameDeckPlayActivity.class)',
+        'intent.putExtra(GameDeckPlayActivity.EXTRA_SYSTEM_ID',
         '"gamedeck-touch-v2-ambient-blur"',
     )
     for fragment in required_fragments:

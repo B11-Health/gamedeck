@@ -481,7 +481,7 @@
     const coreReady = Boolean(syncInfo?.ok && syncInfo.supported);
     const cards = [
       { tone: game ? 'ready' : 'loading', label: 'GAME', value: game ? 'Installed' : 'Select a title' },
-      { tone: syncInfo ? (coreReady ? 'ready' : 'issue') : 'loading', label: 'CORE', value: syncInfo ? (coreReady ? syncInfo.coreLabel : 'Needs attention') : 'Checking' },
+      { tone: syncInfo ? (coreReady ? 'ready' : 'issue') : 'loading', label: 'RUNTIME', value: syncInfo ? (coreReady ? 'GameDeck Runtime' : 'Needs attention') : 'Checking' },
       { tone: controllers >= 2 ? 'ready' : 'attention', label: 'INPUT', value: controllers >= 2 ? `${controllers} controllers` : controllers === 1 ? '1 controller' : 'Keyboard only' }
     ];
     $('#multiplayerReadiness').innerHTML = cards.map(item => `<div class="readiness-chip ${item.tone}"><span aria-hidden="true"></span><small>${escapeHtml(item.label)}</small><b>${escapeHtml(item.value)}</b></div>`).join('');
@@ -551,9 +551,8 @@
       const verified = Boolean(match?.ok && match.supported);
       card.classList.toggle('unsupported', !supported);
       if (supported) {
-        const coreLabel = match?.coreLabel || basic.coreFile || 'Libretro core';
         const meta = [basic.systemName, `${Math.min(4, basic.maxPlayers)}-player game`];
-        if (coreLabel && coreLabel !== basic.systemName) meta.push(coreLabel);
+        if (basic.coreFile || match?.coreLabel) meta.push('GameDeck Runtime');
         $('#netplayGameMeta').textContent = meta.join(' · ');
       } else {
         $('#netplayGameMeta').textContent = basic?.issue || 'This game is not yet supported for multiplayer.';
@@ -633,7 +632,7 @@
     $('#syncProgressTitle').textContent = syncStatus.phase === 'error' ? 'Session could not start'
       : syncStatus.phase === 'ready' ? 'Room ready'
       : syncStatus.role === 'client' ? 'Connecting to host…' : 'Publishing room…';
-    $('#syncProgressMessage').textContent = syncStatus.error || syncStatus.message || 'RetroArch is reserving a relay session.';
+    $('#syncProgressMessage').textContent = syncStatus.error || syncStatus.message || 'GameDeck is reserving a relay session.';
     const invite = String(syncStatus.invite || '');
     $('#syncInvite').classList.toggle('hidden', !invite);
     if (invite) {
@@ -957,7 +956,7 @@
     if (syncStatus.active) await endSyncSession(true);
     if (remoteStatus.active || guestPeer) await endSession(true);
     const controllers = connectedControllerCount();
-    if (controllers < 2) toast('Launching with one local input. Connect player two in RetroArch when ready.', 'warning');
+    if (controllers < 2) toast('Launching with one local input. Connect player two in GameDeck when ready.', 'warning');
     const button = $('#multiplayerCouchLaunch');
     button.disabled = true;
     button.querySelector('b').textContent = 'Launching couch co-op…';

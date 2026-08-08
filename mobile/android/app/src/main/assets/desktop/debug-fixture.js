@@ -56,7 +56,7 @@
   const system = {
     id: 'snes', systemId: 'snes', name: 'Super Nintendo', short: 'SNES', icon: 'S', color: '#8b5cf6',
     folders: ['snes'], core: 'snes9x_libretro', image: '../assets/system-themes/nintendo-classic.webp',
-    count: 1, installedCount: 1, ready: true, route: 'integrated_external', emulatorLabel: 'RetroArch', issue: ''
+    count: 1, installedCount: 1, ready: true, route: 'integrated_external', emulatorLabel: 'GameDeck Runtime', issue: ''
   };
 
   const fixtureLibrary = () => ({

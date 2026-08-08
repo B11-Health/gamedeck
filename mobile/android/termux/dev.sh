@@ -5,8 +5,8 @@ ANDROID_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 REPO_ROOT="$(cd "$ANDROID_DIR/../.." && pwd)"
 ENV_FILE="$HOME/.config/gamedeck/android-env.sh"
 APK="${GAMEDECK_APK:-$ANDROID_DIR/app/build/outputs/apk/debug/app-debug.apk}"
-PACKAGE="${GAMEDECK_PACKAGE:-io.gamedeck.mobile.desktoppreview}"
-DOWNLOAD_NAME="${GAMEDECK_DOWNLOAD_NAME:-GameDeck-dev.apk}"
+PACKAGE="${GAMEDECK_PACKAGE:-io.gamedeck.mobile.desktoppreview.qa}"
+DOWNLOAD_NAME="${GAMEDECK_DOWNLOAD_NAME:-GameDeck-QA-CURRENT.apk}"
 ACTIVITY="io.gamedeck.mobile.MainActivity"
 QA_ROOT="$ANDROID_DIR/app/build/outputs/termux-qa"
 QA_ACTION="io.gamedeck.mobile.QA"
@@ -16,6 +16,9 @@ AAPT2="${GAMEDECK_AAPT2:-${PREFIX:-/data/data/com.termux/files/usr}/bin/aapt2}"
 if [[ -f "$ENV_FILE" ]]; then
   # shellcheck disable=SC1090
   source "$ENV_FILE"
+  APK="${GAMEDECK_APK:-$APK}"
+  PACKAGE="${GAMEDECK_PACKAGE:-$PACKAGE}"
+  DOWNLOAD_NAME="${GAMEDECK_DOWNLOAD_NAME:-$DOWNLOAD_NAME}"
 fi
 
 export JAVA_HOME="${JAVA_HOME:-$(dirname "$(dirname "$(readlink -f "$(command -v javac)")")")}" 
@@ -33,8 +36,9 @@ Commands:
   run            Launch the installed app
   install-run    Build, install, and launch
   qa             Run ADB QA, or the debug app native QA bridge when ADB is unavailable
-  logs           Stream GameDeck renderer/RGSX/runtime logs
+  logs           Stream GameDeck renderer/runtime logs
   screenshot     Capture the current device screen through ADB
+  console-qa      Run staged per-console runtime QA (pass additional runner args)
   watch          Rebuild/install/run whenever Android or shared renderer files change
   clean          Remove Android build outputs
 EOF
@@ -51,6 +55,7 @@ build_apk() {
   require_build_tools
   cd "$ANDROID_DIR"
   echo "Building GameDeck Android from $(git -C "$REPO_ROOT" rev-parse --short HEAD 2>/dev/null || echo working-tree)..."
+  python3 "$ANDROID_DIR/tools/validate-system-core-matrix.py"
   local gradle_args=(
     :app:assembleDebug
     --daemon
@@ -59,9 +64,9 @@ build_apk() {
     --max-workers="${GAMEDECK_GRADLE_WORKERS:-2}"
     -Pandroid.aapt2FromMavenOverride="$AAPT2"
   )
-  if [[ -n "${GAMEDECK_APPLICATION_ID:-}" ]]; then
-    gradle_args+=("-PgamedeckApplicationId=$GAMEDECK_APPLICATION_ID")
-  fi
+  gradle_args+=("-PgamedeckApplicationId=${GAMEDECK_APPLICATION_ID:-$PACKAGE}")
+  [[ -n "${GAMEDECK_VERSION_CODE:-}" ]] && gradle_args+=("-PgamedeckVersionCode=$GAMEDECK_VERSION_CODE")
+  [[ -n "${GAMEDECK_VERSION_NAME:-}" ]] && gradle_args+=("-PgamedeckVersionName=$GAMEDECK_VERSION_NAME")
   gradle "${gradle_args[@]}"
   test -s "$APK"
   mkdir -p "$HOME/storage/downloads" 2>/dev/null || true
@@ -104,9 +109,9 @@ install_apk() {
 run_app() {
   if connect_adb; then
     adb shell am force-stop "$PACKAGE" || true
-    adb shell am start -W -n "$PACKAGE/$ACTIVITY"
+    adb shell am start -W --user 0 -n "$PACKAGE/$ACTIVITY"
   else
-    am start -n "$PACKAGE/$ACTIVITY"
+    am start --user 0 -n "$PACKAGE/$ACTIVITY"
   fi
 }
 
@@ -135,7 +140,8 @@ capture_screen() {
 
 native_qa_command() {
   local command="$1"
-  am broadcast -a "$QA_ACTION" -p "$PACKAGE" --es command "$command" > /dev/null
+  # Dynamic debug receivers on Android 16 must not be package-scoped on this device.
+  am broadcast --user 0 -a "$QA_ACTION" --es command "$command" > /dev/null
 }
 
 wait_native_artifact() {
@@ -169,7 +175,7 @@ native_qa_app() {
   out="$QA_ROOT/$stamp"
   mkdir -p "$out" "$NATIVE_QA_PUBLIC"
   rm -f "$NATIVE_QA_PUBLIC/renderer-status.json" "$NATIVE_QA_PUBLIC/input-devices.json"
-  am start -W -n "$PACKAGE/$ACTIVITY" | tee "$out/start.txt"
+  am start -W --user 0 -n "$PACKAGE/$ACTIVITY" | tee "$out/start.txt"
   sleep 1
   native_qa_command fixture:on
   native_qa_command app:restart
@@ -302,7 +308,7 @@ qa_app() {
   adb shell settings put system accelerometer_rotation 0 || true
   adb shell settings put system user_rotation 0 || true
   adb shell am force-stop "$PACKAGE" || true
-  adb shell am start -W -n "$PACKAGE/$ACTIVITY" | tee "$out/start.txt"
+  adb shell am start -W --user 0 -n "$PACKAGE/$ACTIVITY" | tee "$out/start.txt"
   wait_renderer "$out/logcat.txt"
   sleep 1
   capture_screen "$out/portrait.png"
@@ -366,6 +372,10 @@ case "${1:-}" in
   run) run_app ;;
   install-run) build_apk; install_apk; run_app ;;
   qa) qa_app ;;
+  console-qa)
+    shift
+    python3 "$ANDROID_DIR/tools/run-live-console-qa.py" "$@"
+    ;;
   logs) stream_logs ;;
   screenshot)
     if connect_adb; then

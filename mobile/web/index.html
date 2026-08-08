@@ -55,21 +55,22 @@
       </div>
 
       <div class="switch-frame" id="switchFrame">
-        <aside class="joycon joycon-left" aria-label="Left GameDeck controller">
-          <div class="rail-shoulders">
+        <button class="layout-lock" id="layoutLock" type="button" aria-label="Unlock controller layout" aria-pressed="false"><span class="lock-glyph" aria-hidden="true"></span></button>
+        <aside class="joycon joycon-left gamepad-grip" aria-label="Left GameDeck control grip">
+          <div class="rail-shoulders" data-layout-node="left-shoulders">
             <button type="button" data-button="10">L</button>
             <button type="button" data-button="12">L2</button>
           </div>
-          <button class="mini-button minus" type="button" data-button="2" aria-label="Select">−</button>
-          <div class="analog-stick" data-stick="left" role="group" aria-label="Left analog stick"><span></span></div>
-          <div class="dpad" aria-label="Directional pad">
+          <button data-layout-node="left-select" class="mini-button minus" type="button" data-button="2" aria-label="Select">−</button>
+          <div class="analog-stick" data-layout-node="left-stick" data-stick="left" role="group" aria-label="Left analog stick"><span></span></div>
+          <div class="dpad" data-layout-node="left-dpad" aria-label="Directional pad">
             <button type="button" class="up" data-button="4" aria-label="Up">▲</button>
             <button type="button" class="left" data-button="6" aria-label="Left">◀</button>
             <span></span>
             <button type="button" class="right" data-button="7" aria-label="Right">▶</button>
             <button type="button" class="down" data-button="5" aria-label="Down">▼</button>
           </div>
-          <button class="stick-click" type="button" data-button="14">L3</button>
+          <button data-layout-node="left-stick-click" class="stick-click" type="button" data-button="14">L3</button>
         </aside>
 
         <div class="screen-column">
@@ -89,20 +90,20 @@
           <div class="quality-row"><span id="quality">1080p</span><span id="playerSlot">PLAYER 1</span><span>WEBRTC · LOW LATENCY</span><span id="connection">CONNECTING</span></div>
         </div>
 
-        <aside class="joycon joycon-right" aria-label="Right GameDeck controller">
-          <div class="rail-shoulders">
+        <aside class="joycon joycon-right gamepad-grip" aria-label="Right GameDeck control grip">
+          <div class="rail-shoulders" data-layout-node="right-shoulders">
             <button type="button" data-button="13">R2</button>
             <button type="button" data-button="11">R</button>
           </div>
-          <button class="mini-button plus" type="button" data-button="3" aria-label="Start">+</button>
-          <div class="face-buttons" aria-label="Action buttons">
+          <button data-layout-node="right-start" class="mini-button plus" type="button" data-button="3" aria-label="Start">+</button>
+          <div class="face-buttons" data-layout-node="right-face" aria-label="Action buttons">
             <button type="button" class="y" data-button="1">Y</button>
             <button type="button" class="x" data-button="9">X</button>
             <button type="button" class="b" data-button="0">B</button>
             <button type="button" class="a" data-button="8">A</button>
           </div>
-          <div class="analog-stick" data-stick="right" role="group" aria-label="Right analog stick"><span></span></div>
-          <button class="stick-click" type="button" data-button="15">R3</button>
+          <div class="analog-stick" data-layout-node="right-stick" data-stick="right" role="group" aria-label="Right analog stick"><span></span></div>
+          <button data-layout-node="right-stick-click" class="stick-click" type="button" data-button="15">R3</button>
         </aside>
       </div>
 
@@ -125,6 +126,7 @@
           <article>
             <label class="setting-row"><span><b>Motion steering</b><small>Tilt the phone to drive the left analog stick</small></span><input id="motionToggle" type="checkbox"></label>
             <button id="motionCenter" type="button">Center motion controls</button>
+            <button id="layoutReset" type="button">Reset controller layout</button>
             <div class="sensor-readout" id="sensorReadout">ROLL 0.00 · PITCH 0.00</div>
           </article>
           <article class="native-only">

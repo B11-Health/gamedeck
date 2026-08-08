@@ -41,7 +41,12 @@ let audioAnalyser=null;
 let adaptiveTimer=null;
 let lastImpactAt=0;
 const stickPointers=new Map();
+const stickHapticSectors=new Map();
 const analogValues=[0,0,0,0];
+let layoutUnlocked=false;
+let layoutDrag=null;
+let ambientTimer=null;
+let ambientCanvas=null;
 
 function escapeHtml(value){return String(value??'').replace(/[&<>'"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]))}
 function deviceLabel(){const saved=localStorage.getItem('gamedeck:device-name');if(saved)return saved;const platform=navigator.userAgentData?.platform||navigator.platform||'Android';return `${platform} Player`.slice(0,40)}
@@ -61,6 +66,34 @@ function haptic(style='tick'){
   if(!hapticsEnabled)return;const scale={tick:[Math.round(hapticStrength*.55),12],success:[hapticStrength,28],warning:[Math.min(255,hapticStrength+55),48],heavy:[Math.min(255,hapticStrength+35),36]};
   const [strength,duration]=scale[style]||scale.tick;visualHaptic(style);hapticPulse(strength,duration);
 }
+function controllerLayoutScope(){return `${matchMedia('(orientation:portrait)').matches?'portrait':'landscape'}:${screenEnabled?'screen':'controller'}`}
+function controllerLayoutKey(){return `gamedeck:controller-layout:${controllerLayoutScope()}`}
+function readControllerLayout(){try{return JSON.parse(localStorage.getItem(controllerLayoutKey())||'{}')||{}}catch{return{}}}
+function saveControllerLayout(layout){localStorage.setItem(controllerLayoutKey(),JSON.stringify(layout||{}))}
+function clampLayoutOffset(node,dx,dy){
+  const parent=node.parentElement;if(!parent)return{x:0,y:0};
+  const nodeRect=node.getBoundingClientRect(),parentRect=parent.getBoundingClientRect();
+  const currentX=Number(node.dataset.layoutX||0),currentY=Number(node.dataset.layoutY||0);
+  const baseLeft=nodeRect.left-currentX,baseTop=nodeRect.top-currentY;
+  const pad=6;
+  return{x:Math.round(Math.max(parentRect.left+pad-baseLeft,Math.min(parentRect.right-pad-(baseLeft+nodeRect.width),dx))),y:Math.round(Math.max(parentRect.top+pad-baseTop,Math.min(parentRect.bottom-pad-(baseTop+nodeRect.height),dy)))};
+}
+function setLayoutNodeOffset(node,x,y,{persist=false}={}){
+  if(!node)return;const bounded=clampLayoutOffset(node,Number(x)||0,Number(y)||0);node.dataset.layoutX=String(bounded.x);node.dataset.layoutY=String(bounded.y);node.style.setProperty('--layout-x',`${bounded.x}px`);node.style.setProperty('--layout-y',`${bounded.y}px`);
+  if(persist){const layout=readControllerLayout();layout[node.dataset.layoutNode]={x:bounded.x,y:bounded.y};saveControllerLayout(layout)}
+}
+function applyControllerLayout(){const layout=readControllerLayout();$$('[data-layout-node]').forEach(node=>{const saved=layout[node.dataset.layoutNode]||{x:0,y:0};setLayoutNodeOffset(node,saved.x,saved.y)})}
+function resetControllerLayout(){localStorage.removeItem(controllerLayoutKey());$$('[data-layout-node]').forEach(node=>setLayoutNodeOffset(node,0,0));haptic('success')}
+function setLayoutUnlocked(value){layoutUnlocked=Boolean(value);document.body.classList.toggle('layout-editing',layoutUnlocked);const button=$('#layoutLock');if(button){button.classList.toggle('unlocked',layoutUnlocked);button.setAttribute('aria-pressed',layoutUnlocked?'true':'false');button.setAttribute('aria-label',layoutUnlocked?'Lock controller layout':'Unlock controller layout')}if(layoutUnlocked)releaseTouchInputs();haptic(layoutUnlocked?'success':'tick')}
+function layoutPointerDown(event){if(!layoutUnlocked)return;const node=event.target.closest?.('[data-layout-node]');if(!node||!$('#switchFrame')?.contains(node))return;event.preventDefault();event.stopImmediatePropagation();const pointerId=event.pointerId;node.setPointerCapture?.(pointerId);layoutDrag={pointerId,node,startX:event.clientX,startY:event.clientY,originX:Number(node.dataset.layoutX||0),originY:Number(node.dataset.layoutY||0)};node.classList.add('layout-dragging');haptic('tick')}
+function layoutPointerMove(event){if(!layoutDrag||event.pointerId!==layoutDrag.pointerId)return;event.preventDefault();setLayoutNodeOffset(layoutDrag.node,layoutDrag.originX+event.clientX-layoutDrag.startX,layoutDrag.originY+event.clientY-layoutDrag.startY)}
+function layoutPointerUp(event){if(!layoutDrag||event.pointerId!==layoutDrag.pointerId)return;event.preventDefault();const node=layoutDrag.node;node.classList.remove('layout-dragging');setLayoutNodeOffset(node,Number(node.dataset.layoutX||0),Number(node.dataset.layoutY||0),{persist:true});layoutDrag=null;haptic('tick')}
+function stopLiveAmbient(){clearInterval(ambientTimer);ambientTimer=null}
+function sampleLiveAmbient(){
+  const video=$('#video');if(!video||video.readyState<2||!screenEnabled)return;
+  try{ambientCanvas=ambientCanvas||document.createElement('canvas');ambientCanvas.width=16;ambientCanvas.height=9;const ctx=ambientCanvas.getContext('2d',{willReadFrequently:true});ctx.drawImage(video,0,0,16,9);const data=ctx.getImageData(0,0,16,9).data;let left=[0,0,0,0],right=[0,0,0,0];for(let y=0;y<9;y++)for(let x=0;x<16;x++){const i=(y*16+x)*4,a=x<8?left:right;a[0]+=data[i];a[1]+=data[i+1];a[2]+=data[i+2];a[3]++}const css=a=>`rgb(${Math.round(a[0]/a[3])} ${Math.round(a[1]/a[3])} ${Math.round(a[2]/a[3])})`;document.documentElement.style.setProperty('--gd-live-a',css(left));document.documentElement.style.setProperty('--gd-live-b',css(right))}catch{}
+}
+function startLiveAmbient(){stopLiveAmbient();sampleLiveAmbient();ambientTimer=setInterval(sampleLiveAmbient,420)}
 function setConnection(value){$('#connection').textContent=String(value||'').toUpperCase()}
 function authQuery(){return `viewerId=${encodeURIComponent(viewerId)}&code=${encodeURIComponent(code)}`}
 function apiUrl(path){if(!deckBaseUrl&&NEEDS_DECK_ADDRESS)throw Error('Enter the local GameDeck computer address.');return `${deckBaseUrl}${path}`}
@@ -84,12 +117,12 @@ function applyControllerState(value,{notify=true}={}){
 function readNativeController(){try{return normalizedControllerState(nativeBridge()?.controllerState?.())}catch{return{connected:false,count:0,names:[]}}}
 function renderBluetooth(){
   bluetoothState=parseJson(bluetoothState,{supported:false});
-  const status=$('#bluetoothStatus');if(status)status.textContent=!bluetoothState.supported?'Bluetooth gamepad requires Android 9+':!bluetoothState.permission?'Bluetooth permission required':bluetoothState.connected?`Connected to ${bluetoothState.hostName||'computer'}`:bluetoothState.registered?'Ready � choose a paired computer':'Set up Bluetooth gamepad';
+  const status=$('#bluetoothStatus');if(status)status.textContent=!bluetoothState.supported?'Bluetooth gamepad requires Android 9+':!bluetoothState.permission?'Bluetooth permission required':bluetoothState.connected?`Connected to ${bluetoothState.hostName||'computer'}`:bluetoothState.registered?'Ready · choose a paired computer':'Set up Bluetooth gamepad';
   const devices=parseJson(nativeBridge()?.bluetoothDevices?.()||'[]',[]);for(const target of [$('#bluetoothDevices'),$('#bluetoothHosts')]){if(!target)continue;target.innerHTML=devices.length?devices.map(device=>`<button type="button" data-bt-address="${escapeHtml(device.address)}"><b>${escapeHtml(device.name||'Paired computer')}</b><small>${device.connected?'Connected':device.bonded?'Connect':'Pair in Android settings'}</small></button>`).join(''):'<span>No paired computers found yet.</span>';target.querySelectorAll('[data-bt-address]').forEach(button=>button.onclick=()=>{nativeBridge()?.bluetoothConnect?.(button.dataset.btAddress);setTimeout(refreshBluetooth,500)})}
 }
 function refreshBluetooth(){try{bluetoothState=parseJson(nativeBridge()?.bluetoothState?.()||'{}',{});renderBluetooth()}catch{}}
 function applyOrientation(value){const state=parseJson(value,{mode:'auto',current:matchMedia('(orientation:landscape)').matches?'landscape':'portrait'});document.body.dataset.orientation=state.current;$$('[data-orientation]').forEach(button=>button.classList.toggle('active',button.dataset.orientation===state.mode))}
-function handleMotion(value){lastMotion={...lastMotion,...parseJson(value,{})};$('#sensorReadout').textContent=`ROLL ${Number(lastMotion.roll||0).toFixed(2)} � PITCH ${Number(lastMotion.pitch||0).toFixed(2)}`;if(!motionEnabled||controllerState.connected)return;const x=Math.max(-1,Math.min(1,(Number(lastMotion.roll||0)-motionCenter.roll)*1.65));const y=Math.max(-1,Math.min(1,(Number(lastMotion.pitch||0)-motionCenter.pitch)*1.65));sendInputEvents([{axis:0,value:x},{axis:1,value:y}],'motion')}
+function handleMotion(value){lastMotion={...lastMotion,...parseJson(value,{})};$('#sensorReadout').textContent=`ROLL ${Number(lastMotion.roll||0).toFixed(2)} · PITCH ${Number(lastMotion.pitch||0).toFixed(2)}`;if(!motionEnabled||controllerState.connected)return;const x=Math.max(-1,Math.min(1,(Number(lastMotion.roll||0)-motionCenter.roll)*1.65));const y=Math.max(-1,Math.min(1,(Number(lastMotion.pitch||0)-motionCenter.pitch)*1.65));sendInputEvents([{axis:0,value:x},{axis:1,value:y}],'motion')}
 window.GameDeckAndroid={
   onControllerState:value=>applyControllerState(value),
   onDeckUrl:value=>{const normalized=normalizeDeckUrl(value);if(normalized){deckBaseUrl=normalized;$('#deckAddress').value=normalized.replace(/^https?:\/\//,'')}},
@@ -161,7 +194,7 @@ function releaseTouchInputs(){
   const events=[];
   for(const [id,count]of buttonPressCounts){if(count>0)events.push({id,state:0})}
   for(let axis=0;axis<4;axis++){if(Math.abs(analogValues[axis])>.001)events.push({axis,value:0});analogValues[axis]=0}
-  pointerButtons.clear();buttonPressCounts.clear();stickPointers.clear();$$('[data-button].pressed').forEach(button=>button.classList.remove('pressed'));$$('[data-stick] span').forEach(knob=>knob.style.transform='translate(0,0)');sendInputEvents(events,'touch');
+  pointerButtons.clear();buttonPressCounts.clear();stickPointers.clear();stickHapticSectors.clear();$$('[data-button].pressed').forEach(button=>button.classList.remove('pressed'));$$('[data-stick] span').forEach(knob=>knob.style.transform='translate(0,0)');sendInputEvents(events,'touch');
 }
 function spawnTouchRipple(target,event){const rect=target.getBoundingClientRect();const ripple=document.createElement('span');ripple.className='touch-ripple';const x=event?.clientX?event.clientX-rect.left:rect.width/2;const y=event?.clientY?event.clientY-rect.top:rect.height/2;ripple.style.left=`${x}px`;ripple.style.top=`${y}px`;target.appendChild(ripple);ripple.addEventListener('animationend',()=>ripple.remove(),{once:true})}
 function touchButtonDown(button,event){
@@ -178,14 +211,26 @@ function touchButtonUp(event){
   const count=Math.max(0,Number(buttonPressCounts.get(entry.id)||1)-1);buttonPressCounts.set(entry.id,count);
   if(count===0){entry.button.classList.remove('pressed');sendInputEvents([{id:entry.id,state:0}],'touch')}
 }
+$('#switchFrame')?.addEventListener('pointerdown',layoutPointerDown,true);$('#switchFrame')?.addEventListener('pointermove',layoutPointerMove,true);$('#switchFrame')?.addEventListener('pointerup',layoutPointerUp,true);$('#switchFrame')?.addEventListener('pointercancel',layoutPointerUp,true);
 $$('[data-button]').forEach(button=>{button.addEventListener('pointerdown',event=>touchButtonDown(button,event));button.addEventListener('pointerup',touchButtonUp);button.addEventListener('pointercancel',touchButtonUp);button.addEventListener('lostpointercapture',touchButtonUp);button.addEventListener('contextmenu',event=>event.preventDefault())});
+function updateStickDirectionalHaptic(stick,x,y){
+  const key=stick.dataset.stick||'left';const magnitude=Math.hypot(x,y);
+  if(magnitude<.42){stickHapticSectors.set(key,-1);return}
+  const sector=(Math.round(Math.atan2(y,x)/(Math.PI/4))+8)%8;
+  if(stickHapticSectors.get(key)===sector)return;
+  stickHapticSectors.set(key,sector);
+  hapticPulse(Math.max(24,Math.round(hapticStrength*.32)),8);
+}
 function setStickValue(stick,x,y,source='touch-stick'){
   const base=stick.dataset.stick==='right'?2:0;const magnitude=Math.hypot(x,y);if(magnitude>1){x/=magnitude;y/=magnitude}
-  analogValues[base]=x;analogValues[base+1]=y;const knob=stick.querySelector('span');if(knob)knob.style.transform=`translate(${x*34}px,${y*34}px)`;sendInputEvents([{axis:base,value:x},{axis:base+1,value:y}],source)
+  analogValues[base]=x;analogValues[base+1]=y;
+  if(source==='touch-stick')updateStickDirectionalHaptic(stick,x,y);
+  const knob=stick.querySelector('span');if(knob){const rect=stick.getBoundingClientRect();const travel=Math.max(18,Math.min(rect.width,rect.height)*.29);knob.style.transform=`translate(${x*travel}px,${y*travel}px)`}
+  sendInputEvents([{axis:base,value:x},{axis:base+1,value:y}],source)
 }
 function stickMove(stick,event){const active=stickPointers.get(event.pointerId);if(!active)return;event.preventDefault();const rect=stick.getBoundingClientRect();setStickValue(stick,(event.clientX-(rect.left+rect.width/2))/(rect.width*.38),(event.clientY-(rect.top+rect.height/2))/(rect.height*.38))}
 function stickDown(stick,event){if(controllerState.connected||!touchEnabled)return;event.preventDefault();stick.setPointerCapture?.(event.pointerId);stickPointers.set(event.pointerId,stick);stick.classList.add('pressed');spawnTouchRipple(stick,event);stickMove(stick,event);haptic('tick')}
-function stickUp(event){const stick=stickPointers.get(event.pointerId);if(!stick)return;event.preventDefault();stickPointers.delete(event.pointerId);stick.classList.remove('pressed');setStickValue(stick,0,0)}
+function stickUp(event){const stick=stickPointers.get(event.pointerId);if(!stick)return;event.preventDefault();stickPointers.delete(event.pointerId);stickHapticSectors.set(stick.dataset.stick||'left',-1);stick.classList.remove('pressed');setStickValue(stick,0,0)}
 $$('[data-stick]').forEach(stick=>{stick.addEventListener('pointerdown',event=>stickDown(stick,event));stick.addEventListener('pointermove',event=>stickMove(stick,event));stick.addEventListener('pointerup',stickUp);stick.addEventListener('pointercancel',stickUp);stick.addEventListener('lostpointercapture',stickUp)});
 
 
@@ -235,7 +280,9 @@ $('#disconnect').onclick=disconnect;
 $('#fullscreen').onclick=()=>$('#videoShell').requestFullscreen?.();
 $('#mute').onclick=()=>{const video=$('#video');video.muted=!video.muted;$('#mute').textContent=video.muted?'Unmute':'Mute';haptic('tick')};
 $('#touchToggle').onclick=()=>{touchEnabled=!touchEnabled;localStorage.setItem('gamedeck:touch-controls',touchEnabled?'on':'off');applyControllerState(controllerState,{notify:false});if(!touchEnabled)releaseTouchInputs();haptic('tick')};
-$('#screenToggle').onclick=()=>{screenEnabled=!screenEnabled;localStorage.setItem('gamedeck:screen-enabled',screenEnabled?'on':'off');document.body.classList.toggle('controller-only',!screenEnabled);$('#screenToggle').textContent=screenEnabled?'Controller only':'Show game screen';$('#screenBadge').textContent=screenEnabled?'SCREEN + CONTROLLER':'CONTROLLER ONLY';haptic('tick')};
+$('#screenToggle').onclick=()=>{screenEnabled=!screenEnabled;localStorage.setItem('gamedeck:screen-enabled',screenEnabled?'on':'off');document.body.classList.toggle('controller-only',!screenEnabled);$('#screenToggle').textContent=screenEnabled?'Controller only':'Show game screen';$('#screenBadge').textContent=screenEnabled?'SCREEN + CONTROLLER':'CONTROLLER ONLY';requestAnimationFrame(applyControllerLayout);haptic('tick')};
+$('#layoutLock').onclick=()=>setLayoutUnlocked(!layoutUnlocked);
+$('#layoutReset').onclick=resetControllerLayout;
 $('#settingsToggle').onclick=()=>$('#controllerSettings').classList.toggle('hidden');
 $('#settingsClose').onclick=()=>$('#controllerSettings').classList.add('hidden');
 $$('[data-orientation]').forEach(button=>button.onclick=()=>{nativeBridge()?.setOrientation?.(button.dataset.orientation);applyOrientation({mode:button.dataset.orientation,current:matchMedia('(orientation:landscape)').matches?'landscape':'portrait'});haptic('tick')});
@@ -248,6 +295,7 @@ $('#motionCenter').onclick=()=>{motionCenter={roll:Number(lastMotion.roll||0),pi
 $('#bluetoothPrepare').onclick=$('#bluetoothSettings').onclick=()=>{nativeBridge()?.bluetoothPrepare?.();setTimeout(refreshBluetooth,700)};
 $('#revealChrome').onclick=showChrome;
 $('#videoShell').addEventListener('pointerdown',()=>{if(controllerState.connected)showChrome()});
+$('#video').addEventListener('playing',startLiveAmbient);$('#video').addEventListener('emptied',stopLiveAmbient);
 $('#refreshCommunity').onclick=()=>refreshCommunity(true);
 $('#chatForm').addEventListener('submit',sendChat);
 $$('#mobileTabs [data-tab]').forEach(button=>button.onclick=()=>setTab(button.dataset.tab));
@@ -255,7 +303,8 @@ $('#install').onclick=async()=>{if(!installPrompt)return;installPrompt.prompt();
 window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();installPrompt=event;$('#install').classList.remove('hidden')});
 window.addEventListener('beforeunload',()=>{if(viewerId)try{navigator.sendBeacon(apiUrl('/api/leave'),JSON.stringify({code,viewerId}))}catch{}});
 window.addEventListener('blur',releaseTouchInputs);
-window.addEventListener('orientationchange',()=>setTimeout(()=>applyOrientation({mode:parseJson(nativeBridge()?.orientation?.()||'{}',{mode:'auto'}).mode,current:matchMedia('(orientation:landscape)').matches?'landscape':'portrait'}),120));
+window.addEventListener('orientationchange',()=>setTimeout(()=>{applyOrientation({mode:parseJson(nativeBridge()?.orientation?.()||'{}',{mode:'auto'}).mode,current:matchMedia('(orientation:landscape)').matches?'landscape':'portrait'});applyControllerLayout()},160));
+window.addEventListener('resize',()=>{clearTimeout(applyControllerLayout.timer);applyControllerLayout.timer=setTimeout(applyControllerLayout,120)});
 window.addEventListener('gamepadconnected',()=>{if(!nativeBridge())applyControllerState({connected:true,count:[...navigator.getGamepads()].filter(Boolean).length,names:[...navigator.getGamepads()].filter(Boolean).map(pad=>pad.id)})});
 window.addEventListener('gamepaddisconnected',()=>{if(!nativeBridge())applyControllerState({connected:[...navigator.getGamepads()].filter(Boolean).length>0,count:[...navigator.getGamepads()].filter(Boolean).length,names:[...navigator.getGamepads()].filter(Boolean).map(pad=>pad.id)})});
 
@@ -272,6 +321,7 @@ $('#motionToggle').checked=motionEnabled;
 try{if(nativeBridge()?.platform?.()==='android'){document.body.classList.add('native-android');const saved=normalizeDeckUrl(nativeBridge().savedDeckUrl?.()||'');if(saved){deckBaseUrl=saved;$('#deckAddress').value=saved.replace(/^https?:\/\//,'')}applyOrientation(nativeBridge().orientation?.()||'{}');nativeBridge().setMotionEnabled?.(motionEnabled);refreshBluetooth()}}catch{}
 applyControllerState(readNativeController(),{notify:false});
 document.body.classList.toggle('touch-disabled',!touchEnabled);
+applyControllerLayout();
 const preset=new URLSearchParams(location.search).get('code')||'';
 $('#pairCode').value=preset.replace(/\D/g,'').slice(0,6);
 $('#deviceName').value=deviceLabel();

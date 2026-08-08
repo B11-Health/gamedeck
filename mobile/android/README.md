@@ -130,3 +130,10 @@ Pull-request validation includes:
 The QA fixture is activated only by a marker inside the debuggable app's private sandbox and is inactive for normal installations.
 
 - mobile search stays in normal document flow, aligns to the top on focus, and uses dedicated portrait/landscape layouts
+
+
+## Automatic game dependency orchestration
+
+Android launch is player-first: selecting a game creates a dependency plan for content preparation, engine/core readiness, firmware, renderer assets, and controller mapping. GameDeck displays one branded preparation surface and resumes the same pending game automatically after every dependency is verified. Provider-specific setup screens are not part of the normal player path.
+
+The embedded PlayStation 2 route uses the PCSX2-derived ARM64 engine documented in `PS2_ENGINE_LICENSE.md`. The APK does not bundle commercial games or proprietary console firmware.

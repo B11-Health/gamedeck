@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "provider": "GameDeck lawful RGSX catalog",
+  "provider": "GameDeck catalog",
   "systems": [
     {
       "id": "gamedeck-nes-homebrew",

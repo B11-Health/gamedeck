@@ -55,10 +55,18 @@
   const inferYear = value => String(value || '').match(/(?:19|20)\d{2}/)?.[0] || '';
   const blocked = (message, reasonCode) => Promise.resolve({ ok: false, blocked: true, message, reasonCode });
 
+  const inferSystemFromContentUri = value => {
+    const text = String(value || '');
+    const match = text.match(/\/(?:files|content)\/([^/?#]+)\//i);
+    if (!match) return '';
+    try { return decodeURIComponent(match[1]).trim().toLowerCase(); } catch { return match[1].trim().toLowerCase(); }
+  };
+
   let libraryCache = null;
   const artworkCache = new Map();
   let catalogSystemsCache = null;
   let runtimeCache = null;
+  let controllerSnapshotCache = null;
   const runtimeListeners = new Set();
   const nativeArtworkRequests = new Map();
   let nativeArtworkSequence = 0;
@@ -102,7 +110,7 @@
       image: system.image || imageForSystem(system.id),
       installedCount: Number(system.installedCount ?? system.count ?? 0),
       ready: Boolean(system.ready || system.route === 'integrated_external'),
-      emulatorLabel: system.route === 'integrated_external' ? 'RetroArch' : 'GameDeck Android',
+      emulatorLabel: system.route === 'integrated_external' ? 'GameDeck Runtime' : 'GameDeck Android',
       issue: system.issue || (system.route === 'integrated_external' ? '' : 'Android game engine setup is still required.')
     }));
     const byId = new Map(systems.map(system => [system.id, system]));
@@ -161,6 +169,15 @@
       .some(value => normalizedIdentity(value) === identity)) || null;
   }
 
+  function playerFacingMetadata(value) {
+    return String(value || '')
+      .replace(/\bRGSX\b/gi, 'GameDeck')
+      .replace(/\bRetroArch\b/gi, 'GameDeck Runtime')
+      .replace(/\bPPSSPP\b/gi, 'PSP Runtime')
+      .replace(/\bFinalBurn Neo\b|\bFBNeo\b|\bMAME\b/gi, 'Arcade Runtime')
+      .replace(/\bArchive\.org\b/gi, 'GameDeck library');
+  }
+
   async function detailsFor(title, systemId, context = {}) {
     const game = await findLibraryGame(title, systemId, context);
     const systemName = context.systemName || game?.systemName || systemId || 'this system';
@@ -168,7 +185,7 @@
     const year = game?.year || inferYear(context.file || title);
     return {
       title: game?.metadataTitle || title,
-      description: game?.description || `${cleanTitle(title)} is part of the ${systemName} collection${region ? ` (${region})` : ''}. GameDeck keeps the game, artwork, saves, favorites, and play history on this device.`,
+      description: playerFacingMetadata(game?.description) || `${cleanTitle(title)} is part of the ${systemName} collection${region ? ` (${region})` : ''}. GameDeck keeps the game, artwork, saves, favorites, and play history on this device.`,
       releaseDate: game?.releaseDate || '',
       year,
       genre: game?.genre || '',
@@ -231,7 +248,7 @@
     if (artworkCache.has(key)) return artworkCache.get(key);
 
     const request = (async () => {
-      // This direct GitHub/blob route is the proven pre-RGSX artwork path.
+      // This direct GitHub/blob route is the proven pre-GameDeck artwork path.
       // Keep it first so a stalled native cache request can never hold visible cards.
       for (const candidate of thumbnailNames(title)) {
         const url = `https://raw.githubusercontent.com/libretro-thumbnails/${repo}/master/Named_Boxarts/${encodeURIComponent(candidate + '.png')}`;
@@ -277,7 +294,8 @@
   async function diagnostics() {
     const library = await getLibrary();
     const runtime = getRuntimeStatus();
-    const controllerSnapshot = parse(invoke('controllers', '{"devices":[]}'), { devices: [], retroArchProfiles: 212, defaultMapping: 'RetroArch Android autoconfig' });
+    const controllerSnapshot = controllerSnapshotCache
+      || parse(invoke('controllers', '{"connected":false,"count":0,"names":[],"devices":[]}'), { connected: false, count: 0, names: [], devices: [], retroArchProfiles: 212, defaultMapping: 'GameDeck controller mapping' });
     const controllerProfiles = Array.isArray(controllerSnapshot.devices) ? controllerSnapshot.devices : [];
     return {
       platform: 'android',
@@ -295,7 +313,7 @@
       controllerProfiles,
       controllerAutoconfig: true,
       controllerProfileCount: Number(controllerSnapshot.retroArchProfiles || 212),
-      controllerDefaultMapping: controllerSnapshot.defaultMapping || 'RetroArch Android autoconfig'
+      controllerDefaultMapping: controllerSnapshot.defaultMapping || 'GameDeck controller mapping'
     };
   }
 
@@ -369,9 +387,11 @@
   async function settingsSnapshot() {
     const library = await getLibrary();
     const runtime = getRuntimeStatus();
+    const rgsx = parse(invoke('rgsxStatus', '{}'), {});
     return {
       platform: 'android', arch: 'arm64', version: '1.0.0',
-      libraryRoot: library.rootName || '', rgsxRoot: 'Automatic',
+      libraryRoot: library.rootName || '',
+      rgsxRoot: rgsx.archiveSessionReady ? 'Automatic · Archive session ready' : 'Automatic · Import Archive session',
       retroArchPath: runtime.externalPackage || '', retroArchCores: '', retroArchSystem: '', mamePath: '', sponsorsEnabled: false
     };
   }
@@ -381,8 +401,14 @@
     rescan: () => getLibrary(true),
     launch: async file => {
       const target = typeof file === 'string' ? file : file?.contentUri || file?.file || '';
-      const game = (await getLibrary()).games.find(item => item.file === target || item.contentUri === target);
-      const result = parse(invoke('launch', '{}', target, game?.mimeType || 'application/octet-stream', game?.system || ''), { ok: false, error: 'Launch route unavailable.' });
+      let library = await getLibrary();
+      let game = library.games.find(item => item.file === target || item.contentUri === target);
+      if (!game) {
+        library = await getLibrary(true);
+        game = library.games.find(item => item.file === target || item.contentUri === target);
+      }
+      const systemId = game?.system || inferSystemFromContentUri(target);
+      const result = parse(invoke('launch', '{}', target, game?.mimeType || 'application/octet-stream', systemId), { ok: false, error: 'Launch route unavailable.' });
       if (result.ok) libraryCache = null;
       return result;
     },
@@ -426,22 +452,30 @@
     inspectSettings: async () => {
       const library = await getLibrary();
       const runtime = getRuntimeStatus();
+      const rgsx = parse(invoke('rgsxStatus', '{}'), {});
       return {
         requiredReady: Boolean(library.rootConfigured),
         summary: library.rootConfigured ? 'Android library access is ready.' : 'Choose a game library folder.',
         fields: {
           libraryRoot: { ready: Boolean(library.rootConfigured), tone: library.rootConfigured ? 'ok' : 'bad', message: library.rootConfigured ? 'Secure folder access active.' : 'Choose a folder through Android.' },
-          rgsxRoot: { ready: true, tone: 'ok', message: 'Discover is connected automatically.' },
+          rgsxRoot: {
+            ready: true,
+            tone: rgsx.archiveSessionReady ? 'ok' : 'muted',
+            message: rgsx.archiveSessionReady
+              ? 'Discover is automatic and private library files are authenticated.'
+              : 'Discover is automatic. Import the desktop GameDeck library session for private catalog files.'
+          },
           retroArchPath: { ready: Boolean(runtime.ready), tone: runtime.ready ? 'ok' : 'muted', message: runtime.ready ? 'GameDeck Console ready for one-tap play.' : 'GameDeck Console installs automatically on first play.' },
           retroArchCores: { ready: Boolean(runtime.ready), tone: runtime.ready ? 'ok' : 'muted', message: runtime.ready ? 'Verified cores are selected and cached per console.' : 'The exact verified core downloads automatically with the first title.' },
           retroArchSystem: { ready: false, tone: 'muted', message: 'Managed firmware path pending.' },
-          mamePath: { ready: false, tone: 'muted', message: 'Standalone Android MAME pending.' }
+          mamePath: { ready: false, tone: 'muted', message: 'Optional arcade compatibility runtime pending.' }
         }
       };
     },
     saveSettings: async values => ({ ok: true, restartRequired: false, settings: values || {} }),
     chooseDirectory: async kind => {
       if (kind === 'libraryRoot' || kind === 'library') invoke('chooseLibrary', null);
+      if (kind === 'rgsxRoot' || kind === 'rgsx') invoke('chooseRgsxArchiveSession', null);
       return { ok: true, canceled: false };
     },
     openLibrary: async () => { invoke('chooseLibrary', null); return { ok: true }; },
@@ -476,6 +510,32 @@
     netplayGameInfo: async () => ({ supported: false }),
     netplayMatchInfo: async () => ({ supported: false }),
     netplayRelays: async () => [],
+    communityMatchmakingStatus: async () => ({
+      supported: false,
+      ready: false,
+      provider: 'android-standalone',
+      reasonCode: 'android_community_provider_pending',
+      message: 'Open Rooms are available when GameDeck is connected to a desktop community provider.'
+    }),
+    communityRooms: async () => ({
+      ok: true,
+      rooms: [],
+      status: {
+        supported: false,
+        provider: 'android-standalone',
+        reasonCode: 'android_community_provider_pending'
+      }
+    }),
+    communityLibraryRooms: async () => ({
+      ok: true,
+      rooms: [],
+      scanned: 0,
+      status: {
+        supported: false,
+        provider: 'android-standalone',
+        reasonCode: 'android_community_provider_pending'
+      }
+    }),
     netplayHost: async () => blocked('Synchronized netplay is pending on Android.', 'android_netplay_pending'),
     netplayJoin: async () => blocked('Synchronized netplay is pending on Android.', 'android_netplay_pending'),
     netplayStop: async () => ({ ok: true }),
@@ -513,6 +573,12 @@
         const element = document.querySelector(selector);
         if (element && element.textContent !== value) element.textContent = value;
       });
+
+
+      const rgsxInput = document.querySelector('#settingRgsx');
+      const rgsxButton = document.querySelector('[data-browse="rgsxRoot"]');
+      if (rgsxInput) rgsxInput.readOnly = true;
+      if (rgsxButton) rgsxButton.textContent = 'Import session';
 
       document.querySelectorAll('#setupSteps small, #setupCoach p, .runtime-copy, .settings-field p').forEach(element => {
         const text = String(element.textContent || '');
@@ -555,6 +621,21 @@
   };
   window.GameDeckNative = {
     onStorageChanged() { libraryCache = null; location.reload(); },
+    onRgsxArchiveSession(result) {
+      const state = result && typeof result === 'object' ? result : {};
+      const message = state.message || state.error || 'GameDeck library session update finished.';
+      const status = document.querySelector('#settingRgsxState');
+      if (status) status.textContent = message;
+      if (state.ok) {
+        catalogSystemsCache = null;
+        runtimeCache = null;
+        window.setTimeout(() => location.reload(), 350);
+      }
+    },
+    onControllerState(snapshot) {
+      controllerSnapshotCache = parse(snapshot, { connected: false, count: 0, names: [], devices: [] });
+      window.dispatchEvent(new CustomEvent('gamedeckcontrollerchange', { detail: controllerSnapshotCache }));
+    },
     onRuntimeChanged(runtime) {
       const previousReady = Boolean(runtimeCache?.ready);
       runtimeCache = runtime && typeof runtime === 'object' ? runtime : getRuntimeStatus(true);

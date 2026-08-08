@@ -92,6 +92,25 @@ tasks.register('prepareSharedRenderer') {
         if (debugFixtureFile.getText('UTF-8').contains('artwork: async () => cover')) {
             throw new GradleException('Android debug fixture must not override artwork for the real managed library')
         }
+
+        File nativeLibretroHost = new File(projectDir, 'src/main/jniLibs/arm64-v8a/libgamedeck_libretro.so')
+        File nativeLibretroSource = new File(projectDir, 'src/main/cpp/gamedeck_libretro.c')
+        File libretroHeader = new File(projectDir, 'src/main/cpp/include/libretro.h')
+        byte[] nativeMagic = new byte[0]
+        if (nativeLibretroHost.isFile() && nativeLibretroHost.length() >= 4L) {
+            nativeMagic = new byte[4]
+            nativeLibretroHost.withInputStream { input ->
+                if (input.read(nativeMagic) != 4) nativeMagic = new byte[0]
+            }
+        }
+        boolean nativeElf = nativeMagic.length == 4
+            && (nativeMagic[0] & 0xff) == 0x7f
+            && (nativeMagic[1] & 0xff) == 0x45
+            && (nativeMagic[2] & 0xff) == 0x4c
+            && (nativeMagic[3] & 0xff) == 0x46
+        if (!nativeElf || !nativeLibretroSource.isFile() || !libretroHeader.isFile()) {
+            throw new GradleException('GameDeck embedded libretro host is missing or invalid; run scripts/build-android-libretro-host.sh')
+        }
     }
 }
 
@@ -144,12 +163,19 @@ android {
     sourceSets {
         main {
             assets.srcDirs = controllerOnly ? [sharedRendererAssets] : [file('src/main/assets'), sharedRendererAssets]
+            // Keep the controller-only APK free of emulator native libraries.
+            jniLibs.srcDirs = controllerOnly ? [] : [file('src/main/jniLibs')]
         }
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_11
-        targetCompatibility JavaVersion.VERSION_11
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    lint {
+        abortOnError true
+        checkReleaseBuilds true
     }
 }
 
@@ -173,4 +199,14 @@ tasks.register('verifyReleaseSigning') {
 afterEvaluate {
     tasks.named('assembleRelease').configure { dependsOn tasks.named('verifyReleaseSigning') }
     tasks.named('bundleRelease').configure { dependsOn tasks.named('verifyReleaseSigning') }
+}
+
+
+dependencies {
+    // Controller-only still compiles shared source against the engine API, but does not package it.
+    if (controllerOnly) {
+        compileOnly project(':ps2engine')
+    } else {
+        implementation project(':ps2engine')
+    }
 }

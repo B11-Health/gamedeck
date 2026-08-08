@@ -1,8 +1,8 @@
 package io.gamedeck.mobile;
 
 import android.app.Activity;
-import android.annotation.SuppressLint;
 import android.app.ActivityManager;
+import android.annotation.SuppressLint;
 import android.content.ActivityNotFoundException;
 import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
@@ -15,6 +15,7 @@ import android.content.pm.ApplicationInfo;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Insets;
+import android.hardware.input.InputManager;
 import android.net.Uri;
 import android.util.Log;
 import android.os.Build;
@@ -22,12 +23,15 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.view.InputDevice;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.PixelCopy;
 import android.view.View;
+import android.view.Window;
 import android.view.WindowInsets;
+import android.view.WindowManager;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
@@ -54,12 +58,14 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class MainActivity extends Activity {
+public class MainActivity extends Activity implements InputManager.InputDeviceListener {
     static final int REQUEST_LIBRARY = 4101;
     static final int REQUEST_RGSX = 4102;
+    static final int REQUEST_RGSX_ARCHIVE_SESSION = 4103;
     private static final String LOCAL_URL = "file:///android_asset/desktop/index.html";
     private static final String QA_ACTION = "io.gamedeck.mobile.QA";
     private static final String DEBUG_FIXTURE_FILE = "renderer-fixture.enabled";
+    private static final long CONTROLLER_GRACE_MS = 30_000L;
     private static final String DEBUG_FIXTURE_EXTRA = "gamedeck.qa.fixture";
 
     private FrameLayout rootView;
@@ -73,17 +79,22 @@ public class MainActivity extends Activity {
     private int verticalDirection = 0;
     private boolean leftTriggerPressed = false;
     private boolean rightTriggerPressed = false;
+    private InputManager inputManager;
+    private volatile long lastPhysicalControllerSeenAt = 0L;
+    private volatile String lastPhysicalControllerLabel = "";
     private final ExecutorService qaIo = Executors.newSingleThreadExecutor();
     private volatile boolean debugFixtureEnabled = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        inputManager = (InputManager) getSystemService(Context.INPUT_SERVICE);
         clearLegacyDebugFixture();
         debugFixtureEnabled = isDebugBuild() && getIntent() != null
             && getIntent().getBooleanExtra(DEBUG_FIXTURE_EXTRA, false);
         getWindow().setStatusBarColor(Color.rgb(9, 11, 16));
         getWindow().setNavigationBarColor(Color.rgb(9, 11, 16));
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             getWindow().setDecorFitsSystemWindows(false);
         }
@@ -91,6 +102,101 @@ public class MainActivity extends Activity {
         registerQaReceiver();
         registerBackNavigation();
         loadLocalShell();
+        handleLaunchIntent(getIntent());
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleLaunchIntent(intent);
+    }
+
+    private boolean handleDebugE2eLaunchIntent(Intent intent) {
+        if ((getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) == 0
+            || intent == null || !Intent.ACTION_VIEW.equals(intent.getAction())) return false;
+        Uri data = intent.getData();
+        if (data == null || !"gamedeck".equalsIgnoreCase(data.getScheme())) return false;
+        if (!"connect".equalsIgnoreCase(data.getHost()) || !"/qa-e2e".equals(data.getPath())) return false;
+
+        String folder = data.getQueryParameter("platform");
+        if (folder == null || !folder.matches("[a-z0-9_-]{1,32}")) return true;
+        int rank = parseQaRank(data.getQueryParameter("rank"));
+        debugFixtureEnabled = true;
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            if (bridge != null && !isFinishing() && !isDestroyed()) {
+                qaIo.execute(() -> bridge.launchE2eCandidate(folder, rank));
+            }
+        }, 1500L);
+        return true;
+    }
+
+    private void handleLaunchIntent(Intent intent) {
+        if (handleDebugE2eLaunchIntent(intent)) return;
+        if (isNbaStreetVol2PlayIntent(intent)) {
+            new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                if (bridge != null && !isFinishing() && !isDestroyed()) {
+                    qaIo.execute(bridge::runNbaStreetVol2DirectLaunch);
+                }
+            }, 900L);
+            return;
+        }
+        String incoming = incomingDeckUrl(intent);
+        if (!incoming.isEmpty()) openRemoteReceiver(incoming);
+    }
+
+    private boolean isNbaStreetVol2PlayIntent(Intent intent) {
+        if (intent == null || intent.getData() == null) return false;
+        Uri data = intent.getData();
+        if (!"gamedeck".equalsIgnoreCase(data.getScheme())
+            || !"play".equalsIgnoreCase(data.getHost())) return false;
+        String path = data.getPath();
+        return path != null && path.toLowerCase(Locale.ROOT).startsWith("/nba-street-vol2");
+    }
+
+    private String incomingDeckUrl(Intent intent) {
+        if (intent == null || intent.getData() == null) return "";
+        Uri data = intent.getData();
+        String candidate;
+        if ("gamedeck".equalsIgnoreCase(data.getScheme())
+            && "connect".equalsIgnoreCase(data.getHost())) {
+            candidate = data.getQueryParameter("url");
+        } else {
+            candidate = data.toString();
+        }
+        String normalized = normalizeDeckUrl(candidate);
+        return isAllowedDeckUrl(normalized) ? normalized : "";
+    }
+
+    private String normalizeDeckUrl(String raw) {
+        String value = raw == null ? "" : raw.trim();
+        if (value.isEmpty()) return "";
+        if (!value.startsWith("http://") && !value.startsWith("https://")) value = "http://" + value;
+        return value;
+    }
+
+    private boolean isAllowedDeckUrl(String value) {
+        try {
+            Uri uri = Uri.parse(value);
+            String scheme = uri.getScheme();
+            String host = uri.getHost();
+            if (!("http".equalsIgnoreCase(scheme) || "https".equalsIgnoreCase(scheme)) || host == null) return false;
+            String normalized = host.toLowerCase(Locale.ROOT);
+            if ("localhost".equals(normalized) || "127.0.0.1".equals(normalized)
+                || "::1".equals(normalized) || normalized.endsWith(".local")) return true;
+            if (normalized.startsWith("10.") || normalized.startsWith("192.168.")
+                || normalized.startsWith("169.254.")) return true;
+            if (normalized.startsWith("172.")) {
+                String[] parts = normalized.split("\\.");
+                if (parts.length == 4) {
+                    int second = Integer.parseInt(parts[1]);
+                    return second >= 16 && second <= 31;
+                }
+            }
+            return false;
+        } catch (Exception ignored) {
+            return false;
+        }
     }
 
     private void buildWebView() {
@@ -103,6 +209,8 @@ public class MainActivity extends Activity {
         webView.setVisibility(View.VISIBLE);
         webView.setAlpha(1f);
         webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        webView.setLongClickable(false);
+        webView.setOnLongClickListener(view -> true);
 
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
@@ -114,6 +222,8 @@ public class MainActivity extends Activity {
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         settings.setBuiltInZoomControls(false);
         settings.setDisplayZoomControls(false);
+        settings.setTextZoom(100);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) settings.setSafeBrowsingEnabled(true);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) settings.setOffscreenPreRaster(true);
         settings.setUserAgentString(settings.getUserAgentString() + " GameDeckAndroid/" + AppVersion.name(this));
 
@@ -376,12 +486,37 @@ public class MainActivity extends Activity {
             bridge.writeRgsxQaSnapshot();
             return;
         }
+        if ("rgsx:probe-ps2-archive".equals(command)) {
+            qaIo.execute(bridge::writeRgsxPs2ArchiveProbe);
+            return;
+        }
         if ("runtime:snapshot".equals(command)) {
             bridge.writeRuntimeQaSnapshot();
             return;
         }
+        if ("runtime:probe-ps2-resolution".equals(command)) {
+            bridge.writePs2RuntimeResolutionProbe();
+            return;
+        }
+        if ("runtime:probe-ps2-engine".equals(command)) {
+            qaIo.execute(bridge::writePs2EngineProbe);
+            return;
+        }
+        if ("rgsx:probe-firmware-catalog".equals(command)) {
+            qaIo.execute(bridge::writeFirmwareCatalogProbe);
+            return;
+        }
+        if ("runtime:launch-nba-street-vol2".equals(command)) {
+            bridge.runNbaStreetVol2RuntimeQaLaunch();
+            return;
+        }
         if ("runtime:launch-managed".equals(command)) {
             bridge.runManagedRuntimeQaLaunch();
+            return;
+        }
+        if (command.startsWith("runtime:launch-title:")) {
+            String title = command.substring("runtime:launch-title:".length()).trim();
+            qaIo.execute(() -> bridge.runManagedTitleQaLaunch(title));
             return;
         }
         if ("rgsx:reset-fixture".equals(command)) {
@@ -493,7 +628,19 @@ public class MainActivity extends Activity {
     }
 
     boolean hasActiveGameController() {
-        return activeGameControllerCount() > 0;
+        if (refreshPhysicalControllerState(false)) return true;
+        long seenAt = lastPhysicalControllerSeenAt;
+        return seenAt > 0 && SystemClock.elapsedRealtime() - seenAt <= CONTROLLER_GRACE_MS;
+    }
+
+    boolean awaitActiveGameController(long timeoutMs) {
+        if (hasActiveGameController()) return true;
+        long deadline = SystemClock.elapsedRealtime() + Math.max(0L, Math.min(800L, timeoutMs));
+        while (SystemClock.elapsedRealtime() < deadline) {
+            SystemClock.sleep(40L);
+            if (hasActiveGameController()) return true;
+        }
+        return false;
     }
 
     int activeGameControllerCount() {
@@ -502,6 +649,7 @@ public class MainActivity extends Activity {
             InputDevice device = InputDevice.getDevice(id);
             if (isGameController(device)) count++;
         }
+        if (count == 0 && hasRecentlyObservedController()) return 1;
         return count;
     }
 
@@ -509,28 +657,67 @@ public class MainActivity extends Activity {
         for (int id : InputDevice.getDeviceIds()) {
             InputDevice device = InputDevice.getDevice(id);
             if (!isGameController(device)) continue;
-            String layout = controllerLayout(device);
-            return controllerLabel(layout);
+            observePhysicalController(device);
+            return controllerLabel(controllerLayout(device));
         }
-        return "Touch controls";
+        return hasRecentlyObservedController() && !lastPhysicalControllerLabel.isEmpty()
+            ? lastPhysicalControllerLabel
+            : "Touch controls";
+    }
+
+    private boolean hasRecentlyObservedController() {
+        long seenAt = lastPhysicalControllerSeenAt;
+        return seenAt > 0 && SystemClock.elapsedRealtime() - seenAt <= CONTROLLER_GRACE_MS;
     }
 
     private boolean isGameController(InputDevice device) {
-        if (device == null) return false;
+        if (device == null || device.isVirtual()) return false;
         int sources = device.getSources();
         return (sources & InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD
             || (sources & InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK;
     }
 
+    private boolean observePhysicalController(InputDevice device) {
+        if (!isGameController(device)) return false;
+        lastPhysicalControllerSeenAt = SystemClock.elapsedRealtime();
+        lastPhysicalControllerLabel = controllerLabel(controllerLayout(device));
+        return true;
+    }
+
+    private boolean refreshPhysicalControllerState(boolean clearIfMissing) {
+        boolean found = false;
+        for (int id : InputDevice.getDeviceIds()) {
+            InputDevice device = InputDevice.getDevice(id);
+            if (observePhysicalController(device)) found = true;
+        }
+        if (!found && clearIfMissing) {
+            lastPhysicalControllerSeenAt = 0L;
+            lastPhysicalControllerLabel = "";
+        }
+        return found;
+    }
+
+    private void notifyControllerState() {
+        String snapshot = JSONObject.quote(controllerSnapshot());
+        if (remoteMode) {
+            evaluate("window.GameDeckAndroid&&typeof window.GameDeckAndroid.onControllerState==='function'&&window.GameDeckAndroid.onControllerState(" + snapshot + ")");
+        } else {
+            evaluate("window.GameDeckNative&&typeof window.GameDeckNative.onControllerState==='function'&&window.GameDeckNative.onControllerState(" + snapshot + ")");
+        }
+        if (bridge != null) notifyRuntimeChanged(bridge.runtimeStatus());
+    }
+
     private String inputDevicesSnapshot(boolean controllersOnly) {
         JSONArray devices = new JSONArray();
+        JSONArray names = new JSONArray();
         for (int id : InputDevice.getDeviceIds()) {
             InputDevice device = InputDevice.getDevice(id);
             if (device == null) continue;
             int sources = device.getSources();
             boolean gamepad = (sources & InputDevice.SOURCE_GAMEPAD) == InputDevice.SOURCE_GAMEPAD;
             boolean joystick = (sources & InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK;
-            if (controllersOnly && !gamepad && !joystick) continue;
+            boolean physicalController = isGameController(device);
+            if (controllersOnly && !physicalController) continue;
             JSONObject item = new JSONObject();
             try {
                 String layout = controllerLayout(device);
@@ -542,21 +729,30 @@ public class MainActivity extends Activity {
                 item.put("vendorId", device.getVendorId());
                 item.put("productId", device.getProductId());
                 item.put("sources", sources);
+                item.put("virtual", device.isVirtual());
                 item.put("gamepad", gamepad);
                 item.put("joystick", joystick);
                 item.put("keyboard", (sources & InputDevice.SOURCE_KEYBOARD) == InputDevice.SOURCE_KEYBOARD);
-                item.put("retroArchAutoconfig", gamepad || joystick);
-                item.put("mapping", "RetroArch Android autoconfig");
+                item.put("retroArchAutoconfig", physicalController);
+                item.put("mapping", "GameDeck controller mapping");
                 devices.put(item);
+                if (physicalController) {
+                    names.put(device.getName());
+                    observePhysicalController(device);
+                }
             } catch (Exception ignored) {}
         }
+        boolean connected = devices.length() > 0 || hasRecentlyObservedController();
+        if (names.length() == 0 && connected && !lastPhysicalControllerLabel.isEmpty()) names.put(lastPhysicalControllerLabel);
         JSONObject output = new JSONObject();
         try {
-            output.put("count", devices.length());
+            output.put("connected", connected);
+            output.put("count", connected ? Math.max(1, devices.length()) : 0);
+            output.put("names", names);
             output.put("devices", devices);
             output.put("retroArchProfiles", 212);
-            output.put("defaultMapping", "RetroArch Android autoconfig");
-            output.put("fallback", "RetroArch standard controller");
+            output.put("defaultMapping", "GameDeck controller mapping");
+            output.put("fallback", "GameDeck standard controller");
         } catch (Exception ignored) {}
         return output.toString();
     }
@@ -587,39 +783,48 @@ public class MainActivity extends Activity {
         if (!isDebugBuild()) return;
         String name = sanitizeArtifactName(rawName, "capture") + ".png";
         runOnUiThread(() -> {
-            View decor = getWindow().getDecorView();
-            int width = decor.getWidth();
-            int height = decor.getHeight();
-            if (width <= 0 || height <= 0) {
-                writeQaTextArtifact("capture-status.json", "{\"ok\":false,\"error\":\"window-not-laid-out\"}");
+            Window window = getWindow();
+            View decor = window == null ? null : window.getDecorView();
+            int width = decor == null ? 0 : decor.getWidth();
+            int height = decor == null ? 0 : decor.getHeight();
+            if (decor == null || !decor.isAttachedToWindow() || !decor.isShown() || width <= 0 || height <= 0) {
+                writeQaTextArtifact("capture-status.json", "{\"ok\":false,\"error\":\"window-surface-unavailable\"}");
                 return;
             }
             Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
-            PixelCopy.request(getWindow(), bitmap, result -> {
-                if (result != PixelCopy.SUCCESS) {
-                    bitmap.recycle();
-                    writeQaTextArtifact(
-                        "capture-status.json",
-                        String.format(Locale.US, "{\"ok\":false,\"name\":\"%s\",\"pixelCopyResult\":%d}", name, result)
-                    );
-                    return;
-                }
-                qaIo.execute(() -> {
-                    boolean saved = writeQaBitmapNow(name, bitmap);
-                    bitmap.recycle();
-                    writeQaTextArtifactNow(
-                        "capture-status.json",
-                        String.format(
-                            Locale.US,
-                            "{\"ok\":%s,\"name\":\"%s\",\"width\":%d,\"height\":%d}",
-                            saved,
-                            name,
-                            width,
-                            height
-                        )
-                    );
-                });
-            }, new Handler(Looper.getMainLooper()));
+            try {
+                PixelCopy.request(window, bitmap, result -> {
+                    if (result != PixelCopy.SUCCESS) {
+                        bitmap.recycle();
+                        writeQaTextArtifact(
+                            "capture-status.json",
+                            String.format(Locale.US, "{\"ok\":false,\"name\":\"%s\",\"pixelCopyResult\":%d}", name, result)
+                        );
+                        return;
+                    }
+                    qaIo.execute(() -> {
+                        boolean saved = writeQaBitmapNow(name, bitmap);
+                        bitmap.recycle();
+                        writeQaTextArtifactNow(
+                            "capture-status.json",
+                            String.format(
+                                Locale.US,
+                                "{\"ok\":%s,\"name\":\"%s\",\"width\":%d,\"height\":%d}",
+                                saved,
+                                name,
+                                width,
+                                height
+                            )
+                        );
+                    });
+                }, new Handler(Looper.getMainLooper()));
+            } catch (IllegalArgumentException | IllegalStateException error) {
+                bitmap.recycle();
+                writeQaTextArtifact(
+                    "capture-status.json",
+                    "{\"ok\":false,\"error\":\"window-surface-unavailable\"}"
+                );
+            }
         });
     }
 
@@ -735,6 +940,17 @@ public class MainActivity extends Activity {
         });
     }
 
+
+    void chooseRgsxArchiveSession() {
+        runOnUiThread(() -> {
+            Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+            intent.addCategory(Intent.CATEGORY_OPENABLE);
+            intent.setType("text/plain");
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+            startActivityForResult(intent, REQUEST_RGSX_ARCHIVE_SESSION);
+        });
+    }
+
     void openRemoteReceiver(String raw) {
         runOnUiThread(() -> {
             String value = raw == null ? "" : raw.trim();
@@ -790,6 +1006,9 @@ public class MainActivity extends Activity {
         } else if (requestCode == REQUEST_RGSX) {
             bridge.setRgsxRoot(uri);
             evaluate("window.GameDeckNative&&window.GameDeckNative.onStorageChanged('rgsx')");
+        } else if (requestCode == REQUEST_RGSX_ARCHIVE_SESSION) {
+            String result = bridge.importRgsxArchiveSession(uri);
+            evaluate("window.GameDeckNative&&window.GameDeckNative.onRgsxArchiveSession(" + result + ")");
         }
     }
 
@@ -808,10 +1027,19 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        if (inputManager != null) inputManager.registerInputDeviceListener(this, null);
+        refreshPhysicalControllerState(false);
+        notifyControllerState();
         if (bridge != null) new Handler(Looper.getMainLooper()).postDelayed(() -> {
             bridge.resumeRuntimeProvisioning();
-            notifyRuntimeChanged(bridge.runtimeStatus());
+            notifyControllerState();
         }, 650);
+    }
+
+    @Override
+    protected void onPause() {
+        if (inputManager != null) inputManager.unregisterInputDeviceListener(this);
+        super.onPause();
     }
 
     private void evaluate(String script) {
@@ -820,6 +1048,7 @@ public class MainActivity extends Activity {
 
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
+        if (observePhysicalController(event.getDevice())) notifyControllerState();
         if (remoteMode) return super.dispatchKeyEvent(event);
         String input = keyName(event.getKeyCode());
         if (input != null) {
@@ -831,6 +1060,7 @@ public class MainActivity extends Activity {
 
     @Override
     public boolean dispatchGenericMotionEvent(MotionEvent event) {
+        if (observePhysicalController(event.getDevice())) notifyControllerState();
         if (remoteMode) return super.dispatchGenericMotionEvent(event);
         if ((event.getSource() & InputDevice.SOURCE_JOYSTICK) == InputDevice.SOURCE_JOYSTICK
             && event.getAction() == MotionEvent.ACTION_MOVE) {
@@ -915,6 +1145,24 @@ public class MainActivity extends Activity {
             case KeyEvent.KEYCODE_BUTTON_R2: return "R2";
             default: return null;
         }
+    }
+
+    @Override
+    public void onInputDeviceAdded(int deviceId) {
+        observePhysicalController(InputDevice.getDevice(deviceId));
+        notifyControllerState();
+    }
+
+    @Override
+    public void onInputDeviceRemoved(int deviceId) {
+        refreshPhysicalControllerState(true);
+        notifyControllerState();
+    }
+
+    @Override
+    public void onInputDeviceChanged(int deviceId) {
+        observePhysicalController(InputDevice.getDevice(deviceId));
+        notifyControllerState();
     }
 
     private void registerBackNavigation() {

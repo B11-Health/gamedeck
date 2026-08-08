@@ -14,6 +14,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.File;
+import java.util.Locale;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -37,6 +38,7 @@ final class DeckBridge {
         this.runtime = new AndroidRuntimeManager(activity);
         this.library = new LibraryRepository(activity, runtime);
         this.rgsx = new RgsxProvider(activity, runtime);
+        this.runtime.setDependencyProvider(this.rgsx);
         this.artwork = new LibretroArtworkProvider(activity);
     }
 
@@ -50,7 +52,8 @@ final class DeckBridge {
             value.put("version", AppVersion.name(activity));
             value.put("localFirst", true);
             value.put("accountRequired", false);
-            value.put("embeddedRuntimeReady", runtime.externalAvailable());
+            JSONObject runtimeState = new JSONObject(runtime.status());
+            value.put("embeddedRuntimeReady", runtimeState.optBoolean("embeddedReady", false));
             value.put("debugFixture", debuggable && activity.isDebugFixtureEnabled());
         } catch (Exception ignored) {}
         return value.toString();
@@ -85,8 +88,17 @@ final class DeckBridge {
                 if (system != null) systemsById.put(system.optString("id", ""), system);
             }
 
+            JSONObject runtimeState = new JSONObject(runtime.status());
+            Map<String, JSONObject> coverageBySystem = new HashMap<>();
+            JSONArray coverage = runtimeState.optJSONArray("consoleCoverage");
+            if (coverage != null) {
+                for (int index = 0; index < coverage.length(); index++) {
+                    JSONObject console = coverage.optJSONObject(index);
+                    if (console != null) coverageBySystem.put(console.optString("id", ""), console);
+                }
+            }
+
             JSONArray managed = rgsx.managedLibraryGames();
-            boolean external = runtime.externalAvailable();
             int added = 0;
             for (int index = 0; index < managed.length(); index++) {
                 JSONObject game = managed.optJSONObject(index);
@@ -95,7 +107,6 @@ final class DeckBridge {
                 if (uri.isEmpty() || existing.contains(uri)) continue;
                 game.put("favorite", library.isFavorite(uri));
                 game.put("lastPlayed", library.lastPlayed(uri));
-                game.put("classification", external ? "managed" : "setup_required");
                 games.put(game);
                 existing.add(uri);
                 added++;
@@ -105,17 +116,44 @@ final class DeckBridge {
                 if (system != null) {
                     system.put("count", system.optInt("count", 0) + 1);
                     system.put("installedCount", system.optInt("installedCount", 0) + 1);
-                    system.put("ready", external);
-                    system.put("route", external ? "managed" : "setup_required");
-                    system.put("issue", external
-                        ? "GameDeck Console one-tap route ready."
-                        : "Tap Play once to install GameDeck Console; launch resumes automatically.");
                 }
             }
             if (added > 0) {
                 output.put("rootConfigured", true);
                 if (output.optString("rootName", "").isEmpty()) output.put("rootName", "GameDeck managed library");
             }
+
+            for (int index = 0; index < systems.length(); index++) {
+                JSONObject system = systems.optJSONObject(index);
+                if (system == null) continue;
+                String systemId = system.optString("id", "");
+                JSONObject console = coverageBySystem.get(systemId);
+                boolean routeAvailable = console != null && console.optBoolean("routeAvailable", false);
+                String launchRoute = console == null ? "unavailable" : console.optString("launchRoute", "unavailable");
+                boolean inApp = routeAvailable && ("embedded-libretro".equals(launchRoute)
+                    || launchRoute.startsWith("embedded-pcsx2"));
+                boolean readyNow = inApp && console.optBoolean("readyNow", false);
+                boolean autoSetup = inApp && !readyNow && console.optBoolean("provisionable", false);
+                system.put("productVisible", inApp);
+                system.put("ready", readyNow || autoSetup);
+                system.put("route", readyNow ? "ready" : autoSetup ? "auto_setup" : "unavailable");
+                system.put("launchRoute", launchRoute);
+                system.put("controllerProfile", console == null ? "" : console.optString("controllerProfile", ""));
+                system.put("issue", readyNow ? "Ready to play."
+                    : autoSetup ? "GameDeck will prepare required console files automatically when you press Play."
+                    : "This console does not yet have a verified in-app Android route.");
+            }
+
+            for (int index = 0; index < games.length(); index++) {
+                JSONObject game = games.optJSONObject(index);
+                if (game == null) continue;
+                JSONObject system = systemsById.get(game.optString("system", ""));
+                boolean visible = system != null && system.optBoolean("productVisible", false);
+                String route = system == null ? "unavailable" : system.optString("route", "unavailable");
+                game.put("productVisible", visible);
+                game.put("classification", visible ? route : "unavailable");
+            }
+
             output.put("systems", systems);
             output.put("games", games);
             return output.toString();
@@ -262,6 +300,16 @@ final class DeckBridge {
     @JavascriptInterface
     public void chooseRgsxRoot() {
         // RGSX is intentionally automatic on Android.
+    }
+
+
+    @JavascriptInterface
+    public void chooseRgsxArchiveSession() {
+        activity.chooseRgsxArchiveSession();
+    }
+
+    String importRgsxArchiveSession(Uri uri) {
+        return rgsx.importArchiveSession(uri);
     }
 
     @JavascriptInterface
@@ -446,6 +494,14 @@ final class DeckBridge {
         return safe.isEmpty() ? "console" : safe;
     }
 
+    void writeRgsxPs2ArchiveProbe() {
+        if (!isDebugFixtureEnabled()) return;
+        activity.writeQaTextArtifact(
+            "rgsx-ps2-archive-probe.json",
+            rgsx.qaArchiveProbe("ps2", "NBA Street Vol. 2 (USA).zip")
+        );
+    }
+
     void writeRgsxQaSnapshot() {
         if (!isDebugFixtureEnabled()) return;
         activity.writeQaTextArtifact("rgsx-state.json", rgsx.qaSnapshot());
@@ -456,6 +512,73 @@ final class DeckBridge {
         activity.writeQaTextArtifact("runtime-state.json", runtime.status());
     }
 
+    void writePs2EngineProbe() {
+        if (!isDebugFixtureEnabled()) return;
+        activity.writeQaTextArtifact("runtime-ps2-engine.json", runtime.qaPs2EngineProbe());
+    }
+
+    void writeFirmwareCatalogProbe() {
+        if (!isDebugFixtureEnabled()) return;
+        activity.writeQaTextArtifact("rgsx-firmware-catalog.json", rgsx.qaFirmwareCatalog());
+    }
+
+    void writePs2RuntimeResolutionProbe() {
+        if (!isDebugFixtureEnabled()) return;
+        String uri = ManagedLibraryProvider.uriFor(
+            activity,
+            "ps2",
+            "NBA Street Vol. 2 (USA).zip"
+        ).toString();
+        activity.writeQaTextArtifact(
+            "runtime-ps2-resolution.json",
+            runtime.qaResolveSystem("", uri)
+        );
+    }
+
+
+    void runNbaStreetVol2RuntimeQaLaunch() {
+        if (!isDebugFixtureEnabled()) return;
+        runNbaStreetVol2DirectLaunch();
+    }
+
+    void runNbaStreetVol2DirectLaunch() {
+        JSONObject output = new JSONObject();
+        try {
+            JSONArray games = rgsx.managedLibraryGames();
+            JSONObject game = null;
+            for (int index = 0; index < games.length(); index++) {
+                JSONObject candidate = games.optJSONObject(index);
+                if (candidate == null) continue;
+                String title = candidate.optString("title", "");
+                String fileName = candidate.optString("fileName", "");
+                if ("NBA Street Vol. 2 (USA)".equals(title)
+                    || "NBA Street Vol. 2 (USA).zip".equals(fileName)) {
+                    game = candidate;
+                    break;
+                }
+            }
+            if (game == null) {
+                output.put("ok", false);
+                output.put("error", "NBA Street Vol. 2 (USA) is not installed in the managed GameDeck library.");
+            } else {
+                String result = runtime.launch(
+                    game.optString("contentUri", game.optString("file", "")),
+                    game.optString("mimeType", "application/zip"),
+                    "ps2"
+                );
+                output.put("ok", true);
+                output.put("game", game);
+                output.put("launchResult", new JSONObject(result));
+            }
+        } catch (Exception error) {
+            try {
+                output.put("ok", false);
+                output.put("error", error.getMessage() == null ? error.getClass().getSimpleName() : error.getMessage());
+            } catch (Exception ignored) {}
+        }
+        activity.writeQaTextArtifact("runtime-launch-nba-street-vol2.json", output.toString());
+    }
+
     void runManagedRuntimeQaLaunch() {
         if (!isDebugFixtureEnabled()) return;
         JSONObject output = new JSONObject();
@@ -464,7 +587,7 @@ final class DeckBridge {
             JSONObject game = games.optJSONObject(0);
             if (game == null) {
                 output.put("ok", false);
-                output.put("error", "No managed RGSX game is installed.");
+                output.put("error", "No managed GameDeck game is installed.");
             } else {
                 String result = runtime.launch(
                     game.optString("contentUri", game.optString("file", "")),
@@ -482,6 +605,54 @@ final class DeckBridge {
             } catch (Exception ignored) {}
         }
         activity.writeQaTextArtifact("runtime-launch.json", output.toString());
+    }
+
+    void runManagedTitleQaLaunch(String requestedTitle) {
+        if (!isDebugFixtureEnabled()) return;
+        JSONObject output = new JSONObject();
+        try {
+            String needle = requestedTitle == null ? "" : requestedTitle.trim();
+            if (needle.isEmpty()) {
+                output.put("ok", false);
+                output.put("error", "A managed title is required.");
+            } else {
+                JSONArray games = rgsx.managedLibraryGames();
+                JSONObject game = null;
+                for (int index = 0; index < games.length(); index++) {
+                    JSONObject candidate = games.optJSONObject(index);
+                    if (candidate == null) continue;
+                    String title = candidate.optString("title", "");
+                    String fileName = candidate.optString("fileName", "");
+                    if (title.equalsIgnoreCase(needle)
+                            || title.toLowerCase(Locale.ROOT).contains(needle.toLowerCase(Locale.ROOT))
+                            || fileName.toLowerCase(Locale.ROOT).contains(needle.toLowerCase(Locale.ROOT))) {
+                        game = candidate;
+                        break;
+                    }
+                }
+                if (game == null) {
+                    output.put("ok", false);
+                    output.put("error", "No installed managed game matched: " + needle);
+                } else {
+                    String result = runtime.launch(
+                        game.optString("contentUri", game.optString("file", "")),
+                        game.optString("mimeType", "application/octet-stream"),
+                        game.optString("system", "")
+                    );
+                    JSONObject launch = result.isEmpty() ? new JSONObject() : new JSONObject(result);
+                    output.put("ok", launch.optBoolean("ok", false));
+                    output.put("requestedTitle", needle);
+                    output.put("game", game);
+                    output.put("launchResult", launch);
+                }
+            }
+        } catch (Exception error) {
+            try {
+                output.put("ok", false);
+                output.put("error", error.getMessage() == null ? error.getClass().getSimpleName() : error.getMessage());
+            } catch (Exception ignored) {}
+        }
+        activity.writeQaTextArtifact("runtime-launch-title.json", output.toString());
     }
 
     void resetRgsxQaFixture() {

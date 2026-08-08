@@ -49,6 +49,10 @@ mobile/android/.gradle/
 mobile/android/build/
 mobile/android/app/build/
 mobile/android/local.properties
+# Embedded PS2 engine generated build state
+mobile/android/ps2engine/build/
+mobile/android/ps2engine/.gradle/
+mobile/android/ps2engine/local.properties
 
 # Python local caches
 __pycache__/

@@ -87,6 +87,7 @@ final class RgsxCatalogStore {
     private volatile List<CatalogSystem> systems;
     private volatile Map<String, CatalogSystem> systemsBySource;
     private volatile Map<String, CatalogSystem> systemsByFolder;
+    private volatile Map<String, List<CatalogSystem>> providersByFolder;
     private volatile String lastError = "";
     private final LinkedHashMap<String, JSONArray> gameCache = new LinkedHashMap<String, JSONArray>(4, 0.75f, true) {
         @Override
@@ -172,11 +173,41 @@ final class RgsxCatalogStore {
         return null;
     }
 
+    JSONArray gameCandidates(String preferredSource, String folder, String title, String fileName) {
+        JSONArray output = new JSONArray();
+        try {
+            ensureLoaded();
+            String wantedFolder = folder == null ? "" : folder.trim().toLowerCase(Locale.US);
+            List<CatalogSystem> providers = providersByFolder.get(wantedFolder);
+            if (providers == null || providers.isEmpty()) return output;
+            List<CatalogSystem> ordered = new ArrayList<>(providers);
+            String preferred = preferredSource == null ? "" : preferredSource.trim();
+            ordered.sort((left, right) -> {
+                boolean leftPreferred = left.source.equals(preferred);
+                boolean rightPreferred = right.source.equals(preferred);
+                if (leftPreferred == rightPreferred) return 0;
+                return leftPreferred ? -1 : 1;
+            });
+            Set<String> seenUrls = new HashSet<>();
+            for (CatalogSystem provider : ordered) {
+                JSONObject candidate = game(provider.source, title, fileName);
+                if (candidate == null) continue;
+                String url = candidate.optString("url", "");
+                if (url.isEmpty() || !seenUrls.add(url)) continue;
+                output.put(new JSONObject(candidate.toString()));
+            }
+        } catch (Exception error) {
+            lastError = safeMessage(error);
+        }
+        return output;
+    }
+
     void invalidate() {
         synchronized (lock) {
             systems = null;
             systemsBySource = null;
             systemsByFolder = null;
+            providersByFolder = null;
             synchronized (gameCache) {
                 gameCache.clear();
             }
@@ -190,7 +221,7 @@ final class RgsxCatalogStore {
             File root = catalogRoot();
             if (!validRoot(root)) downloadAndExtract(root);
             loadSystems(root);
-            if (systems == null || systems.isEmpty()) throw new IOException("RGSX returned no Android-compatible systems.");
+            if (systems == null || systems.isEmpty()) throw new IOException("GameDeck returned no Android-compatible systems.");
             lastError = "";
         }
     }
@@ -207,19 +238,19 @@ final class RgsxCatalogStore {
 
     private void downloadAndExtract(File destination) throws Exception {
         File cache = new File(context.getCacheDir(), "rgsx-catalog");
-        if (!cache.isDirectory() && !cache.mkdirs()) throw new IOException("Could not create the RGSX catalog cache.");
+        if (!cache.isDirectory() && !cache.mkdirs()) throw new IOException("Could not create the GameDeck catalog cache.");
         File archive = new File(cache, "games.zip");
         File partial = new File(cache, "games.zip.part");
-        if (partial.exists() && !partial.delete()) throw new IOException("Could not reset the RGSX catalog download.");
+        if (partial.exists() && !partial.delete()) throw new IOException("Could not reset the GameDeck catalog download.");
         download(OTA_URL, partial);
-        if (archive.exists() && !archive.delete()) throw new IOException("Could not replace the RGSX catalog archive.");
+        if (archive.exists() && !archive.delete()) throw new IOException("Could not replace the GameDeck catalog archive.");
         if (!partial.renameTo(archive)) copyFile(partial, archive);
 
         File staging = new File(context.getFilesDir(), ROOT_NAME + ".staging");
         deleteRecursively(staging);
-        if (!staging.mkdirs()) throw new IOException("Could not create the RGSX catalog staging folder.");
+        if (!staging.mkdirs()) throw new IOException("Could not create the GameDeck catalog staging folder.");
         extractCatalog(archive, staging);
-        if (!validRoot(staging)) throw new IOException("RGSX catalog extraction was incomplete.");
+        if (!validRoot(staging)) throw new IOException("GameDeck catalog extraction was incomplete.");
         deleteRecursively(destination);
         if (!staging.renameTo(destination)) {
             copyDirectory(staging, destination);
@@ -241,19 +272,19 @@ final class RgsxCatalogStore {
             if (code >= 300 && code < 400) {
                 String location = connection.getHeaderField("Location");
                 connection.disconnect();
-                if (location == null || location.trim().isEmpty()) throw new IOException("RGSX returned an invalid catalog redirect.");
+                if (location == null || location.trim().isEmpty()) throw new IOException("GameDeck returned an invalid catalog redirect.");
                 current = new URL(current, location);
-                if (!"https".equalsIgnoreCase(current.getProtocol())) throw new IOException("RGSX attempted an insecure catalog redirect.");
+                if (!"https".equalsIgnoreCase(current.getProtocol())) throw new IOException("GameDeck attempted an insecure catalog redirect.");
                 continue;
             }
             if (code < 200 || code >= 300) {
                 connection.disconnect();
-                throw new IOException("RGSX catalog returned HTTP " + code + ".");
+                throw new IOException("GameDeck catalog returned HTTP " + code + ".");
             }
             long advertised = connection.getContentLengthLong();
             if (advertised > MAX_ARCHIVE_BYTES) {
                 connection.disconnect();
-                throw new IOException("RGSX catalog exceeded the Android cache limit.");
+                throw new IOException("GameDeck catalog exceeded the Android cache limit.");
             }
             long total = 0;
             try (InputStream input = new BufferedInputStream(connection.getInputStream());
@@ -263,16 +294,16 @@ final class RgsxCatalogStore {
                 while ((count = input.read(buffer)) >= 0) {
                     if (count == 0) continue;
                     total += count;
-                    if (total > MAX_ARCHIVE_BYTES) throw new IOException("RGSX catalog exceeded the Android cache limit.");
+                    if (total > MAX_ARCHIVE_BYTES) throw new IOException("GameDeck catalog exceeded the Android cache limit.");
                     output.write(buffer, 0, count);
                 }
             } finally {
                 connection.disconnect();
             }
-            if (total < 32) throw new IOException("RGSX catalog download was empty.");
+            if (total < 32) throw new IOException("GameDeck catalog download was empty.");
             return;
         }
-        throw new IOException("RGSX catalog redirected too many times.");
+        throw new IOException("GameDeck catalog redirected too many times.");
     }
 
     private void extractCatalog(File archive, File staging) throws Exception {
@@ -285,11 +316,11 @@ final class RgsxCatalogStore {
                 String name = entry.getName().replace('\\', '/');
                 if (entry.isDirectory() || !allowedEntry(name)) continue;
                 entries++;
-                if (entries > MAX_ENTRIES) throw new IOException("RGSX catalog contained too many files.");
+                if (entries > MAX_ENTRIES) throw new IOException("GameDeck catalog contained too many files.");
                 File output = new File(staging, name).getCanonicalFile();
-                if (!output.getPath().startsWith(rootPath)) throw new IOException("RGSX catalog entry escaped its cache root.");
+                if (!output.getPath().startsWith(rootPath)) throw new IOException("GameDeck catalog entry escaped its cache root.");
                 File parent = output.getParentFile();
-                if (parent == null || (!parent.isDirectory() && !parent.mkdirs())) throw new IOException("Could not create an RGSX catalog folder.");
+                if (parent == null || (!parent.isDirectory() && !parent.mkdirs())) throw new IOException("Could not create a GameDeck catalog folder.");
                 long entryBytes = 0;
                 try (OutputStream target = new BufferedOutputStream(new FileOutputStream(output, false))) {
                     byte[] buffer = new byte[BUFFER_SIZE];
@@ -299,7 +330,7 @@ final class RgsxCatalogStore {
                         entryBytes += count;
                         extracted += count;
                         if (entryBytes > MAX_ENTRY_BYTES || extracted > MAX_EXTRACTED_BYTES) {
-                            throw new IOException("RGSX catalog extraction exceeded its safety limit.");
+                            throw new IOException("GameDeck catalog extraction exceeded its safety limit.");
                         }
                         target.write(buffer, 0, count);
                     }
@@ -320,20 +351,38 @@ final class RgsxCatalogStore {
         List<CatalogSystem> loaded = new ArrayList<>();
         Map<String, CatalogSystem> bySource = new HashMap<>();
         Map<String, CatalogSystem> byFolder = new HashMap<>();
+        Map<String, List<CatalogSystem>> providers = new HashMap<>();
         Set<String> seenFolders = new HashSet<>();
         for (int index = 0; index < sourceRows.length(); index++) {
             JSONObject row = sourceRows.optJSONObject(index);
             if (row == null) continue;
             String source = row.optString("platform_name", "").trim();
             String folder = row.optString("folder", "").trim().toLowerCase(Locale.US);
-            if (source.isEmpty() || folder.isEmpty() || "bios".equals(folder) || seenFolders.contains(folder)) continue;
-            SystemRegistry.SystemDef system = SystemRegistry.forFolder(folder);
-            if (system == null || "external".equals(system.core)) continue;
+            if (source.isEmpty() || folder.isEmpty()) continue;
             File gamesFile = new File(new File(root, GAMES_DIR), source + ".json");
             if (!gamesFile.isFile() || gamesFile.length() < 2) continue;
             int count = countDirectGames(gamesFile);
             if (count <= 0) continue;
-            seenFolders.add(folder);
+
+            if ("bios".equals(folder)) {
+                CatalogSystem firmware = new CatalogSystem(
+                    "firmware",
+                    source,
+                    folder,
+                    "firmware",
+                    "Console firmware",
+                    "",
+                    gamesFile,
+                    count
+                );
+                bySource.put(source, firmware);
+                byFolder.put(folder, firmware);
+                providers.computeIfAbsent(folder, ignored -> new ArrayList<>()).add(firmware);
+                continue;
+            }
+
+            SystemRegistry.SystemDef system = SystemRegistry.forFolder(folder);
+            if (system == null || "external".equals(system.core)) continue;
             String name = cleanSystemName(source);
             CatalogSystem catalogSystem = new CatalogSystem(
                 folder,
@@ -345,14 +394,22 @@ final class RgsxCatalogStore {
                 gamesFile,
                 count
             );
-            loaded.add(catalogSystem);
             bySource.put(source, catalogSystem);
-            byFolder.put(folder, catalogSystem);
+            providers.computeIfAbsent(folder, ignored -> new ArrayList<>()).add(catalogSystem);
+            if (seenFolders.add(folder)) {
+                loaded.add(catalogSystem);
+                byFolder.put(folder, catalogSystem);
+            }
         }
         loaded.sort(Comparator.comparing(value -> value.name.toLowerCase(Locale.US)));
+        Map<String, List<CatalogSystem>> immutableProviders = new HashMap<>();
+        for (Map.Entry<String, List<CatalogSystem>> entry : providers.entrySet()) {
+            immutableProviders.put(entry.getKey(), Collections.unmodifiableList(new ArrayList<>(entry.getValue())));
+        }
         systems = Collections.unmodifiableList(loaded);
         systemsBySource = Collections.unmodifiableMap(bySource);
         systemsByFolder = Collections.unmodifiableMap(byFolder);
+        providersByFolder = Collections.unmodifiableMap(immutableProviders);
     }
 
     private int countDirectGames(File file) {
@@ -393,7 +450,7 @@ final class RgsxCatalogStore {
                 game.put("edition", inferEdition(raw.name));
                 game.put("tags", tags(raw.name));
                 game.put("art", "");
-                game.put("description", title + " from the RGSX " + system.name + " catalog.");
+                game.put("description", title + " from the GameDeck " + system.name + " catalog.");
                 game.put("transferAvailable", true);
                 game.put("catalogOnly", false);
                 output.put(game);
@@ -598,6 +655,6 @@ final class RgsxCatalogStore {
 
     private String safeMessage(Exception error) {
         String message = error == null ? "" : error.getMessage();
-        return message == null || message.trim().isEmpty() ? (error == null ? "RGSX catalog error." : error.getClass().getSimpleName()) : message.trim();
+        return message == null || message.trim().isEmpty() ? (error == null ? "GameDeck catalog error." : error.getClass().getSimpleName()) : message.trim();
     }
 }

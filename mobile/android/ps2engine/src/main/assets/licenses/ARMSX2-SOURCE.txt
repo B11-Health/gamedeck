@@ -1,0 +1,5 @@
+Embedded PS2 engine source:
+https://github.com/ARMSX2/ARMSX2
+Release: 2.6.6.4
+Commit: dd5b6616eb315260b235fee36083e1ba45fc36a0
+The corresponding GameDeck integration source is included in the GameDeck repository.

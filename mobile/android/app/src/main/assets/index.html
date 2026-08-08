@@ -14,16 +14,15 @@
   <header class="topbar">
     <button class="brand focusable" id="brandHome" type="button" aria-label="GameDeck home">
       <span class="brand-mark">G</span>
-      <span><b>GAMEDECK</b><small>ANDROID FOUNDATION</small></span>
+      <span><b>GAMEDECK</b><small>PLAY ANYWHERE</small></span>
     </button>
     <nav class="topnav" aria-label="Main navigation">
       <button class="nav focusable active" type="button" data-view="library">Library</button>
       <button class="nav focusable" type="button" data-view="discover">Discover</button>
       <button class="nav focusable" type="button" data-view="remote">Remote</button>
-      <button class="nav focusable" type="button" data-view="status">Status</button>
     </nav>
     <div class="top-status">
-      <button class="status-chip focusable" id="engineChip" type="button"><i></i><span>Engines</span><b id="engineChipValue">Checking</b></button>
+      <button class="status-chip focusable" id="engineChip" type="button" aria-label="GameDeck play readiness"><i></i><span>Play</span><b id="engineChipValue">Checking</b></button>
       <span class="trust-chip"><i></i><span>LOCAL-FIRST</span></span>
     </div>
   </header>
@@ -54,11 +53,11 @@
           <div class="hero-metrics" aria-label="Library status">
             <div><strong id="gameCount">0</strong><span>GAMES</span></div>
             <div><strong id="readySystemCount">0</strong><span>SYSTEMS</span></div>
-            <div><strong id="routeLabel">BLOCKED</strong><span>PLAY ROUTE</span></div>
+            <div><strong id="routeLabel">CHECKING</strong><span>PLAY STATUS</span></div>
           </div>
         </section>
 
-        <section class="ready-card" id="readyCard">
+        <section class="ready-card hidden" id="readyCard" aria-hidden="true">
           <div class="ready-score"><strong id="readyScore">25%</strong><span>FOUNDATION</span></div>
           <div class="ready-copy"><div class="eyebrow">GAMEDECK READY CHECK</div><h2 id="readyTitle">Preparing the Android path</h2><p id="readyMessage">The local shell is ready. Engine, core, and launch verification remain visible instead of being hidden.</p></div>
           <div class="ready-steps" id="readySteps"></div>
@@ -92,7 +91,7 @@
       </section>
 
       <section class="view" data-view-panel="remote">
-        <section class="page-head"><div><div class="eyebrow">GAMEDECK LIVE</div><h1>Connect to your deck.</h1><p>The existing LAN receiver remains available while standalone Android play is built underneath it.</p></div><span class="page-glyph live">●</span></section>
+        <section class="page-head"><div><div class="eyebrow">GAMEDECK LIVE</div><h1>Play together.</h1><p>Connect to another GameDeck on your local network for remote play.</p></div><span class="page-glyph live">●</span></section>
         <section class="remote-card">
           <div class="remote-art"><span class="signal-ring"></span><b>DIRECT LAN</b><small>WEBVIEW RECEIVER</small></div>
           <form id="remoteForm">
@@ -101,10 +100,10 @@
           </form>
           <div class="remote-notes"><span><i></i>Local-network receiver</span><span><i></i>WebRTC media on host page</span><span><i></i>Back returns to local library</span></div>
         </section>
-        <section class="truth-card"><div class="eyebrow">MULTIPLAYER ROUTES</div><h2>One product, three honest modes.</h2><div class="route-grid"><article><b>COUCH</b><span>Local controllers, no network.</span></article><article><b>REMOTE</b><span>Host owns game; encrypted media and input.</span></article><article><b>SYNC</b><span>Exact matching game and core on both devices.</span></article></div></section>
+        <section class="truth-card"><div class="eyebrow">PLAY YOUR WAY</div><h2>Local or connected.</h2><div class="route-grid"><article><b>COUCH</b><span>Play together on this device.</span></article><article><b>REMOTE</b><span>Join another GameDeck on your network.</span></article><article><b>SYNC</b><span>Keep compatible setups aligned.</span></article></div></section>
       </section>
 
-      <section class="view" data-view-panel="status">
+      <section class="view hidden" data-view-panel="status" aria-hidden="true">
         <section class="page-head"><div><div class="eyebrow">DEVICE TRUTH</div><h1>Nothing hidden.</h1><p>Each unavailable path has one reason and one next action.</p></div><span class="page-glyph">◎</span></section>
         <section class="status-grid">
           <article class="status-card"><header><span>APPLICATION</span><i class="good"></i></header><h2>Android shell</h2><strong>READY</strong><p>Bundled local UI, secure storage picker, library scanner, and controller navigation.</p></article>
@@ -112,7 +111,7 @@
           <article class="status-card"><header><span>LIBRARY</span><i id="libraryDot"></i></header><h2 id="libraryTitle">Local library</h2><strong id="libraryState">NOT SELECTED</strong><p id="libraryMessage">Choose one folder through Android's system picker.</p></article>
           <article class="status-card"><header><span>DISCOVER</span><i id="statusRgsxDot"></i></header><h2>Catalog service</h2><strong id="statusRgsxState">CONNECTING</strong><p id="statusRgsxMessage">GameDeck connects discovery automatically.</p></article>
         </section>
-        <section class="reason-card"><div><small>PUBLIC REASON</small><code id="reasonCode">android_embedded_runtime_pending</code></div><p id="reasonAction">Next action: integrate and verify an Android-native libretro host and signed core bundle.</p></section>
+        <section class="reason-card"><div><small>PUBLIC REASON</small><code id="reasonCode">android_embedded_runtime_pending</code></div><p id="reasonAction">Next action: integrate and verify an built-in GameDeck runtime.</p></section>
       </section>
     </main>
   </div>
@@ -126,7 +125,7 @@
 
   <div class="control-legend" aria-label="Controller help"><span><kbd>◀▶▲▼</kbd> Move</span><span><kbd>A</kbd> Select</span><span><kbd>B</kbd> Back</span><span><kbd>X</kbd> Surprise</span><span><kbd>Y</kbd> Favorite</span></div>
   <div class="toast" id="toast" role="status"><i>i</i><span></span></div>
-  <div class="boot" id="boot"><div class="boot-mark">G</div><div><small>GAMEDECK ANDROID</small><h2 id="bootTitle">Starting local shell</h2><p id="bootMessage">Reading device capabilities without sending library data anywhere.</p><span class="boot-track"><i id="bootBar"></i></span></div></div>
+  <div class="boot" id="boot"><div class="boot-mark">G</div><div><small>GAMEDECK</small><h2 id="bootTitle">Starting GameDeck</h2><p id="bootMessage">Getting your library ready.</p><span class="boot-track"><i id="bootBar"></i></span></div></div>
   <script src="app.js"></script>
 </body>
 </html>

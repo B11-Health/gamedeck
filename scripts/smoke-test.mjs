@@ -11,7 +11,7 @@ const fail = message => {
   process.exitCode = 1;
 };
 
-const [main, preload, renderer, html, styles, pkgText, donations, runtimeManager, runtimeManifest, runtimeCacheBuilder, streamServer, streamingRenderer, netplayManager, netplayRenderer, mobileReceiver, mobileStyles, mobileManifestText, mobileSw, androidActivity, controllerActivity, iosContent, iosInfo, siteHtml, siteStyles, siteApp] = await Promise.all([
+const [main, preload, renderer, html, styles, pkgText, donations, runtimeManager, runtimeManifest, runtimeCacheBuilder, streamServer, streamingRenderer, netplayManager, netplayRenderer, mobileReceiver, mobileStyles, mobileManifestText, mobileSw, androidActivity, controllerActivity, androidDeckBridge, androidPlatform, androidRuntimeManager, androidPlayActivity, androidPlayerRouter, androidLibretroHost, libretroHeader, libretroNotice, iosContent, iosInfo, siteHtml, siteStyles, siteApp] = await Promise.all([
   read('main.js'),
   read('preload.js'),
   read('src/app.js'),
@@ -32,6 +32,14 @@ const [main, preload, renderer, html, styles, pkgText, donations, runtimeManager
   read('mobile/web/sw.js'),
   read('mobile/android/app/src/main/java/io/gamedeck/mobile/MainActivity.java'),
   read('mobile/android/app/src/main/java/io/gamedeck/mobile/ControllerActivity.java'),
+  read('mobile/android/app/src/main/java/io/gamedeck/mobile/DeckBridge.java'),
+  read('mobile/android/app/src/main/assets/desktop/platform-android.js'),
+  read('mobile/android/app/src/main/java/io/gamedeck/mobile/AndroidRuntimeManager.java'),
+  read('mobile/android/app/src/main/java/io/gamedeck/mobile/GameDeckPlayActivity.java'),
+  read('mobile/android/app/src/main/java/io/gamedeck/mobile/GameDeckPlayerRouter.java'),
+  read('mobile/android/app/src/main/cpp/gamedeck_libretro.c'),
+  read('mobile/android/app/src/main/cpp/include/libretro.h'),
+  read('third_party/libretro/NOTICE.md'),
   read('mobile/ios/GameDeckMobile/ContentView.swift'),
   read('mobile/ios/GameDeckMobile/Info.plist'),
   read('site/index.html'),
@@ -42,6 +50,7 @@ const pkg = JSON.parse(pkgText);
 const donationConfig = JSON.parse(donations);
 const managedRuntimeManifest = JSON.parse(runtimeManifest);
 const mobileManifest = JSON.parse(mobileManifestText);
+const androidPerformanceStyles = await read('mobile/android/app/src/main/assets/desktop/android-performance.css');
 const [e2eReportText, e2eResultText] = await Promise.all([
   read('docs/E2E_REPORT_1.2.0.md'),
   read('docs/e2e-results/GameDeck-1.2.0-2026-08-02.json')
@@ -254,7 +263,7 @@ if (!main.includes('MANAGED_RUNTIME_PREFERRED') || !main.includes('managedRuntim
 if (!main.includes("ARCADE_SUPPORT_ARCHIVES = new Set(['neogeo.zip'])") || !main.includes('isArcadeSupportArchive(file, system)')) fail('arcade BIOS support archives must stay out of the playable library');
 if (!styles.includes('body.density-compact .spotlight-primary-actions button') || !styles.includes('min-width: 0; flex: 1 1 0;')) fail('spotlight action rows must shrink without clipping Favorite or Remove');
 if (!preload.includes('ensureRuntime') || !preload.includes('onRuntime')) fail('managed runtime preload bridge is missing');
-if (!renderer.includes('Preparing game engines') || !renderer.includes('window.deck.ensureRuntime')) fail('first-run runtime setup UI is missing');
+if (!(renderer.includes('Preparing game engines') || renderer.includes('Installing the complete GameDeck runtime')) || !renderer.includes('window.deck.ensureRuntime')) fail('first-run runtime setup UI is missing');
 if (!runtimeManager.includes('AbortSignal.timeout') || !runtimeManager.includes('content-range') || !runtimeManager.includes('SHA-256')) fail('managed runtime download safety or resume support is missing');
 if (!managedRuntimeManifest.platforms?.['win32-x64'] || !managedRuntimeManifest.platforms?.['linux-x64'] || !managedRuntimeManifest.platforms?.['darwin-arm64']) fail('runtime manifest is missing a supported desktop platform');
 if (!pkg.build?.files?.includes('runtime-manager.js') || !pkg.build?.asarUnpack?.some(value => value.includes('7zip-bin'))) fail('managed runtime packaging configuration is missing');
@@ -330,6 +339,33 @@ if (!mobileManifest.icons?.some(icon => icon.sizes === '192x192' && icon.purpose
 if (!mobileSw.includes('gamedeck-controller-v') || !mobileSw.includes('./icons/icon-192.png') || !mobileSw.includes('./icons/icon-512.png')) fail('controller PWA cache is missing install icons');
 if (!controllerActivity.includes('WebView') || !controllerActivity.includes('setMediaPlaybackRequiresUserGesture(false)') || !controllerActivity.includes('InputDeviceListener') || !controllerActivity.includes('GameDeckNative') || !controllerActivity.includes('performHaptic')) fail('native Android controller and haptic receiver shell is missing');
 if (!androidActivity.includes('DeckBridge') || !androidActivity.includes('ManagedLibraryProvider')) fail('standalone Android library and runtime shell is missing');
+const legacyAndroidReceiver = androidActivity.includes('InputDeviceListener') && androidActivity.includes('GameDeckNative') && androidActivity.includes('performHaptic');
+const standaloneAndroidReceiver = androidActivity.includes('GameDeckAndroid') && androidActivity.includes('dispatchKeyEvent') && androidActivity.includes('dispatchGenericMotionEvent') && androidDeckBridge.includes('public String controllers()') && androidDeckBridge.includes('public void haptic(String style)');
+if (!androidActivity.includes('WebView') || !androidActivity.includes('setMediaPlaybackRequiresUserGesture(false)') || !(legacyAndroidReceiver || standaloneAndroidReceiver)) fail('native Android controller and haptic receiver shell is missing');
+if (!androidActivity.includes('implements InputManager.InputDeviceListener') || !androidActivity.includes('device.isVirtual()') || !androidActivity.includes('onInputDeviceAdded') || !androidActivity.includes('onInputDeviceRemoved')) fail('Android physical-controller hot-plug lifecycle is missing');
+if (!androidRuntimeManager.includes('startRetroSideloadActivity(runtimePackage, compatibilityCore, launchContent, config)') || !androidRuntimeManager.includes('intent.putExtra(\"CONFIGFILE\", config.getAbsolutePath())')) fail('hardware-rendered compatibility launch must preserve the validated controller overlay profile');
+if (!androidActivity.includes('awaitActiveGameController(long timeoutMs)') || !androidRuntimeManager.includes('awaitActiveGameController(600L)')) fail('Android launch must settle late physical-controller enumeration before choosing the RetroArch profile');
+if (!androidRuntimeManager.includes('launchRoute = \"embedded-libretro\"') || !androidRuntimeManager.includes('startEmbeddedActivity(embeddedCore, playableContent, sessionTitle, system.id)') || !androidRuntimeManager.includes('stageEmbeddedCore') || !androidRuntimeManager.includes('prepareEmbeddedContent')) fail('GameDeck Android must launch software libretro cores in-process without the RetroArch app');
+if (!androidRuntimeManager.includes('selectPlayableArchiveEntry') || !androidRuntimeManager.includes('normalizePlayableTitle') || !androidRuntimeManager.includes('none exactly matches this game title')) fail('multi-ROM archives must select a unique exact title match instead of rejecting valid regional bundles');
+if (androidRuntimeManager.includes('GameDeckPlayActivity.isNativeHostAvailable()') || !androidRuntimeManager.includes('libgamedeck_libretro.so') || !androidRuntimeManager.includes('new ZipFile(sourceApk)')) fail('MainActivity runtime status must inspect the extracted or APK-packaged native library without eagerly loading the play Activity');
+if (!androidLibretroHost.includes('source_aspect') || !androidLibretroHost.includes('viewport_width') || !androidLibretroHost.includes('Video viewport %ux%u centered') || !androidLibretroHost.includes('configure_hw_window_geometry') || !androidLibretroHost.includes('ANativeWindow_setBuffersGeometry(window, width, height') || !androidPlayActivity.includes('applyGameSurfaceBounds(gameRect)')) fail('native video must preserve software ambient scaling while hardware cores render into an aspect-fit GameDeck surface instead of the GL lower-left origin');
+if (!androidPlayActivity.includes('gameRect.set(0f, gameTop, width, gameBottom)') || !androidPlayActivity.includes('fullWidthGameHeight = width /') || !androidLibretroHost.includes('reset_on_window') || !androidLibretroHost.includes('Resolve AV geometry before creating a hardware context')) fail('PSP portrait must use a full-width edge-to-edge video band and initialize framebuffer-0 hardware cores against real AV/window geometry');
+if (!androidPlayActivity.includes('System.loadLibrary("gamedeck_libretro")') || !androidPlayActivity.includes('SurfaceHolder.Callback') || !androidPlayActivity.includes('AudioTrack.Builder') || !androidPlayerRouter.includes('device.isVirtual()') || !androidPlayActivity.includes('TouchOverlay') || !androidPlayActivity.includes('decorView.getWindowInsetsController()') || !androidPlayActivity.includes('native-play-state.txt')) fail('GameDeck Android embedded libretro video, audio, shared controller routing, touch, diagnostics, or Android 16 window lifecycle is incomplete');
+if (!androidPlayActivity.includes('nativeSetButtonForPort') || !androidPlayActivity.includes('nativeSetAxisForPort') || !androidPlayerRouter.includes('MAX_PLAYERS = 4') || !androidPlayerRouter.includes('PHONE_KEY') || !androidLibretroHost.includes('buttons[MAX_PLAYERS][16]') || !androidLibretroHost.includes('axes[MAX_PLAYERS][6]') || !androidLibretroHost.includes('port >= MAX_PLAYERS')) fail('GameDeck Android local multiplayer must route phone and hardware controllers independently across P1-P4');
+if (!androidPlayActivity.includes('ACTION_POINTER_UP') || !androidPlayActivity.includes('HapticFeedbackConstants.VIRTUAL_KEY') || !androidPlayActivity.includes('drawShoulder(canvas, leftShoulderRect') || !androidPlayActivity.includes('next[RETRO_LEFT] = true') || !androidPlayActivity.includes('next[RETRO_UP] = true') || !androidPlayActivity.includes('actionOffset') || !androidPlayActivity.includes('gamedeck-touch-layout-v1') || !androidPlayActivity.includes('layoutLockRect') || !androidPlayActivity.includes('translateEditGroup') || !androidPlayActivity.includes('layoutPspPortraitControls') || !androidPlayActivity.includes('Profile.PSP ? 16f / 9f')) fail('premium touch controls must preserve multi-touch release, haptics, shoulders, diagonals, PSP geometry, and bounded saved control customization');
+if (!androidPlayActivity.includes('protected void onNewIntent(Intent intent)') || !androidPlayActivity.includes('recreating-gameplay-session') || !androidPlayActivity.includes('rootView.post(this::recreate)')) fail('singleTop GameDeck gameplay launches must recreate on a new game intent so core/content extras cannot remain stale');
+if (!androidPlayActivity.includes('qaScreenshotInProgress') || !androidPlayActivity.includes('surface-copy-timeout') || !androidPlayActivity.includes('PixelCopy.request(surface, surfaceBitmap') || !androidPlayActivity.includes('source=') || !androidPlatform.includes('playerFacingMetadata')) fail('hardware gameplay QA capture must be bounded/direct-surface and dynamic Android metadata must be sanitized for player-facing copy');
+if (!androidPlayActivity.includes('sideGutter') || !androidPlayActivity.includes('layoutAspect = 4f / 3f') || !androidPlayActivity.includes('setCenteredRect(selectRect, dpadX') || !androidPlayActivity.includes('setCenteredRect(startRect, actionX')) fail('touch controls must stay compact in the aspect-derived side gutters without covering gameplay');
+if (!androidLibretroHost.includes('dlopen(host.core_path') || !androidLibretroHost.includes('retro_set_environment') || !androidLibretroHost.includes('ANativeWindow_lock') || !androidLibretroHost.includes('RETRO_MEMORY_SAVE_RAM') || !androidLibretroHost.includes('native_signal_handler') || !androidLibretroHost.includes('retro-run-first-enter')) fail('GameDeck native libretro ABI host, save persistence, or crash-stage diagnostics is incomplete');
+if (!libretroHeader.includes('Permission is hereby granted, free of charge') || !libretroNotice.includes('does **not** vendor the RetroArch frontend')) fail('libretro MIT license boundary or third-party notice is missing');
+try { await access(path.join(root, 'mobile/android/app/src/main/jniLibs/arm64-v8a/libgamedeck_libretro.so')); } catch { fail('packaged GameDeck libretro native library is missing'); }
+if (!renderer.includes("readPreference('library-query'") || !renderer.includes("readPreference('catalog-query'") || !renderer.includes("writePreference('catalog-filter'") || !androidPerformanceStyles.includes('position: sticky !important') || !androidPerformanceStyles.includes('#libraryToolbar')) fail('Android library search/filter state must persist and the library toolbar must remain sticky at the top');
+if (!renderer.includes('SYSTEM_DISPLAY_ORDER') || !renderer.includes("'n64', 'dreamcast', 'ps1', 'ps2', 'psp', 'gamecube', 'wii'") || !androidPerformanceStyles.includes('grid-template-rows: repeat(2, 50px)') || !androidPerformanceStyles.includes('scroll-snap-type: x proximity')) fail('major console systems must stay visible and intentionally ordered in the Android portrait system shelf');
+if (/>(?:[^<]*)(?:RGSX|RetroArch|MAME|FBNeo|FinalBurn|Archive\.org)(?:[^<]*)</i.test(html) || renderer.includes('RGSX TITLES') || renderer.includes('RGSX titles') || renderer.includes('Play with RGSX')) fail('player-facing GameDeck UI must not expose third-party provider or emulator branding');
+if (!androidPlatform.includes('gamedeckcontrollerchange') || !renderer.includes("window.addEventListener('gamedeckcontrollerchange'")) fail('standalone Android renderer must consume native controller hot-plug updates');
+for (const method of ['communityMatchmakingStatus', 'communityRooms', 'communityLibraryRooms', 'onCommunityRooms']) {
+  if (!androidPlatform.includes(`${method}:`)) fail(`Android platform bridge is missing ${method}`);
+}
 if (!iosContent.includes('WKWebView') || !iosContent.includes('allowsInlineMediaPlayback')) fail('native iOS receiver shell is missing');
 if (!iosInfo.includes('NSLocalNetworkUsageDescription') || !iosInfo.includes('NSAllowsLocalNetworking')) fail('iOS local-network permissions are missing');
 if (!pkg.build?.files?.includes('stream-server.js') || !pkg.build?.files?.includes('mobile/web/**/*')) fail('desktop packages must include GameDeck Live server and receiver');

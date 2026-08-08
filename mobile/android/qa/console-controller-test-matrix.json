@@ -1,0 +1,259 @@
+{
+  "version": 1,
+  "updated": "2026-08-06",
+  "policy": {
+    "goal": "One reputable, compact, controller-representative title per playable Android system.",
+    "regions": ["USA", "World", "Europe-English"],
+    "preferFormats": ["zip", "chd", "rvz", "cso", "pbp"],
+    "avoid": ["duplicate downloads", "multi-disc games unless required", "large titles with weak input coverage", "titles requiring unsupported accessories"],
+    "passRequires": ["boot", "visible video", "stable audio", "correct console profile", "all visible buttons mapped", "hardware controller routing", "portrait layout", "landscape layout", "exit/menu outside game image"]
+  },
+  "alreadyValidated": [
+    {
+      "systemId": "nes",
+      "title": "720 Degrees (USA)",
+      "action": "regression-only",
+      "reason": "Existing managed content; no new download."
+    },
+    {
+      "systemId": "snes",
+      "title": "Super Mario All-Stars (USA)",
+      "action": "regression-only",
+      "reason": "Existing managed content and controller evidence."
+    },
+    {
+      "systemId": "gb",
+      "title": "Tetris (World) (Rev A)",
+      "action": "regression-only",
+      "reason": "Existing managed content and established classic-pad route."
+    },
+    {
+      "systemId": "ps2",
+      "title": "NBA Street Vol. 2 (USA)",
+      "action": "regression-only",
+      "reason": "Vulkan, zero-copy presentation, controls, audio, and gameplay already validated."
+    }
+  ],
+  "pending": [
+    {
+      "priority": 1,
+      "systemId": "arcade",
+      "system": "FinalBurn Neo",
+      "primary": "Street Fighter II' - Champion Edition",
+      "fallback": "Final Fight",
+      "sizeBand": "small",
+      "profile": "arcade-6",
+      "proves": ["six simultaneous action buttons", "coin", "start", "service/test drawer", "live core/DIP options"]
+    },
+    {
+      "priority": 2,
+      "systemId": "mame",
+      "system": "MAME",
+      "primary": "NBA Jam Tournament Edition",
+      "fallback": "Teenage Mutant Ninja Turtles",
+      "sizeBand": "small-medium",
+      "profile": "arcade-6",
+      "proves": ["cabinet routing", "coin/start", "DIP options", "three/four-player assignments", "simultaneous controls"]
+    },
+    {
+      "priority": 3,
+      "systemId": "gba",
+      "system": "Game Boy Advance",
+      "primary": "Metroid Fusion",
+      "fallback": "Mario Kart - Super Circuit",
+      "sizeBand": "tiny",
+      "profile": "gba",
+      "proves": ["d-pad", "A/B", "L/R", "start/select", "portrait/landscape relayout"]
+    },
+    {
+      "priority": 4,
+      "systemId": "genesis",
+      "system": "Sega Genesis",
+      "primary": "Street Fighter II - Special Champion Edition",
+      "fallback": "Streets of Rage 2",
+      "sizeBand": "tiny",
+      "profile": "sega-6",
+      "proves": ["true six-button grid", "mode/start", "button chords", "slide activation"]
+    },
+    {
+      "priority": 5,
+      "systemId": "n64",
+      "system": "Nintendo 64",
+      "primary": "Mario Kart 64",
+      "fallback": "Star Fox 64",
+      "sizeBand": "small",
+      "profile": "n64",
+      "proves": ["analog stick", "Z trigger", "A/B", "four C-buttons", "multiplayer ports"]
+    },
+    {
+      "priority": 6,
+      "systemId": "mastersystem",
+      "system": "Sega Master System",
+      "primary": "Sonic the Hedgehog",
+      "fallback": "Alex Kidd in Miracle World",
+      "sizeBand": "tiny",
+      "profile": "sega-2",
+      "proves": ["two-button Sega layout", "pause/start semantics"]
+    },
+    {
+      "priority": 7,
+      "systemId": "gamegear",
+      "system": "Sega Game Gear",
+      "primary": "Sonic Triple Trouble",
+      "fallback": "The G.G. Shinobi II",
+      "sizeBand": "tiny",
+      "profile": "sega-2",
+      "proves": ["handheld aspect", "two-button layout", "start"]
+    },
+    {
+      "priority": 8,
+      "systemId": "pce",
+      "system": "PC Engine",
+      "primary": "Soldier Blade",
+      "fallback": "Bonk's Revenge",
+      "sizeBand": "tiny",
+      "profile": "pce",
+      "proves": ["I/II labels", "run/select", "rapid-action responsiveness"]
+    },
+    {
+      "priority": 9,
+      "systemId": "atari2600",
+      "system": "Atari 2600",
+      "primary": "H.E.R.O.",
+      "fallback": "Pitfall!",
+      "sizeBand": "micro",
+      "profile": "atari",
+      "proves": ["single fire button", "joystick", "select/reset system controls"]
+    },
+    {
+      "priority": 10,
+      "systemId": "sega32x",
+      "system": "Sega 32X",
+      "primary": "Virtua Racing Deluxe",
+      "fallback": "Knuckles' Chaotix",
+      "sizeBand": "small",
+      "profile": "sega-6",
+      "proves": ["PicoDrive route", "six-button surface", "performance under polygonal load"]
+    },
+    {
+      "priority": 11,
+      "systemId": "fds",
+      "system": "Famicom Disk System",
+      "primary": "Castlevania",
+      "fallback": "Metroid",
+      "sizeBand": "tiny",
+      "profile": "nintendo-2",
+      "proves": ["FDS firmware/dependency flow", "disk-side handling", "NES controls"]
+    },
+    {
+      "priority": 12,
+      "systemId": "nds",
+      "system": "Nintendo DS",
+      "primary": "Mario Kart DS",
+      "fallback": "New Super Mario Bros.",
+      "sizeBand": "small-medium",
+      "profile": "touchscreen",
+      "proves": ["two-screen layout", "stylus hold/drag/release", "buttons", "shoulders", "rotation"]
+    },
+    {
+      "priority": 13,
+      "systemId": "psp",
+      "system": "PlayStation Portable",
+      "primary": "Assassin's Creed - Bloodlines (USA)",
+      "fallback": "Lumines",
+      "sizeBand": "existing-medium",
+      "profile": "psp",
+      "proves": ["single analog", "PlayStation face buttons", "L/R", "existing managed title without new download"]
+    },
+    {
+      "priority": 14,
+      "systemId": "ps1",
+      "system": "PlayStation",
+      "primary": "Ape Escape",
+      "fallback": "Ridge Racer Type 4",
+      "sizeBand": "medium",
+      "profile": "playstation",
+      "proves": ["PS1 firmware flow", "dual analog", "shoulders/triggers", "L3/R3-compatible surface"]
+    },
+    {
+      "priority": 15,
+      "systemId": "segacd",
+      "system": "Sega CD",
+      "primary": "Sonic CD",
+      "fallback": "Final Fight CD",
+      "sizeBand": "medium",
+      "profile": "sega-6",
+      "proves": ["disc image route", "CD firmware", "CD audio", "six-button compatibility"]
+    },
+    {
+      "priority": 16,
+      "systemId": "saturn",
+      "system": "Sega Saturn",
+      "primary": "Sega Rally Championship",
+      "fallback": "Guardian Heroes",
+      "sizeBand": "medium-large",
+      "profile": "sega-6",
+      "proves": ["Saturn firmware", "disc route", "performance", "shoulders and six-button profile"]
+    },
+    {
+      "priority": 17,
+      "systemId": "dreamcast",
+      "system": "Dreamcast",
+      "primary": "Crazy Taxi",
+      "fallback": "Soulcalibur",
+      "sizeBand": "medium-large",
+      "profile": "dreamcast",
+      "proves": ["analog", "two triggers", "face buttons", "Flycast firmware/storage route"]
+    },
+    {
+      "priority": 18,
+      "systemId": "gamecube",
+      "system": "Nintendo GameCube",
+      "primary": "Super Monkey Ball",
+      "fallback": "Mario Kart - Double Dash!!",
+      "sizeBand": "medium in RVZ",
+      "profile": "gamecube",
+      "proves": ["precision analog", "C-stick", "analog triggers", "GameCube face geometry", "Dolphin performance"]
+    },
+    {
+      "priority": 19,
+      "systemId": "wii",
+      "system": "Nintendo Wii",
+      "primary": "Muramasa - The Demon Blade",
+      "fallback": "Mario Kart Wii",
+      "sizeBand": "medium in RVZ/WBFS",
+      "profile": "wii-classic",
+      "proves": ["Classic Controller route", "dual analog surface", "Dolphin Wii boot", "no motion-controller dependency"]
+    },
+    {
+      "priority": 20,
+      "systemId": "satellaview",
+      "system": "Satellaview",
+      "primary": "BS Zelda no Densetsu - Map 1",
+      "fallback": "BS F-Zero Grand Prix 2",
+      "sizeBand": "tiny",
+      "profile": "snes",
+      "proves": ["Satellaview content recognition", "SNES controller inheritance", "special cartridge boot"]
+    },
+    {
+      "priority": 21,
+      "systemId": "sufami",
+      "system": "Sufami Turbo",
+      "primary": "SD Gundam Generation - Axis Senki",
+      "fallback": "Poi Poi Ninja World",
+      "sizeBand": "tiny",
+      "profile": "snes",
+      "proves": ["Sufami content recognition", "base-cart/dependency handling", "SNES controller inheritance"]
+    }
+  ],
+  "notCurrentlyPlayable": [
+    {
+      "systemId": "wiiu",
+      "reason": "Catalog-only route in the current Android build."
+    },
+    {
+      "systemId": "openbor",
+      "reason": "Catalog-only route in the current Android build."
+    }
+  ]
+}

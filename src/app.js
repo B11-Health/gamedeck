@@ -2,6 +2,20 @@ const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
 
 const GAME_SORTS = new Set(['title', 'recent', 'system', 'size']);
+const SYSTEM_DISPLAY_ORDER = Object.freeze([
+  'n64', 'dreamcast', 'ps1', 'ps2', 'psp', 'gamecube', 'wii',
+  'snes', 'nes', 'genesis', 'gb', 'gba', 'nds', 'saturn',
+  'mastersystem', 'gamegear', 'segacd', 'sega32x', 'pce', 'atari2600',
+  'arcade', 'mame', 'fds', 'satellaview', 'sufami', 'wiiu', 'openbor'
+]);
+const SYSTEM_DISPLAY_RANK = new Map(SYSTEM_DISPLAY_ORDER.map((id, index) => [id, index]));
+function orderedSystems(systems) {
+  return [...(systems || [])].sort((left, right) => {
+    const a = SYSTEM_DISPLAY_RANK.has(left?.id) ? SYSTEM_DISPLAY_RANK.get(left.id) : 999;
+    const b = SYSTEM_DISPLAY_RANK.has(right?.id) ? SYSTEM_DISPLAY_RANK.get(right.id) : 999;
+    return a - b || String(left?.name || left?.id || '').localeCompare(String(right?.name || right?.id || ''));
+  });
+}
 const GAMEDECK_LINKS = Object.freeze({
   github: 'https://github.com/B11-Health/gamedeck',
   site: 'https://b11-health.github.io/gamedeck/',
@@ -15,12 +29,12 @@ const GAMEDECK_LINKS = Object.freeze({
 });
 const GAMEDECK_SHARE_COPY = Object.freeze({
   reddit: `I built GameDeck because my legally owned game library had become a maze of launchers, emulator folders, and inconsistent controller setup. It is an open-source, local-first desktop app that turns the collection into one controller-friendly library and now includes GameDeck Live plus encrypted Remote Play Together.\n\nI would value blunt feedback on setup clarity, controller navigation, and the Remote Play flow—not just stars.\n\nSource, releases, and issue tracker: ${GAMEDECK_LINKS.github}\nStart here: ${GAMEDECK_LINKS.startHere}\n30-second tours: ${GAMEDECK_LINKS.shorts}`,
-  short: `POV: your legally owned game collection finally feels like a console again. GameDeck is open source, local first, controller friendly, and supports Couch Co-op, encrypted Remote Play Together, and exact-match netplay. No ROMs included.\n\n${GAMEDECK_LINKS.site}\n\n#GameDeck #OpenSource #RetroGaming #PCGaming #RemotePlay`,
+  short: `POV: your legally owned game collection finally feels like a console again. GameDeck is open source, local first, controller friendly, and supports Couch Co-op, encrypted Remote Play Together, and synchronized play. No ROMs included.\n\n${GAMEDECK_LINKS.site}\n\n#GameDeck #OpenSource #RetroGaming #PCGaming #RemotePlay`,
   youtube: `GameDeck is free, open source, and built for the games you legally own. Download: ${GAMEDECK_LINKS.site}\nSource + issues: ${GAMEDECK_LINKS.github}\nFull setup and multiplayer guide: ${GAMEDECK_LINKS.startHere}\n\nWhat should I test next: first-run setup, artwork matching, Couch Co-op, Remote Play, or synchronized netplay? I read every substantive reply.`,
   linkedin: `I am building GameDeck, a free and open-source desktop app that turns legally owned local game collections into one controller-first library. The product now combines a one-install runtime, visible setup diagnostics, artwork recovery, Couch Co-op, encrypted Remote Play Together, and exact-match synchronized netplay across Windows, macOS, and Linux.\n\nThe design goal is simple: remove launcher friction without hiding how the system works or uploading a player's library.\n\nI am looking for practical feedback from players, open-source maintainers, emulator enthusiasts, and product designers—especially on first-run setup and multiplayer clarity.\n\nTry it: ${GAMEDECK_LINKS.site}\nSource: ${GAMEDECK_LINKS.github}`,
   facebook: `Sharing this as the builder: GameDeck is a free, open-source, controller-first home for games you legally own. It organizes a local collection, explains setup problems, and supports Couch Co-op, encrypted Remote Play Together, and synchronized netplay. No ROMs, BIOS files, keys, or commercial artwork are included.\n\nI would love a few real-world testers with different controllers and console libraries. What setup should we test next?\n\nDownload and details: ${GAMEDECK_LINKS.site}\nSource: ${GAMEDECK_LINKS.github}`,
   creator: `Hey [NAME] — your [SPECIFIC VIDEO OR SERIES] made me think GameDeck could be useful to your audience. It is a free, open-source, controller-first launcher for legally owned local game libraries, with a one-install runtime, honest setup diagnostics, and three multiplayer paths. I can send a clean build, a 30-second clip, and direct technical support; no paid talking points or required positive coverage.\n\nPreview: ${GAMEDECK_LINKS.shorts}\nSource: ${GAMEDECK_LINKS.github}`,
-  event: `🎮 Remote Play Friday — GameDeck community session\n\nBring one legally owned local multiplayer game and a controller. Hosts can use encrypted Remote Play Together so guests do not need the game, or exact-match synchronized netplay when both players have matching files and cores.\n\nFind players and reply here: ${GAMEDECK_LINKS.players}\nSetup guide: ${GAMEDECK_LINKS.startHere}\n\nReply with your timezone, preferred game, and whether you can host.`
+  event: `🎮 Remote Play Friday — GameDeck community session\n\nBring one legally owned local multiplayer game and a controller. Hosts can use encrypted Remote Play Together so guests do not need the game, or exact-match synchronized netplay when both players have matching game files.\n\nFind players and reply here: ${GAMEDECK_LINKS.players}\nSetup guide: ${GAMEDECK_LINKS.startHere}\n\nReply with your timezone, preferred game, and whether you can host.`
 });
 const COMMUNITY_LINKS = Object.freeze({
   hub: GAMEDECK_LINKS.discussions,
@@ -64,9 +78,10 @@ const state = {
   view: 'home',
   libraryZone: 'games',
   discoverZone: 'systems',
-  query: '',
-  catalogQuery: '',
-  catalogFilter: 'all',
+  query: readPreference('library-query', '').toLowerCase(),
+  catalogQuery: readPreference('catalog-query', '').toLowerCase(),
+  catalogFilter: ['all', 'available', 'downloaded', 'installed'].includes(readPreference('catalog-filter', 'all'))
+    ? readPreference('catalog-filter', 'all') : 'all',
   activities: [],
   activityFilter: 'all',
   downloads: [],
@@ -471,12 +486,13 @@ function renderDownloads() {
   const eta = etaLabel(primary);
   const transferred = primary.totalBytes ? `${transferSize(primary.downloadedBytes)} of ${transferSize(primary.totalBytes)}` : '';
   const runningDetail = [transferred, speed, eta].filter(Boolean).join(' · ') || primary.message || 'Preparing transfer.';
+  const blocked = primary.status === 'error' && primary.retryable === false;
   const detail = primary.status === 'complete'
     ? primary.message || 'Added to your library and ready to play.'
     : primary.status === 'paused'
       ? primary.message || 'Progress is saved. Resume whenever you are ready.'
       : primary.status === 'error'
-        ? primary.error || primary.message || 'Resume to retry from saved progress.'
+        ? primary.error || primary.message || (blocked ? 'This source is not currently available.' : 'Resume to retry from saved progress.')
         : runningDetail;
 
   const dockState = primary.status === 'error' ? 'error' : primary.status === 'paused' ? 'paused' : running.length ? 'running' : 'complete';
@@ -490,11 +506,11 @@ function renderDownloads() {
       : primary.status === 'paused'
         ? 'DOWNLOAD PAUSED'
         : primary.status === 'error'
-          ? 'DOWNLOAD CAN RESUME'
+          ? blocked ? 'SOURCE UNAVAILABLE' : 'DOWNLOAD CAN RESUME'
           : String(primary.stage || 'DOWNLOADING').toUpperCase();
   $('#transferTitle').textContent = running.length > 1 ? `${running.length} downloads are active` : primary.title;
   $('#transferDetail').textContent = detail;
-  $('#transferPercent').textContent = primary.status === 'error' ? 'RETRY' : primary.status === 'paused' ? 'RESUME' : primary.status === 'complete' ? 'READY' : `${progress}%`;
+  $('#transferPercent').textContent = primary.status === 'error' ? (blocked ? 'BLOCKED' : 'RETRY') : primary.status === 'paused' ? 'RESUME' : primary.status === 'complete' ? 'READY' : `${progress}%`;
   $('#transferBar').style.width = `${primary.status === 'complete' ? 100 : progress}%`;
   $('.transfer-meter').classList.toggle('indeterminate', primary.status === 'running' && progress === 0);
   $('#transferSummary').setAttribute('aria-expanded', String(state.transferExpanded));
@@ -507,8 +523,9 @@ function renderDownloads() {
     const art = game?.art || assetFallback(download.title, '#263347', '#10141c', download.systemName || 'TRANSFER');
     const itemProgress = Math.min(100, Math.max(0, Number(download.progress || 0)));
     const itemDetail = [download.systemName, download.speed, etaLabel(download)].filter(Boolean).join(' · ') || download.error || download.message || '';
-    const stage = download.status === 'complete' ? 'Ready' : download.status === 'paused' ? 'Paused · progress saved' : download.status === 'error' ? 'Ready to retry' : download.stage || 'Downloading';
-    const value = download.status === 'error' ? 'RETRY' : download.status === 'paused' ? 'PAUSED' : download.status === 'complete' ? 'READY' : `${Math.round(itemProgress)}%`;
+    const blocked = download.status === 'error' && download.retryable === false;
+    const stage = download.status === 'complete' ? 'Ready' : download.status === 'paused' ? 'Paused · progress saved' : download.status === 'error' ? (blocked ? 'Source unavailable' : 'Ready to retry') : download.stage || 'Downloading';
+    const value = download.status === 'error' ? (blocked ? 'BLOCKED' : 'RETRY') : download.status === 'paused' ? 'PAUSED' : download.status === 'complete' ? 'READY' : `${Math.round(itemProgress)}%`;
     const controls = [
       download.status === 'running' ? `<button type="button" class="transfer-control" data-transfer-action="pause" data-download-id="${escapeHtml(download.id)}">Pause</button>` : '',
       ['paused', 'error'].includes(download.status) && download.resumable ? `<button type="button" class="transfer-control primary" data-transfer-action="resume" data-download-id="${escapeHtml(download.id)}">Resume</button>` : '',
@@ -590,7 +607,27 @@ function systemById(id) {
   return state.library.systems.find(system => system.id === id);
 }
 
+function runtimeConsoleCoverage(systemOrId) {
+  const coverage = Array.isArray(state.runtime?.consoleCoverage) ? state.runtime.consoleCoverage : [];
+  if (!coverage.length) return null;
+  const candidates = typeof systemOrId === 'object' && systemOrId
+    ? [systemOrId.systemId, systemOrId.id]
+    : [systemOrId];
+  const ids = candidates.filter(Boolean).map(value => String(value).toLowerCase());
+  return coverage.find(item => ids.includes(String(item?.id || '').toLowerCase())) || null;
+}
+
+function consoleRouteAvailable(systemOrId) {
+  const coverage = runtimeConsoleCoverage(systemOrId);
+  return coverage ? coverage.routeAvailable !== false : true;
+}
+
+function consoleControllerLabel(systemOrId) {
+  return runtimeConsoleCoverage(systemOrId)?.controllerLabel || 'GameDeck touch gamepad';
+}
+
 function systemStatusLabel(system) {
+  if (!consoleRouteAvailable(system)) return 'CATALOG ONLY';
   if (Number(system?.count || 0) === 0) return system?.ready ? 'NO GAMES' : 'SETUP';
   return system?.ready ? 'READY' : 'SETUP';
 }
@@ -989,7 +1026,7 @@ function setFocusedGame(game, options = {}) {
 
   const system = systemById(game.system);
   const art = gameArt(game);
-  const launcher = system?.emulatorLabel || (system?.core ? 'RetroArch' : system?.name || 'your configured emulator');
+  const launcher = system?.core ? 'GameDeck Runtime' : (system?.name || 'your configured runtime');
   const arcade = isArcadeId(game.system);
   const blocked = arcade && gameLaunchBlocked(game);
   const fallback = fallbackDescription(game.title, system?.name || 'this console', true);
@@ -1094,7 +1131,7 @@ async function refreshFocusedDetails() {
 function renderSystems() {
   const allFocused = state.libraryZone === 'systems' && state.focusedLibrarySystem === 'all';
   const all = `<button type="button" class="system ${state.selectedSystem === 'all' ? 'active' : ''} ${allFocused ? 'controller-focus' : ''}" data-id="all" title="All games"><span class="sys-icon" style="--c:#c8ff52">ALL</span><span class="sys-copy"><b>All games</b><small>Full collection</small></span><span class="count">${state.library.games.length}</span></button>`;
-  const systems = state.library.systems.map(system => {
+  const systems = orderedSystems(state.library.systems).map(system => {
     const focused = state.libraryZone === 'systems' && state.focusedLibrarySystem === system.id;
     const art = system.image ? `<img src="${escapeHtml(system.image)}" alt="">` : escapeHtml(system.icon);
     const installed = Number(system.installedCount ?? systemById(system.systemId)?.installedCount ?? 0);
@@ -1389,6 +1426,9 @@ function renderCatalogFeature(game) {
   const downloading = downloadForGame(game) || (state.activeCatalogTasks.has(catalogTaskKey(game)) ? { stage: 'Preparing', progress: 0 } : null);
   const installed = Boolean(game.installedFile);
   const ready = installed && game.installedReady !== false;
+  const transferable = game.transferAvailable !== false;
+  const routeAvailable = consoleRouteAvailable(state.catalogSystem);
+  const controllerLabel = consoleControllerLabel(state.catalogSystem);
   const cached = state.gameDetails.get(detailKey(game.fileName || game.name, state.catalogSystem.systemId));
   feature.classList.toggle('details-loading', !cached);
   $('#catalogFeatureSource').textContent = cached ? String(cached.source || 'GameDeck').toUpperCase() : 'MATCHING DETAILS';
@@ -1398,22 +1438,22 @@ function renderCatalogFeature(game) {
   feature.classList.remove('feature-loading');
   $('#catalogFeatureArt').innerHTML = `<img src="${escapeHtml(art)}" alt="${escapeHtml(game.name)} cover">`;
   $('#catalogFeatureBackdrop').src = art;
-  $('#catalogFeatureSystem').textContent = `${state.catalogSystem.name.toUpperCase()} / ${ready ? 'IN YOUR LIBRARY' : downloading ? 'FINISHING SETUP' : installed ? 'DOWNLOADED' : 'GAMEDECK CATALOG'}`;
+  $('#catalogFeatureSystem').textContent = `${state.catalogSystem.name.toUpperCase()} / ${!routeAvailable ? 'CATALOG ONLY' : ready ? 'IN YOUR LIBRARY' : downloading ? 'FINISHING SETUP' : installed ? 'DOWNLOADED' : 'GAMEDECK CATALOG'}`;
   $('#catalogFeatureTitle').textContent = game.name;
-  $('#catalogFeatureFacts').innerHTML = factMarkup([game.region || game.tags?.[0], cached?.year, game.size || 'GameDeck verified', ready ? 'Ready' : installed ? 'Downloaded' : 'Available']);
+  $('#catalogFeatureFacts').innerHTML = factMarkup([game.region || game.tags?.[0], cached?.year, game.size || 'GameDeck verified', !routeAvailable ? 'Catalog only' : ready ? 'Ready' : installed ? 'Downloaded' : 'Available', controllerLabel]);
   $('#catalogFeatureDescription').textContent = cached?.description || description;
-  $('#catalogFeatureMeta').textContent = !state.catalogSystem.playable
-    ? `Console setup needed · ${state.catalogSystem.issue} You can still add this title now.`
+  $('#catalogFeatureMeta').textContent = !routeAvailable
+    ? `${controllerLabel} is designed, but this console does not yet have a verified Android emulator route in GameDeck.`
     : ready
-      ? 'Ready to play · GameDeck will choose the configured emulator automatically.'
+      ? 'Ready to play · GameDeck opens this title automatically.'
       : downloading
         ? `${downloading.stage || 'Downloading'} · ${Math.round(Number(downloading.progress || 0))}% complete`
         : installed
-          ? 'Download complete · Unpack locally once to finish setup. The original archive will be kept.'
-        : 'One-click GameDeck download · Progress stays visible while you keep browsing.';
-  $('#catalogFeatureAction').textContent = ready ? 'Play now' : downloading ? `${downloading.stage || 'Working'} ${Math.round(Number(downloading.progress || 0))}%` : installed ? 'Finish setup' : 'Add to my deck';
-  $('#catalogFeatureAction').disabled = Boolean(downloading);
-  $('#catalogSetup').classList.toggle('hidden', state.catalogSystem.playable);
+          ? 'Download complete · GameDeck is preparing the game runtime now.'
+          : 'One-tap GameDeck play · required game and console assets are prepared automatically.';
+  $('#catalogFeatureAction').textContent = !routeAvailable ? 'Android route pending' : ready ? 'Play now' : downloading ? `${downloading.stage || 'Working'} ${Math.round(Number(downloading.progress || 0))}%` : installed ? 'Play now' : 'Get & play';
+  $('#catalogFeatureAction').disabled = !routeAvailable || Boolean(downloading);
+  $('#catalogSetup').classList.toggle('hidden', state.catalogSystem.playable || !routeAvailable);
   $('#catalogSetup').textContent = systemNeedsFirmware(state.catalogSystem) ? 'Download firmware' : 'Setup console';
   feature.classList.remove('hidden');
 
@@ -1428,7 +1468,7 @@ function renderCatalogFeature(game) {
     const isFeatured = state.focusedCatalogId === game.id || (state.focusedCatalogId == null && currentCatalogGames()[0]?.id === game.id);
     if (!isFeatured) return;
     $('#catalogFeatureDescription').textContent = details.description || description;
-    $('#catalogFeatureFacts').innerHTML = factMarkup([game.region || game.tags?.[0], details.year, details.genre, details.players && `${details.players} player${details.players === '1' ? '' : 's'}`, game.size || 'GameDeck verified', ready ? 'Ready' : installed ? 'Downloaded' : 'Available']);
+    $('#catalogFeatureFacts').innerHTML = factMarkup([game.region || game.tags?.[0], details.year, details.genre, details.players && `${details.players} player${details.players === '1' ? '' : 's'}`, game.size || 'GameDeck verified', !routeAvailable ? 'Catalog only' : ready ? 'Ready' : installed ? 'Downloaded' : 'Available', controllerLabel]);
     $('#catalogFeatureSource').textContent = String(details.source || 'GameDeck').toUpperCase();
     feature.classList.remove('details-loading');
   });
@@ -1456,16 +1496,17 @@ function renderCatalogGames() {
   const filteredTotal = filteredCatalogGames().length;
   $('#catalogResultCount').textContent = `${filteredTotal.toLocaleString()} ${filteredTotal === 1 ? 'title' : 'titles'}`;
   $('#catalogGames').removeAttribute('aria-busy');
+  const routeAvailable = consoleRouteAvailable(state.catalogSystem);
   $('#catalogGames').innerHTML = games.map((game, index) => {
     const active = game.id === state.focusedCatalogId;
     const downloading = downloadForGame(game) || (state.activeCatalogTasks.has(catalogTaskKey(game)) ? { progress: 0, stage: 'Preparing' } : null);
     const installed = Boolean(game.installedFile);
     const ready = installed && game.installedReady !== false;
     const art = game.art || assetFallback(game.name, '#263347', '#10141c', state.catalogSystem?.name || 'DISCOVER');
-    const facts = [game.region || game.tags?.[0] || 'Catalog', game.size || 'GameDeck'].filter(Boolean);
-    const action = ready ? 'Play' : downloading ? `${Math.round(Number(downloading.progress || 0))}%` : installed ? 'Finish' : 'Add';
-    const cardState = ready ? 'IN LIBRARY' : downloading ? escapeHtml(downloading.stage || 'WORKING') : installed ? 'DOWNLOADED' : 'AVAILABLE';
-    return `<article class="catalog-game ${game.art ? 'has-art' : 'art-pending'} ${active ? 'active' : ''} ${ready ? 'installed' : ''} ${installed && !ready ? 'downloaded' : ''} ${downloading ? 'downloading' : ''}" tabindex="0" role="listitem" aria-current="${active}" aria-label="Select ${escapeHtml(game.name)} for ${escapeHtml(state.catalogSystem?.name || 'this console')}" style="--delay:${Math.min(index, 14) * 18}ms" data-id="${game.id}"><div class="catalog-media"><img class="catalog-media-backdrop" data-catalog-art="${game.id}" src="${escapeHtml(art)}" alt="" loading="lazy"><img class="catalog-poster" data-catalog-art="${game.id}" src="${escapeHtml(art)}" alt="${escapeHtml(game.name)} artwork" loading="lazy"><span class="catalog-platform">${escapeHtml(state.catalogSystem?.name || 'GAME')}</span><span class="catalog-state">${cardState}</span></div><div class="catalog-info"><b title="${escapeHtml(game.name)}">${escapeHtml(game.name)}</b><small>${facts.map(fact => `<span>${escapeHtml(fact)}</span>`).join('')}</small><p>${escapeHtml(cardDescription(game, state.catalogSystem))}</p><button type="button" class="import" data-id="${game.id}" ${downloading ? 'disabled' : ''}>${action}</button></div></article>`;
+    const facts = [game.region || game.tags?.[0] || 'GameDeck', game.size || 'GameDeck'].filter(Boolean);
+    const action = !routeAvailable ? 'Unavailable' : ready ? 'Play' : downloading ? `${Math.round(Number(downloading.progress || 0))}%` : installed ? 'Open' : 'Play';
+    const cardState = !routeAvailable ? 'CATALOG ONLY' : ready ? 'IN LIBRARY' : downloading ? escapeHtml(downloading.stage || 'WORKING') : installed ? 'OPENING' : 'READY TO GET';
+    return `<article class="catalog-game ${game.art ? 'has-art' : 'art-pending'} ${active ? 'active' : ''} ${ready ? 'installed' : ''} ${installed && !ready ? 'downloaded' : ''} ${downloading ? 'downloading' : ''}" tabindex="0" role="listitem" aria-current="${active}" aria-label="Select ${escapeHtml(game.name)} for ${escapeHtml(state.catalogSystem?.name || 'this console')}" style="--delay:${Math.min(index, 14) * 18}ms" data-id="${game.id}"><div class="catalog-media"><img class="catalog-media-backdrop" data-catalog-art="${game.id}" src="${escapeHtml(art)}" alt="" loading="lazy"><img class="catalog-poster" data-catalog-art="${game.id}" src="${escapeHtml(art)}" alt="${escapeHtml(game.name)} artwork" loading="lazy"><span class="catalog-platform">${escapeHtml(state.catalogSystem?.name || 'GAME')}</span><span class="catalog-state">${cardState}</span></div><div class="catalog-info"><b title="${escapeHtml(game.name)}">${escapeHtml(game.name)}</b><small>${facts.map(fact => `<span>${escapeHtml(fact)}</span>`).join('')}</small><p>${escapeHtml(cardDescription(game, state.catalogSystem))}</p><button type="button" class="import" data-id="${game.id}" ${(!routeAvailable || downloading) ? 'disabled' : ''}>${action}</button></div></article>`;
   }).join('');
 
   $$('.catalog-game').forEach(card => {
@@ -1539,6 +1580,10 @@ function showMoreCatalog(focusNext = false) {
 
 async function catalogAction(game) {
   if (!game || !state.catalogSystem) return;
+  if (!consoleRouteAvailable(state.catalogSystem)) {
+    toast(`${state.catalogSystem.name} is catalog-only on Android until a verified emulator route is available.`, 'warning');
+    return;
+  }
   if (game.installedFile) {
     if (game.installedReady !== false) {
       await launch(game.installedFile);
@@ -1621,7 +1666,10 @@ function applyCatalogCollection(system, games, enterGames = false) {
   state.catalogGames = games;
   system.count = games.length;
   system.installedCount = games.filter(game => game.installedFile).length;
-  $('#catalogCount').textContent = `${system.installedCount.toLocaleString()} installed · ${games.length.toLocaleString()} available · ${system.playable ? 'emulator ready' : 'setup needed'}`;
+  system.rgsxCount = games.length;
+  $('#catalogCount').textContent = consoleRouteAvailable(system)
+    ? `${system.installedCount.toLocaleString()} installed · ${games.length.toLocaleString()} titles · one-tap GameDeck play`
+    : `${games.length.toLocaleString()} catalog titles · Android emulator route pending`;
   renderConsoleRail();
   if (enterGames && games.length && !state.focusedCatalogId) {
     state.discoverZone = 'games';
@@ -1640,8 +1688,8 @@ async function selectCatalog(id, enterGames = false) {
   state.catalogSystem = system;
   state.focusedConsoleId = id;
   state.focusedCatalogId = memory.focusedCatalogId || null;
-  state.catalogQuery = memory.query || '';
-  state.catalogFilter = ['all', 'available', 'downloaded', 'installed'].includes(memory.filter) ? memory.filter : 'all';
+  state.catalogQuery = Object.prototype.hasOwnProperty.call(memory, 'query') ? memory.query : state.catalogQuery;
+  state.catalogFilter = ['all', 'available', 'downloaded', 'installed'].includes(memory.filter) ? memory.filter : state.catalogFilter;
   state.catalogLimit = Math.max(CATALOG_PAGE_SIZE, Number(memory.limit || CATALOG_PAGE_SIZE));
   state.catalogGames = [];
   $('#search').value = state.catalogQuery;
@@ -1649,7 +1697,9 @@ async function selectCatalog(id, enterGames = false) {
   renderConsoleRail();
   requestAnimationFrame(() => document.querySelector(`.console-card[data-id="${id}"]`)?.scrollIntoView({ block: 'nearest', inline: 'center' }));
   $('#catalogTitle').textContent = system.name;
-  $('#catalogCount').textContent = `${system.count.toLocaleString()} titles · ${system.playable ? 'ready to play' : 'setup needed'}`;
+  $('#catalogCount').textContent = consoleRouteAvailable(system)
+    ? `${system.count.toLocaleString()} titles · ${system.playable ? 'ready to play' : 'setup needed'}`
+    : `${system.count.toLocaleString()} titles · catalog only on Android`;
 
   const cached = state.catalogCache.get(system.gamesFile);
   if (cached) {
@@ -1665,11 +1715,18 @@ async function selectCatalog(id, enterGames = false) {
 }
 
 function renderConsoleRail() {
-  $('#consoleRail').innerHTML = state.catalog.map(system => {
+  $('#consoleRail').innerHTML = orderedSystems(state.catalog).map(system => {
     const active = state.catalogSystem?.id === system.id;
     const focused = state.discoverZone === 'systems' && state.focusedConsoleId === system.id;
     const installed = Number(system.installedCount || 0);
-    return `<button type="button" class="console-card ${system.playable ? 'playable' : 'needs-setup'} ${active ? 'active' : ''} ${focused ? 'controller-focus' : ''}" data-id="${escapeHtml(system.id)}" title="${escapeHtml(system.issue || '')}"><span class="console-state">${system.playable ? 'READY' : 'SETUP'}</span><b>${escapeHtml(system.name)}</b><small><span>${system.count.toLocaleString()} TITLES</span>${installed ? `<span>${installed.toLocaleString()} ON DECK</span>` : ''}</small><img src="${escapeHtml(system.image)}" alt=""></button>`;
+    const rgsxCount = Number(system.count || system.rgsxCount || 0);
+    const titleCount = `${rgsxCount.toLocaleString()} TITLES`;
+    const routeAvailable = consoleRouteAvailable(system);
+    const consoleState = routeAvailable ? 'READY' : 'CATALOG ONLY';
+    const title = !routeAvailable
+      ? `${system.name} — Android emulator route pending · ${consoleControllerLabel(system)} designed`
+      : system.issue || '';
+    return `<button type="button" class="console-card ${routeAvailable && system.playable ? 'playable' : 'needs-setup'} ${!routeAvailable ? 'runtime-unavailable' : ''} ${active ? 'active' : ''} ${focused ? 'controller-focus' : ''}" data-id="${escapeHtml(system.id)}" title="${escapeHtml(title)}"><span class="console-state">${consoleState}</span><b>${escapeHtml(system.name)}</b><small><span>${titleCount}</span>${installed ? `<span>${installed.toLocaleString()} ON DECK</span>` : ''}</small><img src="${escapeHtml(system.image)}" alt=""></button>`;
   }).join('');
   $$('.console-card').forEach(card => {
     card.onclick = () => selectCatalog(card.dataset.id, true);
@@ -1689,7 +1746,10 @@ async function renderDiscover() {
   if (!state.catalogSystem && state.focusedConsoleId) await selectCatalog(state.focusedConsoleId, false);
   else if (state.catalogSystem) {
     $('#catalogTitle').textContent = state.catalogSystem.name;
-    $('#catalogCount').textContent = `${Number(state.catalogSystem.installedCount || 0).toLocaleString()} installed · ${state.catalogSystem.count.toLocaleString()} available · ${state.catalogSystem.playable ? 'emulator ready' : 'setup needed'}`;
+    const available = `${Number(state.catalogSystem.count || 0).toLocaleString()} titles`;
+    $('#catalogCount').textContent = consoleRouteAvailable(state.catalogSystem)
+      ? `${Number(state.catalogSystem.installedCount || 0).toLocaleString()} installed · ${available} · one-tap GameDeck play`
+      : `${available} · catalog only on Android`;
     renderCatalogGames();
   }
 }
@@ -1886,7 +1946,7 @@ function setupReadiness() {
           : runtime.supported
             ? 'Included with GameDeck. Finish setup once—no separate emulator installation.'
             : diagnostics.retroarch
-              ? 'Compatible local RetroArch installation detected.'
+              ? 'Compatible local game runtime detected.'
               : 'No managed runtime is available for this device.'
     },
     {
@@ -2117,9 +2177,9 @@ function render() {
           ? 'The full cabinet.<br> <em>One clean launch.</em>'
           : selected ? `${escapeHtml(selected.name)}<br> <em>collection.</em>` : 'Your games.<br> <em>One move away.</em>';
   $('#subhead').textContent = selected?.id === 'arcade'
-    ? 'FinalBurn Neo, full game names, matched artwork, and Xbox-ready controls.'
+    ? 'Arcade games with full names, matched artwork, and controller-ready play.'
     : selected?.id === 'mame'
-      ? 'Standalone MAME takes priority, validates ROM sets, and launches with couch controls.'
+      ? 'Arcade compatibility mode validates ROM sets and launches with couch controls.'
       : 'Pick a title and GameDeck chooses the right emulator automatically.';
   renderHeroActions(selected);
   $('#gameCount').textContent = currentGames().length;
@@ -2207,7 +2267,7 @@ function moveLibrary(direction) {
     return;
   }
   if (state.libraryZone === 'systems') {
-    const ids = ['all', ...state.library.systems.map(system => system.id)];
+    const ids = ['all', ...orderedSystems(state.library.systems).map(system => system.id)];
     let index = Math.max(0, ids.indexOf(state.focusedLibrarySystem));
     if (direction === 'up') index = (index - 1 + ids.length) % ids.length;
     if (direction === 'down') index = (index + 1) % ids.length;
@@ -2366,6 +2426,7 @@ function clearSearch(options = {}) {
   $('#search').value = '';
   if (state.view === 'discover') {
     state.catalogQuery = '';
+    writePreference('catalog-query', '');
     state.focusedCatalogId = null;
     state.catalogLimit = CATALOG_PAGE_SIZE;
     if (state.catalogSystem) {
@@ -2374,6 +2435,7 @@ function clearSearch(options = {}) {
     }
   } else {
     state.query = '';
+    writePreference('library-query', '');
   }
   updateSearchChrome();
   render();
@@ -2398,8 +2460,8 @@ function changeView(view) {
   rememberShelfPosition();
   if (state.view === 'discover' && view !== 'discover') rememberCatalogContext();
   state.view = view;
-  state.query = '';
-  $('#search').value = view === 'discover' ? state.catalogQuery : '';
+  $('#search').value = view === 'discover' ? state.catalogQuery : state.query;
+  updateSearchChrome();
   if (view === 'discover') state.discoverZone = 'systems';
   else state.libraryZone = 'games';
   prepareRememberedShelf();
@@ -2674,7 +2736,7 @@ function diagnosticReport() {
     `Library: ${diagnostics.library || state.settings?.libraryRoot || 'not configured'}`,
     `Discover provider: ${diagnostics.rgsxRuntime ? 'connected' : 'optional / not connected'}`,
     `RetroArch: ${diagnostics.retroarch ? 'ready' : 'missing'}`,
-    `MAME: ${diagnostics.mame ? 'ready' : 'missing'}`,
+    `Arcade runtime: ${diagnostics.mame ? 'ready' : 'missing'}`,
     '',
     'SYSTEMS',
     systems || 'No system diagnostics available.',
@@ -2690,7 +2752,7 @@ async function refreshDiagnostics(includeLibrary = false) {
   state.controllerHints = diagnostics.controllers || [];
   state.activities = diagnostics.activity || [];
   state.downloads = diagnostics.downloads || [];
-  $('#debugHealth').innerHTML = `<span class="${diagnostics.rgsxRuntime ? 'ok' : ''}">DISCOVER ${diagnostics.rgsxRuntime ? 'CONNECTED' : 'OPTIONAL'}</span><span class="${diagnostics.retroarch ? 'ok' : 'bad'}">RETROARCH ${diagnostics.retroarch ? 'READY' : 'MISSING'}</span><span class="${diagnostics.mame ? 'ok' : 'bad'}">MAME ${diagnostics.mame ? 'READY' : 'MISSING'}</span><span>${state.arcadeAudit?.verified || diagnostics.arcade?.verified || 0}/${state.arcadeAudit?.total || diagnostics.arcade?.total || 0} ARCADE VERIFIED</span><span>${diagnostics.systems.filter(system => system.ready).length} EMULATORS</span><span>${diagnostics.downloads.filter(download => download.status === 'running').length} ACTIVE</span>`;
+  $('#debugHealth').innerHTML = `<span class="${diagnostics.rgsxRuntime ? 'ok' : ''}">DISCOVER ${diagnostics.rgsxRuntime ? 'CONNECTED' : 'OPTIONAL'}</span><span class="${diagnostics.retroarch ? 'ok' : 'bad'}">RUNTIME ${diagnostics.retroarch ? 'READY' : 'MISSING'}</span><span class="${diagnostics.mame ? 'ok' : 'bad'}">ARCADE RUNTIME ${diagnostics.mame ? 'READY' : 'MISSING'}</span><span>${state.arcadeAudit?.verified || diagnostics.arcade?.verified || 0}/${state.arcadeAudit?.total || diagnostics.arcade?.total || 0} ARCADE VERIFIED</span><span>${diagnostics.systems.filter(system => system.ready).length} EMULATORS</span><span>${diagnostics.downloads.filter(download => download.status === 'running').length} ACTIVE</span>`;
   renderActivity();
   renderDownloads();
 }
@@ -2844,6 +2906,7 @@ $('#artworkFilter').onchange = event => {
 };
 $('#catalogFilter').onchange = event => {
   state.catalogFilter = ['available', 'downloaded', 'installed'].includes(event.target.value) ? event.target.value : 'all';
+  writePreference('catalog-filter', state.catalogFilter);
   state.focusedCatalogId = null;
   state.catalogLimit = CATALOG_PAGE_SIZE;
   renderCatalogGames();
@@ -2857,6 +2920,7 @@ $('#gameSort').onchange = event => {
 $('#search').oninput = event => {
   if (state.view === 'discover') {
     state.catalogQuery = event.target.value.toLowerCase();
+    writePreference('catalog-query', state.catalogQuery);
     state.focusedCatalogId = null;
     state.catalogLimit = CATALOG_PAGE_SIZE;
     if (state.catalogSystem) {
@@ -2866,6 +2930,7 @@ $('#search').oninput = event => {
     renderCatalogGames();
   } else {
     state.query = event.target.value.toLowerCase();
+    writePreference('library-query', state.query);
     render();
   }
 };
@@ -3124,6 +3189,15 @@ window.addEventListener('gamepadconnected', () => {
   gamepadState.acceptAfter = performance.now() + 1200;
   setControllerStatus();
 });
+window.addEventListener('gamedeckcontrollerchange', event => {
+  const snapshot = event.detail && typeof event.detail === 'object' ? event.detail : {};
+  state.controllerProfiles = Array.isArray(snapshot.devices) ? snapshot.devices : [];
+  state.controllerHints = Array.isArray(snapshot.names)
+    ? snapshot.names
+    : state.controllerProfiles.map(controller => controller.name || controller.label).filter(Boolean);
+  setControllerStatus();
+  renderSetupCoach();
+});
 window.addEventListener('gamepaddisconnected', () => {
   gamepadState.initialized = false;
   setControllerStatus();
@@ -3150,9 +3224,24 @@ window.deck.onArcadeAudit(progress => {
 });
 window.deck.onRuntime(update => {
   state.runtime = update;
-  if (['downloading', 'retrying', 'verifying', 'installing', 'preparing'].includes(update.phase)) {
-    const progress = Math.max(8, Math.min(92, Number(update.progress || 0)));
-    setLoading(true, 'Preparing game engines', update.message || 'Installing the components GameDeck needs.', progress);
+  renderSessionReturn(update);
+  const activePhases = [
+    'downloading', 'retrying', 'verifying', 'installing', 'preparing',
+    'runtime-download', 'runtime-confirmation', 'core-download', 'core-install',
+    'content-staging', 'content-extract', 'dependency-resolve',
+    'firmware-check', 'firmware-download', 'firmware-verify', 'firmware-install',
+    'engine-select', 'engine-resources', 'engine-native', 'engine-ready', 'renderer-warmup',
+    'booting', 'launching', 'launching-native', 'launching-compatibility'
+  ];
+  if (activePhases.includes(update.phase)) {
+    const progress = Math.max(8, Math.min(98, Number(update.progress || 0)));
+    const activeGame = state.library.games.find(item => item.file === state.launchingFile) || state.lastSession;
+    const title = update.phase === 'runtime-confirmation'
+      ? 'Confirm GameDeck Console'
+      : update.phase === 'launching'
+        ? `Starting ${activeGame?.title || 'your game'}`
+        : `Preparing ${activeGame?.title || 'your game'}`;
+    setLoading(true, title, update.message || 'GameDeck is preparing the correct console automatically.', progress);
   } else if (update.phase === 'ready') {
     setLoading(false);
     toast(update.message || 'Game engines are ready.', 'success');
@@ -3218,11 +3307,14 @@ async function init() {
   applyLayoutPreferences();
   setInputMode('pointer');
   $('#gameSort').value = state.sort;
+  $('#search').value = state.query;
+  $('#catalogFilter').value = state.catalogFilter;
+  updateSearchChrome();
   setLoading(true, 'Opening your deck', 'Checking local launchers and active transfers.', 10);
   await refreshDiagnostics();
   state.runtime = state.diagnostics?.managedRuntime || await window.deck.runtimeStatus();
   if (state.runtime?.supported && !state.runtime.ready && (state.runtime.bundled || !state.diagnostics?.retroarch)) {
-    setLoading(true, 'Installing the complete GameDeck runtime', 'Preparing the included RetroArch engine and compatible cores. No separate installers are needed.', 14);
+    setLoading(true, 'Installing the complete GameDeck runtime', 'Preparing the built-in GameDeck runtime. No separate installers are needed.', 14);
     const runtimeResult = await window.deck.ensureRuntime(false);
     state.runtime = runtimeResult;
     await refreshDiagnostics();
@@ -3271,8 +3363,8 @@ setInterval(() => { if (state.view === 'community') void refreshCommunityHubRoom
     const now = Date.now();
     state.activities = [
       { id: 'qa-ready', at: now - 8000, level: 'info', message: 'GameDeck ready' },
-      { id: 'qa-issue-1', at: now - 6200, level: 'error', message: 'RetroArch core is missing for Super Nintendo.' },
-      { id: 'qa-issue-2', at: now - 5600, level: 'error', message: 'RetroArch core is missing for Super Nintendo.' },
+      { id: 'qa-issue-1', at: now - 6200, level: 'error', message: 'Game runtime component is missing for Super Nintendo.' },
+      { id: 'qa-issue-2', at: now - 5600, level: 'error', message: 'Game runtime component is missing for Super Nintendo.' },
       { id: 'qa-success', at: now - 2400, level: 'success', message: 'Custom artwork saved for Chrono Trigger.' }
     ];
     state.downloads = [{ id: 'qa-download', status: 'running', title: 'Super Metroid', progress: 44, startedAt: now - 12000 }];
@@ -3280,7 +3372,7 @@ setInterval(() => { if (state.view === 'community') void refreshCommunityHubRoom
       platform: 'win32', arch: 'x64', library: 'C:\\Games\\GameDeck', rgsxRuntime: true, retroarch: true, mame: false,
       settings: { version: '1.1.0' }, systems: [{ name: 'Super Nintendo', ready: false, issue: 'Core missing' }]
     };
-    $('#debugHealth').innerHTML = '<span class="ok">GAMEDECK READY</span><span class="ok">RETROARCH READY</span><span class="bad">MAME MISSING</span><span>1 ACTIVE</span>';
+    $('#debugHealth').innerHTML = '<span class="ok">GAMEDECK READY</span><span class="ok">RUNTIME READY</span><span class="bad">ARCADE RUNTIME MISSING</span><span>1 ACTIVE</span>';
     $('#debugConsole').classList.remove('hidden');
     $('#consoleToggle').classList.add('active');
     renderActivity();

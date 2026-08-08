@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
 import android.graphics.Color;
+import android.graphics.Rect;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -165,14 +166,16 @@ public class ControllerActivity extends Activity implements
         settings.setBuiltInZoomControls(false);
         settings.setDisplayZoomControls(false);
         settings.setTextZoom(100);
-        settings.setUserAgentString(settings.getUserAgentString() + " GameDeckController/1.2");
+        settings.setUserAgentString(settings.getUserAgentString() + " GameDeckController/" + AppVersion.name(this));
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) settings.setSafeBrowsingEnabled(true);
 
-        webView.setBackgroundColor(Color.BLACK);
+        webView.setBackgroundColor(Color.rgb(5, 8, 13));
         webView.setFocusable(true);
         webView.setFocusableInTouchMode(true);
         webView.setLongClickable(false);
         webView.setOnLongClickListener(view -> true);
+        webView.addOnLayoutChangeListener((view, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) ->
+            applyControllerGestureExclusions());
         webView.setWebChromeClient(new WebChromeClient());
         webView.addJavascriptInterface(new NativeBridge(), BRIDGE_NAME);
         webView.setWebViewClient(new WebViewClient() {
@@ -209,6 +212,19 @@ public class ControllerActivity extends Activity implements
             }
         });
         setContentView(webView);
+    }
+
+    private void applyControllerGestureExclusions() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || webView == null) return;
+        int width = webView.getWidth();
+        int height = webView.getHeight();
+        if (width <= 0 || height <= 0) return;
+        float density = getResources().getDisplayMetrics().density;
+        int edgeBand = Math.min(Math.round(108f * density), Math.round(width * 0.24f));
+        List<Rect> exclusions = new ArrayList<>();
+        exclusions.add(new Rect(0, 0, edgeBand, height));
+        exclusions.add(new Rect(width - edgeBand, 0, width, height));
+        webView.setSystemGestureExclusionRects(exclusions);
     }
 
     private WebResourceResponse localAssetResponse(String path) {
