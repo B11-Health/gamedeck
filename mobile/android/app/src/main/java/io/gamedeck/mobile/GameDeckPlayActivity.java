@@ -1179,8 +1179,15 @@ public final class GameDeckPlayActivity extends Activity
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(qaReceiver, filter, Context.RECEIVER_EXPORTED);
         } else {
-            registerReceiver(qaReceiver, filter);
+            registerLegacyQaReceiver(filter);
         }
+    }
+
+    @android.annotation.SuppressLint("UnspecifiedRegisterReceiverFlag")
+    private void registerLegacyQaReceiver(IntentFilter filter) {
+        // Android 12L and older do not expose the receiver-export flag overload used on T+.
+        // This path exists only in debuggable builds so shell-driven QA remains available.
+        registerReceiver(qaReceiver, filter);
     }
 
     private void captureQaScreenshot(String rawName) {

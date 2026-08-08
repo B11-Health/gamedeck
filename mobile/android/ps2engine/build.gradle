@@ -19,4 +19,11 @@ android {
         jniLibs { useLegacyPackaging false }
         resources.excludes += ['META-INF/LICENSE*', 'META-INF/NOTICE*']
     }
+
+    // This module vendors upstream Play!/SDL Android sources. Their lint debt is
+    // reported in CI, but must not fail GameDeck's app build; GameDeck-owned
+    // Android sources remain under the app module's normal fatal lint policy.
+    lint {
+        abortOnError false
+    }
 }

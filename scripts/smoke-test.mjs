@@ -51,6 +51,7 @@ const donationConfig = JSON.parse(donations);
 const managedRuntimeManifest = JSON.parse(runtimeManifest);
 const mobileManifest = JSON.parse(mobileManifestText);
 const androidPerformanceStyles = await read('mobile/android/app/src/main/assets/desktop/android-performance.css');
+const ps2EngineGradle = await read('mobile/android/ps2engine/build.gradle');
 const [e2eReportText, e2eResultText] = await Promise.all([
   read('docs/E2E_REPORT_1.2.0.md'),
   read('docs/e2e-results/GameDeck-1.2.0-2026-08-02.json')
@@ -359,6 +360,8 @@ if (!androidPlayActivity.includes('sideGutter') || !androidPlayActivity.includes
 if (!androidLibretroHost.includes('dlopen(host.core_path') || !androidLibretroHost.includes('retro_set_environment') || !androidLibretroHost.includes('ANativeWindow_lock') || !androidLibretroHost.includes('RETRO_MEMORY_SAVE_RAM') || !androidLibretroHost.includes('native_signal_handler') || !androidLibretroHost.includes('retro-run-first-enter')) fail('GameDeck native libretro ABI host, save persistence, or crash-stage diagnostics is incomplete');
 if (!libretroHeader.includes('Permission is hereby granted, free of charge') || !libretroNotice.includes('does **not** vendor the RetroArch frontend')) fail('libretro MIT license boundary or third-party notice is missing');
 try { await access(path.join(root, 'mobile/android/app/src/main/jniLibs/arm64-v8a/libgamedeck_libretro.so')); } catch { fail('packaged GameDeck libretro native library is missing'); }
+if (!ps2EngineGradle.includes('abortOnError false')) fail('vendored PS2/SDL lint findings must be reported without failing the GameDeck app build');
+if (!androidPlayActivity.includes('Context.RECEIVER_EXPORTED') || !androidPlayActivity.includes('@android.annotation.SuppressLint(\"UnspecifiedRegisterReceiverFlag\")') || !androidPlayActivity.includes('registerLegacyQaReceiver(filter)')) fail('debug PLAY_QA receiver must declare Android 13+ export semantics while narrowly handling the legacy registration API');
 if (!renderer.includes("readPreference('library-query'") || !renderer.includes("readPreference('catalog-query'") || !renderer.includes("writePreference('catalog-filter'") || !androidPerformanceStyles.includes('position: sticky !important') || !androidPerformanceStyles.includes('#libraryToolbar')) fail('Android library search/filter state must persist and the library toolbar must remain sticky at the top');
 if (!renderer.includes('SYSTEM_DISPLAY_ORDER') || !renderer.includes("'n64', 'dreamcast', 'ps1', 'ps2', 'psp', 'gamecube', 'wii'") || !androidPerformanceStyles.includes('grid-template-rows: repeat(2, 50px)') || !androidPerformanceStyles.includes('scroll-snap-type: x proximity')) fail('major console systems must stay visible and intentionally ordered in the Android portrait system shelf');
 if (/>(?:[^<]*)(?:RGSX|RetroArch|MAME|FBNeo|FinalBurn|Archive\.org)(?:[^<]*)</i.test(html) || renderer.includes('RGSX TITLES') || renderer.includes('RGSX titles') || renderer.includes('Play with RGSX')) fail('player-facing GameDeck UI must not expose third-party provider or emulator branding');
